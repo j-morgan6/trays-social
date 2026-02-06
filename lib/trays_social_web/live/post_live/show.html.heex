@@ -1,0 +1,25 @@
+<div class="mx-auto max-w-2xl">
+  <.header>
+    <%= @post.user.username %>
+  </.header>
+
+  <div class="mt-6">
+    <img src={@post.photo_url} alt="Post photo" class="w-full rounded-lg" />
+  </div>
+
+  <div class="mt-6">
+    <p class="text-lg"><%= @post.caption %></p>
+    <p class="mt-2 text-sm text-gray-600">
+      Cooking time: <%= @post.cooking_time_minutes %> minutes
+    </p>
+    <p class="mt-1 text-sm text-gray-600">
+      Posted on <%= Calendar.strftime(@post.inserted_at, "%B %d, %Y") %>
+    </p>
+  </div>
+
+  <div class="mt-6">
+    <.link href={~p"/"} class="text-brand hover:underline">
+      Back to feed
+    </.link>
+  </div>
+</div>
