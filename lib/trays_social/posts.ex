@@ -26,6 +26,23 @@ defmodule TraysSocial.Posts do
   end
 
   @doc """
+  Returns the list of posts for a specific user, excluding soft deleted posts.
+
+  ## Examples
+
+      iex> list_posts_by_user(user_id)
+      [%Post{}, ...]
+
+  """
+  def list_posts_by_user(user_id) do
+    Post
+    |> where([p], p.user_id == ^user_id and is_nil(p.deleted_at))
+    |> order_by([p], desc: p.inserted_at)
+    |> preload([:user])
+    |> Repo.all()
+  end
+
+  @doc """
   Gets a single post.
 
   Raises `Ecto.NoResultsError` if the Post does not exist or is deleted.

@@ -21,6 +21,7 @@ defmodule TraysSocialWeb.Router do
     pipe_through :browser
 
     live "/", FeedLive.Index, :index
+    live "/@:username", ProfileLive.Show, :show
   end
 
   # Other scopes may use custom stacks.

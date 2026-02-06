@@ -1,0 +1,79 @@
+<div class="mx-auto max-w-4xl px-4">
+  <%!-- Profile Header --%>
+  <div class="flex items-start gap-8 mb-8 pb-8 border-b">
+    <%!-- Profile Photo --%>
+    <div class="flex-shrink-0">
+      <%= if @user.profile_photo_url do %>
+        <img
+          src={@user.profile_photo_url}
+          alt={@user.username}
+          class="w-32 h-32 rounded-full object-cover"
+        />
+      <% else %>
+        <div class="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center">
+          <span class="text-4xl text-gray-500 font-bold">
+            <%= String.first(@user.username) |> String.upcase() %>
+          </span>
+        </div>
+      <% end %>
+    </div>
+
+    <%!-- Profile Info --%>
+    <div class="flex-1">
+      <div class="flex items-center gap-4 mb-4">
+        <h1 class="text-2xl font-semibold"><%= @user.username %></h1>
+
+        <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @user.id do %>
+          <.link
+            href={~p"/users/settings"}
+            class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50"
+          >
+            Edit Profile
+          </.link>
+        <% end %>
+      </div>
+
+      <%!-- Stats --%>
+      <div class="flex gap-8 mb-4">
+        <div>
+          <span class="font-semibold"><%= @post_count %></span>
+          <span class="text-gray-600"><%= if @post_count == 1, do: "post", else: "posts" %></span>
+        </div>
+      </div>
+
+      <%!-- Bio --%>
+      <%= if @user.bio do %>
+        <div class="mt-4">
+          <p class="whitespace-pre-wrap"><%= @user.bio %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%!-- Posts Grid --%>
+  <%= if Enum.empty?(@posts) do %>
+    <div class="text-center py-12">
+      <p class="text-lg text-gray-600">No posts yet</p>
+      <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @user.id do %>
+        <.link
+          href={~p"/posts/new"}
+          class="mt-4 inline-block text-brand hover:underline font-semibold"
+        >
+          Share your first post
+        </.link>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="grid grid-cols-3 gap-1">
+      <%= for post <- @posts do %>
+        <.link href={~p"/posts/#{post.id}"} class="aspect-square overflow-hidden">
+          <img
+            src={post.photo_url}
+            alt={post.caption}
+            class="w-full h-full object-cover hover:opacity-90 transition-opacity"
+          />
+        </.link>
+      <% end %>
+    </div>
+  <% end %>
+</div>
