@@ -46,12 +46,6 @@ defmodule TraysSocialWeb.PostLive.New do
          socket
          |> put_flash(:error, "Please upload a photo")
          |> assign(:changeset, Posts.change_post(%Post{}, post_params))}
-
-      {:error, reason} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Failed to upload photo: #{inspect(reason)}")
-         |> assign(:changeset, Posts.change_post(%Post{}, post_params))}
     end
   end
 
