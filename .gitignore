@@ -1,0 +1,39 @@
+# Stride configuration (keep private)
+.stride_auth.md
+2026-02-04-food-social-app-design.md
+
+# Phoenix / Elixir standard ignores
+/_build
+/cover
+/deps
+/doc
+/.fetch
+erl_crash.dump
+*.ez
+*.beam
+/config/*.secret.exs
+.elixir_ls/
+
+# Database
+/*.sql
+/*.sqlite
+/*.sqlite-*
+
+# Temporary files
+.DS_Store
+.env
+.envrc
+
+# Static artifacts
+/priv/static/assets/
+/priv/static/cache_manifest.json
+
+# Node/NPM
+/assets/node_modules/
+npm-debug.log
+
+# Uploaded files (development)
+/priv/static/uploads/
+
+# Elixir Plugin Recommendations
+ELIXIR_PLUGIN_IMPROVEMENTS.md
