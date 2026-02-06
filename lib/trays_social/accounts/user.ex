@@ -45,6 +45,18 @@ defmodule TraysSocial.Accounts.User do
     |> validate_email(opts)
   end
 
+  @doc """
+  A user changeset for updating profile information.
+
+  Validates username, bio, and profile_photo_url fields.
+  """
+  def profile_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:username, :bio, :profile_photo_url])
+    |> validate_username(opts)
+    |> validate_length(:bio, max: 500)
+  end
+
   defp validate_username(changeset, opts) do
     changeset
     |> validate_required([:username])

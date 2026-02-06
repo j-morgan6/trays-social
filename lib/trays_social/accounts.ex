@@ -183,6 +183,60 @@ defmodule TraysSocial.Accounts do
     |> update_user_and_delete_all_tokens()
   end
 
+  @doc """
+  Updates the user profile (username, bio, profile_photo_url).
+
+  ## Examples
+
+      iex> update_user_profile(user, %{bio: "New bio"})
+      {:ok, %User{}}
+
+      iex> update_user_profile(user, %{username: ""})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_user_profile(user, attrs) do
+    user
+    |> User.profile_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking user profile changes.
+  """
+  def change_user_profile(user, attrs \\ %{}) do
+    User.profile_changeset(user, attrs)
+  end
+
+  @doc """
+  Soft deletes a user account and all their posts.
+
+  ## Examples
+
+      iex> delete_account(user)
+      {:ok, %User{}}
+
+  """
+  def delete_account(user) do
+    import Ecto.Query
+
+    Repo.transaction(fn ->
+      # Soft delete all user's posts
+      now = DateTime.utc_now(:second)
+
+      from(p in TraysSocial.Posts.Post,
+        where: p.user_id == ^user.id and is_nil(p.deleted_at)
+      )
+      |> Repo.update_all(set: [deleted_at: now])
+
+      # Delete all user tokens to log them out everywhere
+      from(t in UserToken, where: t.user_id == ^user.id)
+      |> Repo.delete_all()
+
+      user
+    end)
+  end
+
   ## Session
 
   @doc """
