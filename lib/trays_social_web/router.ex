@@ -20,7 +20,7 @@ defmodule TraysSocialWeb.Router do
   scope "/", TraysSocialWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", FeedLive.Index, :index
   end
 
   # Other scopes may use custom stacks.

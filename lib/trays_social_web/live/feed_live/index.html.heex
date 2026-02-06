@@ -1,0 +1,60 @@
+<div class="mx-auto max-w-2xl">
+  <div class="flex justify-between items-center mb-6">
+    <.header>
+      Feed
+      <:subtitle>Latest posts from the community</:subtitle>
+    </.header>
+
+    <%= if assigns[:current_scope] && @current_scope.user do %>
+      <.link href={~p"/posts/new"} class="text-brand hover:underline">
+        Create Post
+      </.link>
+    <% end %>
+  </div>
+
+  <%= if Enum.empty?(@posts) do %>
+    <div class="text-center py-12">
+      <p class="text-lg text-gray-600">No posts yet. Be the first to share something!</p>
+      <%= if assigns[:current_scope] && @current_scope.user do %>
+        <.link
+          href={~p"/posts/new"}
+          class="mt-4 inline-block text-brand hover:underline font-semibold"
+        >
+          Create your first post
+        </.link>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="space-y-8">
+      <%= for post <- @posts do %>
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+          <%!-- Post Header --%>
+          <div class="p-4 flex items-center">
+            <div class="flex-1">
+              <p class="font-semibold text-lg">
+                <%= post.user.username %>
+              </p>
+            </div>
+          </div>
+
+          <%!-- Post Photo --%>
+          <.link href={~p"/posts/#{post.id}"}>
+            <img src={post.photo_url} alt="Post photo" class="w-full" />
+          </.link>
+
+          <%!-- Post Details --%>
+          <div class="p-4">
+            <p class="font-semibold mb-2"><%= post.user.username %></p>
+            <p class="text-gray-900 mb-2"><%= post.caption %></p>
+            <p class="text-sm text-gray-600">
+              Cooking time: <%= post.cooking_time_minutes %> minutes
+            </p>
+            <p class="text-xs text-gray-500 mt-2">
+              <%= Calendar.strftime(post.inserted_at, "%B %d, %Y at %I:%M %p") %>
+            </p>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

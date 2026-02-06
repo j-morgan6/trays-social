@@ -2,8 +2,10 @@ defmodule TraysSocialWeb.UserAuth do
   use TraysSocialWeb, :verified_routes
 
   import Plug.Conn
-  import Phoenix.Controller
+  import Phoenix.Controller, except: [redirect: 2, put_flash: 3]
 
+  alias Phoenix.Controller
+  alias Phoenix.LiveView
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.Scope
 
@@ -37,7 +39,7 @@ defmodule TraysSocialWeb.UserAuth do
 
     conn
     |> create_or_extend_session(user, params)
-    |> redirect(to: user_return_to || signed_in_path(conn))
+    |> Controller.redirect(to: user_return_to || signed_in_path(conn))
   end
 
   @doc """
@@ -56,7 +58,7 @@ defmodule TraysSocialWeb.UserAuth do
     conn
     |> renew_session(nil)
     |> delete_resp_cookie(@remember_me_cookie)
-    |> redirect(to: ~p"/")
+    |> Controller.redirect(to: ~p"/")
   end
 
   @doc """
@@ -174,9 +176,9 @@ defmodule TraysSocialWeb.UserAuth do
       conn
     else
       conn
-      |> put_flash(:error, "You must re-authenticate to access this page.")
+      |> Controller.put_flash(:error, "You must re-authenticate to access this page.")
       |> maybe_store_return_to()
-      |> redirect(to: ~p"/users/log-in")
+      |> Controller.redirect(to: ~p"/users/log-in")
       |> halt()
     end
   end
@@ -187,7 +189,7 @@ defmodule TraysSocialWeb.UserAuth do
   def redirect_if_user_is_authenticated(conn, _opts) do
     if conn.assigns.current_scope do
       conn
-      |> redirect(to: signed_in_path(conn))
+      |> Controller.redirect(to: signed_in_path(conn))
       |> halt()
     else
       conn
@@ -204,9 +206,9 @@ defmodule TraysSocialWeb.UserAuth do
       conn
     else
       conn
-      |> put_flash(:error, "You must log in to access this page.")
+      |> Controller.put_flash(:error, "You must log in to access this page.")
       |> maybe_store_return_to()
-      |> redirect(to: ~p"/users/log-in")
+      |> Controller.redirect(to: ~p"/users/log-in")
       |> halt()
     end
   end
@@ -216,4 +218,46 @@ defmodule TraysSocialWeb.UserAuth do
   end
 
   defp maybe_store_return_to(conn), do: conn
+
+  @doc """
+  Handles LiveView authentication.
+
+  ## Modes
+
+    * `:require_authenticated_user` - Requires the user to be authenticated,
+      redirects to login page if not.
+    * `:mount_current_scope` - Mounts current_scope for LiveViews that can work
+      with or without authentication.
+  """
+  def on_mount(:require_authenticated_user, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+
+    if socket.assigns.current_scope && socket.assigns.current_scope.user do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> LiveView.put_flash(:error, "You must log in to access this page.")
+        |> LiveView.redirect(to: ~p"/users/log-in")
+
+      {:halt, socket}
+    end
+  end
+
+  def on_mount(:mount_current_scope, _params, session, socket) do
+    {:cont, mount_current_scope(socket, session)}
+  end
+
+  defp mount_current_scope(socket, session) do
+    Phoenix.Component.assign_new(socket, :current_scope, fn ->
+      if user_token = session["user_token"] do
+        case Accounts.get_user_by_session_token(user_token) do
+          {user, _token_inserted_at} -> Scope.for_user(user)
+          nil -> nil
+        end
+      else
+        nil
+      end
+    end)
+  end
 end

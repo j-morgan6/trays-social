@@ -1,8 +1,9 @@
 defmodule TraysSocialWeb.PageControllerTest do
   use TraysSocialWeb.ConnCase
 
-  test "GET /", %{conn: conn} do
+  test "GET / shows feed", %{conn: conn} do
     conn = get(conn, ~p"/")
-    assert html_response(conn, 200) =~ "Peace of mind from prototype to production"
+    assert html_response(conn, 200) =~ "Feed"
+    assert html_response(conn, 200) =~ "Latest posts from the community"
   end
 end

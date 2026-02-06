@@ -5,6 +5,8 @@ defmodule TraysSocialWeb.PostLive.New do
   alias TraysSocial.Posts.Post
   alias TraysSocial.Uploads.Photo
 
+  on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
+
   @impl true
   def mount(_params, _session, socket) do
     changeset = Posts.change_post(%Post{})
@@ -73,7 +75,7 @@ defmodule TraysSocialWeb.PostLive.New do
 
   defp create_post(socket, post_params) do
     # Add current user ID
-    post_params = Map.put(post_params, "user_id", socket.assigns.current_user.id)
+    post_params = Map.put(post_params, "user_id", socket.assigns.current_scope.user.id)
 
     case Posts.create_post(post_params) do
       {:ok, post} ->

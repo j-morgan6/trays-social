@@ -3,6 +3,8 @@ defmodule TraysSocialWeb.PostLive.Show do
 
   alias TraysSocial.Posts
 
+  on_mount {TraysSocialWeb.UserAuth, :mount_current_scope}
+
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     post = Posts.get_post!(id)
