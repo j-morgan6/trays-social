@@ -87,18 +87,26 @@ defmodule TraysSocialWeb.CoreComponents do
       <.button>Send!</.button>
       <.button phx-click="go" variant="primary">Send!</.button>
       <.button navigate={~p"/"}>Home</.button>
+      <.button variant="secondary">Cancel</.button>
+      <.button variant="danger">Delete</.button>
+      <.button variant="ghost">Link Style</.button>
   """
   attr :rest, :global, include: ~w(href navigate patch method download name value disabled)
   attr :class, :any
-  attr :variant, :string, values: ~w(primary)
+  attr :variant, :string, default: "primary", values: ~w(primary secondary danger ghost)
   slot :inner_block, required: true
 
   def button(%{rest: rest} = assigns) do
-    variants = %{"primary" => "btn-primary", nil => "btn-primary btn-soft"}
+    variants = %{
+      "primary" => "btn btn-primary",
+      "secondary" => "btn btn-outline btn-secondary",
+      "danger" => "btn btn-error",
+      "ghost" => "btn btn-ghost"
+    }
 
     assigns =
       assign_new(assigns, :class, fn ->
-        ["btn", Map.fetch!(variants, assigns[:variant])]
+        Map.fetch!(variants, assigns[:variant])
       end)
 
     if rest[:href] || rest[:navigate] || rest[:patch] do
@@ -114,6 +122,32 @@ defmodule TraysSocialWeb.CoreComponents do
       </button>
       """
     end
+  end
+
+  @doc """
+  Renders a loading spinner.
+
+  ## Examples
+
+      <.spinner />
+      <.spinner size="sm" />
+      <.spinner size="lg" class="text-primary" />
+  """
+  attr :size, :string, default: "md", values: ~w(sm md lg)
+  attr :class, :any, default: nil
+
+  def spinner(assigns) do
+    size_classes = %{
+      "sm" => "w-4 h-4",
+      "md" => "w-6 h-6",
+      "lg" => "w-8 h-8"
+    }
+
+    assigns = assign(assigns, :size_class, Map.fetch!(size_classes, assigns.size))
+
+    ~H"""
+    <span class={["loading loading-spinner", @size_class, @class]} />
+    """
   end
 
   @doc """

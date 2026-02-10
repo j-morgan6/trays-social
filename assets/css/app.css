@@ -61,28 +61,34 @@
   default: true;
   prefersdark: false;
   color-scheme: "light";
-  --color-base-100: oklch(98% 0 0);
-  --color-base-200: oklch(96% 0.001 286.375);
-  --color-base-300: oklch(92% 0.004 286.32);
-  --color-base-content: oklch(21% 0.006 285.885);
-  --color-primary: oklch(70% 0.213 47.604);
-  --color-primary-content: oklch(98% 0.016 73.684);
-  --color-secondary: oklch(55% 0.027 264.364);
-  --color-secondary-content: oklch(98% 0.002 247.839);
-  --color-accent: oklch(0% 0 0);
-  --color-accent-content: oklch(100% 0 0);
-  --color-neutral: oklch(44% 0.017 285.786);
-  --color-neutral-content: oklch(98% 0 0);
+  /* Warm off-white backgrounds instead of pure white */
+  --color-base-100: oklch(98.5% 0.002 60);
+  --color-base-200: oklch(96% 0.003 55);
+  --color-base-300: oklch(92% 0.005 50);
+  --color-base-content: oklch(25% 0.008 40);
+  /* Warm coral primary (#FF6B6B) */
+  --color-primary: oklch(70% 0.20 20);
+  --color-primary-content: oklch(98% 0.01 20);
+  /* Deep teal secondary (#2D6A4F) */
+  --color-secondary: oklch(45% 0.08 160);
+  --color-secondary-content: oklch(98% 0.01 160);
+  /* Warm amber accent (#F4A261) */
+  --color-accent: oklch(75% 0.15 50);
+  --color-accent-content: oklch(20% 0.01 50);
+  /* Warm gray neutral */
+  --color-neutral: oklch(48% 0.01 40);
+  --color-neutral-content: oklch(98% 0.002 40);
   --color-info: oklch(62% 0.214 259.815);
   --color-info-content: oklch(97% 0.014 254.604);
-  --color-success: oklch(70% 0.14 182.503);
-  --color-success-content: oklch(98% 0.014 180.72);
-  --color-warning: oklch(66% 0.179 58.318);
-  --color-warning-content: oklch(98% 0.022 95.277);
-  --color-error: oklch(58% 0.253 17.585);
-  --color-error-content: oklch(96% 0.015 12.422);
-  --radius-selector: 0.25rem;
-  --radius-field: 0.25rem;
+  --color-success: oklch(65% 0.15 145);
+  --color-success-content: oklch(98% 0.01 145);
+  --color-warning: oklch(70% 0.18 65);
+  --color-warning-content: oklch(20% 0.01 65);
+  --color-error: oklch(60% 0.22 25);
+  --color-error-content: oklch(98% 0.01 25);
+  /* Slightly more rounded corners for friendlier feel */
+  --radius-selector: 0.375rem;
+  --radius-field: 0.375rem;
   --radius-box: 0.5rem;
   --size-selector: 0.21875rem;
   --size-field: 0.21875rem;
@@ -103,3 +109,49 @@
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
 /* This file is for your main application CSS */
+
+/* ===== CUSTOM TYPOGRAPHY SYSTEM ===== */
+/* Import fonts - Using system fonts for now, can add Google Fonts later */
+@layer base {
+  /* Typography scale with generous line heights */
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    @apply text-base-content;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  h1 { font-size: 2.5rem; }    /* 40px */
+  h2 { font-size: 2rem; }      /* 32px */
+  h3 { font-size: 1.75rem; }   /* 28px */
+  h4 { font-size: 1.5rem; }    /* 24px */
+  h5 { font-size: 1.25rem; }   /* 20px */
+  h6 { font-size: 1.125rem; }  /* 18px */
+
+  p {
+    line-height: 1.7;
+  }
+}
+
+/* ===== CUSTOM SPACING UTILITIES ===== */
+/* Using consistent 4px base scale */
+@layer utilities {
+  .space-xs { padding: 0.25rem; }   /* 4px */
+  .space-sm { padding: 0.5rem; }    /* 8px */
+  .space-md { padding: 1rem; }      /* 16px */
+  .space-lg { padding: 1.5rem; }    /* 24px */
+  .space-xl { padding: 2rem; }      /* 32px */
+  .space-2xl { padding: 3rem; }     /* 48px */
+
+  .gap-xs { gap: 0.25rem; }
+  .gap-sm { gap: 0.5rem; }
+  .gap-md { gap: 1rem; }
+  .gap-lg { gap: 1.5rem; }
+  .gap-xl { gap: 2rem; }
+  .gap-2xl { gap: 3rem; }
+}
