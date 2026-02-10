@@ -3,19 +3,7 @@
   <div class="flex items-start gap-8 mb-8 pb-8 border-b">
     <%!-- Profile Photo --%>
     <div class="flex-shrink-0">
-      <%= if @user.profile_photo_url do %>
-        <img
-          src={@user.profile_photo_url}
-          alt={@user.username}
-          class="w-32 h-32 rounded-full object-cover"
-        />
-      <% else %>
-        <div class="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center">
-          <span class="text-4xl text-gray-500 font-bold">
-            <%= String.first(@user.username) |> String.upcase() %>
-          </span>
-        </div>
-      <% end %>
+      <.user_avatar username={@user.username} photo_url={@user.profile_photo_url} size="2xl" />
     </div>
 
     <%!-- Profile Info --%>
@@ -24,12 +12,9 @@
         <h1 class="text-2xl font-semibold"><%= @user.username %></h1>
 
         <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @user.id do %>
-          <.link
-            href={~p"/users/settings"}
-            class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50"
-          >
+          <.button href={~p"/users/settings"} variant="secondary">
             Edit Profile
-          </.link>
+          </.button>
         <% end %>
       </div>
 
@@ -52,17 +37,13 @@
 
   <%!-- Posts Grid --%>
   <%= if Enum.empty?(@posts) do %>
-    <div class="text-center py-12">
-      <p class="text-lg text-gray-600">No posts yet</p>
+    <.empty_state message="No posts yet">
       <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @user.id do %>
-        <.link
-          href={~p"/posts/new"}
-          class="mt-4 inline-block text-brand hover:underline font-semibold"
-        >
+        <.button href={~p"/posts/new"} variant="primary">
           Share your first post
-        </.link>
+        </.button>
       <% end %>
-    </div>
+    </.empty_state>
   <% else %>
     <div class="grid grid-cols-3 gap-1">
       <%= for post <- @posts do %>

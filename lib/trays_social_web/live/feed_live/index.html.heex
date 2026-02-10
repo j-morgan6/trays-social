@@ -13,47 +13,17 @@
   </div>
 
   <%= if Enum.empty?(@posts) do %>
-    <div class="text-center py-12">
-      <p class="text-lg text-gray-600">No posts yet. Be the first to share something!</p>
+    <.empty_state message="No posts yet. Be the first to share something!">
       <%= if assigns[:current_scope] && @current_scope.user do %>
-        <.link
-          href={~p"/posts/new"}
-          class="mt-4 inline-block text-brand hover:underline font-semibold"
-        >
+        <.button href={~p"/posts/new"} variant="primary">
           Create your first post
-        </.link>
+        </.button>
       <% end %>
-    </div>
+    </.empty_state>
   <% else %>
-    <div class="space-y-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <%= for post <- @posts do %>
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-          <%!-- Post Header --%>
-          <div class="p-4 flex items-center">
-            <div class="flex-1">
-              <p class="font-semibold text-lg">
-                <%= post.user.username %>
-              </p>
-            </div>
-          </div>
-
-          <%!-- Post Photo --%>
-          <.link href={~p"/posts/#{post.id}"}>
-            <img src={post.photo_url} alt="Post photo" class="w-full" />
-          </.link>
-
-          <%!-- Post Details --%>
-          <div class="p-4">
-            <p class="font-semibold mb-2"><%= post.user.username %></p>
-            <p class="text-gray-900 mb-2"><%= post.caption %></p>
-            <p class="text-sm text-gray-600">
-              Cooking time: <%= post.cooking_time_minutes %> minutes
-            </p>
-            <p class="text-xs text-gray-500 mt-2">
-              <%= Calendar.strftime(post.inserted_at, "%B %d, %Y at %I:%M %p") %>
-            </p>
-          </div>
-        </div>
+        <.post_card post={post} />
       <% end %>
     </div>
   <% end %>

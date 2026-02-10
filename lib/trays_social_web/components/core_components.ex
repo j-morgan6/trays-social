@@ -151,6 +151,165 @@ defmodule TraysSocialWeb.CoreComponents do
   end
 
   @doc """
+  Renders a user avatar with fallback to initials.
+
+  ## Examples
+
+      <.user_avatar username="john_doe" />
+      <.user_avatar username="jane" photo_url="/images/jane.jpg" />
+      <.user_avatar username="bob" size="lg" />
+  """
+  attr :username, :string, required: true
+  attr :photo_url, :string, default: nil
+  attr :size, :string, default: "md", values: ~w(sm md lg xl 2xl)
+  attr :class, :any, default: nil
+
+  def user_avatar(assigns) do
+    size_classes = %{
+      "sm" => "w-8 h-8 text-xs",
+      "md" => "w-10 h-10 text-sm",
+      "lg" => "w-12 h-12 text-base",
+      "xl" => "w-16 h-16 text-lg",
+      "2xl" => "w-32 h-32 text-4xl"
+    }
+
+    assigns = assign(assigns, :size_class, Map.fetch!(size_classes, assigns.size))
+    assigns = assign(assigns, :initial, String.first(assigns.username) |> String.upcase())
+
+    ~H"""
+    <div class={["avatar placeholder", @class]}>
+      <%= if @photo_url do %>
+        <div class={[@size_class, "rounded-full"]}>
+          <img src={@photo_url} alt={@username} />
+        </div>
+      <% else %>
+        <div class={[@size_class, "bg-primary text-primary-content rounded-full"]}>
+          <span class="font-bold">{@initial}</span>
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders an empty state message with optional action.
+
+  ## Examples
+
+      <.empty_state message="No posts yet" />
+      <.empty_state message="No posts yet">
+        <.button href="/posts/new">Create your first post</.button>
+      </.empty_state>
+  """
+  attr :message, :string, required: true
+  attr :class, :any, default: nil
+  slot :inner_block
+
+  def empty_state(assigns) do
+    ~H"""
+    <div class={["text-center py-12", @class]}>
+      <p class="text-lg text-base-content/60 mb-4">{@message}</p>
+      <%= if render_slot(@inner_block) != [] do %>
+        <div class="mt-6">
+          {render_slot(@inner_block)}
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a loading skeleton with shimmer animation.
+
+  ## Examples
+
+      <.loading_skeleton type="card" />
+      <.loading_skeleton type="text" />
+      <.loading_skeleton type="circle" class="w-12 h-12" />
+  """
+  attr :type, :string, default: "card", values: ~w(card text circle avatar)
+  attr :class, :any, default: nil
+
+  def loading_skeleton(assigns) do
+    type_classes = %{
+      "card" => "h-96 w-full rounded-lg",
+      "text" => "h-4 w-full rounded",
+      "circle" => "rounded-full",
+      "avatar" => "w-10 h-10 rounded-full"
+    }
+
+    assigns = assign(assigns, :type_class, Map.fetch!(type_classes, assigns.type))
+
+    ~H"""
+    <div class={["skeleton bg-base-300 animate-pulse", @type_class, @class]} />
+    """
+  end
+
+  @doc """
+  Renders a post card for the feed with user info, photo, and metadata.
+
+  ## Examples
+
+      <.post_card post={@post} />
+  """
+  attr :post, :map, required: true
+  attr :class, :any, default: nil
+
+  def post_card(assigns) do
+    ~H"""
+    <.link
+      navigate={"/posts/#{@post.id}"}
+      class={[
+        "card bg-base-100 shadow-md hover:shadow-xl transition-shadow duration-200 overflow-hidden block",
+        @class
+      ]}
+    >
+      <%!-- User Info Header --%>
+      <div class="px-4 pt-4 pb-3 flex items-center gap-3">
+        <.user_avatar username={@post.user.username} photo_url={@post.user.profile_photo_url} size="md" />
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-base-content truncate">
+            {@post.user.username}
+          </p>
+          <p class="text-xs text-base-content/60">
+            <%= Calendar.strftime(@post.inserted_at, "%B %d, %Y") %>
+          </p>
+        </div>
+      </div>
+
+      <%!-- Post Photo --%>
+      <div class="w-full aspect-square bg-base-200">
+        <img src={@post.photo_url} alt="Post photo" class="w-full h-full object-cover" />
+      </div>
+
+      <%!-- Post Details --%>
+      <div class="p-4">
+        <p class="text-base-content line-clamp-2 mb-3">
+          {@post.caption}
+        </p>
+
+        <%!-- Metadata Row --%>
+        <div class="flex items-center gap-4 text-sm text-base-content/60">
+          <%= if @post.cooking_time_minutes do %>
+            <div class="flex items-center gap-1">
+              <span>[ICON]</span>
+              <span><%= @post.cooking_time_minutes %> min</span>
+            </div>
+          <% end %>
+
+          <%= if Ecto.assoc_loaded?(@post.ingredients) && !Enum.empty?(@post.ingredients) do %>
+            <div class="flex items-center gap-1">
+              <span>[ICON]</span>
+              <span><%= length(@post.ingredients) %> ingredients</span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </.link>
+    """
+  end
+
+  @doc """
   Renders an input with label and error messages.
 
   A `Phoenix.HTML.FormField` may be passed as argument,
