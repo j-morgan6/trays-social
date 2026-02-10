@@ -54,6 +54,23 @@ Structure:
 - Skip tests for unused features (e.g., magic link tests)
 - Update fixtures when adding required fields
 
+## 🚫 DESIGN RULES - NO EXCEPTIONS
+
+### NO EMOJIS
+- **NEVER use emojis anywhere in the app** - they look unprofessional
+- This includes: UI, comments, placeholders, or any visible text
+- Use text or proper icons instead
+
+### Logos and Visual Design
+- **Use placeholders like `[LOGO]` or `[ICON]`** for visual elements
+- **Always inform the user** when you add a placeholder that needs design
+- User will create all custom designs themselves
+- Don't attempt to create SVGs or visual designs
+- Examples:
+  - `[LOGO] Trays` not `🍽️ Trays`
+  - `[ICON: Plus]` not `➕`
+  - `[Avatar placeholder]` not emoji avatars
+
 ## Workflow
 1. Use Stride task system (W1, W2, W3...)
 2. Execute hooks: before_doing → after_doing → before_review
