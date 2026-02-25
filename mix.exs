@@ -67,7 +67,8 @@ defmodule TraysSocial.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:mogrify, "~> 0.9"}
+      {:mogrify, "~> 0.9"},
+      {:tidewave, "~> 0.5", only: :dev}
     ]
   end
 

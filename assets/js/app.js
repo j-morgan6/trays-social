@@ -25,11 +25,37 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/trays_social"
 import topbar from "../vendor/topbar"
 
+const LazyLoad = {
+  mounted() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target
+          const src = img.dataset.src
+          if (src) {
+            img.onload = () => img.classList.add("lazy-loaded")
+            img.onerror = () => img.classList.add("lazy-loaded")
+            img.src = src
+            img.removeAttribute("data-src")
+            observer.unobserve(img)
+          }
+        }
+      })
+    }, { rootMargin: "100px" })
+
+    observer.observe(this.el)
+    this.observer = observer
+  },
+  destroyed() {
+    if (this.observer) this.observer.disconnect()
+  }
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, LazyLoad},
 })
 
 // Show progress bar on live navigation and form submits

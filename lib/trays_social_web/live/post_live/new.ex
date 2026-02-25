@@ -15,7 +15,6 @@ defmodule TraysSocialWeb.PostLive.New do
       socket
       |> assign(:page_title, "Create Post")
       |> assign(:changeset, changeset)
-      |> assign(:uploaded_photo_url, nil)
       |> allow_upload(:photo,
         accept: ~w(.jpg .jpeg .png .heic),
         max_entries: 1,
@@ -36,8 +35,12 @@ defmodule TraysSocialWeb.PostLive.New do
   end
 
   @impl true
+  def handle_event("cancel-upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :photo, ref)}
+  end
+
+  @impl true
   def handle_event("save", %{"post" => post_params}, socket) do
-    # Upload photo first
     case upload_photo(socket) do
       {:ok, photo_url} ->
         post_params = Map.put(post_params, "photo_url", photo_url)
@@ -54,7 +57,6 @@ defmodule TraysSocialWeb.PostLive.New do
   defp upload_photo(socket) do
     uploaded_files =
       consume_uploaded_entries(socket, :photo, fn %{path: path}, entry ->
-        # Create a Plug.Upload struct for Photo.store/1
         upload = %Plug.Upload{
           path: path,
           filename: entry.client_name,
@@ -74,12 +76,10 @@ defmodule TraysSocialWeb.PostLive.New do
   end
 
   defp create_post(socket, post_params) do
-    # Add current user ID
     post_params = Map.put(post_params, "user_id", socket.assigns.current_scope.user.id)
 
     case Posts.create_post(post_params) do
       {:ok, post} ->
-        # Broadcast new post to feed
         Phoenix.PubSub.broadcast(
           TraysSocial.PubSub,
           "posts:new",

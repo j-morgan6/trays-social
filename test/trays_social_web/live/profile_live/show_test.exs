@@ -32,9 +32,9 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
       assert html =~ user.username
       assert html =~ "2"
       assert html =~ "posts"
-      # Posts should be displayed in grid
-      assert html =~ post1.photo_url
-      assert html =~ post2.photo_url
+      # Posts should be displayed in grid using thumb variants
+      assert html =~ TraysSocial.Uploads.ImageProcessor.thumb_url(post1.photo_url)
+      assert html =~ TraysSocial.Uploads.ImageProcessor.thumb_url(post2.photo_url)
     end
 
     test "shows edit profile button for own profile", %{conn: conn} do

@@ -10,7 +10,7 @@
       <.button
         phx-click="delete"
         data-confirm="Are you sure you want to delete this post?"
-        class="bg-red-600 hover:bg-red-700"
+        variant="danger"
       >
         Delete Post
       </.button>
@@ -18,8 +18,12 @@
   </div>
 
   <%!-- Photo --%>
-  <div class="mt-6">
-    <img src={@post.photo_url} alt="Post photo" class="w-full rounded-lg shadow-lg" />
+  <div class="mt-6 overflow-hidden rounded-lg shadow-lg">
+    <img
+      src={TraysSocial.Uploads.ImageProcessor.large_url(@post.photo_url) || @post.photo_url}
+      alt="Post photo"
+      class="w-full hover:scale-105 transition-transform duration-500"
+    />
   </div>
 
   <%!-- Caption and Cooking Time --%>
@@ -72,8 +76,8 @@
       <ol class="space-y-4">
         <%= for step <- Enum.sort_by(@post.cooking_steps, & &1.order) do %>
           <li class="flex">
-            <span class="font-bold text-brand mr-3"><%= step.order %>.</span>
-            <p><%= step.instruction %></p>
+            <span class="font-bold text-brand mr-3"><%= step.order + 1 %>.</span>
+            <p><%= step.description %></p>
           </li>
         <% end %>
       </ol>
@@ -86,7 +90,7 @@
       <h2 class="text-xl font-bold mb-3">Tags</h2>
       <div class="flex flex-wrap gap-2">
         <%= for post_tag <- @post.post_tags do %>
-          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-base-200 text-base-content hover:bg-primary hover:text-primary-content transition-colors duration-150 cursor-default">
             #<%= post_tag.tag %>
           </span>
         <% end %>
@@ -96,8 +100,8 @@
 
   <%!-- Back to Feed --%>
   <div class="mt-8 pt-6 border-t">
-    <.link href={~p"/"} class="text-brand hover:underline">
-      ← Back to feed
+    <.link href={~p"/"} class="inline-flex items-center gap-1 text-base-content/60 hover:text-primary transition-colors duration-150">
+      <.icon name="hero-arrow-left" class="size-4" /> Back to feed
     </.link>
   </div>
 </div>

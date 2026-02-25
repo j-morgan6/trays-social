@@ -10,7 +10,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       {:ok, _view, html} = live(conn, ~p"/")
 
       assert html =~ "Feed"
-      assert html =~ "No posts yet"
+      assert html =~ "Nothing here yet"
     end
 
     test "lists all posts", %{conn: conn} do
@@ -31,7 +31,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
         |> log_in_user(user)
         |> live(~p"/")
 
-      assert html =~ "Create Post"
+      assert html =~ "Share something"
     end
 
     test "receives real-time updates for new posts", %{conn: conn} do

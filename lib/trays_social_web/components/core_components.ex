@@ -179,11 +179,11 @@ defmodule TraysSocialWeb.CoreComponents do
     ~H"""
     <div class={["avatar placeholder", @class]}>
       <%= if @photo_url do %>
-        <div class={[@size_class, "rounded-full"]}>
+        <div class={[@size_class, "rounded-full ring-2 ring-transparent hover:ring-primary/40 transition-all duration-200"]}>
           <img src={@photo_url} alt={@username} />
         </div>
       <% else %>
-        <div class={[@size_class, "bg-primary text-primary-content rounded-full"]}>
+        <div class={[@size_class, "bg-primary text-primary-content rounded-full ring-2 ring-transparent hover:ring-primary/40 transition-all duration-200"]}>
           <span class="font-bold">{@initial}</span>
         </div>
       <% end %>
@@ -260,7 +260,7 @@ defmodule TraysSocialWeb.CoreComponents do
     <.link
       navigate={"/posts/#{@post.id}"}
       class={[
-        "card bg-base-100 shadow-md hover:shadow-xl transition-shadow duration-200 overflow-hidden block",
+        "card bg-base-100 shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-200 overflow-hidden block",
         @class
       ]}
     >
@@ -277,9 +277,14 @@ defmodule TraysSocialWeb.CoreComponents do
         </div>
       </div>
 
-      <%!-- Post Photo --%>
+      <%!-- Post Photo — square crop, lazy loaded --%>
       <div class="w-full aspect-square bg-base-200">
-        <img src={@post.photo_url} alt="Post photo" class="w-full h-full object-cover" />
+        <.lazy_image
+          id={"post-card-#{@post.id}"}
+          src={thumb_url(@post.photo_url)}
+          alt="Post photo"
+          class="w-full h-full object-cover"
+        />
       </div>
 
       <%!-- Post Details --%>
@@ -306,6 +311,34 @@ defmodule TraysSocialWeb.CoreComponents do
         </div>
       </div>
     </.link>
+    """
+  end
+
+  @doc """
+  Renders an image with lazy loading via IntersectionObserver.
+
+  Requires the `LazyLoad` JS hook to be registered in app.js.
+  The image is not loaded until it enters the viewport.
+
+  ## Examples
+
+      <.lazy_image id="post-1-photo" src="/uploads/abc.jpg" alt="Post photo" class="w-full" />
+  """
+  attr :id, :string, required: true
+  attr :src, :string, required: true
+  attr :alt, :string, default: ""
+  attr :class, :any, default: nil
+
+  def lazy_image(assigns) do
+    ~H"""
+    <img
+      id={@id}
+      src=""
+      data-src={@src}
+      alt={@alt}
+      class={@class}
+      phx-hook="LazyLoad"
+    />
     """
   end
 
@@ -659,6 +692,17 @@ defmodule TraysSocialWeb.CoreComponents do
         {"transition-all ease-in duration-200", "opacity-100 translate-y-0 sm:scale-100",
          "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
     )
+  end
+
+  defp thumb_url(nil), do: nil
+
+  defp thumb_url(url) do
+    ext = Path.extname(url)
+    if ext == "" do
+      url
+    else
+      String.replace_trailing(url, ext, "") <> "_thumb" <> ext
+    end
   end
 
   @doc """

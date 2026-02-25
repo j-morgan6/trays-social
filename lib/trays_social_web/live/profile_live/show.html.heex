@@ -21,8 +21,12 @@
       <%!-- Stats --%>
       <div class="flex gap-8 mb-4">
         <div>
-          <span class="font-semibold"><%= @post_count %></span>
-          <span class="text-gray-600"><%= if @post_count == 1, do: "post", else: "posts" %></span>
+          <%= if @loading do %>
+            <.loading_skeleton type="text" class="w-16 h-4" />
+          <% else %>
+            <span class="font-semibold"><%= @post_count %></span>
+            <span class="text-base-content/60"><%= if @post_count == 1, do: "post", else: "posts" %></span>
+          <% end %>
         </div>
       </div>
 
@@ -36,25 +40,34 @@
   </div>
 
   <%!-- Posts Grid --%>
-  <%= if Enum.empty?(@posts) do %>
-    <.empty_state message="No posts yet">
-      <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @user.id do %>
-        <.button href={~p"/posts/new"} variant="primary">
-          Share your first post
-        </.button>
-      <% end %>
-    </.empty_state>
-  <% else %>
+  <%= if @loading do %>
     <div class="grid grid-cols-3 gap-1">
-      <%= for post <- @posts do %>
-        <.link href={~p"/posts/#{post.id}"} class="aspect-square overflow-hidden">
-          <img
-            src={post.photo_url}
-            alt={post.caption}
-            class="w-full h-full object-cover hover:opacity-90 transition-opacity"
-          />
-        </.link>
+      <%= for _ <- 1..9 do %>
+        <.loading_skeleton type="card" class="aspect-square rounded-none" />
       <% end %>
     </div>
+  <% else %>
+    <%= if Enum.empty?(@posts) do %>
+      <.empty_state message="No posts yet">
+        <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @user.id do %>
+          <.button href={~p"/posts/new"} variant="primary">
+            Share your first post
+          </.button>
+        <% end %>
+      </.empty_state>
+    <% else %>
+      <div class="grid grid-cols-3 gap-1">
+        <%= for post <- @posts do %>
+          <.link href={~p"/posts/#{post.id}"} class="aspect-square overflow-hidden block animate-fade-in">
+            <.lazy_image
+              id={"profile-post-#{post.id}"}
+              src={TraysSocial.Uploads.ImageProcessor.thumb_url(post.photo_url)}
+              alt={post.caption}
+              class="w-full h-full object-cover hover:opacity-90 transition-opacity"
+            />
+          </.link>
+        <% end %>
+      </div>
+    <% end %>
   <% end %>
 </div>

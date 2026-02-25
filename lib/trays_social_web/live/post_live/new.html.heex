@@ -10,76 +10,105 @@
     phx-change="validate"
     phx-submit="save"
   >
-      <%!-- Photo Upload --%>
-      <div>
-        <label class="block text-sm font-semibold mb-2">
-          Photo
-        </label>
-        <div
-          class="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10"
-          phx-drop-target={@uploads.photo.ref}
-        >
-          <div class="text-center">
-            <%= if @uploaded_photo_url do %>
-              <img src={@uploaded_photo_url} class="mx-auto h-48 w-auto" />
-            <% else %>
-              <svg
-                class="mx-auto h-12 w-12 text-gray-300"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              <div class="mt-4 text-sm text-gray-600">
-                <label
-                  for={@uploads.photo.ref}
-                  class="relative cursor-pointer rounded-md bg-white font-semibold text-brand hover:text-brand-dark"
-                >
-                  <span>Upload a photo</span>
-                  <.live_file_input upload={@uploads.photo} class="sr-only" />
-                </label>
-                <p class="pl-1">or drag and drop</p>
-              </div>
-              <p class="text-xs text-gray-600">PNG, JPG, HEIC up to 10MB</p>
-            <% end %>
-          </div>
-        </div>
+    <%!-- Photo Upload --%>
+    <div class="mb-4">
+      <label class="block text-sm font-semibold mb-2">Photo</label>
 
-        <%!-- Upload Errors --%>
-        <%= for entry <- @uploads.photo.entries do %>
-          <div class="mt-2">
-            <div class="text-sm text-gray-600">
-              <%= entry.client_name %> - <%= trunc(entry.progress) %>%
-            </div>
-            <%= for err <- upload_errors(@uploads.photo, entry) do %>
-              <p class="text-sm text-red-600">
-                <%= error_to_string(err) %>
-              </p>
+      <div
+        id="upload-drop-zone"
+        class="rounded-xl border-2 border-dashed border-base-300 overflow-hidden transition-colors duration-200 phx-drop-target:border-primary phx-drop-target:bg-primary/5"
+        phx-drop-target={@uploads.photo.ref}
+      >
+        <%= if entry = List.first(@uploads.photo.entries) do %>
+          <%!-- Preview with progress ring overlay --%>
+          <div class="relative">
+            <.live_img_preview entry={entry} class="w-full aspect-square object-cover" />
+
+            <%!-- Progress ring — shown while uploading --%>
+            <%= if entry.progress > 0 && entry.progress < 100 do %>
+              <div class="absolute inset-0 flex items-center justify-center bg-black/40">
+                <div class="relative flex items-center justify-center">
+                  <svg class="w-20 h-20 -rotate-90" viewBox="0 0 44 44">
+                    <circle
+                      cx="22" cy="22" r="19"
+                      fill="none"
+                      stroke="white"
+                      stroke-opacity="0.25"
+                      stroke-width="3"
+                    />
+                    <circle
+                      cx="22" cy="22" r="19"
+                      fill="none"
+                      stroke="white"
+                      stroke-width="3"
+                      stroke-linecap="round"
+                      stroke-dasharray="119.38"
+                      stroke-dashoffset={119.38 * (1 - entry.progress / 100)}
+                      style="transition: stroke-dashoffset 0.3s ease"
+                    />
+                  </svg>
+                  <span class="absolute text-white text-sm font-bold">
+                    <%= trunc(entry.progress) %>%
+                  </span>
+                </div>
+              </div>
             <% end %>
+
+            <%!-- Cancel button --%>
+            <button
+              type="button"
+              class="absolute top-2 right-2 btn btn-circle btn-sm bg-black/50 hover:bg-black/70 border-0 text-white"
+              phx-click="cancel-upload"
+              phx-value-ref={entry.ref}
+            >
+              <.icon name="hero-x-mark" class="size-4" />
+            </button>
           </div>
+
+        <% else %>
+          <%!-- Empty drop zone --%>
+          <label
+            for={@uploads.photo.ref}
+            class="flex flex-col items-center justify-center py-14 px-6 text-center cursor-pointer"
+          >
+            <div class="w-16 h-16 rounded-full bg-base-200 flex items-center justify-center mb-4">
+              <.icon name="hero-camera" class="size-8 text-base-content/40" />
+            </div>
+            <p class="font-medium text-base-content">Drop your photo here</p>
+            <p class="text-sm text-base-content/50 mt-1">or click to browse</p>
+            <p class="text-xs text-base-content/40 mt-3">PNG, JPG, HEIC up to 10MB</p>
+            <.live_file_input upload={@uploads.photo} class="sr-only" />
+          </label>
         <% end %>
       </div>
 
-      <.input
-        field={@changeset[:caption]}
-        type="textarea"
-        label="Caption"
-        placeholder="Describe your dish..."
-        required
-        phx-debounce="300"
-      />
+      <%!-- Upload errors --%>
+      <%= for entry <- @uploads.photo.entries do %>
+        <%= for err <- upload_errors(@uploads.photo, entry) do %>
+          <p class="mt-2 text-sm text-error flex items-center gap-1">
+            <.icon name="hero-exclamation-circle" class="size-4" />
+            <%= error_to_string(err) %>
+          </p>
+        <% end %>
+      <% end %>
+    </div>
 
-      <.input
-        field={@changeset[:cooking_time_minutes]}
-        type="number"
-        label="Cooking Time (minutes)"
-        required
-        min="1"
-      />
+    <.input
+      field={@changeset[:caption]}
+      type="textarea"
+      label="Caption"
+      placeholder="Describe your dish..."
+      required
+      phx-debounce="300"
+    />
+
+    <.input
+      field={@changeset[:cooking_time_minutes]}
+      type="number"
+      label="Cooking Time (minutes)"
+      required
+      min="1"
+    />
 
     <div class="mt-6">
       <.button phx-disable-with="Creating..." class="w-full">

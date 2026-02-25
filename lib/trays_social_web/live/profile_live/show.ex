@@ -16,17 +16,25 @@ defmodule TraysSocialWeb.ProfileLive.Show do
          |> push_navigate(to: ~p"/")}
 
       user ->
-        posts = Posts.list_posts_by_user(user.id)
-        post_count = length(posts)
+        if connected?(socket) do
+          posts = Posts.list_posts_by_user(user.id)
 
-        socket =
-          socket
-          |> assign(:page_title, "@#{user.username}")
-          |> assign(:user, user)
-          |> assign(:posts, posts)
-          |> assign(:post_count, post_count)
-
-        {:ok, socket}
+          {:ok,
+           socket
+           |> assign(:page_title, "@#{user.username}")
+           |> assign(:user, user)
+           |> assign(:posts, posts)
+           |> assign(:post_count, length(posts))
+           |> assign(:loading, false)}
+        else
+          {:ok,
+           socket
+           |> assign(:page_title, "@#{user.username}")
+           |> assign(:user, user)
+           |> assign(:posts, [])
+           |> assign(:post_count, 0)
+           |> assign(:loading, true)}
+        end
     end
   end
 end

@@ -154,4 +154,28 @@
   .gap-lg { gap: 1.5rem; }
   .gap-xl { gap: 2rem; }
   .gap-2xl { gap: 3rem; }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.25s ease-out both;
+  }
+}
+
+/* ===== LAZY IMAGE FADE-IN ===== */
+[phx-hook="LazyLoad"] {
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+[phx-hook="LazyLoad"].lazy-loaded {
+  opacity: 1;
+}
+
+/* ===== PAGE TRANSITION ===== */
+main {
+  animation: fade-in 0.2s ease-out both;
 }

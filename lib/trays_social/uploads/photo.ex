@@ -31,6 +31,8 @@ defmodule TraysSocial.Uploads.Photo do
       case File.cp(upload.path, full_path) do
         :ok ->
           public_url = "/uploads/#{destination}"
+          # Generate size variants — best effort, don't fail upload if processing fails
+          TraysSocial.Uploads.ImageProcessor.process(public_url)
           {:ok, public_url}
 
         {:error, reason} ->

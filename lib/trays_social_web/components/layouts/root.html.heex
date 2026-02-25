@@ -45,13 +45,13 @@
         <div class="navbar-center hidden md:flex">
           <ul class="menu menu-horizontal px-1 gap-1">
             <li>
-              <.link href={~p"/"} class="font-medium">
+              <.link href={~p"/"} class="font-medium transition-colors duration-150">
                 Feed
               </.link>
             </li>
             <%= if @current_scope do %>
               <li>
-                <.link href={~p"/@#{@current_scope.user.username}"} class="font-medium">
+                <.link href={~p"/@#{@current_scope.user.username}"} class="font-medium transition-colors duration-150">
                   Profile
                 </.link>
               </li>

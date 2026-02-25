@@ -6,25 +6,53 @@
     </.header>
 
     <%= if assigns[:current_scope] && @current_scope.user do %>
-      <.link href={~p"/posts/new"} class="text-brand hover:underline">
-        Create Post
-      </.link>
+      <.button href={~p"/posts/new"} variant="primary">
+        Share something
+      </.button>
     <% end %>
   </div>
 
-  <%= if Enum.empty?(@posts) do %>
-    <.empty_state message="No posts yet. Be the first to share something!">
-      <%= if assigns[:current_scope] && @current_scope.user do %>
-        <.button href={~p"/posts/new"} variant="primary">
-          Create your first post
-        </.button>
-      <% end %>
-    </.empty_state>
-  <% else %>
+  <%= if @loading do %>
+    <%!-- Skeleton grid while posts load --%>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <%= for post <- @posts do %>
-        <.post_card post={post} />
+      <%= for _ <- 1..6 do %>
+        <div class="card bg-base-100 shadow-md overflow-hidden">
+          <div class="px-4 pt-4 pb-3 flex items-center gap-3">
+            <.loading_skeleton type="avatar" />
+            <div class="flex-1 flex flex-col gap-2">
+              <.loading_skeleton type="text" class="w-24 h-3" />
+              <.loading_skeleton type="text" class="w-16 h-2" />
+            </div>
+          </div>
+          <.loading_skeleton type="card" class="h-48 rounded-none" />
+          <div class="p-4 flex flex-col gap-2">
+            <.loading_skeleton type="text" />
+            <.loading_skeleton type="text" class="w-3/4" />
+          </div>
+        </div>
       <% end %>
     </div>
+  <% else %>
+    <%= if Enum.empty?(@posts) do %>
+      <.empty_state message="Nothing here yet — be the first to post something delicious!">
+        <%= if assigns[:current_scope] && @current_scope.user do %>
+          <.button href={~p"/posts/new"} variant="primary">
+            Create your first post
+          </.button>
+        <% else %>
+          <.button href={~p"/users/log-in"} variant="primary">
+            Log in to post
+          </.button>
+        <% end %>
+      </.empty_state>
+    <% else %>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <%= for post <- @posts do %>
+          <div class="animate-fade-in">
+            <.post_card post={post} />
+          </div>
+        <% end %>
+      </div>
+    <% end %>
   <% end %>
 </div>
