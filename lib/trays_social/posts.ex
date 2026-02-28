@@ -6,7 +6,7 @@ defmodule TraysSocial.Posts do
   import Ecto.Query, warn: false
   alias TraysSocial.Repo
 
-  alias TraysSocial.Posts.{Post, Ingredient, Tool, CookingStep, PostTag}
+  alias TraysSocial.Posts.{Post, Ingredient, Tool, CookingStep, PostTag, PostPhoto}
 
   @doc """
   Returns the list of posts, excluding soft deleted posts.
@@ -21,7 +21,7 @@ defmodule TraysSocial.Posts do
     Post
     |> where([p], is_nil(p.deleted_at))
     |> order_by([p], desc: p.inserted_at)
-    |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags])
+    |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags, :post_photos])
     |> Repo.all()
   end
 
@@ -59,7 +59,7 @@ defmodule TraysSocial.Posts do
   def get_post!(id) do
     Post
     |> where([p], is_nil(p.deleted_at))
-    |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags])
+    |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags, :post_photos])
     |> Repo.get!(id)
   end
 
@@ -134,5 +134,6 @@ defmodule TraysSocial.Posts do
     |> Ecto.Changeset.cast_assoc(:tools, with: &Tool.changeset/2)
     |> Ecto.Changeset.cast_assoc(:cooking_steps, with: &CookingStep.changeset/2)
     |> Ecto.Changeset.cast_assoc(:post_tags, with: &PostTag.changeset/2)
+    |> Ecto.Changeset.cast_assoc(:post_photos, with: &PostPhoto.changeset/2)
   end
 end

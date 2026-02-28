@@ -16,6 +16,7 @@ defmodule TraysSocial.Posts.Post do
     has_many :tools, TraysSocial.Posts.Tool
     has_many :cooking_steps, TraysSocial.Posts.CookingStep
     has_many :post_tags, TraysSocial.Posts.PostTag
+    has_many :post_photos, TraysSocial.Posts.PostPhoto, preload_order: [asc: :position]
 
     timestamps(type: :utc_datetime)
   end

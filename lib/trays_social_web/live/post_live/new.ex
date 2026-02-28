@@ -138,9 +138,15 @@ defmodule TraysSocialWeb.PostLive.New do
 
     case uploaded_urls do
       [first_url | _] ->
+        post_photos =
+          uploaded_urls
+          |> Enum.with_index()
+          |> Enum.map(fn {url, idx} -> %{"url" => url, "position" => idx} end)
+
         post_params =
           post_params
           |> Map.put("photo_url", first_url)
+          |> Map.put("post_photos", post_photos)
           |> parse_tags()
 
         create_post(socket, post_params)

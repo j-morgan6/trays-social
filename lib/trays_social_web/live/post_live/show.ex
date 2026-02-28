@@ -13,8 +13,35 @@ defmodule TraysSocialWeb.PostLive.Show do
       socket
       |> assign(:page_title, "Post")
       |> assign(:post, post)
+      |> assign(:photo_index, 0)
 
     {:ok, socket}
+  end
+
+  @impl true
+  def handle_event("next-photo", _, socket) do
+    post = socket.assigns.post
+    count = photo_count(post)
+
+    if count > 1 do
+      next = rem(socket.assigns.photo_index + 1, count)
+      {:noreply, assign(socket, :photo_index, next)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("prev-photo", _, socket) do
+    post = socket.assigns.post
+    count = photo_count(post)
+
+    if count > 1 do
+      prev = rem(socket.assigns.photo_index - 1 + count, count)
+      {:noreply, assign(socket, :photo_index, prev)}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
@@ -40,6 +67,14 @@ defmodule TraysSocialWeb.PostLive.Show do
       {:noreply,
        socket
        |> put_flash(:error, "You are not authorized to delete this post")}
+    end
+  end
+
+  defp photo_count(post) do
+    if Ecto.assoc_loaded?(post.post_photos) && !Enum.empty?(post.post_photos) do
+      length(post.post_photos)
+    else
+      1
     end
   end
 end

@@ -77,14 +77,50 @@
               </.link>
             </div>
 
-            <%!-- Photo with metadata overlay --%>
+            <%!-- Photo carousel --%>
+            <% photos = if Ecto.assoc_loaded?(post.post_photos) && !Enum.empty?(post.post_photos),
+                          do: Enum.sort_by(post.post_photos, & &1.position),
+                          else: [%{url: post.photo_url}] %>
+            <% photo_count = length(photos) %>
+            <% current_idx = Map.get(@photo_indices, post.id, 0) %>
+            <% current_photo = Enum.at(photos, current_idx) %>
             <div class="relative w-full aspect-square bg-base-200">
               <.lazy_image
-                id={"feed-post-#{post.id}"}
-                src={post.photo_url}
+                id={"feed-post-#{post.id}-#{current_idx}"}
+                src={current_photo.url}
                 alt="Post photo"
                 class="w-full h-full object-cover"
               />
+
+              <%!-- Carousel arrows (only when multiple photos) --%>
+              <%= if photo_count > 1 do %>
+                <button
+                  type="button"
+                  class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors"
+                  phx-click="prev-photo"
+                  phx-value-post-id={post.id}
+                >
+                  <.icon name="hero-chevron-left" class="size-4" />
+                </button>
+                <button
+                  type="button"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1.5 backdrop-blur-sm transition-colors"
+                  phx-click="next-photo"
+                  phx-value-post-id={post.id}
+                >
+                  <.icon name="hero-chevron-right" class="size-4" />
+                </button>
+
+                <%!-- Dot indicators --%>
+                <div class="absolute top-2 inset-x-0 flex justify-center gap-1">
+                  <%= for idx <- 0..(photo_count - 1) do %>
+                    <div class={[
+                      "w-1.5 h-1.5 rounded-full transition-all",
+                      if(idx == current_idx, do: "bg-white scale-125", else: "bg-white/50")
+                    ]} />
+                  <% end %>
+                </div>
+              <% end %>
 
               <%!-- Gradient + chips overlaid on bottom of photo --%>
               <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pt-8 pb-3 px-3 flex items-end gap-2">

@@ -15,7 +15,7 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
       assert html =~ post.user.username
       assert html =~ post.caption
       assert html =~ "#{post.cooking_time_minutes} minutes"
-      assert html =~ TraysSocial.Uploads.ImageProcessor.large_url(post.photo_url)
+      assert html =~ post.photo_url
     end
 
     test "shows delete button for post owner", %{conn: conn} do

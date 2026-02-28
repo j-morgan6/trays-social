@@ -17,13 +17,51 @@
     <% end %>
   </div>
 
-  <%!-- Photo --%>
-  <div class="mt-6 overflow-hidden rounded-lg shadow-lg">
+  <%!-- Photo carousel --%>
+  <% photos = if Ecto.assoc_loaded?(@post.post_photos) && !Enum.empty?(@post.post_photos),
+                do: Enum.sort_by(@post.post_photos, & &1.position),
+                else: [%{url: @post.photo_url}] %>
+  <% photo_count = length(photos) %>
+  <% current_photo = Enum.at(photos, @photo_index) %>
+  <div class="mt-6 relative overflow-hidden rounded-2xl shadow-lg bg-base-200 aspect-square">
     <img
-      src={TraysSocial.Uploads.ImageProcessor.large_url(@post.photo_url) || @post.photo_url}
+      src={current_photo.url}
       alt="Post photo"
-      class="w-full hover:scale-105 transition-transform duration-500"
+      class="w-full h-full object-cover"
     />
+
+    <%= if photo_count > 1 do %>
+      <%!-- Arrows --%>
+      <button
+        type="button"
+        class="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 backdrop-blur-sm transition-colors"
+        phx-click="prev-photo"
+      >
+        <.icon name="hero-chevron-left" class="size-5" />
+      </button>
+      <button
+        type="button"
+        class="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-2 backdrop-blur-sm transition-colors"
+        phx-click="next-photo"
+      >
+        <.icon name="hero-chevron-right" class="size-5" />
+      </button>
+
+      <%!-- Dots --%>
+      <div class="absolute bottom-3 inset-x-0 flex justify-center gap-1.5">
+        <%= for idx <- 0..(photo_count - 1) do %>
+          <div class={[
+            "w-2 h-2 rounded-full transition-all",
+            if(idx == @photo_index, do: "bg-white scale-125", else: "bg-white/50")
+          ]} />
+        <% end %>
+      </div>
+
+      <%!-- Counter badge --%>
+      <div class="absolute top-3 right-3 bg-black/50 text-white text-xs font-medium px-2 py-1 rounded-full backdrop-blur-sm">
+        {@photo_index + 1} / {photo_count}
+      </div>
+    <% end %>
   </div>
 
   <%!-- Caption and Cooking Time --%>

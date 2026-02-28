@@ -15,6 +15,64 @@
       phx-change="validate"
       phx-submit="save_profile"
     >
+      <%!-- Profile photo upload --%>
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-base-content mb-3">Profile Photo</label>
+
+        <%!-- Current avatar + change trigger --%>
+        <div class="flex items-center gap-4">
+          <.user_avatar
+            username={@user.username}
+            photo_url={@user.profile_photo_url}
+            size="xl"
+          />
+          <div>
+            <label
+              for={@uploads.profile_photo.ref}
+              class="cursor-pointer text-sm font-medium text-primary hover:underline"
+            >
+              Change photo
+            </label>
+            <p class="text-xs text-base-content/50 mt-0.5">JPG, PNG or HEIC, max 10MB</p>
+          </div>
+        </div>
+
+        <%!-- Hidden file input --%>
+        <.live_file_input upload={@uploads.profile_photo} class="hidden" />
+
+        <%!-- Entry preview --%>
+        <%= for entry <- @uploads.profile_photo.entries do %>
+          <div class="flex items-center gap-3 mt-4 p-3 bg-base-200 rounded-xl">
+            <.live_img_preview entry={entry} class="w-14 h-14 rounded-full object-cover shrink-0" />
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium truncate">{entry.client_name}</p>
+              <div class="w-full bg-base-300 rounded-full h-1 mt-1.5">
+                <div
+                  class="bg-primary h-1 rounded-full transition-all"
+                  style={"width: #{entry.progress}%"}
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              phx-click="cancel-upload"
+              phx-value-ref={entry.ref}
+              class="btn btn-ghost btn-sm btn-square shrink-0"
+            >
+              <.icon name="hero-x-mark" class="size-4" />
+            </button>
+          </div>
+
+          <%= for err <- upload_errors(@uploads.profile_photo, entry) do %>
+            <p class="text-error text-sm mt-1">{error_to_string(err)}</p>
+          <% end %>
+        <% end %>
+
+        <%= for err <- upload_errors(@uploads.profile_photo) do %>
+          <p class="text-error text-sm mt-1">{error_to_string(err)}</p>
+        <% end %>
+      </div>
+
       <.input
         field={f[:username]}
         type="text"
@@ -28,14 +86,6 @@
         type="textarea"
         label="Bio"
         placeholder="Tell us about yourself..."
-        phx-debounce="300"
-      />
-
-      <.input
-        field={f[:profile_photo_url]}
-        type="text"
-        label="Profile Photo URL"
-        placeholder="https://example.com/photo.jpg"
         phx-debounce="300"
       />
 
