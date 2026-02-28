@@ -17,12 +17,28 @@ defmodule TraysSocial.Posts do
       [%Post{}, ...]
 
   """
-  def list_posts do
+  def list_posts(opts \\ []) do
+    limit = Keyword.get(opts, :limit)
+    cursor_id = Keyword.get(opts, :cursor_id)
+    cursor_time = Keyword.get(opts, :cursor_time)
+
     Post
     |> where([p], is_nil(p.deleted_at))
-    |> order_by([p], desc: p.inserted_at)
+    |> cursor_where(cursor_id, cursor_time)
+    |> order_by([p], desc: p.inserted_at, desc: p.id)
+    |> then(fn q -> if limit, do: limit(q, ^limit), else: q end)
     |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags, :post_photos])
     |> Repo.all()
+  end
+
+  defp cursor_where(query, nil, _), do: query
+
+  defp cursor_where(query, cursor_id, cursor_time) do
+    where(
+      query,
+      [p],
+      p.inserted_at < ^cursor_time or (p.inserted_at == ^cursor_time and p.id < ^cursor_id)
+    )
   end
 
   @doc """

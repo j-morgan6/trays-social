@@ -32,7 +32,7 @@
       <% end %>
     </div>
   <% else %>
-    <%= if Enum.empty?(@posts) do %>
+    <%= if @no_posts do %>
       <.empty_state message="Nothing here yet — be the first to post something delicious!">
         <%= if assigns[:current_scope] && @current_scope.user do %>
           <.button href={~p"/posts/new"} variant="primary">
@@ -45,8 +45,9 @@
         <% end %>
       </.empty_state>
     <% else %>
-      <div class="space-y-6">
-        <%= for post <- @posts do %>
+      <%!-- Stream of post cards --%>
+      <div id="posts" phx-update="stream" class="space-y-6">
+        <div :for={{dom_id, post} <- @streams.posts} id={dom_id}>
           <div class="bg-base-100 rounded-2xl overflow-hidden shadow-sm border border-base-200">
 
             <%!-- Author row --%>
@@ -215,14 +216,31 @@
 
             </div>
           </div>
-        <% end %>
+        </div>
       </div>
+
+      <%!-- Infinite scroll sentinel --%>
+      <%= if @has_more do %>
+        <div id="feed-sentinel" phx-hook="InfiniteScroll" class="h-4 mt-6"></div>
+      <% end %>
+
+      <%!-- Loading more indicator --%>
+      <%= if @loading_more do %>
+        <div class="flex justify-center py-6">
+          <.spinner size="md" />
+        </div>
+      <% end %>
+
+      <%!-- End of feed message --%>
+      <%= if !@has_more do %>
+        <p class="text-center text-sm text-base-content/40 py-8">You're all caught up</p>
+      <% end %>
     <% end %>
   <% end %>
 </div>
 
 <%!-- Recipe drawer --%>
-<% selected_post = @selected_post_id && Enum.find(@posts, &(&1.id == @selected_post_id)) %>
+<% selected_post = @selected_post_id && Map.get(@posts_map, @selected_post_id) %>
 <.bottom_drawer
   id="recipe-drawer"
   show={selected_post != nil}

@@ -51,11 +51,28 @@ const LazyLoad = {
   }
 }
 
+const InfiniteScroll = {
+  mounted() {
+    this.observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          this.pushEvent("load-more", {})
+        }
+      })
+    }, { rootMargin: "200px" })
+
+    this.observer.observe(this.el)
+  },
+  destroyed() {
+    if (this.observer) this.observer.disconnect()
+  }
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, LazyLoad},
+  hooks: {...colocatedHooks, LazyLoad, InfiniteScroll},
 })
 
 // Show progress bar on live navigation and form submits
