@@ -1,7 +1,7 @@
-<div class="mx-auto max-w-2xl">
+<div class="mx-auto max-w-2xl pb-12">
   <.header>
     Create New Post
-    <:subtitle>Share your cooking creation with the community</:subtitle>
+    <:subtitle>Share your recipe with the community</:subtitle>
   </.header>
 
   <.form
@@ -10,89 +10,84 @@
     phx-change="validate"
     phx-submit="save"
   >
-    <%!-- Photo Upload --%>
-    <div class="mb-4">
-      <label class="block text-sm font-semibold mb-2">Photo</label>
+    <%!-- Photos --%>
+    <div class="mb-8">
+      <label class="block text-sm font-semibold mb-2">
+        Photos <span class="text-error">*</span>
+      </label>
+
+      <.live_file_input upload={@uploads.photos} class="sr-only" />
 
       <div
-        id="upload-drop-zone"
+        id="photo-drop-zone"
         class="rounded-xl border-2 border-dashed border-base-300 overflow-hidden transition-colors duration-200 phx-drop-target:border-primary phx-drop-target:bg-primary/5"
-        phx-drop-target={@uploads.photo.ref}
+        phx-drop-target={@uploads.photos.ref}
       >
-        <%= if entry = List.first(@uploads.photo.entries) do %>
-          <%!-- Preview with progress ring overlay --%>
-          <div class="relative">
-            <.live_img_preview entry={entry} class="w-full aspect-square object-cover" />
-
-            <%!-- Progress ring — shown while uploading --%>
-            <%= if entry.progress > 0 && entry.progress < 100 do %>
-              <div class="absolute inset-0 flex items-center justify-center bg-black/40">
-                <div class="relative flex items-center justify-center">
-                  <svg class="w-20 h-20 -rotate-90" viewBox="0 0 44 44">
-                    <circle
-                      cx="22" cy="22" r="19"
-                      fill="none"
-                      stroke="white"
-                      stroke-opacity="0.25"
-                      stroke-width="3"
-                    />
-                    <circle
-                      cx="22" cy="22" r="19"
-                      fill="none"
-                      stroke="white"
-                      stroke-width="3"
-                      stroke-linecap="round"
-                      stroke-dasharray="119.38"
-                      stroke-dashoffset={119.38 * (1 - entry.progress / 100)}
-                      style="transition: stroke-dashoffset 0.3s ease"
-                    />
-                  </svg>
-                  <span class="absolute text-white text-sm font-bold">
-                    <%= trunc(entry.progress) %>%
-                  </span>
-                </div>
-              </div>
-            <% end %>
-
-            <%!-- Cancel button --%>
-            <button
-              type="button"
-              class="absolute top-2 right-2 btn btn-circle btn-sm bg-black/50 hover:bg-black/70 border-0 text-white"
-              phx-click="cancel-upload"
-              phx-value-ref={entry.ref}
-            >
-              <.icon name="hero-x-mark" class="size-4" />
-            </button>
-          </div>
-
-        <% else %>
-          <%!-- Empty drop zone --%>
+        <%= if @uploads.photos.entries == [] do %>
           <label
-            for={@uploads.photo.ref}
+            for={@uploads.photos.ref}
             class="flex flex-col items-center justify-center py-14 px-6 text-center cursor-pointer"
           >
             <div class="w-16 h-16 rounded-full bg-base-200 flex items-center justify-center mb-4">
               <.icon name="hero-camera" class="size-8 text-base-content/40" />
             </div>
-            <p class="font-medium text-base-content">Drop your photo here</p>
-            <p class="text-sm text-base-content/50 mt-1">or click to browse</p>
-            <p class="text-xs text-base-content/40 mt-3">PNG, JPG, HEIC up to 10MB</p>
-            <.live_file_input upload={@uploads.photo} class="sr-only" />
+            <p class="font-medium text-base-content">Drop photos here</p>
+            <p class="text-sm text-base-content/50 mt-1">or click to browse — up to 5 photos</p>
+            <p class="text-xs text-base-content/40 mt-3">PNG, JPG, HEIC up to 10MB each</p>
           </label>
+        <% else %>
+          <div class="p-3 grid grid-cols-3 gap-2">
+            <%= for entry <- @uploads.photos.entries do %>
+              <div class="relative aspect-square rounded-lg overflow-hidden bg-base-200">
+                <.live_img_preview entry={entry} class="w-full h-full object-cover" />
+
+                <%= if entry.progress > 0 && entry.progress < 100 do %>
+                  <div class="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <span class="text-white text-sm font-bold"><%= trunc(entry.progress) %>%</span>
+                  </div>
+                <% end %>
+
+                <button
+                  type="button"
+                  class="absolute top-1 right-1 btn btn-circle btn-xs bg-black/50 hover:bg-black/70 border-0 text-white"
+                  phx-click="cancel-upload"
+                  phx-value-ref={entry.ref}
+                >
+                  <.icon name="hero-x-mark" class="size-3" />
+                </button>
+              </div>
+            <% end %>
+
+            <%= if length(@uploads.photos.entries) < 5 do %>
+              <label
+                for={@uploads.photos.ref}
+                class="aspect-square rounded-lg border-2 border-dashed border-base-300 flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+              >
+                <.icon name="hero-plus" class="size-6 text-base-content/40" />
+                <p class="text-xs text-base-content/40 mt-1">Add more</p>
+              </label>
+            <% end %>
+          </div>
         <% end %>
       </div>
 
-      <%!-- Upload errors --%>
-      <%= for entry <- @uploads.photo.entries do %>
-        <%= for err <- upload_errors(@uploads.photo, entry) do %>
+      <%= for entry <- @uploads.photos.entries do %>
+        <%= for err <- upload_errors(@uploads.photos, entry) do %>
           <p class="mt-2 text-sm text-error flex items-center gap-1">
             <.icon name="hero-exclamation-circle" class="size-4" />
-            <%= error_to_string(err) %>
+            <%= entry.client_name %>: <%= error_to_string(err) %>
           </p>
         <% end %>
       <% end %>
+      <%= for err <- upload_errors(@uploads.photos) do %>
+        <p class="mt-2 text-sm text-error flex items-center gap-1">
+          <.icon name="hero-exclamation-circle" class="size-4" />
+          <%= error_to_string(err) %>
+        </p>
+      <% end %>
     </div>
 
+    <%!-- Caption --%>
     <.input
       field={@changeset[:caption]}
       type="textarea"
@@ -102,17 +97,209 @@
       phx-debounce="300"
     />
 
-    <.input
-      field={@changeset[:cooking_time_minutes]}
-      type="number"
-      label="Cooking Time (minutes)"
-      required
-      min="1"
-    />
+    <%!-- Ingredients --%>
+    <div class="mt-8">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h3 class="font-semibold text-base-content">Ingredients <span class="text-error">*</span></h3>
+          <p class="text-xs text-base-content/50">At least one required</p>
+        </div>
+        <button type="button" class="btn btn-sm btn-ghost gap-1" phx-click="add-ingredient">
+          <.icon name="hero-plus" class="size-4" /> Add
+        </button>
+      </div>
 
-    <div class="mt-6">
-      <.button phx-disable-with="Creating..." class="w-full">
-        Create Post
+      <div class="space-y-2">
+        <%= for {row_id, display_idx} <- Enum.with_index(@ingredient_rows) do %>
+          <div class="flex gap-2 items-center">
+            <span class="text-xs font-semibold text-base-content/40 w-5 shrink-0 text-right">
+              <%= display_idx + 1 %>
+            </span>
+            <input
+              type="text"
+              name={"post[ingredients][#{row_id}][name]"}
+              placeholder="Ingredient name"
+              required
+              class="input input-bordered input-sm flex-1 min-w-0"
+            />
+            <input
+              type="text"
+              name={"post[ingredients][#{row_id}][quantity]"}
+              placeholder="Qty"
+              class="input input-bordered input-sm w-20"
+            />
+            <input
+              type="text"
+              name={"post[ingredients][#{row_id}][unit]"}
+              placeholder="Unit"
+              class="input input-bordered input-sm w-20"
+            />
+            <input
+              type="hidden"
+              name={"post[ingredients][#{row_id}][order]"}
+              value={display_idx}
+            />
+            <%= if length(@ingredient_rows) > 1 do %>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm btn-square text-error shrink-0"
+                phx-click="remove-ingredient"
+                phx-value-id={row_id}
+              >
+                <.icon name="hero-trash" class="size-4" />
+              </button>
+            <% else %>
+              <div class="w-8 shrink-0"></div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <%!-- Cooking Steps --%>
+    <div class="mt-8">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h3 class="font-semibold text-base-content">Cooking Steps <span class="text-error">*</span></h3>
+          <p class="text-xs text-base-content/50">At least one required</p>
+        </div>
+        <button type="button" class="btn btn-sm btn-ghost gap-1" phx-click="add-step">
+          <.icon name="hero-plus" class="size-4" /> Add
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <%= for {row_id, display_idx} <- Enum.with_index(@step_rows) do %>
+          <div class="flex gap-2 items-start">
+            <span class="text-xs font-semibold text-base-content/40 w-5 shrink-0 text-right mt-2">
+              <%= display_idx + 1 %>
+            </span>
+            <textarea
+              name={"post[cooking_steps][#{row_id}][description]"}
+              placeholder="Describe this step..."
+              required
+              rows="2"
+              class="textarea textarea-bordered textarea-sm flex-1 min-w-0 resize-none"
+            ></textarea>
+            <input
+              type="hidden"
+              name={"post[cooking_steps][#{row_id}][order]"}
+              value={display_idx}
+            />
+            <%= if length(@step_rows) > 1 do %>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm btn-square text-error shrink-0 mt-1"
+                phx-click="remove-step"
+                phx-value-id={row_id}
+              >
+                <.icon name="hero-trash" class="size-4" />
+              </button>
+            <% else %>
+              <div class="w-8 shrink-0"></div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <%!-- Tools (optional) --%>
+    <div class="mt-8">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h3 class="font-semibold text-base-content">
+            Tools <span class="text-xs font-normal text-base-content/50">(optional)</span>
+          </h3>
+        </div>
+        <button type="button" class="btn btn-sm btn-ghost gap-1" phx-click="add-tool">
+          <.icon name="hero-plus" class="size-4" /> Add
+        </button>
+      </div>
+
+      <%= if @tool_rows == [] do %>
+        <p class="text-sm text-base-content/40 italic">No tools added</p>
+      <% else %>
+        <div class="space-y-2">
+          <%= for {row_id, display_idx} <- Enum.with_index(@tool_rows) do %>
+            <div class="flex gap-2 items-center">
+              <input
+                type="text"
+                name={"post[tools][#{row_id}][name]"}
+                placeholder="e.g. cast iron pan, blender"
+                class="input input-bordered input-sm flex-1 min-w-0"
+              />
+              <input
+                type="hidden"
+                name={"post[tools][#{row_id}][order]"}
+                value={display_idx}
+              />
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm btn-square text-error shrink-0"
+                phx-click="remove-tool"
+                phx-value-id={row_id}
+              >
+                <.icon name="hero-trash" class="size-4" />
+              </button>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <%!-- Metadata --%>
+    <div class="mt-8">
+      <h3 class="font-semibold text-base-content mb-4">Details</h3>
+
+      <div class="grid grid-cols-2 gap-4">
+        <.input
+          field={@changeset[:cooking_time_minutes]}
+          type="number"
+          label="Cooking Time (minutes)"
+          required
+          min="1"
+          phx-debounce="300"
+        />
+        <.input
+          field={@changeset[:servings]}
+          type="number"
+          label="Servings"
+          placeholder="e.g. 4"
+          min="1"
+          phx-debounce="300"
+        />
+      </div>
+
+      <div class="mt-4">
+        <.input
+          field={@changeset[:difficulty]}
+          type="select"
+          label="Difficulty"
+          prompt="Select difficulty"
+          options={[{"Easy", "easy"}, {"Medium", "medium"}, {"Hard", "hard"}]}
+        />
+      </div>
+
+      <div class="mt-4">
+        <label class="block text-sm font-semibold mb-2">
+          Tags
+          <span class="text-xs font-normal text-base-content/50">(optional, comma-separated)</span>
+        </label>
+        <input
+          type="text"
+          name="post[tags_input]"
+          placeholder="pasta, italian, quick dinner"
+          class="input input-bordered w-full"
+          phx-debounce="500"
+        />
+        <p class="mt-1 text-xs text-base-content/40">Separate multiple tags with commas</p>
+      </div>
+    </div>
+
+    <%!-- Submit --%>
+    <div class="mt-10">
+      <.button phx-disable-with="Publishing..." class="w-full btn-lg">
+        Publish Post
       </.button>
     </div>
   </.form>

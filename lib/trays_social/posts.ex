@@ -77,11 +77,7 @@ defmodule TraysSocial.Posts do
   """
   def create_post(attrs \\ %{}) do
     %Post{}
-    |> Post.changeset(attrs)
-    |> Ecto.Changeset.cast_assoc(:ingredients, with: &Ingredient.changeset/2)
-    |> Ecto.Changeset.cast_assoc(:tools, with: &Tool.changeset/2)
-    |> Ecto.Changeset.cast_assoc(:cooking_steps, with: &CookingStep.changeset/2)
-    |> Ecto.Changeset.cast_assoc(:post_tags, with: &PostTag.changeset/2)
+    |> change_post(attrs)
     |> Repo.insert()
   end
 
@@ -122,7 +118,8 @@ defmodule TraysSocial.Posts do
   end
 
   @doc """
-  Returns an `%Ecto.Changeset{}` for tracking post changes.
+  Returns an `%Ecto.Changeset{}` for tracking post changes, including
+  nested association changesets for ingredients, tools, cooking steps, and tags.
 
   ## Examples
 
@@ -131,6 +128,11 @@ defmodule TraysSocial.Posts do
 
   """
   def change_post(%Post{} = post, attrs \\ %{}) do
-    Post.changeset(post, attrs)
+    post
+    |> Post.changeset(attrs)
+    |> Ecto.Changeset.cast_assoc(:ingredients, with: &Ingredient.changeset/2)
+    |> Ecto.Changeset.cast_assoc(:tools, with: &Tool.changeset/2)
+    |> Ecto.Changeset.cast_assoc(:cooking_steps, with: &CookingStep.changeset/2)
+    |> Ecto.Changeset.cast_assoc(:post_tags, with: &PostTag.changeset/2)
   end
 end

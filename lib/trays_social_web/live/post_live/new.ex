@@ -15,9 +15,15 @@ defmodule TraysSocialWeb.PostLive.New do
       socket
       |> assign(:page_title, "Create Post")
       |> assign(:changeset, changeset)
-      |> allow_upload(:photo,
+      |> assign(:ingredient_rows, [0])
+      |> assign(:next_ingredient_id, 1)
+      |> assign(:step_rows, [0])
+      |> assign(:next_step_id, 1)
+      |> assign(:tool_rows, [])
+      |> assign(:next_tool_id, 0)
+      |> allow_upload(:photos,
         accept: ~w(.jpg .jpeg .png .heic),
-        max_entries: 1,
+        max_entries: 5,
         max_file_size: Photo.max_file_size()
       )
 
@@ -35,28 +41,89 @@ defmodule TraysSocialWeb.PostLive.New do
   end
 
   @impl true
+  def handle_event("add-ingredient", _, socket) do
+    id = socket.assigns.next_ingredient_id
+
+    socket =
+      socket
+      |> update(:ingredient_rows, &(&1 ++ [id]))
+      |> assign(:next_ingredient_id, id + 1)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("remove-ingredient", %{"id" => id_str}, socket) do
+    id = String.to_integer(id_str)
+    socket = update(socket, :ingredient_rows, &Enum.reject(&1, fn row_id -> row_id == id end))
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("add-step", _, socket) do
+    id = socket.assigns.next_step_id
+
+    socket =
+      socket
+      |> update(:step_rows, &(&1 ++ [id]))
+      |> assign(:next_step_id, id + 1)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("remove-step", %{"id" => id_str}, socket) do
+    id = String.to_integer(id_str)
+    socket = update(socket, :step_rows, &Enum.reject(&1, fn row_id -> row_id == id end))
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("add-tool", _, socket) do
+    id = socket.assigns.next_tool_id
+
+    socket =
+      socket
+      |> update(:tool_rows, &(&1 ++ [id]))
+      |> assign(:next_tool_id, id + 1)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("remove-tool", %{"id" => id_str}, socket) do
+    id = String.to_integer(id_str)
+    socket = update(socket, :tool_rows, &Enum.reject(&1, fn row_id -> row_id == id end))
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("cancel-upload", %{"ref" => ref}, socket) do
-    {:noreply, cancel_upload(socket, :photo, ref)}
+    {:noreply, cancel_upload(socket, :photos, ref)}
   end
 
   @impl true
   def handle_event("save", %{"post" => post_params}, socket) do
-    case upload_photo(socket) do
-      {:ok, photo_url} ->
-        post_params = Map.put(post_params, "photo_url", photo_url)
-        create_post(socket, post_params)
+    case socket.assigns.uploads.photos.entries do
+      [] ->
+        changeset =
+          %Post{}
+          |> Posts.change_post(post_params)
+          |> Map.put(:action, :validate)
 
-      {:error, :no_file} ->
         {:noreply,
          socket
-         |> put_flash(:error, "Please upload a photo")
-         |> assign(:changeset, Posts.change_post(%Post{}, post_params))}
+         |> put_flash(:error, "Please upload at least one photo")
+         |> assign(:changeset, changeset)}
+
+      _ ->
+        upload_and_create(socket, post_params)
     end
   end
 
-  defp upload_photo(socket) do
-    uploaded_files =
-      consume_uploaded_entries(socket, :photo, fn %{path: path}, entry ->
+  defp upload_and_create(socket, post_params) do
+    uploaded_urls =
+      consume_uploaded_entries(socket, :photos, fn %{path: path}, entry ->
         upload = %Plug.Upload{
           path: path,
           filename: entry.client_name,
@@ -69,10 +136,31 @@ defmodule TraysSocialWeb.PostLive.New do
         end
       end)
 
-    case uploaded_files do
-      [url | _] -> {:ok, url}
-      [] -> {:error, :no_file}
+    case uploaded_urls do
+      [first_url | _] ->
+        post_params =
+          post_params
+          |> Map.put("photo_url", first_url)
+          |> parse_tags()
+
+        create_post(socket, post_params)
+
+      [] ->
+        {:noreply, put_flash(socket, :error, "Photo upload failed. Please try again.")}
     end
+  end
+
+  defp parse_tags(post_params) do
+    tags_input = post_params["tags_input"] || ""
+
+    tags =
+      tags_input
+      |> String.split(",")
+      |> Enum.map(&String.trim/1)
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.map(&%{"tag" => &1})
+
+    Map.put(post_params, "post_tags", tags)
   end
 
   defp create_post(socket, post_params) do
@@ -98,5 +186,6 @@ defmodule TraysSocialWeb.PostLive.New do
 
   defp error_to_string(:too_large), do: "File is too large (max 10MB)"
   defp error_to_string(:not_accepted), do: "File type not accepted"
+  defp error_to_string(:too_many_files), do: "Too many files selected"
   defp error_to_string(err), do: "Upload error: #{inspect(err)}"
 end
