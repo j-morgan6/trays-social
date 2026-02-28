@@ -97,6 +97,101 @@
     </.form>
   </div>
 
+  <%!-- Email Section --%>
+  <div class="mt-12 pt-8 border-t">
+    <h2 class="text-xl font-bold mb-4">Email Address</h2>
+    <p class="text-sm text-base-content/60 mb-4">Current email: <span class="font-medium text-base-content">{@user.email}</span></p>
+
+    <.form
+      :let={f}
+      for={@email_changeset}
+      id="email-form"
+      phx-submit="change_email"
+    >
+      <.input
+        field={f[:email]}
+        type="email"
+        label="New Email"
+        required
+        phx-debounce="300"
+      />
+
+      <div class="mt-4">
+        <label class="label">
+          <span class="label-text">Current Password</span>
+        </label>
+        <input
+          type="password"
+          name="user[current_password]"
+          class="input input-bordered w-full"
+          required
+          autocomplete="current-password"
+        />
+        <%= if @email_form_error do %>
+          <p class="text-error text-sm mt-1">{@email_form_error}</p>
+        <% end %>
+      </div>
+
+      <div class="mt-6">
+        <.button phx-disable-with="Sending...">
+          Change Email
+        </.button>
+      </div>
+    </.form>
+  </div>
+
+  <%!-- Password Section --%>
+  <div class="mt-12 pt-8 border-t">
+    <h2 class="text-xl font-bold mb-4">Change Password</h2>
+
+    <.form
+      :let={f}
+      for={@password_changeset}
+      id="password-form"
+      phx-submit="change_password"
+    >
+      <div class="mb-4">
+        <label class="label">
+          <span class="label-text">Current Password</span>
+        </label>
+        <input
+          type="password"
+          name="user[current_password]"
+          class="input input-bordered w-full"
+          required
+          autocomplete="current-password"
+        />
+        <%= if @password_form_error do %>
+          <p class="text-error text-sm mt-1">{@password_form_error}</p>
+        <% end %>
+      </div>
+
+      <.input
+        field={f[:password]}
+        type="password"
+        label="New Password"
+        required
+        phx-debounce="blur"
+        autocomplete="new-password"
+      />
+
+      <.input
+        field={f[:password_confirmation]}
+        type="password"
+        label="Confirm New Password"
+        required
+        phx-debounce="blur"
+        autocomplete="new-password"
+      />
+
+      <div class="mt-6">
+        <.button phx-disable-with="Updating...">
+          Update Password
+        </.button>
+      </div>
+    </.form>
+  </div>
+
   <%!-- Account Section --%>
   <div class="mt-12 pt-8 border-t">
     <h2 class="text-xl font-bold mb-4 text-red-600">Danger Zone</h2>

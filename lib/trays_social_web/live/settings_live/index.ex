@@ -2,6 +2,7 @@ defmodule TraysSocialWeb.SettingsLive.Index do
   use TraysSocialWeb, :live_view
 
   alias TraysSocial.Accounts
+  alias TraysSocial.Accounts.User
   alias TraysSocial.Uploads.{Photo, ImageProcessor}
 
   on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
@@ -10,12 +11,18 @@ defmodule TraysSocialWeb.SettingsLive.Index do
   def mount(_params, _session, socket) do
     user = socket.assigns.current_scope.user
     changeset = Accounts.change_user_profile(user)
+    email_changeset = Accounts.change_user_email(user)
+    password_changeset = Accounts.change_user_password(user)
 
     socket =
       socket
       |> assign(:page_title, "Settings")
       |> assign(:user, user)
       |> assign(:changeset, changeset)
+      |> assign(:email_changeset, email_changeset)
+      |> assign(:password_changeset, password_changeset)
+      |> assign(:email_form_error, nil)
+      |> assign(:password_form_error, nil)
       |> allow_upload(:profile_photo,
         accept: ~w(.jpg .jpeg .png .heic),
         max_entries: 1,
@@ -62,6 +69,66 @@ defmodule TraysSocialWeb.SettingsLive.Index do
 
       {:error, _reason} ->
         {:noreply, put_flash(socket, :error, "Photo upload failed. Please try again.")}
+    end
+  end
+
+  @impl true
+  def handle_event("change_email", %{"user" => %{"current_password" => current_password, "email" => email}}, socket) do
+    user = socket.assigns.user
+
+    if User.valid_password?(user, current_password) do
+      email_changeset =
+        user
+        |> Accounts.change_user_email(%{"email" => email})
+        |> Map.put(:action, :validate)
+
+      if email_changeset.valid? do
+        user_with_new_email = Ecto.Changeset.apply_changes(email_changeset)
+
+        Accounts.deliver_user_update_email_instructions(
+          user_with_new_email,
+          user.email,
+          fn token -> url(~p"/users/settings/confirm-email/#{token}") end
+        )
+
+        {:noreply,
+         socket
+         |> assign(:email_form_error, nil)
+         |> assign(:email_changeset, Accounts.change_user_email(user))
+         |> put_flash(:info, "A link to confirm your email change has been sent to #{email}.")}
+      else
+        {:noreply,
+         socket
+         |> assign(:email_form_error, nil)
+         |> assign(:email_changeset, email_changeset)}
+      end
+    else
+      {:noreply, assign(socket, :email_form_error, "Current password is incorrect.")}
+    end
+  end
+
+  @impl true
+  def handle_event("change_password", %{"user" => user_params}, socket) do
+    user = socket.assigns.user
+    current_password = Map.get(user_params, "current_password", "")
+
+    if User.valid_password?(user, current_password) do
+      case Accounts.update_user_password(user, user_params) do
+        {:ok, _user} ->
+          {:noreply,
+           socket
+           |> assign(:password_form_error, nil)
+           |> put_flash(:info, "Password updated successfully. Please log in again.")
+           |> push_navigate(to: ~p"/users/log-in")}
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply,
+           socket
+           |> assign(:password_form_error, nil)
+           |> assign(:password_changeset, changeset)}
+      end
+    else
+      {:noreply, assign(socket, :password_form_error, "Current password is incorrect.")}
     end
   end
 
