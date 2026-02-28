@@ -15,18 +15,31 @@ defmodule TraysSocialWeb.FeedLive.Index do
        socket
        |> assign(:page_title, "Feed")
        |> assign(:posts, posts)
+       |> assign(:selected_post_id, nil)
        |> assign(:loading, false)}
     else
       {:ok,
        socket
        |> assign(:page_title, "Feed")
        |> assign(:posts, [])
+       |> assign(:selected_post_id, nil)
        |> assign(:loading, true)}
     end
   end
 
   @impl true
+  def handle_event("open-drawer", %{"id" => post_id_str}, socket) do
+    {:noreply, assign(socket, :selected_post_id, String.to_integer(post_id_str))}
+  end
+
+  @impl true
+  def handle_event("close-drawer", _, socket) do
+    {:noreply, assign(socket, :selected_post_id, nil)}
+  end
+
+  @impl true
   def handle_info({:new_post, post}, socket) do
-    {:noreply, assign(socket, :posts, [post | socket.assigns.posts])}
+    full_post = Posts.get_post!(post.id)
+    {:noreply, assign(socket, :posts, [full_post | socket.assigns.posts])}
   end
 end

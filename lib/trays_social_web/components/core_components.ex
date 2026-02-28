@@ -315,6 +315,63 @@ defmodule TraysSocialWeb.CoreComponents do
   end
 
   @doc """
+  Renders a bottom drawer overlay with a backdrop.
+
+  Tapping the backdrop fires the `on_close` event. A drag handle and close
+  button are included automatically.
+
+  ## Examples
+
+      <.bottom_drawer id="recipe-drawer" show={@selected_post_id != nil} on_close="close-drawer">
+        <:header>Recipe</:header>
+        <p>Content goes here</p>
+      </.bottom_drawer>
+  """
+  attr :id, :string, required: true
+  attr :show, :boolean, required: true
+  attr :on_close, :string, required: true
+  slot :header
+  slot :inner_block, required: true
+
+  def bottom_drawer(assigns) do
+    ~H"""
+    <%= if @show do %>
+      <%!-- Backdrop --%>
+      <div
+        class="fixed inset-0 z-40 bg-black/50"
+        phx-click={@on_close}
+        aria-label="Close drawer"
+      />
+      <%!-- Drawer panel --%>
+      <div
+        id={@id}
+        class="fixed bottom-0 inset-x-0 z-50 bg-base-100 rounded-t-2xl shadow-2xl max-h-[75vh] flex flex-col"
+        role="dialog"
+        aria-modal="true"
+      >
+        <%!-- Drag handle --%>
+        <div class="flex justify-center pt-3 pb-1 shrink-0">
+          <div class="w-12 h-1 bg-base-300 rounded-full" />
+        </div>
+        <%!-- Header --%>
+        <%= if @header != [] do %>
+          <div class="flex items-center justify-between px-5 py-3 border-b border-base-200 shrink-0">
+            <span class="font-semibold">{render_slot(@header)}</span>
+            <button type="button" phx-click={@on_close} class="btn btn-ghost btn-sm btn-square">
+              <.icon name="hero-x-mark" class="size-5" />
+            </button>
+          </div>
+        <% end %>
+        <%!-- Scrollable content --%>
+        <div class="overflow-y-auto flex-1 overscroll-contain">
+          {render_slot(@inner_block)}
+        </div>
+      </div>
+    <% end %>
+    """
+  end
+
+  @doc """
   Renders an image with lazy loading via IntersectionObserver.
 
   Requires the `LazyLoad` JS hook to be registered in app.js.

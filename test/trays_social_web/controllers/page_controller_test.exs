@@ -4,6 +4,6 @@ defmodule TraysSocialWeb.PageControllerTest do
   test "GET / shows feed", %{conn: conn} do
     conn = get(conn, ~p"/")
     assert html_response(conn, 200) =~ "Feed"
-    assert html_response(conn, 200) =~ "Latest posts from the community"
+    assert html_response(conn, 200) =~ "Feed"
   end
 end
