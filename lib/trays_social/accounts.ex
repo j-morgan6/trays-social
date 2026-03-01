@@ -371,9 +371,24 @@ defmodule TraysSocial.Accounts do
   Follows a user. No-op if already following.
   """
   def follow_user(follower, followed) when follower.id != followed.id do
-    %Follow{}
-    |> Follow.changeset(%{follower_id: follower.id, followed_id: followed.id})
-    |> Repo.insert(on_conflict: :nothing, conflict_target: [:follower_id, :followed_id])
+    result =
+      %Follow{}
+      |> Follow.changeset(%{follower_id: follower.id, followed_id: followed.id})
+      |> Repo.insert(on_conflict: :nothing, conflict_target: [:follower_id, :followed_id])
+
+    case result do
+      {:ok, follow} when not is_nil(follow.id) ->
+        TraysSocial.Notifications.create_notification(%{
+          type: "follow",
+          user_id: followed.id,
+          actor_id: follower.id
+        })
+
+        {:ok, follow}
+
+      other ->
+        other
+    end
   end
 
   def follow_user(_follower, _followed), do: {:error, :cannot_follow_self}

@@ -60,6 +60,7 @@ defmodule TraysSocialWeb.Router do
 
     live "/posts/new", PostLive.New, :new
     live "/users/settings", SettingsLive.Index, :index
+    live "/notifications", NotificationsLive.Index, :index
 
     put "/users/settings", UserSettingsController, :update
     get "/users/settings/confirm-email/:token", UserSettingsController, :confirm_email

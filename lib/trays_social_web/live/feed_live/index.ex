@@ -5,6 +5,7 @@ defmodule TraysSocialWeb.FeedLive.Index do
   alias TraysSocial.Accounts
 
   on_mount {TraysSocialWeb.UserAuth, :mount_current_scope}
+  on_mount {TraysSocialWeb.NotificationsHook, :mount_notifications}
 
   @page_size 20
 

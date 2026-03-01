@@ -8,6 +8,7 @@ defmodule TraysSocial.Posts do
 
   alias TraysSocial.Posts.{Post, Ingredient, Tool, CookingStep, PostTag, PostPhoto, PostLike, Comment}
   alias TraysSocial.Accounts.Follow
+  alias TraysSocial.Notifications
 
   @doc """
   Returns the list of posts, excluding soft deleted posts.
@@ -185,6 +186,18 @@ defmodule TraysSocial.Posts do
       end
     end)
     |> Repo.transaction()
+    |> tap(fn
+      {:ok, %{like: like}} when not is_nil(like.id) ->
+        Notifications.create_notification(%{
+          type: "like",
+          user_id: post.user_id,
+          actor_id: user.id,
+          post_id: post.id
+        })
+
+      _ ->
+        :ok
+    end)
   end
 
   @doc """
@@ -265,8 +278,20 @@ defmodule TraysSocial.Posts do
     end)
     |> Repo.transaction()
     |> case do
-      {:ok, %{comment: comment}} -> {:ok, Repo.preload(comment, :user)}
-      {:error, :comment, changeset, _} -> {:error, changeset}
+      {:ok, %{comment: comment}} ->
+        comment = Repo.preload(comment, :user)
+
+        Notifications.create_notification(%{
+          type: "comment",
+          user_id: post.user_id,
+          actor_id: user.id,
+          post_id: post.id
+        })
+
+        {:ok, comment}
+
+      {:error, :comment, changeset, _} ->
+        {:error, changeset}
     end
   end
 

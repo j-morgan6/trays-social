@@ -6,6 +6,7 @@ defmodule TraysSocialWeb.PostLive.New do
   alias TraysSocial.Uploads.Photo
 
   on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
+  on_mount {TraysSocialWeb.NotificationsHook, :mount_notifications}
 
   @impl true
   def mount(_params, _session, socket) do

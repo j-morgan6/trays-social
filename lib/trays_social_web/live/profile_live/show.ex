@@ -5,6 +5,7 @@ defmodule TraysSocialWeb.ProfileLive.Show do
   alias TraysSocial.Posts
 
   on_mount {TraysSocialWeb.UserAuth, :mount_current_scope}
+  on_mount {TraysSocialWeb.NotificationsHook, :mount_notifications}
 
   @impl true
   def mount(%{"username" => username}, _session, socket) do
