@@ -199,12 +199,18 @@
               <%!-- Engagement row --%>
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
+                  <% liked = MapSet.member?(@liked_post_ids, post.id) %>
                   <button
                     type="button"
-                    class="flex items-center gap-1.5 text-sm text-base-content/60 hover:text-primary transition-colors"
+                    class={[
+                      "flex items-center gap-1.5 text-sm transition-colors",
+                      if(liked, do: "text-primary", else: "text-base-content/60 hover:text-primary")
+                    ]}
+                    phx-click="toggle-like"
+                    phx-value-post-id={post.id}
                   >
-                    <.icon name="hero-heart" class="size-5" />
-                    <span>0</span>
+                    <.icon name={if liked, do: "hero-heart-solid", else: "hero-heart"} class="size-5" />
+                    <span>{post.like_count}</span>
                   </button>
                   <button
                     type="button"

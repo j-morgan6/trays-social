@@ -88,6 +88,21 @@
     <% end %>
   </div>
 
+  <%!-- Like button --%>
+  <div class="mt-4 flex items-center gap-4">
+    <button
+      type="button"
+      class={[
+        "flex items-center gap-1.5 text-sm transition-colors",
+        if(@liked, do: "text-primary", else: "text-base-content/60 hover:text-primary")
+      ]}
+      phx-click="toggle-like"
+    >
+      <.icon name={if @liked, do: "hero-heart-solid", else: "hero-heart"} class="size-5" />
+      <span>{@post.like_count}</span>
+    </button>
+  </div>
+
   <%!-- Caption --%>
   <p class="mt-4 text-base text-base-content leading-relaxed">{@post.caption}</p>
 

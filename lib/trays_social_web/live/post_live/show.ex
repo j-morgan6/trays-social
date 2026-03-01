@@ -9,11 +9,18 @@ defmodule TraysSocialWeb.PostLive.Show do
   def mount(%{"id" => id}, _session, socket) do
     post = Posts.get_post!(id)
 
+    liked =
+      case socket.assigns[:current_scope] do
+        %{user: user} -> Posts.liked_by?(post.id, user.id)
+        _ -> false
+      end
+
     socket =
       socket
       |> assign(:page_title, "Post")
       |> assign(:post, post)
       |> assign(:photo_index, 0)
+      |> assign(:liked, liked)
 
     {:ok, socket}
   end
@@ -41,6 +48,40 @@ defmodule TraysSocialWeb.PostLive.Show do
       {:noreply, assign(socket, :photo_index, prev)}
     else
       {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle-like", _params, socket) do
+    case socket.assigns[:current_scope] do
+      nil ->
+        {:noreply, push_navigate(socket, to: ~p"/users/log-in")}
+
+      %{user: user} ->
+        post = socket.assigns.post
+        liked = socket.assigns.liked
+
+        {new_count, new_liked} =
+          if liked do
+            {max(0, post.like_count - 1), false}
+          else
+            {post.like_count + 1, true}
+          end
+
+        updated_post = %{post | like_count: new_count}
+
+        socket =
+          socket
+          |> assign(:liked, new_liked)
+          |> assign(:post, updated_post)
+
+        if liked do
+          Posts.unlike_post(post, user)
+        else
+          Posts.like_post(post, user)
+        end
+
+        {:noreply, socket}
     end
   end
 

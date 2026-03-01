@@ -11,7 +11,15 @@ defmodule TraysSocialWeb.FeedLive.Index do
   def mount(_params, _session, socket) do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(TraysSocial.PubSub, "posts:new")
+      Phoenix.PubSub.subscribe(TraysSocial.PubSub, "posts:likes")
       posts = Posts.list_posts(limit: @page_size)
+      post_ids = Enum.map(posts, & &1.id)
+
+      liked_post_ids =
+        case socket.assigns[:current_scope] do
+          %{user: user} -> Posts.liked_post_ids_for_user(user.id, post_ids)
+          _ -> MapSet.new()
+        end
 
       {:ok,
        socket
@@ -24,6 +32,7 @@ defmodule TraysSocialWeb.FeedLive.Index do
        |> assign(:has_more, length(posts) == @page_size)
        |> assign(:no_posts, Enum.empty?(posts))
        |> assign(:cursor, last_cursor(posts))
+       |> assign(:liked_post_ids, liked_post_ids)
        |> assign(:posts_map, Map.new(posts, &{&1.id, &1}))
        |> stream(:posts, posts)}
     else
@@ -38,6 +47,7 @@ defmodule TraysSocialWeb.FeedLive.Index do
        |> assign(:has_more, true)
        |> assign(:no_posts, false)
        |> assign(:cursor, nil)
+       |> assign(:liked_post_ids, MapSet.new())
        |> assign(:posts_map, %{})
        |> stream(:posts, [])}
     end
@@ -55,17 +65,76 @@ defmodule TraysSocialWeb.FeedLive.Index do
           cursor_time: cursor_time
         )
 
+      new_post_ids = Enum.map(posts, & &1.id)
+
+      new_liked_ids =
+        case socket.assigns[:current_scope] do
+          %{user: user} -> Posts.liked_post_ids_for_user(user.id, new_post_ids)
+          _ -> MapSet.new()
+        end
+
       socket =
         socket
         |> assign(:cursor, last_cursor(posts))
         |> assign(:has_more, length(posts) == @page_size)
         |> assign(:loading_more, false)
+        |> update(:liked_post_ids, &MapSet.union(&1, new_liked_ids))
         |> update(:posts_map, &Map.merge(&1, Map.new(posts, fn p -> {p.id, p} end)))
         |> stream(:posts, posts, at: -1)
 
       {:noreply, socket}
     else
       {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle-like", %{"post-id" => post_id_str}, socket) do
+    case socket.assigns[:current_scope] do
+      nil ->
+        {:noreply, push_navigate(socket, to: ~p"/users/log-in")}
+
+      %{user: user} ->
+        post_id = String.to_integer(post_id_str)
+
+        case Map.get(socket.assigns.posts_map, post_id) do
+          nil ->
+            {:noreply, socket}
+
+          post ->
+            liked = MapSet.member?(socket.assigns.liked_post_ids, post_id)
+
+            # Optimistic update
+            {new_count, new_liked_ids} =
+              if liked do
+                {max(0, post.like_count - 1), MapSet.delete(socket.assigns.liked_post_ids, post_id)}
+              else
+                {post.like_count + 1, MapSet.put(socket.assigns.liked_post_ids, post_id)}
+              end
+
+            updated_post = %{post | like_count: new_count}
+
+            socket =
+              socket
+              |> assign(:liked_post_ids, new_liked_ids)
+              |> update(:posts_map, &Map.put(&1, post_id, updated_post))
+              |> stream_insert(:posts, updated_post)
+
+            # Persist to DB and broadcast
+            if liked do
+              Posts.unlike_post(post, user)
+            else
+              Posts.like_post(post, user)
+            end
+
+            Phoenix.PubSub.broadcast(
+              TraysSocial.PubSub,
+              "posts:likes",
+              {:like_updated, post_id, new_count}
+            )
+
+            {:noreply, socket}
+        end
     end
   end
 
@@ -132,6 +201,24 @@ defmodule TraysSocialWeb.FeedLive.Index do
       |> stream_insert(:posts, full_post, at: 0)
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:like_updated, post_id, like_count}, socket) do
+    case Map.get(socket.assigns.posts_map, post_id) do
+      nil ->
+        {:noreply, socket}
+
+      post ->
+        updated_post = %{post | like_count: like_count}
+
+        socket =
+          socket
+          |> update(:posts_map, &Map.put(&1, post_id, updated_post))
+          |> stream_insert(:posts, updated_post)
+
+        {:noreply, socket}
+    end
   end
 
   defp last_cursor([]), do: nil

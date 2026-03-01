@@ -8,6 +8,7 @@ defmodule TraysSocial.Posts.Post do
     field :cooking_time_minutes, :integer
     field :servings, :integer
     field :difficulty, :string
+    field :like_count, :integer, default: 0
     field :deleted_at, :utc_datetime
 
     belongs_to :user, TraysSocial.Accounts.User
@@ -17,6 +18,7 @@ defmodule TraysSocial.Posts.Post do
     has_many :cooking_steps, TraysSocial.Posts.CookingStep
     has_many :post_tags, TraysSocial.Posts.PostTag
     has_many :post_photos, TraysSocial.Posts.PostPhoto, preload_order: [asc: :position]
+    has_many :post_likes, TraysSocial.Posts.PostLike
 
     timestamps(type: :utc_datetime)
   end

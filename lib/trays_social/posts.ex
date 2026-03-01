@@ -6,7 +6,7 @@ defmodule TraysSocial.Posts do
   import Ecto.Query, warn: false
   alias TraysSocial.Repo
 
-  alias TraysSocial.Posts.{Post, Ingredient, Tool, CookingStep, PostTag, PostPhoto}
+  alias TraysSocial.Posts.{Post, Ingredient, Tool, CookingStep, PostTag, PostPhoto, PostLike}
 
   @doc """
   Returns the list of posts, excluding soft deleted posts.
@@ -151,5 +151,74 @@ defmodule TraysSocial.Posts do
     |> Ecto.Changeset.cast_assoc(:cooking_steps, with: &CookingStep.changeset/2)
     |> Ecto.Changeset.cast_assoc(:post_tags, with: &PostTag.changeset/2)
     |> Ecto.Changeset.cast_assoc(:post_photos, with: &PostPhoto.changeset/2)
+  end
+
+  @doc """
+  Likes a post. Increments like_count atomically. No-op if already liked.
+  """
+  def like_post(%Post{} = post, user) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.insert(
+      :like,
+      PostLike.changeset(%PostLike{}, %{post_id: post.id, user_id: user.id}),
+      on_conflict: :nothing,
+      conflict_target: [:post_id, :user_id]
+    )
+    |> Ecto.Multi.run(:count, fn _repo, %{like: like} ->
+      if like.id do
+        {1, _} = Repo.update_all(from(p in Post, where: p.id == ^post.id), inc: [like_count: 1])
+        {:ok, post.like_count + 1}
+      else
+        {:ok, post.like_count}
+      end
+    end)
+    |> Repo.transaction()
+  end
+
+  @doc """
+  Unlikes a post. Decrements like_count atomically. No-op if not liked.
+  """
+  def unlike_post(%Post{} = post, user) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.delete_all(
+      :like,
+      from(pl in PostLike, where: pl.post_id == ^post.id and pl.user_id == ^user.id)
+    )
+    |> Ecto.Multi.run(:count, fn _repo, %{like: {deleted, _}} ->
+      if deleted > 0 do
+        {1, _} =
+          Repo.update_all(
+            from(p in Post, where: p.id == ^post.id),
+            inc: [like_count: -1]
+          )
+
+        {:ok, max(0, post.like_count - 1)}
+      else
+        {:ok, post.like_count}
+      end
+    end)
+    |> Repo.transaction()
+  end
+
+  @doc """
+  Returns true if the user has liked the post.
+  """
+  def liked_by?(post_id, user_id) do
+    PostLike
+    |> where([pl], pl.post_id == ^post_id and pl.user_id == ^user_id)
+    |> Repo.exists?()
+  end
+
+  @doc """
+  Returns a MapSet of post IDs (from the given list) that the user has liked.
+  """
+  def liked_post_ids_for_user(_user_id, []), do: MapSet.new()
+
+  def liked_post_ids_for_user(user_id, post_ids) do
+    PostLike
+    |> where([pl], pl.user_id == ^user_id and pl.post_id in ^post_ids)
+    |> select([pl], pl.post_id)
+    |> Repo.all()
+    |> MapSet.new()
   end
 end
