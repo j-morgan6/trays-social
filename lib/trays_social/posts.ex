@@ -55,6 +55,85 @@ defmodule TraysSocial.Posts do
   end
 
   @doc """
+  Returns trending posts (highest like_count), excluding soft deleted.
+  """
+  def list_trending_posts(limit \\ 10) do
+    Post
+    |> where([p], is_nil(p.deleted_at))
+    |> order_by([p], desc: p.like_count, desc: p.inserted_at)
+    |> limit(^limit)
+    |> preload([:user, :post_photos])
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns the most recent posts, excluding soft deleted.
+  """
+  def list_recent_posts(limit \\ 10) do
+    Post
+    |> where([p], is_nil(p.deleted_at))
+    |> order_by([p], desc: p.inserted_at)
+    |> limit(^limit)
+    |> preload([:user, :post_photos])
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns the top N tags by post count.
+  """
+  def list_top_tags(limit \\ 6) do
+    PostTag
+    |> join(:inner, [pt], p in Post, on: p.id == pt.post_id and is_nil(p.deleted_at))
+    |> group_by([pt], pt.tag)
+    |> order_by([pt], desc: count(pt.id))
+    |> limit(^limit)
+    |> select([pt], pt.tag)
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns posts grouped by tag. Loads all posts for the given tags in one query,
+  groups in Elixir, limiting to posts_per_tag per tag.
+  Returns a list of {tag, posts} tuples in the same order as tags.
+  """
+  def list_posts_by_tags(tags, posts_per_tag \\ 8) do
+    rows =
+      Post
+      |> join(:inner, [p], pt in PostTag, on: pt.post_id == p.id and pt.tag in ^tags)
+      |> where([p], is_nil(p.deleted_at))
+      |> order_by([p, pt], [asc: pt.tag, desc: p.inserted_at])
+      |> select([p, pt], {pt.tag, p.id})
+      |> Repo.all()
+
+    # Collect up to posts_per_tag post IDs per tag (order preserved)
+    tag_post_ids =
+      Enum.reduce(rows, %{}, fn {tag, post_id}, acc ->
+        current = Map.get(acc, tag, [])
+        if length(current) < posts_per_tag do
+          Map.put(acc, tag, current ++ [post_id])
+        else
+          acc
+        end
+      end)
+
+    all_post_ids = tag_post_ids |> Map.values() |> List.flatten() |> Enum.uniq()
+
+    posts_by_id =
+      Post
+      |> where([p], p.id in ^all_post_ids)
+      |> preload([:user, :post_photos])
+      |> Repo.all()
+      |> Map.new(&{&1.id, &1})
+
+    Enum.map(tags, fn tag ->
+      ids = Map.get(tag_post_ids, tag, [])
+      posts = Enum.map(ids, &Map.get(posts_by_id, &1)) |> Enum.reject(&is_nil/1)
+      {tag, posts}
+    end)
+    |> Enum.reject(fn {_tag, posts} -> Enum.empty?(posts) end)
+  end
+
+  @doc """
   Returns the list of posts for a specific user, excluding soft deleted posts.
 
   ## Examples

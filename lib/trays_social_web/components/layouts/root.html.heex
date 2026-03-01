@@ -49,6 +49,11 @@
                 Feed
               </.link>
             </li>
+            <li>
+              <.link href={~p"/explore"} class="font-medium transition-colors duration-150">
+                Explore
+              </.link>
+            </li>
             <%= if @current_scope do %>
               <li>
                 <.link href={~p"/@#{@current_scope.user.username}"} class="font-medium transition-colors duration-150">
@@ -151,13 +156,10 @@
             <span>Post</span>
           </.link>
 
-          <%!-- Notifications --%>
-          <.link navigate={~p"/notifications"} class={"relative flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :notifications, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}>
-            <span class="hero-bell w-6 h-6"></span>
-            <%= if assigns[:unread_notifications] && assigns[:unread_notifications] > 0 do %>
-              <span class="absolute top-1 right-2 w-2 h-2 rounded-full bg-primary"></span>
-            <% end %>
-            <span>Alerts</span>
+          <%!-- Explore --%>
+          <.link navigate={~p"/explore"} class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :explore, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}>
+            <span class="hero-magnifying-glass w-6 h-6"></span>
+            <span>Explore</span>
           </.link>
         <% else %>
           <%!-- Feed (guest placeholder) --%>
@@ -171,9 +173,9 @@
             <span>Post</span>
           </.link>
 
-          <.link navigate={~p"/users/log-in"} class="flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium text-base-content/50 hover:text-base-content transition-colors">
-            <span class="hero-cog-6-tooth w-6 h-6"></span>
-            <span>Settings</span>
+          <.link navigate={~p"/explore"} class={["flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors", if(assigns[:current_tab] == :explore, do: "text-primary", else: "text-base-content/50 hover:text-base-content")]}>
+            <span class="hero-magnifying-glass w-6 h-6"></span>
+            <span>Explore</span>
           </.link>
         <% end %>
       </div>
