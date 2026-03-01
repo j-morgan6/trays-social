@@ -17,6 +17,7 @@ defmodule TraysSocialWeb.SettingsLive.Index do
     socket =
       socket
       |> assign(:page_title, "Settings")
+      |> assign(:current_tab, :settings)
       |> assign(:user, user)
       |> assign(:changeset, changeset)
       |> assign(:email_changeset, email_changeset)

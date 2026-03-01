@@ -14,6 +14,7 @@ defmodule TraysSocialWeb.PostLive.New do
     socket =
       socket
       |> assign(:page_title, "Create Post")
+      |> assign(:current_tab, :new_post)
       |> assign(:changeset, changeset)
       |> assign(:ingredient_rows, [0])
       |> assign(:next_ingredient_id, 1)

@@ -1,10 +1,12 @@
-<div class="mx-auto max-w-2xl">
+<div class="mx-auto max-w-2xl px-4 py-8">
   <%!-- Header with username and delete button --%>
-  <div class="flex justify-between items-center">
-    <.header>
-      <%= @post.user.username %>
-      <:subtitle>Posted on <%= Calendar.strftime(@post.inserted_at, "%B %d, %Y") %></:subtitle>
-    </.header>
+  <div class="flex justify-between items-start mb-6">
+    <div>
+      <h1 class="text-xl font-bold text-base-content">{@post.user.username}</h1>
+      <p class="text-sm text-base-content/50 mt-0.5">
+        {Calendar.strftime(@post.inserted_at, "%B %d, %Y")}
+      </p>
+    </div>
 
     <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @post.user_id do %>
       <.button
@@ -23,7 +25,7 @@
                 else: [%{url: @post.photo_url}] %>
   <% photo_count = length(photos) %>
   <% current_photo = Enum.at(photos, @photo_index) %>
-  <div class="mt-6 relative overflow-hidden rounded-2xl shadow-lg bg-base-200 aspect-square">
+  <div class="relative overflow-hidden rounded-2xl shadow-lg bg-base-200 aspect-square">
     <img
       src={current_photo.url}
       alt="Post photo"
@@ -64,28 +66,45 @@
     <% end %>
   </div>
 
-  <%!-- Caption and Cooking Time --%>
-  <div class="mt-6">
-    <p class="text-lg"><%= @post.caption %></p>
-    <p class="mt-2 text-sm font-semibold text-gray-700">
-      Cooking time: <%= @post.cooking_time_minutes %> minutes
-    </p>
+  <%!-- Meta chips --%>
+  <div class="flex flex-wrap gap-2 mt-4">
+    <%= if @post.cooking_time_minutes do %>
+      <span class="inline-flex items-center gap-1.5 bg-base-200 text-base-content/70 text-sm px-3 py-1.5 rounded-full">
+        <.icon name="hero-clock" class="size-4" />
+        {@post.cooking_time_minutes} minutes
+      </span>
+    <% end %>
+    <%= if @post.difficulty do %>
+      <span class="inline-flex items-center bg-base-200 text-base-content/70 text-sm px-3 py-1.5 rounded-full">
+        {String.capitalize(@post.difficulty)}
+      </span>
+    <% end %>
+    <%= if @post.servings do %>
+      <span class="inline-flex items-center gap-1.5 bg-base-200 text-base-content/70 text-sm px-3 py-1.5 rounded-full">
+        <.icon name="hero-user-group" class="size-4" />
+        {if @post.servings == 1, do: "1 serving", else: "#{@post.servings} servings"}
+      </span>
+    <% end %>
   </div>
+
+  <%!-- Caption --%>
+  <p class="mt-4 text-base text-base-content leading-relaxed">{@post.caption}</p>
 
   <%!-- Ingredients --%>
   <%= if !Enum.empty?(@post.ingredients) do %>
     <div class="mt-8">
-      <h2 class="text-xl font-bold mb-3">Ingredients</h2>
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3">
+        Ingredients
+      </h2>
       <ul class="space-y-2">
         <%= for ingredient <- Enum.sort_by(@post.ingredients, & &1.order) do %>
-          <li class="flex items-start">
-            <span class="text-brand mr-2">•</span>
-            <span>
-              <%= if ingredient.quantity && ingredient.unit do %>
-                <span class="font-semibold"><%= ingredient.quantity %> <%= ingredient.unit %></span>
-              <% end %>
-              <%= ingredient.name %>
-            </span>
+          <li class="flex items-baseline gap-2 text-sm">
+            <%= if ingredient.quantity do %>
+              <span class="font-medium text-base-content/70 shrink-0 tabular-nums">
+                {ingredient.quantity}<%= if ingredient.unit, do: " #{ingredient.unit}" %>
+              </span>
+            <% end %>
+            <span class="text-base-content">{ingredient.name}</span>
           </li>
         <% end %>
       </ul>
@@ -95,12 +114,14 @@
   <%!-- Tools --%>
   <%= if !Enum.empty?(@post.tools) do %>
     <div class="mt-8">
-      <h2 class="text-xl font-bold mb-3">Tools</h2>
-      <ul class="space-y-2">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3">
+        Tools
+      </h2>
+      <ul class="space-y-1.5">
         <%= for tool <- Enum.sort_by(@post.tools, & &1.order) do %>
-          <li class="flex items-start">
-            <span class="text-brand mr-2">•</span>
-            <span><%= tool.name %></span>
+          <li class="flex items-center gap-2 text-sm text-base-content">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
+            {tool.name}
           </li>
         <% end %>
       </ul>
@@ -110,12 +131,16 @@
   <%!-- Cooking Steps --%>
   <%= if !Enum.empty?(@post.cooking_steps) do %>
     <div class="mt-8">
-      <h2 class="text-xl font-bold mb-3">Cooking Steps</h2>
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3">
+        Steps
+      </h2>
       <ol class="space-y-4">
         <%= for step <- Enum.sort_by(@post.cooking_steps, & &1.order) do %>
-          <li class="flex">
-            <span class="font-bold text-brand mr-3"><%= step.order + 1 %>.</span>
-            <p><%= step.description %></p>
+          <li class="flex gap-3 text-sm">
+            <span class="font-bold text-primary shrink-0 w-5 text-right">
+              {step.order + 1}.
+            </span>
+            <p class="text-base-content leading-relaxed">{step.description}</p>
           </li>
         <% end %>
       </ol>
@@ -125,11 +150,13 @@
   <%!-- Tags --%>
   <%= if !Enum.empty?(@post.post_tags) do %>
     <div class="mt-8">
-      <h2 class="text-xl font-bold mb-3">Tags</h2>
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3">
+        Tags
+      </h2>
       <div class="flex flex-wrap gap-2">
         <%= for post_tag <- @post.post_tags do %>
           <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-base-200 text-base-content hover:bg-primary hover:text-primary-content transition-colors duration-150 cursor-default">
-            #<%= post_tag.tag %>
+            #{post_tag.tag}
           </span>
         <% end %>
       </div>
@@ -137,8 +164,8 @@
   <% end %>
 
   <%!-- Back to Feed --%>
-  <div class="mt-8 pt-6 border-t">
-    <.link href={~p"/"} class="inline-flex items-center gap-1 text-base-content/60 hover:text-primary transition-colors duration-150">
+  <div class="mt-10 pt-6 border-t border-base-300">
+    <.link navigate={~p"/"} class="inline-flex items-center gap-1.5 text-sm text-base-content/60 hover:text-primary transition-colors">
       <.icon name="hero-arrow-left" class="size-4" /> Back to feed
     </.link>
   </div>

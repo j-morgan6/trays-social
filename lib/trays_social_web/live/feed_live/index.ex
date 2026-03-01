@@ -16,6 +16,7 @@ defmodule TraysSocialWeb.FeedLive.Index do
       {:ok,
        socket
        |> assign(:page_title, "Feed")
+       |> assign(:current_tab, :feed)
        |> assign(:selected_post_id, nil)
        |> assign(:photo_indices, %{})
        |> assign(:loading, false)
@@ -29,6 +30,7 @@ defmodule TraysSocialWeb.FeedLive.Index do
       {:ok,
        socket
        |> assign(:page_title, "Feed")
+       |> assign(:current_tab, :feed)
        |> assign(:selected_post_id, nil)
        |> assign(:photo_indices, %{})
        |> assign(:loading, true)

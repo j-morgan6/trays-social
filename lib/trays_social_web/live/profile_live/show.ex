@@ -22,6 +22,7 @@ defmodule TraysSocialWeb.ProfileLive.Show do
           {:ok,
            socket
            |> assign(:page_title, "@#{user.username}")
+           |> assign(:current_tab, :profile)
            |> assign(:user, user)
            |> assign(:posts, posts)
            |> assign(:post_count, length(posts))
@@ -30,6 +31,7 @@ defmodule TraysSocialWeb.ProfileLive.Show do
           {:ok,
            socket
            |> assign(:page_title, "@#{user.username}")
+           |> assign(:current_tab, :profile)
            |> assign(:user, user)
            |> assign(:posts, [])
            |> assign(:post_count, 0)

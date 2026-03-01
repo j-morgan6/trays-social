@@ -115,8 +115,55 @@
     </header>
 
     <%!-- Main Content --%>
-    <main class="min-h-screen py-8">
+    <main class="min-h-screen py-8 pb-24 md:pb-8">
       {@inner_content}
     </main>
+
+    <%!-- Mobile Bottom Tab Bar --%>
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-base-100 border-t border-base-300">
+      <div class="flex items-center justify-around h-16">
+        <%!-- Feed --%>
+        <.link navigate={~p"/"} class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :feed, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}>
+          <span class="hero-home w-6 h-6"></span>
+          <span>Feed</span>
+        </.link>
+
+        <%= if @current_scope do %>
+          <%!-- Profile --%>
+          <.link navigate={~p"/@#{@current_scope.user.username}"} class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :profile, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}>
+            <span class="hero-user w-6 h-6"></span>
+            <span>Profile</span>
+          </.link>
+
+          <%!-- New Post (center-prominent) --%>
+          <.link navigate={~p"/posts/new"} class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :new_post, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}>
+            <span class="hero-plus-circle w-7 h-7"></span>
+            <span>Post</span>
+          </.link>
+
+          <%!-- Settings --%>
+          <.link navigate={~p"/users/settings"} class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :settings, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}>
+            <span class="hero-cog-6-tooth w-6 h-6"></span>
+            <span>Settings</span>
+          </.link>
+        <% else %>
+          <%!-- Feed (guest placeholder) --%>
+          <.link navigate={~p"/users/log-in"} class="flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium text-base-content/50 hover:text-base-content transition-colors">
+            <span class="hero-user w-6 h-6"></span>
+            <span>Profile</span>
+          </.link>
+
+          <.link navigate={~p"/users/log-in"} class="flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium text-base-content/50 hover:text-base-content transition-colors">
+            <span class="hero-plus-circle w-7 h-7"></span>
+            <span>Post</span>
+          </.link>
+
+          <.link navigate={~p"/users/log-in"} class="flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium text-base-content/50 hover:text-base-content transition-colors">
+            <span class="hero-cog-6-tooth w-6 h-6"></span>
+            <span>Settings</span>
+          </.link>
+        <% end %>
+      </div>
+    </nav>
   </body>
 </html>
