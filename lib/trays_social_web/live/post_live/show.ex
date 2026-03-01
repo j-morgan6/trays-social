@@ -8,6 +8,7 @@ defmodule TraysSocialWeb.PostLive.Show do
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     post = Posts.get_post!(id)
+    comments = Posts.list_comments(post.id)
 
     liked =
       case socket.assigns[:current_scope] do
@@ -21,6 +22,8 @@ defmodule TraysSocialWeb.PostLive.Show do
       |> assign(:post, post)
       |> assign(:photo_index, 0)
       |> assign(:liked, liked)
+      |> assign(:comment_body, "")
+      |> stream(:comments, comments)
 
     {:ok, socket}
   end
@@ -82,6 +85,69 @@ defmodule TraysSocialWeb.PostLive.Show do
         end
 
         {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("update-comment-body", %{"value" => value}, socket) do
+    {:noreply, assign(socket, :comment_body, value)}
+  end
+
+  @impl true
+  def handle_event("add-comment", %{"comment" => %{"body" => body}}, socket) do
+    case socket.assigns[:current_scope] do
+      nil ->
+        {:noreply, push_navigate(socket, to: ~p"/users/log-in")}
+
+      %{user: user} ->
+        post = socket.assigns.post
+
+        case Posts.create_comment(post, user, %{body: body}) do
+          {:ok, comment} ->
+            updated_post = %{post | comment_count: post.comment_count + 1}
+
+            socket =
+              socket
+              |> assign(:post, updated_post)
+              |> assign(:comment_body, "")
+              |> stream_insert(:comments, comment, at: -1)
+
+            {:noreply, socket}
+
+          {:error, _changeset} ->
+            {:noreply, put_flash(socket, :error, "Could not add comment")}
+        end
+    end
+  end
+
+  @impl true
+  def handle_event("delete-comment", %{"id" => id_str}, socket) do
+    case socket.assigns[:current_scope] do
+      nil ->
+        {:noreply, socket}
+
+      %{user: user} ->
+        comment_id = String.to_integer(id_str)
+        comment = Posts.get_comment!(comment_id)
+
+        case Posts.delete_comment(comment, user) do
+          {:ok, deleted_comment} ->
+            post = socket.assigns.post
+            updated_post = %{post | comment_count: max(0, post.comment_count - 1)}
+
+            socket =
+              socket
+              |> assign(:post, updated_post)
+              |> stream_delete(:comments, deleted_comment)
+
+            {:noreply, socket}
+
+          {:error, :unauthorized} ->
+            {:noreply, put_flash(socket, :error, "Not authorized to delete this comment")}
+
+          {:error, _} ->
+            {:noreply, put_flash(socket, :error, "Could not delete comment")}
+        end
     end
   end
 

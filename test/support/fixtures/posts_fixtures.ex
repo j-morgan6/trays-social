@@ -5,6 +5,15 @@ defmodule TraysSocial.PostsFixtures do
   """
 
   @doc """
+  Generate a comment.
+  """
+  def comment_fixture(post, user, attrs \\ %{}) do
+    attrs = Enum.into(attrs, %{body: "some comment body"})
+    {:ok, comment} = TraysSocial.Posts.create_comment(post, user, attrs)
+    comment
+  end
+
+  @doc """
   Generate a post.
   """
   def post_fixture(attrs \\ %{}) do

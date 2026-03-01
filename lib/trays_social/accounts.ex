@@ -6,7 +6,7 @@ defmodule TraysSocial.Accounts do
   import Ecto.Query, warn: false
   alias TraysSocial.Repo
 
-  alias TraysSocial.Accounts.{User, UserToken, UserNotifier}
+  alias TraysSocial.Accounts.{User, UserToken, UserNotifier, Follow}
 
   ## Database getters
 
@@ -363,5 +363,57 @@ defmodule TraysSocial.Accounts do
         {:ok, {user, tokens_to_expire}}
       end
     end)
+  end
+
+  ## Follow system
+
+  @doc """
+  Follows a user. No-op if already following.
+  """
+  def follow_user(follower, followed) when follower.id != followed.id do
+    %Follow{}
+    |> Follow.changeset(%{follower_id: follower.id, followed_id: followed.id})
+    |> Repo.insert(on_conflict: :nothing, conflict_target: [:follower_id, :followed_id])
+  end
+
+  def follow_user(_follower, _followed), do: {:error, :cannot_follow_self}
+
+  @doc """
+  Unfollows a user.
+  """
+  def unfollow_user(follower, followed) do
+    Repo.delete_all(
+      from(f in Follow, where: f.follower_id == ^follower.id and f.followed_id == ^followed.id)
+    )
+
+    :ok
+  end
+
+  @doc """
+  Returns true if follower is following followed.
+  """
+  def following?(follower_id, followed_id) do
+    Repo.exists?(from(f in Follow, where: f.follower_id == ^follower_id and f.followed_id == ^followed_id))
+  end
+
+  @doc """
+  Returns the number of followers for a user.
+  """
+  def get_follower_count(user_id) do
+    Repo.aggregate(from(f in Follow, where: f.followed_id == ^user_id), :count)
+  end
+
+  @doc """
+  Returns the number of users a user is following.
+  """
+  def get_following_count(user_id) do
+    Repo.aggregate(from(f in Follow, where: f.follower_id == ^user_id), :count)
+  end
+
+  @doc """
+  Returns true if the user has any follows (is following at least one person).
+  """
+  def has_follows?(user_id) do
+    Repo.exists?(from(f in Follow, where: f.follower_id == ^user_id))
   end
 end

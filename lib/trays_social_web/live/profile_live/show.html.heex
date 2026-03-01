@@ -15,6 +15,19 @@
           <.button href={~p"/users/settings"} variant="secondary">
             Edit Profile
           </.button>
+        <% else %>
+          <%= if assigns[:current_scope] && @current_scope.user do %>
+            <button
+              type="button"
+              class={[
+                "btn btn-sm",
+                if(@is_following, do: "btn-ghost border border-base-300", else: "btn-primary")
+              ]}
+              phx-click="toggle-follow"
+            >
+              <%= if @is_following, do: "Following", else: "Follow" %>
+            </button>
+          <% end %>
         <% end %>
       </div>
 
@@ -26,6 +39,22 @@
           <% else %>
             <span class="font-semibold"><%= @post_count %></span>
             <span class="text-base-content/60"><%= if @post_count == 1, do: "post", else: "posts" %></span>
+          <% end %>
+        </div>
+        <div>
+          <%= if @loading do %>
+            <.loading_skeleton type="text" class="w-20 h-4" />
+          <% else %>
+            <span class="font-semibold"><%= @follower_count %></span>
+            <span class="text-base-content/60"><%= if @follower_count == 1, do: "follower", else: "followers" %></span>
+          <% end %>
+        </div>
+        <div>
+          <%= if @loading do %>
+            <.loading_skeleton type="text" class="w-20 h-4" />
+          <% else %>
+            <span class="font-semibold"><%= @following_count %></span>
+            <span class="text-base-content/60">following</span>
           <% end %>
         </div>
       </div>

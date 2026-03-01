@@ -2,6 +2,7 @@ defmodule TraysSocialWeb.FeedLive.Index do
   use TraysSocialWeb, :live_view
 
   alias TraysSocial.Posts
+  alias TraysSocial.Accounts
 
   on_mount {TraysSocialWeb.UserAuth, :mount_current_scope}
 
@@ -12,7 +13,21 @@ defmodule TraysSocialWeb.FeedLive.Index do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(TraysSocial.PubSub, "posts:new")
       Phoenix.PubSub.subscribe(TraysSocial.PubSub, "posts:likes")
-      posts = Posts.list_posts(limit: @page_size)
+
+      current_user_id =
+        case socket.assigns[:current_scope] do
+          %{user: user} -> user.id
+          _ -> nil
+        end
+
+      is_following = current_user_id && Accounts.has_follows?(current_user_id)
+
+      posts =
+        Posts.list_posts(
+          limit: @page_size,
+          for_user_id: current_user_id
+        )
+
       post_ids = Enum.map(posts, & &1.id)
 
       liked_post_ids =
@@ -34,6 +49,7 @@ defmodule TraysSocialWeb.FeedLive.Index do
        |> assign(:cursor, last_cursor(posts))
        |> assign(:liked_post_ids, liked_post_ids)
        |> assign(:posts_map, Map.new(posts, &{&1.id, &1}))
+       |> assign(:is_personalized, is_following || false)
        |> stream(:posts, posts)}
     else
       {:ok,
@@ -49,6 +65,7 @@ defmodule TraysSocialWeb.FeedLive.Index do
        |> assign(:cursor, nil)
        |> assign(:liked_post_ids, MapSet.new())
        |> assign(:posts_map, %{})
+       |> assign(:is_personalized, false)
        |> stream(:posts, [])}
     end
   end
@@ -58,11 +75,18 @@ defmodule TraysSocialWeb.FeedLive.Index do
     if socket.assigns.has_more && !socket.assigns.loading_more && socket.assigns.cursor do
       {cursor_id, cursor_time} = socket.assigns.cursor
 
+      current_user_id =
+        case socket.assigns[:current_scope] do
+          %{user: user} -> user.id
+          _ -> nil
+        end
+
       posts =
         Posts.list_posts(
           limit: @page_size,
           cursor_id: cursor_id,
-          cursor_time: cursor_time
+          cursor_time: cursor_time,
+          for_user_id: current_user_id
         )
 
       new_post_ids = Enum.map(posts, & &1.id)

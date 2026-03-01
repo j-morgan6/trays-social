@@ -179,8 +179,69 @@
     </div>
   <% end %>
 
-  <%!-- Back to Feed --%>
+  <%!-- Comments --%>
   <div class="mt-10 pt-6 border-t border-base-300">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-4">
+      Comments ({@post.comment_count})
+    </h2>
+
+    <div id="comments" phx-update="stream" class="space-y-4 mb-6">
+      <div :for={{dom_id, comment} <- @streams.comments} id={dom_id} class="flex gap-3">
+        <div class="w-8 h-8 rounded-full bg-base-200 shrink-0 overflow-hidden">
+          <%= if comment.user.profile_photo_url do %>
+            <img src={comment.user.profile_photo_url} alt={comment.user.username} class="w-full h-full object-cover" />
+          <% else %>
+            <div class="w-full h-full flex items-center justify-center text-xs font-semibold text-base-content/50">
+              {String.first(comment.user.username) |> String.upcase()}
+            </div>
+          <% end %>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-baseline justify-between gap-2">
+            <span class="text-sm font-semibold text-base-content">{comment.user.username}</span>
+            <span class="text-xs text-base-content/40 shrink-0">
+              {Calendar.strftime(comment.inserted_at, "%b %d")}
+            </span>
+          </div>
+          <p class="text-sm text-base-content/80 mt-0.5 break-words">{comment.body}</p>
+          <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == comment.user_id do %>
+            <button
+              type="button"
+              class="text-xs text-base-content/40 hover:text-error transition-colors mt-1"
+              phx-click="delete-comment"
+              phx-value-id={comment.id}
+              data-confirm="Delete this comment?"
+            >
+              Delete
+            </button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <%= if assigns[:current_scope] && @current_scope.user do %>
+      <.form for={%{}} as={:comment} phx-submit="add-comment" class="flex gap-2">
+        <input
+          type="text"
+          name="comment[body]"
+          value={@comment_body}
+          placeholder="Add a comment..."
+          class="input input-bordered input-sm flex-1 text-sm"
+          required
+          maxlength="1000"
+        />
+        <button type="submit" class="btn btn-primary btn-sm">Post</button>
+      </.form>
+    <% else %>
+      <p class="text-sm text-base-content/50">
+        <.link navigate={~p"/users/log-in"} class="text-primary hover:underline">Log in</.link>
+        to leave a comment.
+      </p>
+    <% end %>
+  </div>
+
+  <%!-- Back to Feed --%>
+  <div class="mt-6 pt-6 border-t border-base-300">
     <.link navigate={~p"/"} class="inline-flex items-center gap-1.5 text-sm text-base-content/60 hover:text-primary transition-colors">
       <.icon name="hero-arrow-left" class="size-4" /> Back to feed
     </.link>

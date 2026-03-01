@@ -48,6 +48,13 @@
       <% end %>
     </div>
   <% else %>
+    <%!-- "Find people to follow" nudge for logged-in users on global feed --%>
+    <%= if assigns[:current_scope] && @current_scope.user && !@is_personalized && !@no_posts do %>
+      <div class="mb-4 p-4 bg-base-200 rounded-2xl text-sm text-base-content/70">
+        Showing all recent posts. Follow people to personalize your feed.
+      </div>
+    <% end %>
+
     <%= if @no_posts do %>
       <.empty_state message="Nothing here yet — be the first to post something delicious!">
         <%= if assigns[:current_scope] && @current_scope.user do %>
@@ -215,9 +222,11 @@
                   <button
                     type="button"
                     class="flex items-center gap-1.5 text-sm text-base-content/60 hover:text-primary transition-colors"
+                    phx-click="open-drawer"
+                    phx-value-id={post.id}
                   >
                     <.icon name="hero-chat-bubble-left-ellipsis" class="size-5" />
-                    <span>0</span>
+                    <span>{post.comment_count}</span>
                   </button>
                 </div>
                 <div class="flex items-center gap-3">

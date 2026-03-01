@@ -9,6 +9,7 @@ defmodule TraysSocial.Posts.Post do
     field :servings, :integer
     field :difficulty, :string
     field :like_count, :integer, default: 0
+    field :comment_count, :integer, default: 0
     field :deleted_at, :utc_datetime
 
     belongs_to :user, TraysSocial.Accounts.User
@@ -19,6 +20,7 @@ defmodule TraysSocial.Posts.Post do
     has_many :post_tags, TraysSocial.Posts.PostTag
     has_many :post_photos, TraysSocial.Posts.PostPhoto, preload_order: [asc: :position]
     has_many :post_likes, TraysSocial.Posts.PostLike
+    has_many :comments, TraysSocial.Posts.Comment
 
     timestamps(type: :utc_datetime)
   end

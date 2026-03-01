@@ -6,7 +6,8 @@ defmodule TraysSocial.Posts do
   import Ecto.Query, warn: false
   alias TraysSocial.Repo
 
-  alias TraysSocial.Posts.{Post, Ingredient, Tool, CookingStep, PostTag, PostPhoto, PostLike}
+  alias TraysSocial.Posts.{Post, Ingredient, Tool, CookingStep, PostTag, PostPhoto, PostLike, Comment}
+  alias TraysSocial.Accounts.Follow
 
   @doc """
   Returns the list of posts, excluding soft deleted posts.
@@ -21,14 +22,25 @@ defmodule TraysSocial.Posts do
     limit = Keyword.get(opts, :limit)
     cursor_id = Keyword.get(opts, :cursor_id)
     cursor_time = Keyword.get(opts, :cursor_time)
+    for_user_id = Keyword.get(opts, :for_user_id)
+
+    personalized = for_user_id && Repo.exists?(from(f in Follow, where: f.follower_id == ^for_user_id))
 
     Post
     |> where([p], is_nil(p.deleted_at))
+    |> filter_followed_feed(for_user_id, personalized)
     |> cursor_where(cursor_id, cursor_time)
     |> order_by([p], desc: p.inserted_at, desc: p.id)
     |> then(fn q -> if limit, do: limit(q, ^limit), else: q end)
     |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags, :post_photos])
     |> Repo.all()
+  end
+
+  defp filter_followed_feed(query, _user_id, nil), do: query
+  defp filter_followed_feed(query, _user_id, false), do: query
+
+  defp filter_followed_feed(query, user_id, true) do
+    join(query, :inner, [p], f in Follow, on: f.follower_id == ^user_id and f.followed_id == p.user_id)
   end
 
   defp cursor_where(query, nil, _), do: query
@@ -220,5 +232,70 @@ defmodule TraysSocial.Posts do
     |> select([pl], pl.post_id)
     |> Repo.all()
     |> MapSet.new()
+  end
+
+  @doc """
+  Gets a single comment by ID. Raises if not found.
+  """
+  def get_comment!(id), do: Repo.get!(Comment, id)
+
+  @doc """
+  Returns non-deleted comments for a post, oldest first, with user preloaded.
+  """
+  def list_comments(post_id) do
+    Comment
+    |> where([c], c.post_id == ^post_id and is_nil(c.deleted_at))
+    |> order_by([c], asc: c.inserted_at)
+    |> preload(:user)
+    |> Repo.all()
+  end
+
+  @doc """
+  Creates a comment on a post and increments comment_count atomically.
+  """
+  def create_comment(%Post{} = post, user, attrs) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.insert(
+      :comment,
+      Comment.changeset(%Comment{}, Map.merge(attrs, %{post_id: post.id, user_id: user.id}))
+    )
+    |> Ecto.Multi.run(:count, fn _repo, _changes ->
+      {1, _} = Repo.update_all(from(p in Post, where: p.id == ^post.id), inc: [comment_count: 1])
+      {:ok, :incremented}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{comment: comment}} -> {:ok, Repo.preload(comment, :user)}
+      {:error, :comment, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Soft-deletes a comment and decrements comment_count. Verifies ownership.
+  """
+  def delete_comment(%Comment{} = comment, user) do
+    if comment.user_id == user.id do
+      Ecto.Multi.new()
+      |> Ecto.Multi.update(
+        :comment,
+        Ecto.Changeset.change(comment, deleted_at: DateTime.utc_now(:second))
+      )
+      |> Ecto.Multi.run(:count, fn _repo, _changes ->
+        {1, _} =
+          Repo.update_all(
+            from(p in Post, where: p.id == ^comment.post_id),
+            inc: [comment_count: -1]
+          )
+
+        {:ok, :decremented}
+      end)
+      |> Repo.transaction()
+      |> case do
+        {:ok, %{comment: comment}} -> {:ok, comment}
+        {:error, _, reason, _} -> {:error, reason}
+      end
+    else
+      {:error, :unauthorized}
+    end
   end
 end
