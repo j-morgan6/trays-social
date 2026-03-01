@@ -335,39 +335,45 @@ defmodule TraysSocialWeb.CoreComponents do
 
   def bottom_drawer(assigns) do
     ~H"""
-    <%= if @show do %>
-      <%!-- Backdrop --%>
-      <div
-        class="fixed inset-0 z-40 bg-black/50"
-        phx-click={@on_close}
-        aria-label="Close drawer"
-      />
-      <%!-- Drawer panel --%>
-      <div
-        id={@id}
-        class="fixed bottom-0 inset-x-0 z-50 bg-base-100 rounded-t-2xl shadow-2xl max-h-[75vh] flex flex-col"
-        role="dialog"
-        aria-modal="true"
-      >
-        <%!-- Drag handle --%>
-        <div class="flex justify-center pt-3 pb-1 shrink-0">
-          <div class="w-12 h-1 bg-base-300 rounded-full" />
-        </div>
-        <%!-- Header --%>
-        <%= if @header != [] do %>
-          <div class="flex items-center justify-between px-5 py-3 border-b border-base-200 shrink-0">
-            <span class="font-semibold">{render_slot(@header)}</span>
-            <button type="button" phx-click={@on_close} class="btn btn-ghost btn-sm btn-square">
-              <.icon name="hero-x-mark" class="size-5" />
-            </button>
-          </div>
-        <% end %>
-        <%!-- Scrollable content --%>
-        <div class="overflow-y-auto flex-1 overscroll-contain">
-          {render_slot(@inner_block)}
-        </div>
+    <%!-- Backdrop --%>
+    <div
+      class={[
+        "fixed inset-0 z-40 bg-black/50 transition-opacity duration-300",
+        if(@show, do: "opacity-100 pointer-events-auto", else: "opacity-0 pointer-events-none")
+      ]}
+      phx-click={@on_close}
+      aria-label="Close drawer"
+    />
+    <%!-- Drawer panel --%>
+    <div
+      id={@id}
+      class={[
+        "fixed bottom-0 inset-x-0 z-50 bg-base-100 rounded-t-2xl shadow-2xl max-h-[75vh] flex flex-col",
+        "transition-transform duration-300 ease-out",
+        if(@show, do: "translate-y-0", else: "translate-y-full")
+      ]}
+      role="dialog"
+      aria-modal={to_string(@show)}
+      aria-hidden={to_string(!@show)}
+    >
+      <%!-- Drag handle --%>
+      <div class="flex justify-center pt-3 pb-1 shrink-0">
+        <div class="w-12 h-1 bg-base-300 rounded-full" />
       </div>
-    <% end %>
+      <%!-- Header --%>
+      <%= if @header != [] do %>
+        <div class="flex items-center justify-between px-5 py-3 border-b border-base-200 shrink-0">
+          <span class="font-semibold">{render_slot(@header)}</span>
+          <button type="button" phx-click={@on_close} class="btn btn-ghost btn-sm btn-square">
+            <.icon name="hero-x-mark" class="size-5" />
+          </button>
+        </div>
+      <% end %>
+      <%!-- Scrollable content --%>
+      <div class="overflow-y-auto flex-1 overscroll-contain">
+        {render_slot(@inner_block)}
+      </div>
+    </div>
     """
   end
 

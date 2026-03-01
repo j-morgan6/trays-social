@@ -178,4 +178,9 @@
 /* ===== PAGE TRANSITION ===== */
 main {
   animation: fade-in 0.2s ease-out both;
+  transition: opacity 0.15s ease;
+}
+
+main.phx-navigating {
+  opacity: 0.35;
 }
