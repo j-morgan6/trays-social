@@ -1,5 +1,36 @@
 This is a web application written using the Phoenix web framework.
 
+## Quality gates
+
+These gates are **mandatory** — do not mark any task complete without passing all three.
+
+**Gate 1: Pre-coding check**
+Before writing code, verify:
+- Does this task require a migration? Run `mix ecto.gen.migration` if so.
+- Does this touch auth or user data? Review the auth guidelines below.
+
+**Gate 2: Post-coding validation**
+After writing code, run:
+```
+mix test && mix credo --strict
+```
+Fix all failures and warnings before proceeding.
+
+**Gate 3: Pre-completion full audit**
+Before marking done, run:
+```
+mix precommit
+mix deps.audit
+mix hex.audit
+mix sobelow --skip
+```
+All must pass clean.
+
+## Module design standards
+
+- **500-600 line limit**: If a module exceeds 600 lines, it must be refactored. Split by responsibility (e.g., extract a `MyApp.Users.Queries` module from `MyApp.Users`).
+- **Refactor trigger**: At 500 lines, plan the split. At 600 lines, stop and refactor before adding more code.
+
 ## Project guidelines
 
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues
