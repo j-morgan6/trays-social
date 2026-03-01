@@ -3,6 +3,10 @@ defmodule TraysSocial.Posts do
   The Posts context.
   """
 
+  # Dialyzer false positives: Ecto.Multi.new() creates a concrete %MapSet{map: %{}}
+  # but Ecto.Multi operations expect the opaque MapSet.internal(_) type.
+  @dialyzer {:no_opaque, [like_post: 2, unlike_post: 2, create_comment: 3, delete_comment: 2]}
+
   import Ecto.Query, warn: false
   alias TraysSocial.Repo
 

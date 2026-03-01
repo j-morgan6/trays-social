@@ -1,6 +1,10 @@
 defmodule TraysSocialWeb.FeedLive.Index do
   use TraysSocialWeb, :live_view
 
+  # Dialyzer false positive: MapSet.new(list) can infer old :sets tuple representation,
+  # causing opaqueness mismatch when passed to MapSet.union/2.
+  @dialyzer {:no_opaque, handle_event: 3}
+
   alias TraysSocial.Posts
   alias TraysSocial.Accounts
 
@@ -120,46 +124,7 @@ defmodule TraysSocialWeb.FeedLive.Index do
         {:noreply, push_navigate(socket, to: ~p"/users/log-in")}
 
       %{user: user} ->
-        post_id = String.to_integer(post_id_str)
-
-        case Map.get(socket.assigns.posts_map, post_id) do
-          nil ->
-            {:noreply, socket}
-
-          post ->
-            liked = MapSet.member?(socket.assigns.liked_post_ids, post_id)
-
-            # Optimistic update
-            {new_count, new_liked_ids} =
-              if liked do
-                {max(0, post.like_count - 1), MapSet.delete(socket.assigns.liked_post_ids, post_id)}
-              else
-                {post.like_count + 1, MapSet.put(socket.assigns.liked_post_ids, post_id)}
-              end
-
-            updated_post = %{post | like_count: new_count}
-
-            socket =
-              socket
-              |> assign(:liked_post_ids, new_liked_ids)
-              |> update(:posts_map, &Map.put(&1, post_id, updated_post))
-              |> stream_insert(:posts, updated_post)
-
-            # Persist to DB and broadcast
-            if liked do
-              Posts.unlike_post(post, user)
-            else
-              Posts.like_post(post, user)
-            end
-
-            Phoenix.PubSub.broadcast(
-              TraysSocial.PubSub,
-              "posts:likes",
-              {:like_updated, post_id, new_count}
-            )
-
-            {:noreply, socket}
-        end
+        {:noreply, toggle_like(socket, String.to_integer(post_id_str), user)}
     end
   end
 
@@ -175,44 +140,12 @@ defmodule TraysSocialWeb.FeedLive.Index do
 
   @impl true
   def handle_event("next-photo", %{"post-id" => post_id_str}, socket) do
-    post_id = String.to_integer(post_id_str)
-
-    case Map.get(socket.assigns.posts_map, post_id) do
-      nil ->
-        {:noreply, socket}
-
-      post ->
-        count = photo_count(post)
-
-        if count > 1 do
-          current = Map.get(socket.assigns.photo_indices, post_id, 0)
-          next = rem(current + 1, count)
-          {:noreply, assign(socket, :photo_indices, Map.put(socket.assigns.photo_indices, post_id, next))}
-        else
-          {:noreply, socket}
-        end
-    end
+    {:noreply, update_photo_index(socket, String.to_integer(post_id_str), 1)}
   end
 
   @impl true
   def handle_event("prev-photo", %{"post-id" => post_id_str}, socket) do
-    post_id = String.to_integer(post_id_str)
-
-    case Map.get(socket.assigns.posts_map, post_id) do
-      nil ->
-        {:noreply, socket}
-
-      post ->
-        count = photo_count(post)
-
-        if count > 1 do
-          current = Map.get(socket.assigns.photo_indices, post_id, 0)
-          prev = rem(current - 1 + count, count)
-          {:noreply, assign(socket, :photo_indices, Map.put(socket.assigns.photo_indices, post_id, prev))}
-        else
-          {:noreply, socket}
-        end
-    end
+    {:noreply, update_photo_index(socket, String.to_integer(post_id_str), -1)}
   end
 
   @impl true
@@ -243,6 +176,60 @@ defmodule TraysSocialWeb.FeedLive.Index do
           |> stream_insert(:posts, updated_post)
 
         {:noreply, socket}
+    end
+  end
+
+  defp update_photo_index(socket, post_id, delta) do
+    case Map.get(socket.assigns.posts_map, post_id) do
+      nil ->
+        socket
+
+      post ->
+        count = photo_count(post)
+
+        if count > 1 do
+          current = Map.get(socket.assigns.photo_indices, post_id, 0)
+          next = rem(current + delta + count, count)
+          assign(socket, :photo_indices, Map.put(socket.assigns.photo_indices, post_id, next))
+        else
+          socket
+        end
+    end
+  end
+
+  defp toggle_like(socket, post_id, user) do
+    case Map.get(socket.assigns.posts_map, post_id) do
+      nil ->
+        socket
+
+      post ->
+        liked = MapSet.member?(socket.assigns.liked_post_ids, post_id)
+
+        {new_count, new_liked_ids} =
+          if liked do
+            {max(0, post.like_count - 1), MapSet.delete(socket.assigns.liked_post_ids, post_id)}
+          else
+            {post.like_count + 1, MapSet.put(socket.assigns.liked_post_ids, post_id)}
+          end
+
+        updated_post = %{post | like_count: new_count}
+
+        if liked do
+          Posts.unlike_post(post, user)
+        else
+          Posts.like_post(post, user)
+        end
+
+        Phoenix.PubSub.broadcast(
+          TraysSocial.PubSub,
+          "posts:likes",
+          {:like_updated, post_id, new_count}
+        )
+
+        socket
+        |> assign(:liked_post_ids, new_liked_ids)
+        |> update(:posts_map, &Map.put(&1, post_id, updated_post))
+        |> stream_insert(:posts, updated_post)
     end
   end
 
