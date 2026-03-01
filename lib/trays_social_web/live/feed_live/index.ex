@@ -5,8 +5,8 @@ defmodule TraysSocialWeb.FeedLive.Index do
   # causing opaqueness mismatch when passed to MapSet.union/2.
   @dialyzer {:no_opaque, handle_event: 3}
 
-  alias TraysSocial.Posts
   alias TraysSocial.Accounts
+  alias TraysSocial.Posts
 
   on_mount {TraysSocialWeb.UserAuth, :mount_current_scope}
   on_mount {TraysSocialWeb.NotificationsHook, :mount_notifications}

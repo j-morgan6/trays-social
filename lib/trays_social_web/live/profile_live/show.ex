@@ -17,50 +17,7 @@ defmodule TraysSocialWeb.ProfileLive.Show do
          |> push_navigate(to: ~p"/")}
 
       user ->
-        if connected?(socket) do
-          posts = Posts.list_posts_by_user(user.id)
-
-          {is_following, follower_count, following_count} =
-            case socket.assigns[:current_scope] do
-              %{user: current_user} when current_user.id != user.id ->
-                {
-                  Accounts.following?(current_user.id, user.id),
-                  Accounts.get_follower_count(user.id),
-                  Accounts.get_following_count(user.id)
-                }
-
-              _ ->
-                {
-                  false,
-                  Accounts.get_follower_count(user.id),
-                  Accounts.get_following_count(user.id)
-                }
-            end
-
-          {:ok,
-           socket
-           |> assign(:page_title, "@#{user.username}")
-           |> assign(:current_tab, :profile)
-           |> assign(:user, user)
-           |> assign(:posts, posts)
-           |> assign(:post_count, length(posts))
-           |> assign(:is_following, is_following)
-           |> assign(:follower_count, follower_count)
-           |> assign(:following_count, following_count)
-           |> assign(:loading, false)}
-        else
-          {:ok,
-           socket
-           |> assign(:page_title, "@#{user.username}")
-           |> assign(:current_tab, :profile)
-           |> assign(:user, user)
-           |> assign(:posts, [])
-           |> assign(:post_count, 0)
-           |> assign(:is_following, false)
-           |> assign(:follower_count, 0)
-           |> assign(:following_count, 0)
-           |> assign(:loading, true)}
-        end
+        {:ok, mount_user_profile(socket, user)}
     end
   end
 
@@ -71,28 +28,73 @@ defmodule TraysSocialWeb.ProfileLive.Show do
         {:noreply, push_navigate(socket, to: ~p"/users/log-in")}
 
       %{user: current_user} ->
-        target_user = socket.assigns.user
-        is_following = socket.assigns.is_following
+        {:noreply, toggle_follow(socket, current_user)}
+    end
+  end
 
-        if is_following do
-          Accounts.unfollow_user(current_user, target_user)
+  defp mount_user_profile(socket, user) do
+    if connected?(socket) do
+      posts = Posts.list_posts_by_user(user.id)
+      {is_following, follower_count, following_count} = follow_stats(socket, user)
 
-          {:noreply,
-           socket
-           |> assign(:is_following, false)
-           |> update(:follower_count, &max(0, &1 - 1))}
-        else
-          case Accounts.follow_user(current_user, target_user) do
-            {:ok, _} ->
-              {:noreply,
-               socket
-               |> assign(:is_following, true)
-               |> update(:follower_count, &(&1 + 1))}
+      socket
+      |> assign(:page_title, "@#{user.username}")
+      |> assign(:current_tab, :profile)
+      |> assign(:user, user)
+      |> assign(:posts, posts)
+      |> assign(:post_count, length(posts))
+      |> assign(:is_following, is_following)
+      |> assign(:follower_count, follower_count)
+      |> assign(:following_count, following_count)
+      |> assign(:loading, false)
+    else
+      socket
+      |> assign(:page_title, "@#{user.username}")
+      |> assign(:current_tab, :profile)
+      |> assign(:user, user)
+      |> assign(:posts, [])
+      |> assign(:post_count, 0)
+      |> assign(:is_following, false)
+      |> assign(:follower_count, 0)
+      |> assign(:following_count, 0)
+      |> assign(:loading, true)
+    end
+  end
 
-            {:error, _} ->
-              {:noreply, socket}
-          end
-        end
+  defp follow_stats(socket, user) do
+    case socket.assigns[:current_scope] do
+      %{user: current_user} when current_user.id != user.id ->
+        {
+          Accounts.following?(current_user.id, user.id),
+          Accounts.get_follower_count(user.id),
+          Accounts.get_following_count(user.id)
+        }
+
+      _ ->
+        {false, Accounts.get_follower_count(user.id), Accounts.get_following_count(user.id)}
+    end
+  end
+
+  defp toggle_follow(socket, current_user) do
+    target_user = socket.assigns.user
+    is_following = socket.assigns.is_following
+
+    if is_following do
+      Accounts.unfollow_user(current_user, target_user)
+
+      socket
+      |> assign(:is_following, false)
+      |> update(:follower_count, &max(0, &1 - 1))
+    else
+      case Accounts.follow_user(current_user, target_user) do
+        {:ok, _} ->
+          socket
+          |> assign(:is_following, true)
+          |> update(:follower_count, &(&1 + 1))
+
+        {:error, _} ->
+          socket
+      end
     end
   end
 end

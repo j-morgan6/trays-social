@@ -250,14 +250,16 @@ defmodule TraysSocialWeb.UserAuth do
 
   defp mount_current_scope(socket, session) do
     Phoenix.Component.assign_new(socket, :current_scope, fn ->
-      if user_token = session["user_token"] do
-        case Accounts.get_user_by_session_token(user_token) do
-          {user, _token_inserted_at} -> Scope.for_user(user)
-          nil -> nil
-        end
-      else
-        nil
-      end
+      scope_from_session(session)
     end)
+  end
+
+  defp scope_from_session(session) do
+    with token when not is_nil(token) <- session["user_token"],
+         {user, _token_inserted_at} <- Accounts.get_user_by_session_token(token) do
+      Scope.for_user(user)
+    else
+      _ -> nil
+    end
   end
 end

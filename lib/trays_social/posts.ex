@@ -8,11 +8,11 @@ defmodule TraysSocial.Posts do
   @dialyzer {:no_opaque, [like_post: 2, unlike_post: 2, create_comment: 3, delete_comment: 2]}
 
   import Ecto.Query, warn: false
-  alias TraysSocial.Repo
 
-  alias TraysSocial.Posts.{Post, Ingredient, Tool, CookingStep, PostTag, PostPhoto, PostLike, Comment}
   alias TraysSocial.Accounts.Follow
   alias TraysSocial.Notifications
+  alias TraysSocial.Posts.{Comment, CookingStep, Ingredient, Post, PostLike, PostPhoto, PostTag, Tool}
+  alias TraysSocial.Repo
 
   @doc """
   Returns the list of posts, excluding soft deleted posts.

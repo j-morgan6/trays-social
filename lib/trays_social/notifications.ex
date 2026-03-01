@@ -1,7 +1,7 @@
 defmodule TraysSocial.Notifications do
   import Ecto.Query, warn: false
-  alias TraysSocial.Repo
   alias TraysSocial.Notifications.Notification
+  alias TraysSocial.Repo
 
   @doc """
   Creates a notification and broadcasts it to the recipient via PubSub.

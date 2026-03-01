@@ -6,7 +6,7 @@ defmodule TraysSocial.Accounts do
   import Ecto.Query, warn: false
   alias TraysSocial.Repo
 
-  alias TraysSocial.Accounts.{User, UserToken, UserNotifier, Follow}
+  alias TraysSocial.Accounts.{Follow, User, UserNotifier, UserToken}
 
   ## Database getters
 

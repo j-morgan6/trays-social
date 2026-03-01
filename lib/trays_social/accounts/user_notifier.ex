@@ -1,8 +1,8 @@
 defmodule TraysSocial.Accounts.UserNotifier do
   import Swoosh.Email
 
-  alias TraysSocial.Mailer
   alias TraysSocial.Accounts.User
+  alias TraysSocial.Mailer
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do

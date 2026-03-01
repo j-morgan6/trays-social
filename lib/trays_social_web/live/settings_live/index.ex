@@ -3,7 +3,7 @@ defmodule TraysSocialWeb.SettingsLive.Index do
 
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.User
-  alias TraysSocial.Uploads.{Photo, ImageProcessor}
+  alias TraysSocial.Uploads.{ImageProcessor, Photo}
 
   on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
   on_mount {TraysSocialWeb.NotificationsHook, :mount_notifications}
@@ -84,26 +84,7 @@ defmodule TraysSocialWeb.SettingsLive.Index do
         |> Accounts.change_user_email(%{"email" => email})
         |> Map.put(:action, :validate)
 
-      if email_changeset.valid? do
-        user_with_new_email = Ecto.Changeset.apply_changes(email_changeset)
-
-        Accounts.deliver_user_update_email_instructions(
-          user_with_new_email,
-          user.email,
-          fn token -> url(~p"/users/settings/confirm-email/#{token}") end
-        )
-
-        {:noreply,
-         socket
-         |> assign(:email_form_error, nil)
-         |> assign(:email_changeset, Accounts.change_user_email(user))
-         |> put_flash(:info, "A link to confirm your email change has been sent to #{email}.")}
-      else
-        {:noreply,
-         socket
-         |> assign(:email_form_error, nil)
-         |> assign(:email_changeset, email_changeset)}
-      end
+      send_email_change(socket, user, email, email_changeset)
     else
       {:noreply, assign(socket, :email_form_error, "Current password is incorrect.")}
     end
@@ -158,24 +139,48 @@ defmodule TraysSocialWeb.SettingsLive.Index do
         {:ok, nil}
 
       _ ->
-        urls =
-          consume_uploaded_entries(socket, :profile_photo, fn %{path: path}, entry ->
-            upload = %Plug.Upload{
-              path: path,
-              filename: entry.client_name,
-              content_type: entry.client_type
-            }
-
-            case Photo.store(upload) do
-              {:ok, url} -> {:ok, ImageProcessor.thumb_url(url)}
-              {:error, reason} -> {:postpone, reason}
-            end
-          end)
+        urls = consume_uploaded_entries(socket, :profile_photo, &process_photo_entry/2)
 
         case urls do
           [url | _] -> {:ok, url}
           [] -> {:error, :upload_failed}
         end
+    end
+  end
+
+  defp send_email_change(socket, user, email, email_changeset) do
+    if email_changeset.valid? do
+      user_with_new_email = Ecto.Changeset.apply_changes(email_changeset)
+
+      Accounts.deliver_user_update_email_instructions(
+        user_with_new_email,
+        user.email,
+        fn token -> url(~p"/users/settings/confirm-email/#{token}") end
+      )
+
+      {:noreply,
+       socket
+       |> assign(:email_form_error, nil)
+       |> assign(:email_changeset, Accounts.change_user_email(user))
+       |> put_flash(:info, "A link to confirm your email change has been sent to #{email}.")}
+    else
+      {:noreply,
+       socket
+       |> assign(:email_form_error, nil)
+       |> assign(:email_changeset, email_changeset)}
+    end
+  end
+
+  defp process_photo_entry(%{path: path}, entry) do
+    upload = %Plug.Upload{
+      path: path,
+      filename: entry.client_name,
+      content_type: entry.client_type
+    }
+
+    case Photo.store(upload) do
+      {:ok, url} -> {:ok, ImageProcessor.thumb_url(url)}
+      {:error, reason} -> {:postpone, reason}
     end
   end
 
