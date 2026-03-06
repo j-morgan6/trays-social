@@ -11,7 +11,8 @@ defmodule TraysSocial.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      test_coverage: test_coverage()
     ]
   end
 
@@ -75,6 +76,37 @@ defmodule TraysSocial.MixProject do
     ]
   end
 
+  defp test_coverage do
+    [
+      ignore_modules: [
+        Inspect.TraysSocial.Accounts.User,
+        TraysSocial,
+        TraysSocial.AccountsFixtures,
+        TraysSocial.Application,
+        TraysSocial.DataCase,
+        TraysSocial.Mailer,
+        TraysSocial.PostsFixtures,
+        TraysSocial.Repo,
+        TraysSocialWeb,
+        TraysSocialWeb.ConnCase,
+        TraysSocialWeb.CoreComponents,
+        TraysSocialWeb.Endpoint,
+        TraysSocialWeb.ErrorHTML,
+        TraysSocialWeb.ErrorJSON,
+        TraysSocialWeb.Gettext,
+        TraysSocialWeb.Layouts,
+        TraysSocialWeb.PageController,
+        TraysSocialWeb.PageHTML,
+        TraysSocialWeb.Router,
+        TraysSocialWeb.Telemetry,
+        TraysSocialWeb.UserRegistrationHTML,
+        TraysSocialWeb.UserSessionHTML,
+        TraysSocialWeb.UserSettingsHTML,
+        TraysSocial.Uploads.ImageProcessor
+      ]
+    ]
+  end
+
   # Aliases are shortcuts or tasks specific to the current project.
   # For example, to install project dependencies and perform other setup tasks, run:
   #
@@ -86,7 +118,7 @@ defmodule TraysSocial.MixProject do
       setup: ["deps.get", "ecto.setup", "assets.setup", "assets.build"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test --cover"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["compile", "tailwind trays_social", "esbuild trays_social"],
       "assets.deploy": [
