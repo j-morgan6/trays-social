@@ -23,6 +23,4 @@ defmodule TraysSocial.Posts.PostTag do
     |> String.downcase()
     |> String.trim()
   end
-
-  defp normalize_tag(tag), do: tag
 end

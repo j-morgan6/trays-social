@@ -124,7 +124,19 @@ defmodule TraysSocialWeb.PostLive.New do
   end
 
   defp upload_and_create(socket, post_params) do
+    require Logger
+
+    entries = socket.assigns.uploads.photos.entries
+    Logger.warning("upload_and_create: #{length(entries)} entries")
+
+    for entry <- entries do
+      Logger.warning(
+        "  entry: #{entry.client_name}, done?=#{entry.done?}, progress=#{entry.progress}"
+      )
+    end
+
     uploaded_urls = consume_photo_uploads(socket)
+    Logger.warning("uploaded_urls: #{inspect(uploaded_urls)}")
 
     case uploaded_urls do
       [first_url | _] ->
@@ -177,10 +189,14 @@ defmodule TraysSocialWeb.PostLive.New do
   end
 
   defp create_post(socket, post_params) do
+    require Logger
     post_params = Map.put(post_params, "user_id", socket.assigns.current_scope.user.id)
+    Logger.warning("create_post params: #{inspect(Map.keys(post_params))}")
 
     case Posts.create_post(post_params) do
       {:ok, post} ->
+        Logger.warning("Post created successfully, id=#{post.id}")
+
         Phoenix.PubSub.broadcast(
           TraysSocial.PubSub,
           "posts:new",
@@ -193,6 +209,7 @@ defmodule TraysSocialWeb.PostLive.New do
          |> push_navigate(to: ~p"/posts/#{post.id}")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        Logger.warning("Post creation failed: #{inspect(changeset.errors)}")
         {:noreply, assign(socket, changeset: changeset)}
     end
   end
