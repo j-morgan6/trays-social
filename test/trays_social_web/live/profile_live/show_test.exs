@@ -101,5 +101,96 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
 
       assert_redirect(view, ~p"/posts/#{post.id}")
     end
+
+    test "shows follow button for authenticated user viewing another profile", %{conn: conn} do
+      user = user_fixture()
+      viewer = user_fixture()
+
+      {:ok, _view, html} =
+        conn
+        |> log_in_user(viewer)
+        |> live(~p"/@#{user.username}")
+
+      assert html =~ "Follow"
+    end
+
+    test "toggle-follow redirects unauthenticated user to login", %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/@#{user.username}")
+
+      render_click(view, "toggle-follow")
+      assert_redirect(view, ~p"/users/log-in")
+    end
+
+    test "authenticated user can follow and unfollow another user", %{conn: conn} do
+      user = user_fixture()
+      viewer = user_fixture()
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(viewer)
+        |> live(~p"/@#{user.username}")
+
+      # Follow the user
+      html = render_click(view, "toggle-follow")
+      assert html =~ "Following"
+
+      # Unfollow the user
+      html = render_click(view, "toggle-follow")
+      assert html =~ "Follow"
+      refute html =~ "Following"
+    end
+
+    test "displays follower and following counts", %{conn: conn} do
+      user = user_fixture()
+      follower = user_fixture()
+
+      # Create a follow relationship
+      TraysSocial.Accounts.follow_user(follower, user)
+
+      {:ok, _view, html} =
+        conn
+        |> log_in_user(follower)
+        |> live(~p"/@#{user.username}")
+
+      # Should show 1 follower
+      assert html =~ "1"
+      assert html =~ "follower"
+    end
+
+    test "displays following count for own profile", %{conn: conn} do
+      user = user_fixture()
+      other = user_fixture()
+
+      TraysSocial.Accounts.follow_user(user, other)
+
+      {:ok, _view, html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/@#{user.username}")
+
+      assert html =~ "following"
+    end
+
+    test "shows empty posts state for own profile with no posts", %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, _view, html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/@#{user.username}")
+
+      assert html =~ "No posts yet"
+      assert html =~ "Share your first post"
+    end
+
+    test "shows empty posts state for other user with no posts", %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/@#{user.username}")
+
+      assert html =~ "No posts yet"
+    end
   end
 end

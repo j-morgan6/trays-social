@@ -115,6 +115,39 @@ defmodule TraysSocial.Uploads.PhotoTest do
     end
   end
 
+  describe "validate_size/1" do
+    test "accepts files within size limit" do
+      path = Path.join(System.tmp_dir!(), "small_file_#{System.unique_integer([:positive])}.jpg")
+      File.write!(path, "small content")
+
+      on_exit(fn -> File.rm(path) end)
+
+      assert :ok = Photo.validate_size(path)
+    end
+
+    test "rejects files exceeding size limit" do
+      path = Path.join(System.tmp_dir!(), "large_file_#{System.unique_integer([:positive])}.jpg")
+      # Create a file larger than 10MB
+      content = :binary.copy(<<0>>, 10 * 1024 * 1024 + 1)
+      File.write!(path, content)
+
+      on_exit(fn -> File.rm(path) end)
+
+      assert {:error, :file_too_large} = Photo.validate_size(path)
+    end
+
+    test "returns error when file does not exist" do
+      assert {:error, :enoent} = Photo.validate_size("/tmp/nonexistent_file_for_test.jpg")
+    end
+  end
+
+  describe "delete/1 edge cases" do
+    test "handles non-binary non-nil input gracefully" do
+      assert :ok = Photo.delete(123)
+      assert :ok = Photo.delete(:atom)
+    end
+  end
+
   describe "allowed_extensions/0" do
     test "returns list of allowed extensions" do
       extensions = Photo.allowed_extensions()

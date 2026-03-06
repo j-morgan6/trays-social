@@ -15,23 +15,29 @@ defmodule TraysSocial.PostsFixtures do
 
   @doc """
   Generate a post.
+
+  Accepts either a keyword list or a map of attributes.
+  Requires :user_id. Supports nested :post_tags, :post_photos, etc.
   """
   def post_fixture(attrs \\ %{}) do
+    attrs = Map.new(attrs)
+
     user_id =
       attrs[:user_id] ||
         raise "user_id is required for post_fixture"
 
-    {:ok, post} =
-      attrs
-      |> Enum.into(%{
-        caption: "some caption",
-        cooking_time_minutes: 42,
-        photo_url: "/uploads/test_photo.jpg",
-        user_id: user_id
-      })
-      |> TraysSocial.Posts.create_post()
+    base_attrs = %{
+      caption: "some caption",
+      cooking_time_minutes: 42,
+      photo_url: "/uploads/test_photo.jpg",
+      user_id: user_id
+    }
 
-    # Preload user association for tests
-    TraysSocial.Repo.preload(post, :user)
+    merged = Enum.into(attrs, base_attrs)
+
+    {:ok, post} = TraysSocial.Posts.create_post(merged)
+
+    # Preload associations for tests
+    TraysSocial.Repo.preload(post, [:user, :post_photos])
   end
 end

@@ -397,6 +397,293 @@ defmodule TraysSocial.AccountsTest do
     end
   end
 
+  describe "get_user_by_username/1" do
+    test "does not return the user if the username does not exist" do
+      refute Accounts.get_user_by_username("nonexistent")
+    end
+
+    test "returns the user if the username exists" do
+      %{id: id} = user = user_fixture()
+      assert %User{id: ^id} = Accounts.get_user_by_username(user.username)
+    end
+  end
+
+  describe "update_user_profile/2" do
+    setup do
+      %{user: user_fixture()}
+    end
+
+    test "updates bio successfully", %{user: user} do
+      assert {:ok, updated} = Accounts.update_user_profile(user, %{bio: "New bio"})
+      assert updated.bio == "New bio"
+    end
+
+    test "updates username successfully", %{user: user} do
+      assert {:ok, updated} = Accounts.update_user_profile(user, %{username: "newname"})
+      assert updated.username == "newname"
+    end
+
+    test "updates profile_photo_url successfully", %{user: user} do
+      url = "https://example.com/photo.jpg"
+      assert {:ok, updated} = Accounts.update_user_profile(user, %{profile_photo_url: url})
+      assert updated.profile_photo_url == url
+    end
+
+    test "rejects blank username", %{user: user} do
+      assert {:error, changeset} = Accounts.update_user_profile(user, %{username: ""})
+      assert %{username: ["can't be blank"]} = errors_on(changeset)
+    end
+
+    test "rejects username shorter than 3 characters", %{user: user} do
+      assert {:error, changeset} = Accounts.update_user_profile(user, %{username: "ab"})
+      assert "should be at least 3 character(s)" in errors_on(changeset).username
+    end
+
+    test "rejects username longer than 30 characters", %{user: user} do
+      long_name = String.duplicate("a", 31)
+      assert {:error, changeset} = Accounts.update_user_profile(user, %{username: long_name})
+      assert "should be at most 30 character(s)" in errors_on(changeset).username
+    end
+
+    test "rejects bio longer than 500 characters", %{user: user} do
+      long_bio = String.duplicate("a", 501)
+      assert {:error, changeset} = Accounts.update_user_profile(user, %{bio: long_bio})
+      assert "should be at most 500 character(s)" in errors_on(changeset).bio
+    end
+  end
+
+  describe "change_user_profile/2" do
+    test "returns a changeset" do
+      user = user_fixture()
+      assert %Ecto.Changeset{} = Accounts.change_user_profile(user)
+    end
+
+    test "returns a changeset with attrs applied" do
+      user = user_fixture()
+      changeset = Accounts.change_user_profile(user, %{bio: "Hello"})
+      assert Ecto.Changeset.get_change(changeset, :bio) == "Hello"
+    end
+  end
+
+  describe "delete_account/1" do
+    test "soft deletes user's posts and removes tokens" do
+      user = user_fixture()
+      _token = Accounts.generate_user_session_token(user)
+
+      # Create a post for this user
+      {:ok, post} =
+        TraysSocial.Posts.create_post(%{
+          caption: "Test post",
+          photo_url: "https://example.com/photo.jpg",
+          cooking_time_minutes: 30,
+          user_id: user.id
+        })
+
+      assert {:ok, _user} = Accounts.delete_account(user)
+
+      # Post should be soft-deleted
+      updated_post = TraysSocial.Repo.get!(TraysSocial.Posts.Post, post.id)
+      assert updated_post.deleted_at != nil
+
+      # All tokens should be deleted
+      refute TraysSocial.Repo.get_by(UserToken, user_id: user.id)
+    end
+
+    test "works when user has no posts or tokens" do
+      user = user_fixture()
+      assert {:ok, _user} = Accounts.delete_account(user)
+    end
+  end
+
+  describe "follow_user/2" do
+    setup do
+      %{user1: user_fixture(), user2: user_fixture()}
+    end
+
+    test "follows a user successfully", %{user1: user1, user2: user2} do
+      assert {:ok, follow} = Accounts.follow_user(user1, user2)
+      assert follow.follower_id == user1.id
+      assert follow.followed_id == user2.id
+    end
+
+    test "is idempotent (no-op if already following)", %{user1: user1, user2: user2} do
+      assert {:ok, _follow} = Accounts.follow_user(user1, user2)
+      assert {:ok, _follow} = Accounts.follow_user(user1, user2)
+      # Should still only have one follow record
+      assert Accounts.get_follower_count(user2.id) == 1
+    end
+
+    test "cannot follow yourself", %{user1: user1} do
+      assert {:error, :cannot_follow_self} = Accounts.follow_user(user1, user1)
+    end
+
+    test "creates a notification for the followed user", %{user1: user1, user2: user2} do
+      assert {:ok, _follow} = Accounts.follow_user(user1, user2)
+
+      notification =
+        TraysSocial.Repo.get_by(TraysSocial.Notifications.Notification,
+          user_id: user2.id,
+          actor_id: user1.id,
+          type: "follow"
+        )
+
+      assert notification != nil
+    end
+  end
+
+  describe "unfollow_user/2" do
+    setup do
+      user1 = user_fixture()
+      user2 = user_fixture()
+      {:ok, _follow} = Accounts.follow_user(user1, user2)
+      %{user1: user1, user2: user2}
+    end
+
+    test "unfollows a user successfully", %{user1: user1, user2: user2} do
+      assert :ok = Accounts.unfollow_user(user1, user2)
+      refute Accounts.following?(user1.id, user2.id)
+    end
+
+    test "is idempotent (no-op if not following)", %{user1: user1, user2: user2} do
+      assert :ok = Accounts.unfollow_user(user1, user2)
+      assert :ok = Accounts.unfollow_user(user1, user2)
+    end
+  end
+
+  describe "following?/2" do
+    setup do
+      %{user1: user_fixture(), user2: user_fixture()}
+    end
+
+    test "returns true when following", %{user1: user1, user2: user2} do
+      {:ok, _follow} = Accounts.follow_user(user1, user2)
+      assert Accounts.following?(user1.id, user2.id)
+    end
+
+    test "returns false when not following", %{user1: user1, user2: user2} do
+      refute Accounts.following?(user1.id, user2.id)
+    end
+
+    test "is directional (A follows B does not mean B follows A)", %{user1: user1, user2: user2} do
+      {:ok, _follow} = Accounts.follow_user(user1, user2)
+      assert Accounts.following?(user1.id, user2.id)
+      refute Accounts.following?(user2.id, user1.id)
+    end
+  end
+
+  describe "has_follows?/1" do
+    test "returns false when user follows nobody" do
+      user = user_fixture()
+      refute Accounts.has_follows?(user.id)
+    end
+
+    test "returns true when user follows someone" do
+      user1 = user_fixture()
+      user2 = user_fixture()
+      {:ok, _follow} = Accounts.follow_user(user1, user2)
+      assert Accounts.has_follows?(user1.id)
+    end
+
+    test "returns false for the followed user if they don't follow back" do
+      user1 = user_fixture()
+      user2 = user_fixture()
+      {:ok, _follow} = Accounts.follow_user(user1, user2)
+      refute Accounts.has_follows?(user2.id)
+    end
+  end
+
+  describe "get_follower_count/1" do
+    test "returns 0 when user has no followers" do
+      user = user_fixture()
+      assert Accounts.get_follower_count(user.id) == 0
+    end
+
+    test "returns correct count with multiple followers" do
+      user1 = user_fixture()
+      user2 = user_fixture()
+      user3 = user_fixture()
+
+      {:ok, _} = Accounts.follow_user(user1, user3)
+      {:ok, _} = Accounts.follow_user(user2, user3)
+
+      assert Accounts.get_follower_count(user3.id) == 2
+    end
+
+    test "decreases when someone unfollows" do
+      user1 = user_fixture()
+      user2 = user_fixture()
+
+      {:ok, _} = Accounts.follow_user(user1, user2)
+      assert Accounts.get_follower_count(user2.id) == 1
+
+      :ok = Accounts.unfollow_user(user1, user2)
+      assert Accounts.get_follower_count(user2.id) == 0
+    end
+  end
+
+  describe "get_following_count/1" do
+    test "returns 0 when user follows nobody" do
+      user = user_fixture()
+      assert Accounts.get_following_count(user.id) == 0
+    end
+
+    test "returns correct count when following multiple users" do
+      user1 = user_fixture()
+      user2 = user_fixture()
+      user3 = user_fixture()
+
+      {:ok, _} = Accounts.follow_user(user1, user2)
+      {:ok, _} = Accounts.follow_user(user1, user3)
+
+      assert Accounts.get_following_count(user1.id) == 2
+    end
+
+    test "decreases when unfollowing" do
+      user1 = user_fixture()
+      user2 = user_fixture()
+
+      {:ok, _} = Accounts.follow_user(user1, user2)
+      assert Accounts.get_following_count(user1.id) == 1
+
+      :ok = Accounts.unfollow_user(user1, user2)
+      assert Accounts.get_following_count(user1.id) == 0
+    end
+  end
+
+  describe "Follow.changeset/2" do
+    alias TraysSocial.Accounts.Follow
+
+    test "valid changeset with follower_id and followed_id" do
+      changeset = Follow.changeset(%Follow{}, %{follower_id: 1, followed_id: 2})
+      assert changeset.valid?
+    end
+
+    test "requires follower_id" do
+      changeset = Follow.changeset(%Follow{}, %{followed_id: 2})
+      refute changeset.valid?
+      assert %{follower_id: ["can't be blank"]} = errors_on(changeset)
+    end
+
+    test "requires followed_id" do
+      changeset = Follow.changeset(%Follow{}, %{follower_id: 1})
+      refute changeset.valid?
+      assert %{followed_id: ["can't be blank"]} = errors_on(changeset)
+    end
+
+    test "rejects self-follow" do
+      changeset = Follow.changeset(%Follow{}, %{follower_id: 1, followed_id: 1})
+      refute changeset.valid?
+      assert %{followed_id: ["cannot follow yourself"]} = errors_on(changeset)
+    end
+
+    test "allows different follower and followed ids" do
+      changeset = Follow.changeset(%Follow{}, %{follower_id: 1, followed_id: 2})
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :follower_id) == 1
+      assert Ecto.Changeset.get_change(changeset, :followed_id) == 2
+    end
+  end
+
   describe "inspect/2 for the User module" do
     test "does not include password" do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""
