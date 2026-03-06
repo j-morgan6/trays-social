@@ -1,11 +1,11 @@
 defmodule TraysSocialWeb.UserAuthTest do
   use TraysSocialWeb.ConnCase, async: true
 
+  import TraysSocial.AccountsFixtures
+
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.Scope
   alias TraysSocialWeb.UserAuth
-
-  import TraysSocial.AccountsFixtures
 
   @remember_me_cookie "_trays_social_web_user_remember_me"
   @remember_me_cookie_max_age 60 * 60 * 24 * 14

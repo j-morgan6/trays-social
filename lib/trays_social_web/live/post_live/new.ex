@@ -124,38 +124,43 @@ defmodule TraysSocialWeb.PostLive.New do
   end
 
   defp upload_and_create(socket, post_params) do
-    uploaded_urls =
-      consume_uploaded_entries(socket, :photos, fn %{path: path}, entry ->
-        upload = %Plug.Upload{
-          path: path,
-          filename: entry.client_name,
-          content_type: entry.client_type
-        }
-
-        case Photo.store(upload) do
-          {:ok, url} -> {:ok, url}
-          {:error, reason} -> {:postpone, reason}
-        end
-      end)
+    uploaded_urls = consume_photo_uploads(socket)
 
     case uploaded_urls do
       [first_url | _] ->
-        post_photos =
-          uploaded_urls
-          |> Enum.with_index()
-          |> Enum.map(fn {url, idx} -> %{"url" => url, "position" => idx} end)
-
-        post_params =
-          post_params
-          |> Map.put("photo_url", first_url)
-          |> Map.put("post_photos", post_photos)
-          |> parse_tags()
-
+        post_params = build_post_params_with_photos(post_params, first_url, uploaded_urls)
         create_post(socket, post_params)
 
       [] ->
         {:noreply, put_flash(socket, :error, "Photo upload failed. Please try again.")}
     end
+  end
+
+  defp consume_photo_uploads(socket) do
+    consume_uploaded_entries(socket, :photos, fn %{path: path}, entry ->
+      upload = %Plug.Upload{
+        path: path,
+        filename: entry.client_name,
+        content_type: entry.client_type
+      }
+
+      case Photo.store(upload) do
+        {:ok, url} -> {:ok, url}
+        {:error, reason} -> {:postpone, reason}
+      end
+    end)
+  end
+
+  defp build_post_params_with_photos(post_params, first_url, uploaded_urls) do
+    post_photos =
+      uploaded_urls
+      |> Enum.with_index()
+      |> Enum.map(fn {url, idx} -> %{"url" => url, "position" => idx} end)
+
+    post_params
+    |> Map.put("photo_url", first_url)
+    |> Map.put("post_photos", post_photos)
+    |> parse_tags()
   end
 
   defp parse_tags(post_params) do

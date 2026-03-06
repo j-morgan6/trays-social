@@ -1,10 +1,11 @@
 defmodule TraysSocial.AccountsTest do
   use TraysSocial.DataCase
 
-  alias TraysSocial.Accounts
-
   import TraysSocial.AccountsFixtures
-  alias TraysSocial.Accounts.{User, UserToken}
+
+  alias TraysSocial.Accounts
+  alias TraysSocial.Accounts.User
+  alias TraysSocial.Accounts.UserToken
 
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
@@ -80,7 +81,12 @@ defmodule TraysSocial.AccountsTest do
     @tag :skip
     test "registers users without password" do
       email = unique_user_email()
-      {:ok, user} = Accounts.register_user(valid_user_attributes(email: email))
+
+      {:ok, user} =
+        [email: email]
+        |> valid_user_attributes()
+        |> Accounts.register_user()
+
       assert user.email == email
       assert is_nil(user.hashed_password)
       assert is_nil(user.confirmed_at)
@@ -275,7 +281,7 @@ defmodule TraysSocial.AccountsTest do
     end
 
     test "duplicates the authenticated_at of given user in new token", %{user: user} do
-      user = %{user | authenticated_at: DateTime.add(DateTime.utc_now(:second), -3600)}
+      user = %{user | authenticated_at: DateTime.utc_now(:second) |> DateTime.add(-3600)}
       token = Accounts.generate_user_session_token(user)
       assert user_token = Repo.get_by(UserToken, token: token)
       assert user_token.authenticated_at == user.authenticated_at

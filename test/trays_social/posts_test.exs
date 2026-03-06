@@ -1,9 +1,9 @@
 defmodule TraysSocial.PostsTest do
   use TraysSocial.DataCase
 
-  alias TraysSocial.Posts
-
   import TraysSocial.AccountsFixtures
+
+  alias TraysSocial.Posts
 
   describe "posts" do
     alias TraysSocial.Posts.Post

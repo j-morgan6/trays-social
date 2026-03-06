@@ -1,10 +1,10 @@
 defmodule TraysSocialWeb.UserSettingsController do
   use TraysSocialWeb, :controller
 
+  import TraysSocialWeb.UserAuth, only: [require_sudo_mode: 2]
+
   alias TraysSocial.Accounts
   alias TraysSocialWeb.UserAuth
-
-  import TraysSocialWeb.UserAuth, only: [require_sudo_mode: 2]
 
   plug :require_sudo_mode
   plug :assign_email_and_password_changesets
@@ -19,8 +19,9 @@ defmodule TraysSocialWeb.UserSettingsController do
 
     case Accounts.change_user_email(user, user_params) do
       %{valid?: true} = changeset ->
-        Accounts.deliver_user_update_email_instructions(
-          Ecto.Changeset.apply_action!(changeset, :insert),
+        changeset
+        |> Ecto.Changeset.apply_action!(:insert)
+        |> Accounts.deliver_user_update_email_instructions(
           user.email,
           &url(~p"/users/settings/confirm-email/#{&1}")
         )

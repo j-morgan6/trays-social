@@ -1,8 +1,9 @@
 defmodule TraysSocialWeb.UserSettingsControllerTest do
   use TraysSocialWeb.ConnCase, async: true
 
-  alias TraysSocial.Accounts
   import TraysSocial.AccountsFixtures
+
+  alias TraysSocial.Accounts
 
   setup :register_and_log_in_user
 
@@ -20,7 +21,7 @@ defmodule TraysSocialWeb.UserSettingsControllerTest do
     end
 
     @tag :skip
-    @tag token_authenticated_at: DateTime.add(DateTime.utc_now(:second), -11, :minute)
+    @tag token_authenticated_at: DateTime.utc_now(:second) |> DateTime.add(-11, :minute)
     test "redirects if user is not in sudo mode", %{conn: conn} do
       # Skipped: LiveView replaced controller, uses simpler auth via on_mount
       conn = get(conn, ~p"/users/settings")

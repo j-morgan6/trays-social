@@ -11,7 +11,16 @@ defmodule TraysSocial.Posts do
 
   alias TraysSocial.Accounts.Follow
   alias TraysSocial.Notifications
-  alias TraysSocial.Posts.{Comment, CookingStep, Ingredient, Post, PostLike, PostPhoto, PostTag, Tool}
+
+  alias TraysSocial.Posts.Comment
+  alias TraysSocial.Posts.CookingStep
+  alias TraysSocial.Posts.Ingredient
+  alias TraysSocial.Posts.Post
+  alias TraysSocial.Posts.PostLike
+  alias TraysSocial.Posts.PostPhoto
+  alias TraysSocial.Posts.PostTag
+  alias TraysSocial.Posts.Tool
+
   alias TraysSocial.Repo
 
   @doc """
@@ -29,7 +38,9 @@ defmodule TraysSocial.Posts do
     cursor_time = Keyword.get(opts, :cursor_time)
     for_user_id = Keyword.get(opts, :for_user_id)
 
-    personalized = for_user_id && Repo.exists?(from(f in Follow, where: f.follower_id == ^for_user_id))
+    personalized =
+      for_user_id &&
+        Follow |> where([f], f.follower_id == ^for_user_id) |> Repo.exists?()
 
     Post
     |> where([p], is_nil(p.deleted_at))
@@ -45,7 +56,9 @@ defmodule TraysSocial.Posts do
   defp filter_followed_feed(query, _user_id, false), do: query
 
   defp filter_followed_feed(query, user_id, true) do
-    join(query, :inner, [p], f in Follow, on: f.follower_id == ^user_id and f.followed_id == p.user_id)
+    join(query, :inner, [p], f in Follow,
+      on: f.follower_id == ^user_id and f.followed_id == p.user_id
+    )
   end
 
   defp cursor_where(query, nil, _), do: query
@@ -101,40 +114,56 @@ defmodule TraysSocial.Posts do
   Returns a list of {tag, posts} tuples in the same order as tags.
   """
   def list_posts_by_tags(tags, posts_per_tag \\ 8) do
-    rows =
-      Post
-      |> join(:inner, [p], pt in PostTag, on: pt.post_id == p.id and pt.tag in ^tags)
-      |> where([p], is_nil(p.deleted_at))
-      |> order_by([p, pt], [asc: pt.tag, desc: p.inserted_at])
-      |> select([p, pt], {pt.tag, p.id})
-      |> Repo.all()
-
-    # Collect up to posts_per_tag post IDs per tag (order preserved)
     tag_post_ids =
-      Enum.reduce(rows, %{}, fn {tag, post_id}, acc ->
-        current = Map.get(acc, tag, [])
-        if length(current) < posts_per_tag do
-          Map.put(acc, tag, current ++ [post_id])
-        else
-          acc
-        end
-      end)
+      tags
+      |> fetch_tag_post_rows()
+      |> collect_post_ids_per_tag(posts_per_tag)
 
+    posts_by_id = fetch_posts_by_ids(tag_post_ids)
+
+    tags
+    |> assemble_tag_posts(tag_post_ids, posts_by_id)
+    |> Enum.reject(fn {_tag, posts} -> Enum.empty?(posts) end)
+  end
+
+  defp fetch_tag_post_rows(tags) do
+    Post
+    |> join(:inner, [p], pt in PostTag, on: pt.post_id == p.id and pt.tag in ^tags)
+    |> where([p], is_nil(p.deleted_at))
+    |> order_by([p, pt], asc: pt.tag, desc: p.inserted_at)
+    |> select([p, pt], {pt.tag, p.id})
+    |> Repo.all()
+  end
+
+  # Collect up to posts_per_tag post IDs per tag (order preserved)
+  defp collect_post_ids_per_tag(rows, posts_per_tag) do
+    Enum.reduce(rows, %{}, fn {tag, post_id}, acc ->
+      current = Map.get(acc, tag, [])
+
+      if length(current) < posts_per_tag do
+        Map.put(acc, tag, current ++ [post_id])
+      else
+        acc
+      end
+    end)
+  end
+
+  defp fetch_posts_by_ids(tag_post_ids) do
     all_post_ids = tag_post_ids |> Map.values() |> List.flatten() |> Enum.uniq()
 
-    posts_by_id =
-      Post
-      |> where([p], p.id in ^all_post_ids)
-      |> preload([:user, :post_photos])
-      |> Repo.all()
-      |> Map.new(&{&1.id, &1})
+    Post
+    |> where([p], p.id in ^all_post_ids)
+    |> preload([:user, :post_photos])
+    |> Repo.all()
+    |> Map.new(&{&1.id, &1})
+  end
 
+  defp assemble_tag_posts(tags, tag_post_ids, posts_by_id) do
     Enum.map(tags, fn tag ->
       ids = Map.get(tag_post_ids, tag, [])
-      posts = Enum.map(ids, &Map.get(posts_by_id, &1)) |> Enum.reject(&is_nil/1)
+      posts = ids |> Enum.map(&Map.get(posts_by_id, &1)) |> Enum.reject(&is_nil/1)
       {tag, posts}
     end)
-    |> Enum.reject(fn {_tag, posts} -> Enum.empty?(posts) end)
   end
 
   @doc """
@@ -262,7 +291,11 @@ defmodule TraysSocial.Posts do
     )
     |> Ecto.Multi.run(:count, fn _repo, %{like: like} ->
       if like.id do
-        {1, _} = Repo.update_all(from(p in Post, where: p.id == ^post.id), inc: [like_count: 1])
+        {1, _} =
+          Post
+          |> where([p], p.id == ^post.id)
+          |> Repo.update_all(inc: [like_count: 1])
+
         {:ok, post.like_count + 1}
       else
         {:ok, post.like_count}
@@ -295,10 +328,9 @@ defmodule TraysSocial.Posts do
     |> Ecto.Multi.run(:count, fn _repo, %{like: {deleted, _}} ->
       if deleted > 0 do
         {1, _} =
-          Repo.update_all(
-            from(p in Post, where: p.id == ^post.id),
-            inc: [like_count: -1]
-          )
+          Post
+          |> where([p], p.id == ^post.id)
+          |> Repo.update_all(inc: [like_count: -1])
 
         {:ok, max(0, post.like_count - 1)}
       else
@@ -356,7 +388,11 @@ defmodule TraysSocial.Posts do
       Comment.changeset(%Comment{}, Map.merge(attrs, %{post_id: post.id, user_id: user.id}))
     )
     |> Ecto.Multi.run(:count, fn _repo, _changes ->
-      {1, _} = Repo.update_all(from(p in Post, where: p.id == ^post.id), inc: [comment_count: 1])
+      {1, _} =
+        Post
+        |> where([p], p.id == ^post.id)
+        |> Repo.update_all(inc: [comment_count: 1])
+
       {:ok, :incremented}
     end)
     |> Repo.transaction()
@@ -390,10 +426,9 @@ defmodule TraysSocial.Posts do
       )
       |> Ecto.Multi.run(:count, fn _repo, _changes ->
         {1, _} =
-          Repo.update_all(
-            from(p in Post, where: p.id == ^comment.post_id),
-            inc: [comment_count: -1]
-          )
+          Post
+          |> where([p], p.id == ^comment.post_id)
+          |> Repo.update_all(inc: [comment_count: -1])
 
         {:ok, :decremented}
       end)

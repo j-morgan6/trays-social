@@ -6,7 +6,10 @@ defmodule TraysSocial.Accounts do
   import Ecto.Query, warn: false
   alias TraysSocial.Repo
 
-  alias TraysSocial.Accounts.{Follow, User, UserNotifier, UserToken}
+  alias TraysSocial.Accounts.Follow
+  alias TraysSocial.Accounts.User
+  alias TraysSocial.Accounts.UserNotifier
+  alias TraysSocial.Accounts.UserToken
 
   ## Database getters
 
@@ -347,7 +350,7 @@ defmodule TraysSocial.Accounts do
   Deletes the signed token with the given context.
   """
   def delete_user_session_token(token) do
-    Repo.delete_all(from(UserToken, where: [token: ^token, context: "session"]))
+    from(UserToken, where: [token: ^token, context: "session"]) |> Repo.delete_all()
     :ok
   end
 
@@ -397,9 +400,8 @@ defmodule TraysSocial.Accounts do
   Unfollows a user.
   """
   def unfollow_user(follower, followed) do
-    Repo.delete_all(
-      from(f in Follow, where: f.follower_id == ^follower.id and f.followed_id == ^followed.id)
-    )
+    from(f in Follow, where: f.follower_id == ^follower.id and f.followed_id == ^followed.id)
+    |> Repo.delete_all()
 
     :ok
   end
@@ -408,27 +410,28 @@ defmodule TraysSocial.Accounts do
   Returns true if follower is following followed.
   """
   def following?(follower_id, followed_id) do
-    Repo.exists?(from(f in Follow, where: f.follower_id == ^follower_id and f.followed_id == ^followed_id))
+    from(f in Follow, where: f.follower_id == ^follower_id and f.followed_id == ^followed_id)
+    |> Repo.exists?()
   end
 
   @doc """
   Returns the number of followers for a user.
   """
   def get_follower_count(user_id) do
-    Repo.aggregate(from(f in Follow, where: f.followed_id == ^user_id), :count)
+    from(f in Follow, where: f.followed_id == ^user_id) |> Repo.aggregate(:count)
   end
 
   @doc """
   Returns the number of users a user is following.
   """
   def get_following_count(user_id) do
-    Repo.aggregate(from(f in Follow, where: f.follower_id == ^user_id), :count)
+    from(f in Follow, where: f.follower_id == ^user_id) |> Repo.aggregate(:count)
   end
 
   @doc """
   Returns true if the user has any follows (is following at least one person).
   """
   def has_follows?(user_id) do
-    Repo.exists?(from(f in Follow, where: f.follower_id == ^user_id))
+    from(f in Follow, where: f.follower_id == ^user_id) |> Repo.exists?()
   end
 end

@@ -16,102 +16,16 @@ defmodule TraysSocialWeb.FeedLive.Index do
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(TraysSocial.PubSub, "posts:new")
-      Phoenix.PubSub.subscribe(TraysSocial.PubSub, "posts:likes")
-
-      current_user_id =
-        case socket.assigns[:current_scope] do
-          %{user: user} -> user.id
-          _ -> nil
-        end
-
-      is_following = current_user_id && Accounts.has_follows?(current_user_id)
-
-      posts =
-        Posts.list_posts(
-          limit: @page_size,
-          for_user_id: current_user_id
-        )
-
-      post_ids = Enum.map(posts, & &1.id)
-
-      liked_post_ids =
-        case socket.assigns[:current_scope] do
-          %{user: user} -> Posts.liked_post_ids_for_user(user.id, post_ids)
-          _ -> MapSet.new()
-        end
-
-      {:ok,
-       socket
-       |> assign(:page_title, "Feed")
-       |> assign(:current_tab, :feed)
-       |> assign(:selected_post_id, nil)
-       |> assign(:photo_indices, %{})
-       |> assign(:loading, false)
-       |> assign(:loading_more, false)
-       |> assign(:has_more, length(posts) == @page_size)
-       |> assign(:no_posts, Enum.empty?(posts))
-       |> assign(:cursor, last_cursor(posts))
-       |> assign(:liked_post_ids, liked_post_ids)
-       |> assign(:posts_map, Map.new(posts, &{&1.id, &1}))
-       |> assign(:is_personalized, is_following || false)
-       |> stream(:posts, posts)}
+      {:ok, mount_connected(socket)}
     else
-      {:ok,
-       socket
-       |> assign(:page_title, "Feed")
-       |> assign(:current_tab, :feed)
-       |> assign(:selected_post_id, nil)
-       |> assign(:photo_indices, %{})
-       |> assign(:loading, true)
-       |> assign(:loading_more, false)
-       |> assign(:has_more, true)
-       |> assign(:no_posts, false)
-       |> assign(:cursor, nil)
-       |> assign(:liked_post_ids, MapSet.new())
-       |> assign(:posts_map, %{})
-       |> assign(:is_personalized, false)
-       |> stream(:posts, [])}
+      {:ok, mount_disconnected(socket)}
     end
   end
 
   @impl true
   def handle_event("load-more", _, socket) do
     if socket.assigns.has_more && !socket.assigns.loading_more && socket.assigns.cursor do
-      {cursor_id, cursor_time} = socket.assigns.cursor
-
-      current_user_id =
-        case socket.assigns[:current_scope] do
-          %{user: user} -> user.id
-          _ -> nil
-        end
-
-      posts =
-        Posts.list_posts(
-          limit: @page_size,
-          cursor_id: cursor_id,
-          cursor_time: cursor_time,
-          for_user_id: current_user_id
-        )
-
-      new_post_ids = Enum.map(posts, & &1.id)
-
-      new_liked_ids =
-        case socket.assigns[:current_scope] do
-          %{user: user} -> Posts.liked_post_ids_for_user(user.id, new_post_ids)
-          _ -> MapSet.new()
-        end
-
-      socket =
-        socket
-        |> assign(:cursor, last_cursor(posts))
-        |> assign(:has_more, length(posts) == @page_size)
-        |> assign(:loading_more, false)
-        |> update(:liked_post_ids, &MapSet.union(&1, new_liked_ids))
-        |> update(:posts_map, &Map.merge(&1, Map.new(posts, fn p -> {p.id, p} end)))
-        |> stream(:posts, posts, at: -1)
-
-      {:noreply, socket}
+      {:noreply, load_more_posts(socket)}
     else
       {:noreply, socket}
     end
@@ -177,6 +91,92 @@ defmodule TraysSocialWeb.FeedLive.Index do
 
         {:noreply, socket}
     end
+  end
+
+  defp mount_connected(socket) do
+    Phoenix.PubSub.subscribe(TraysSocial.PubSub, "posts:new")
+    Phoenix.PubSub.subscribe(TraysSocial.PubSub, "posts:likes")
+
+    current_user_id = current_user_id(socket)
+    is_following = current_user_id && Accounts.has_follows?(current_user_id)
+
+    posts =
+      Posts.list_posts(
+        limit: @page_size,
+        for_user_id: current_user_id
+      )
+
+    liked_post_ids = fetch_liked_post_ids(socket, Enum.map(posts, & &1.id))
+
+    socket
+    |> assign_base_feed_state()
+    |> assign(:loading, false)
+    |> assign(:has_more, length(posts) == @page_size)
+    |> assign(:no_posts, Enum.empty?(posts))
+    |> assign(:cursor, last_cursor(posts))
+    |> assign(:liked_post_ids, liked_post_ids)
+    |> assign(:posts_map, Map.new(posts, &{&1.id, &1}))
+    |> assign(:is_personalized, is_following || false)
+    |> stream(:posts, posts)
+  end
+
+  defp mount_disconnected(socket) do
+    socket
+    |> assign_base_feed_state()
+    |> assign(:loading, true)
+    |> assign(:has_more, true)
+    |> assign(:no_posts, false)
+    |> assign(:cursor, nil)
+    |> assign(:liked_post_ids, MapSet.new())
+    |> assign(:posts_map, %{})
+    |> assign(:is_personalized, false)
+    |> stream(:posts, [])
+  end
+
+  defp assign_base_feed_state(socket) do
+    socket
+    |> assign(:page_title, "Feed")
+    |> assign(:current_tab, :feed)
+    |> assign(:selected_post_id, nil)
+    |> assign(:photo_indices, %{})
+    |> assign(:loading_more, false)
+  end
+
+  defp current_user_id(socket) do
+    case socket.assigns[:current_scope] do
+      %{user: user} -> user.id
+      _ -> nil
+    end
+  end
+
+  defp fetch_liked_post_ids(socket, post_ids) do
+    case socket.assigns[:current_scope] do
+      %{user: user} -> Posts.liked_post_ids_for_user(user.id, post_ids)
+      _ -> MapSet.new()
+    end
+  end
+
+  defp load_more_posts(socket) do
+    {cursor_id, cursor_time} = socket.assigns.cursor
+
+    posts =
+      Posts.list_posts(
+        limit: @page_size,
+        cursor_id: cursor_id,
+        cursor_time: cursor_time,
+        for_user_id: current_user_id(socket)
+      )
+
+    new_liked_ids = fetch_liked_post_ids(socket, Enum.map(posts, & &1.id))
+    liked_post_ids = MapSet.union(socket.assigns.liked_post_ids, new_liked_ids)
+
+    socket
+    |> assign(:cursor, last_cursor(posts))
+    |> assign(:has_more, length(posts) == @page_size)
+    |> assign(:loading_more, false)
+    |> assign(:liked_post_ids, liked_post_ids)
+    |> update(:posts_map, &Map.merge(&1, Map.new(posts, fn p -> {p.id, p} end)))
+    |> stream(:posts, posts, at: -1)
   end
 
   defp update_photo_index(socket, post_id, delta) do

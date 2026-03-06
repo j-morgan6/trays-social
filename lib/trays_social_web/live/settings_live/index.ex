@@ -3,7 +3,8 @@ defmodule TraysSocialWeb.SettingsLive.Index do
 
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.User
-  alias TraysSocial.Uploads.{ImageProcessor, Photo}
+  alias TraysSocial.Uploads.ImageProcessor
+  alias TraysSocial.Uploads.Photo
 
   on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
   on_mount {TraysSocialWeb.NotificationsHook, :mount_notifications}
@@ -75,7 +76,11 @@ defmodule TraysSocialWeb.SettingsLive.Index do
   end
 
   @impl true
-  def handle_event("change_email", %{"user" => %{"current_password" => current_password, "email" => email}}, socket) do
+  def handle_event(
+        "change_email",
+        %{"user" => %{"current_password" => current_password, "email" => email}},
+        socket
+      ) do
     user = socket.assigns.user
 
     if User.valid_password?(user, current_password) do
