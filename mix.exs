@@ -70,6 +70,7 @@ defmodule TraysSocial.MixProject do
       {:mogrify, "~> 0.9"},
       {:tidewave, "~> 0.5", only: :dev},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false}
     ]
   end
@@ -93,7 +94,15 @@ defmodule TraysSocial.MixProject do
         "esbuild trays_social --minify",
         "phx.digest"
       ],
-      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "credo --strict", "test"]
+      security: ["deps.audit", "sobelow --config"],
+      precommit: [
+        "compile --warning-as-errors",
+        "deps.unlock --unused",
+        "format",
+        "test",
+        "credo --strict",
+        "security"
+      ]
     ]
   end
 end
