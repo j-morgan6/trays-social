@@ -12,7 +12,7 @@ defmodule TraysSocialWeb.Router do
 
     plug :put_secure_browser_headers, %{
       "content-security-policy" =>
-        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' wss:"
+        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' wss:"
     }
 
     plug :fetch_current_scope_for_user

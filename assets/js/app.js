@@ -27,18 +27,29 @@ import topbar from "../vendor/topbar"
 
 const LazyLoad = {
   mounted() {
+    const loadImage = (img) => {
+      const src = img.dataset.src
+      if (src) {
+        img.onload = () => img.classList.add("lazy-loaded")
+        img.onerror = () => img.classList.add("lazy-loaded")
+        img.src = src
+        img.removeAttribute("data-src")
+      }
+    }
+
+    const rect = this.el.getBoundingClientRect()
+    const isInViewport = rect.top < window.innerHeight + 100 && rect.bottom > -100
+
+    if (isInViewport) {
+      loadImage(this.el)
+      return
+    }
+
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          const img = entry.target
-          const src = img.dataset.src
-          if (src) {
-            img.onload = () => img.classList.add("lazy-loaded")
-            img.onerror = () => img.classList.add("lazy-loaded")
-            img.src = src
-            img.removeAttribute("data-src")
-            observer.unobserve(img)
-          }
+          loadImage(entry.target)
+          observer.unobserve(entry.target)
         }
       })
     }, { rootMargin: "100px" })
