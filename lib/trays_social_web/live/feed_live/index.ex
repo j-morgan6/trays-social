@@ -3,7 +3,7 @@ defmodule TraysSocialWeb.FeedLive.Index do
 
   # Dialyzer false positive: MapSet.new(list) can infer old :sets tuple representation,
   # causing opaqueness mismatch when passed to MapSet.union/2.
-  @dialyzer {:no_opaque, handle_event: 3}
+  @dialyzer {:no_opaque, load_more_posts: 1}
 
   alias TraysSocial.Accounts
   alias TraysSocial.Posts
