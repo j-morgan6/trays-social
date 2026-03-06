@@ -37,7 +37,11 @@ defmodule TraysSocial.Uploads.ImageProcessor do
 
   def thumb_url(url) do
     ext = Path.extname(url)
-    String.replace_trailing(url, ext, "") <> "_thumb" <> ext
+    if ext == "" do
+      url <> "_thumb"
+    else
+      String.replace_trailing(url, ext, "") <> "_thumb" <> ext
+    end
   end
 
   @doc """
@@ -47,7 +51,11 @@ defmodule TraysSocial.Uploads.ImageProcessor do
 
   def medium_url(url) do
     ext = Path.extname(url)
-    String.replace_trailing(url, ext, "") <> "_medium" <> ext
+    if ext == "" do
+      url <> "_medium"
+    else
+      String.replace_trailing(url, ext, "") <> "_medium" <> ext
+    end
   end
 
   @doc """
