@@ -3,16 +3,18 @@
 
   <div id="notifications" phx-update="stream" class="space-y-1">
     <div :for={{dom_id, notification} <- @streams.notifications} id={dom_id}>
-      <% path = case notification.type do
-        "follow" -> ~p"/@#{notification.actor.username}"
-        _ -> if notification.post, do: ~p"/posts/#{notification.post.id}", else: ~p"/"
-      end %>
-      <% text = case notification.type do
-        "like" -> "liked your post"
-        "comment" -> "commented on your post"
-        "follow" -> "started following you"
-        _ -> "interacted with you"
-      end %>
+      <% path =
+        case notification.type do
+          "follow" -> ~p"/@#{notification.actor.username}"
+          _ -> if notification.post, do: ~p"/posts/#{notification.post.id}", else: ~p"/"
+        end %>
+      <% text =
+        case notification.type do
+          "like" -> "liked your post"
+          "comment" -> "commented on your post"
+          "follow" -> "started following you"
+          _ -> "interacted with you"
+        end %>
       <.link
         navigate={path}
         class={[

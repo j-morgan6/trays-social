@@ -20,9 +20,10 @@
   </div>
 
   <%!-- Photo carousel --%>
-  <% photos = if Ecto.assoc_loaded?(@post.post_photos) && !Enum.empty?(@post.post_photos),
-                do: Enum.sort_by(@post.post_photos, & &1.position),
-                else: [%{url: @post.photo_url}] %>
+  <% photos =
+    if Ecto.assoc_loaded?(@post.post_photos) && !Enum.empty?(@post.post_photos),
+      do: Enum.sort_by(@post.post_photos, & &1.position),
+      else: [%{url: @post.photo_url}] %>
   <% photo_count = length(photos) %>
   <% current_photo = Enum.at(photos, @photo_index) %>
   <div class="relative overflow-hidden rounded-2xl shadow-lg bg-base-200 aspect-square">
@@ -117,7 +118,7 @@
           <li class="flex items-baseline gap-2 text-sm">
             <%= if ingredient.quantity do %>
               <span class="font-medium text-base-content/70 shrink-0 tabular-nums">
-                {ingredient.quantity}<%= if ingredient.unit, do: " #{ingredient.unit}" %>
+                {ingredient.quantity}{if ingredient.unit, do: " #{ingredient.unit}"}
               </span>
             <% end %>
             <span class="text-base-content">{ingredient.name}</span>
@@ -189,7 +190,11 @@
       <div :for={{dom_id, comment} <- @streams.comments} id={dom_id} class="flex gap-3">
         <div class="w-8 h-8 rounded-full bg-base-200 shrink-0 overflow-hidden">
           <%= if comment.user.profile_photo_url do %>
-            <img src={comment.user.profile_photo_url} alt={comment.user.username} class="w-full h-full object-cover" />
+            <img
+              src={comment.user.profile_photo_url}
+              alt={comment.user.username}
+              class="w-full h-full object-cover"
+            />
           <% else %>
             <div class="w-full h-full flex items-center justify-center text-xs font-semibold text-base-content/50">
               {String.first(comment.user.username) |> String.upcase()}
@@ -242,7 +247,10 @@
 
   <%!-- Back to Feed --%>
   <div class="mt-6 pt-6 border-t border-base-300">
-    <.link navigate={~p"/"} class="inline-flex items-center gap-1.5 text-sm text-base-content/60 hover:text-primary transition-colors">
+    <.link
+      navigate={~p"/"}
+      class="inline-flex items-center gap-1.5 text-sm text-base-content/60 hover:text-primary transition-colors"
+    >
       <.icon name="hero-arrow-left" class="size-4" /> Back to feed
     </.link>
   </div>

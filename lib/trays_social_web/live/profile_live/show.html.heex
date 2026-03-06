@@ -9,7 +9,7 @@
     <%!-- Profile Info --%>
     <div class="flex-1">
       <div class="flex items-center gap-4 mb-4">
-        <h1 class="text-2xl font-semibold"><%= @user.username %></h1>
+        <h1 class="text-2xl font-semibold">{@user.username}</h1>
 
         <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @user.id do %>
           <.button href={~p"/users/settings"} variant="secondary">
@@ -25,7 +25,7 @@
               ]}
               phx-click="toggle-follow"
             >
-              <%= if @is_following, do: "Following", else: "Follow" %>
+              {if @is_following, do: "Following", else: "Follow"}
             </button>
           <% end %>
         <% end %>
@@ -37,23 +37,27 @@
           <%= if @loading do %>
             <.loading_skeleton type="text" class="w-16 h-4" />
           <% else %>
-            <span class="font-semibold"><%= @post_count %></span>
-            <span class="text-base-content/60"><%= if @post_count == 1, do: "post", else: "posts" %></span>
+            <span class="font-semibold">{@post_count}</span>
+            <span class="text-base-content/60">
+              {if @post_count == 1, do: "post", else: "posts"}
+            </span>
           <% end %>
         </div>
         <div>
           <%= if @loading do %>
             <.loading_skeleton type="text" class="w-20 h-4" />
           <% else %>
-            <span class="font-semibold"><%= @follower_count %></span>
-            <span class="text-base-content/60"><%= if @follower_count == 1, do: "follower", else: "followers" %></span>
+            <span class="font-semibold">{@follower_count}</span>
+            <span class="text-base-content/60">
+              {if @follower_count == 1, do: "follower", else: "followers"}
+            </span>
           <% end %>
         </div>
         <div>
           <%= if @loading do %>
             <.loading_skeleton type="text" class="w-20 h-4" />
           <% else %>
-            <span class="font-semibold"><%= @following_count %></span>
+            <span class="font-semibold">{@following_count}</span>
             <span class="text-base-content/60">following</span>
           <% end %>
         </div>
@@ -62,7 +66,7 @@
       <%!-- Bio --%>
       <%= if @user.bio do %>
         <div class="mt-4">
-          <p class="whitespace-pre-wrap"><%= @user.bio %></p>
+          <p class="whitespace-pre-wrap">{@user.bio}</p>
         </div>
       <% end %>
     </div>
@@ -87,7 +91,10 @@
     <% else %>
       <div class="grid grid-cols-3 gap-1">
         <%= for post <- @posts do %>
-          <.link href={~p"/posts/#{post.id}"} class="aspect-square overflow-hidden block animate-fade-in">
+          <.link
+            href={~p"/posts/#{post.id}"}
+            class="aspect-square overflow-hidden block animate-fade-in"
+          >
             <.lazy_image
               id={"profile-post-#{post.id}"}
               src={TraysSocial.Uploads.ImageProcessor.thumb_url(post.photo_url)}

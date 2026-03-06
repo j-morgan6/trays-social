@@ -179,11 +179,17 @@ defmodule TraysSocialWeb.CoreComponents do
     ~H"""
     <div class={["avatar placeholder", @class]}>
       <%= if @photo_url do %>
-        <div class={[@size_class, "rounded-full ring-2 ring-transparent hover:ring-primary/40 transition-all duration-200"]}>
+        <div class={[
+          @size_class,
+          "rounded-full ring-2 ring-transparent hover:ring-primary/40 transition-all duration-200"
+        ]}>
           <img src={@photo_url} alt={@username} />
         </div>
       <% else %>
-        <div class={[@size_class, "bg-primary text-primary-content rounded-full ring-2 ring-transparent hover:ring-primary/40 transition-all duration-200"]}>
+        <div class={[
+          @size_class,
+          "bg-primary text-primary-content rounded-full ring-2 ring-transparent hover:ring-primary/40 transition-all duration-200"
+        ]}>
           <span class="font-bold">{@initial}</span>
         </div>
       <% end %>
@@ -266,13 +272,17 @@ defmodule TraysSocialWeb.CoreComponents do
     >
       <%!-- User Info Header --%>
       <div class="px-4 pt-4 pb-3 flex items-center gap-3">
-        <.user_avatar username={@post.user.username} photo_url={@post.user.profile_photo_url} size="md" />
+        <.user_avatar
+          username={@post.user.username}
+          photo_url={@post.user.profile_photo_url}
+          size="md"
+        />
         <div class="flex-1 min-w-0">
           <p class="font-semibold text-base-content truncate">
             {@post.user.username}
           </p>
           <p class="text-xs text-base-content/60">
-            <%= Calendar.strftime(@post.inserted_at, "%B %d, %Y") %>
+            {Calendar.strftime(@post.inserted_at, "%B %d, %Y")}
           </p>
         </div>
       </div>
@@ -298,14 +308,14 @@ defmodule TraysSocialWeb.CoreComponents do
           <%= if @post.cooking_time_minutes do %>
             <div class="flex items-center gap-1">
               <span>[ICON]</span>
-              <span><%= @post.cooking_time_minutes %> min</span>
+              <span>{@post.cooking_time_minutes} min</span>
             </div>
           <% end %>
 
           <%= if Ecto.assoc_loaded?(@post.ingredients) && !Enum.empty?(@post.ingredients) do %>
             <div class="flex items-center gap-1">
               <span>[ICON]</span>
-              <span><%= length(@post.ingredients) %> ingredients</span>
+              <span>{length(@post.ingredients)} ingredients</span>
             </div>
           <% end %>
         </div>
@@ -761,6 +771,7 @@ defmodule TraysSocialWeb.CoreComponents do
 
   defp thumb_url(url) do
     ext = Path.extname(url)
+
     if ext == "" do
       url
     else

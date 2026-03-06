@@ -37,6 +37,7 @@ defmodule TraysSocial.Uploads.ImageProcessor do
 
   def thumb_url(url) do
     ext = Path.extname(url)
+
     if ext == "" do
       url <> "_thumb"
     else
@@ -51,6 +52,7 @@ defmodule TraysSocial.Uploads.ImageProcessor do
 
   def medium_url(url) do
     ext = Path.extname(url)
+
     if ext == "" do
       url <> "_medium"
     else
@@ -65,6 +67,7 @@ defmodule TraysSocial.Uploads.ImageProcessor do
 
   def large_url(url) do
     ext = Path.extname(url)
+
     if ext == "" do
       url
     else

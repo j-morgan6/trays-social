@@ -56,7 +56,10 @@
             </li>
             <%= if @current_scope do %>
               <li>
-                <.link href={~p"/@#{@current_scope.user.username}"} class="font-medium transition-colors duration-150">
+                <.link
+                  href={~p"/@#{@current_scope.user.username}"}
+                  class="font-medium transition-colors duration-150"
+                >
                   Profile
                 </.link>
               </li>
@@ -72,15 +75,26 @@
               <span class="hero-bell w-5 h-5"></span>
               <%= if assigns[:unread_notifications] && assigns[:unread_notifications] > 0 do %>
                 <span class="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] rounded-full bg-primary text-primary-content text-[0.6rem] font-bold flex items-center justify-center px-0.5">
-                  <%= if assigns[:unread_notifications] > 9, do: "9+", else: assigns[:unread_notifications] %>
+                  {if assigns[:unread_notifications] > 9,
+                    do: "9+",
+                    else: assigns[:unread_notifications]}
                 </span>
               <% end %>
             </.link>
 
             <%!-- Create Post Button --%>
             <.link href={~p"/posts/new"} class="btn btn-primary btn-sm gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                  clip-rule="evenodd"
+                />
               </svg>
               <span class="hidden sm:inline">Post</span>
             </.link>
@@ -90,13 +104,18 @@
               <label tabindex="0" class="btn btn-ghost btn-circle avatar placeholder">
                 <div class="bg-primary text-primary-content rounded-full w-10">
                   <span class="text-sm font-bold">
-                    <%= String.first(@current_scope.user.username) |> String.upcase() %>
+                    {String.first(@current_scope.user.username) |> String.upcase()}
                   </span>
                 </div>
               </label>
-              <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-base-100 rounded-box w-52 border border-base-300">
+              <ul
+                tabindex="0"
+                class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-base-100 rounded-box w-52 border border-base-300"
+              >
                 <li class="menu-title">
-                  <span class="text-base-content font-semibold">@{@current_scope.user.username}</span>
+                  <span class="text-base-content font-semibold">
+                    @{@current_scope.user.username}
+                  </span>
                 </li>
                 <li>
                   <.link href={~p"/@#{@current_scope.user.username}"}>
@@ -138,42 +157,69 @@
     <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-base-100 border-t border-base-300">
       <div class="flex items-center justify-around h-16">
         <%!-- Feed --%>
-        <.link navigate={~p"/"} class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :feed, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}>
+        <.link
+          navigate={~p"/"}
+          class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :feed, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}
+        >
           <span class="hero-home w-6 h-6"></span>
           <span>Feed</span>
         </.link>
 
         <%= if @current_scope do %>
           <%!-- Profile --%>
-          <.link navigate={~p"/@#{@current_scope.user.username}"} class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :profile, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}>
+          <.link
+            navigate={~p"/@#{@current_scope.user.username}"}
+            class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :profile, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}
+          >
             <span class="hero-user w-6 h-6"></span>
             <span>Profile</span>
           </.link>
 
           <%!-- New Post (center-prominent) --%>
-          <.link navigate={~p"/posts/new"} class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :new_post, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}>
+          <.link
+            navigate={~p"/posts/new"}
+            class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :new_post, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}
+          >
             <span class="hero-plus-circle w-7 h-7"></span>
             <span>Post</span>
           </.link>
 
           <%!-- Explore --%>
-          <.link navigate={~p"/explore"} class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :explore, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}>
+          <.link
+            navigate={~p"/explore"}
+            class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :explore, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}
+          >
             <span class="hero-magnifying-glass w-6 h-6"></span>
             <span>Explore</span>
           </.link>
         <% else %>
           <%!-- Feed (guest placeholder) --%>
-          <.link navigate={~p"/users/log-in"} class="flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium text-base-content/50 hover:text-base-content transition-colors">
+          <.link
+            navigate={~p"/users/log-in"}
+            class="flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium text-base-content/50 hover:text-base-content transition-colors"
+          >
             <span class="hero-user w-6 h-6"></span>
             <span>Profile</span>
           </.link>
 
-          <.link navigate={~p"/users/log-in"} class="flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium text-base-content/50 hover:text-base-content transition-colors">
+          <.link
+            navigate={~p"/users/log-in"}
+            class="flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium text-base-content/50 hover:text-base-content transition-colors"
+          >
             <span class="hero-plus-circle w-7 h-7"></span>
             <span>Post</span>
           </.link>
 
-          <.link navigate={~p"/explore"} class={["flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors", if(assigns[:current_tab] == :explore, do: "text-primary", else: "text-base-content/50 hover:text-base-content")]}>
+          <.link
+            navigate={~p"/explore"}
+            class={[
+              "flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors",
+              if(assigns[:current_tab] == :explore,
+                do: "text-primary",
+                else: "text-base-content/50 hover:text-base-content"
+              )
+            ]}
+          >
             <span class="hero-magnifying-glass w-6 h-6"></span>
             <span>Explore</span>
           </.link>

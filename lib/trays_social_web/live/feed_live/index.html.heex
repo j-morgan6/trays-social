@@ -1,6 +1,5 @@
 <%!-- Single-column centered feed --%>
 <div class="mx-auto max-w-[650px] px-4 py-6">
-
   <%!-- Header row --%>
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-xl font-bold text-base-content">Feed</h1>
@@ -72,7 +71,6 @@
       <div id="posts" phx-update="stream" class="space-y-6">
         <div :for={{dom_id, post} <- @streams.posts} id={dom_id}>
           <div class="bg-base-100 rounded-2xl overflow-hidden shadow-sm border border-base-200">
-
             <%!-- Author row --%>
             <div class="px-4 pt-4 pb-3 flex items-center gap-3">
               <.link navigate={~p"/@#{post.user.username}"}>
@@ -102,9 +100,10 @@
             </div>
 
             <%!-- Photo carousel --%>
-            <% photos = if Ecto.assoc_loaded?(post.post_photos) && !Enum.empty?(post.post_photos),
-                          do: Enum.sort_by(post.post_photos, & &1.position),
-                          else: [%{url: post.photo_url}] %>
+            <% photos =
+              if Ecto.assoc_loaded?(post.post_photos) && !Enum.empty?(post.post_photos),
+                do: Enum.sort_by(post.post_photos, & &1.position),
+                else: [%{url: post.photo_url}] %>
             <% photo_count = length(photos) %>
             <% current_idx = Map.get(@photo_indices, post.id, 0) %>
             <% current_photo = Enum.at(photos, current_idx) %>
@@ -170,7 +169,6 @@
 
             <%!-- Card body --%>
             <div class="p-4">
-
               <%!-- Caption --%>
               <p class="text-sm text-base-content line-clamp-2 mb-3">
                 {post.caption}
@@ -195,7 +193,7 @@
                     Recipe
                   </p>
                   <p class="text-sm text-base-content line-clamp-2">
-                    {preview_ingredients}<%= if more_count > 0, do: " +#{more_count} more" %>
+                    {preview_ingredients}{if more_count > 0, do: " +#{more_count} more"}
                   </p>
                   <p class="text-xs text-primary font-medium mt-1.5">
                     View full recipe
@@ -211,12 +209,18 @@
                     type="button"
                     class={[
                       "flex items-center gap-1.5 text-sm transition-colors",
-                      if(liked, do: "text-primary", else: "text-base-content/60 hover:text-primary")
+                      if(liked,
+                        do: "text-primary",
+                        else: "text-base-content/60 hover:text-primary"
+                      )
                     ]}
                     phx-click="toggle-like"
                     phx-value-post-id={post.id}
                   >
-                    <.icon name={if liked, do: "hero-heart-solid", else: "hero-heart"} class="size-5" />
+                    <.icon
+                      name={if liked, do: "hero-heart-solid", else: "hero-heart"}
+                      class="size-5"
+                    />
                     <span>{post.like_count}</span>
                   </button>
                   <button
@@ -244,7 +248,6 @@
                   </button>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
@@ -283,7 +286,6 @@
 
   <%= if selected_post do %>
     <div class="p-5 space-y-6 pb-10">
-
       <%!-- Ingredients --%>
       <%= if Ecto.assoc_loaded?(selected_post.ingredients) && !Enum.empty?(selected_post.ingredients) do %>
         <div>
@@ -295,7 +297,7 @@
               <li class="flex items-baseline gap-2 text-sm">
                 <%= if ingredient.quantity do %>
                   <span class="font-medium text-base-content/70 shrink-0 tabular-nums">
-                    {ingredient.quantity}<%= if ingredient.unit, do: " #{ingredient.unit}" %>
+                    {ingredient.quantity}{if ingredient.unit, do: " #{ingredient.unit}"}
                   </span>
                 <% end %>
                 <span class="text-base-content">{ingredient.name}</span>
@@ -323,7 +325,6 @@
           </ol>
         </div>
       <% end %>
-
     </div>
   <% end %>
 </.bottom_drawer>

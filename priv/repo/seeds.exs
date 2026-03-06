@@ -41,13 +41,15 @@ users = [
   }
 ]
 
-created_users = Enum.map(users, fn user_attrs ->
-  {:ok, user} = 
-    %User{}
-    |> User.registration_changeset(user_attrs)
-    |> Repo.insert()
-  user
-end)
+created_users =
+  Enum.map(users, fn user_attrs ->
+    {:ok, user} =
+      %User{}
+      |> User.registration_changeset(user_attrs)
+      |> Repo.insert()
+
+    user
+  end)
 
 [user1, user2, user3, user4] = created_users
 
@@ -55,7 +57,8 @@ posts_data = [
   %{
     user: user1,
     photo_url: "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=800",
-    caption: "Homemade margherita pizza with fresh mozzarella and basil. The secret is in the dough - let it rise slowly!",
+    caption:
+      "Homemade margherita pizza with fresh mozzarella and basil. The secret is in the dough - let it rise slowly!",
     cooking_time_minutes: 90,
     tags: ["italian", "pizza", "dinner"],
     ingredients: [
@@ -80,7 +83,8 @@ posts_data = [
   %{
     user: user2,
     photo_url: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800",
-    caption: "Fluffy sourdough pancakes for a perfect weekend breakfast. Using sourdough starter adds amazing depth of flavor!",
+    caption:
+      "Fluffy sourdough pancakes for a perfect weekend breakfast. Using sourdough starter adds amazing depth of flavor!",
     cooking_time_minutes: 25,
     tags: ["breakfast", "sourdough", "pancakes"],
     ingredients: [
@@ -107,7 +111,8 @@ posts_data = [
   %{
     user: user3,
     photo_url: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800",
-    caption: "Fresh and vibrant Buddha bowl packed with nutrients. Perfect meal prep option for the week!",
+    caption:
+      "Fresh and vibrant Buddha bowl packed with nutrients. Perfect meal prep option for the week!",
     cooking_time_minutes: 35,
     tags: ["healthy", "vegan", "mealprep", "bowl"],
     ingredients: [
@@ -134,7 +139,8 @@ posts_data = [
   %{
     user: user4,
     photo_url: "https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?w=800",
-    caption: "Authentic Thai green curry with tender chicken and vegetables. The homemade curry paste makes all the difference!",
+    caption:
+      "Authentic Thai green curry with tender chicken and vegetables. The homemade curry paste makes all the difference!",
     cooking_time_minutes: 45,
     tags: ["thai", "curry", "dinner", "spicy"],
     ingredients: [
@@ -161,7 +167,8 @@ posts_data = [
   %{
     user: user1,
     photo_url: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800",
-    caption: "Classic tiramisu - no bake dessert that's absolutely divine! Coffee and mascarpone heaven.",
+    caption:
+      "Classic tiramisu - no bake dessert that's absolutely divine! Coffee and mascarpone heaven.",
     cooking_time_minutes: 30,
     tags: ["dessert", "italian", "nobake"],
     ingredients: [
@@ -187,7 +194,8 @@ posts_data = [
   %{
     user: user2,
     photo_url: "https://images.unsplash.com/photo-1608039829572-78524f79c4c7?w=800",
-    caption: "Crusty artisan sourdough bread with the perfect crumb! Nothing beats fresh homemade bread.",
+    caption:
+      "Crusty artisan sourdough bread with the perfect crumb! Nothing beats fresh homemade bread.",
     cooking_time_minutes: 480,
     tags: ["bread", "sourdough", "baking"],
     ingredients: [
@@ -210,7 +218,8 @@ posts_data = [
   %{
     user: user3,
     photo_url: "https://images.unsplash.com/photo-1623428187969-5da2dcea5ebf?w=800",
-    caption: "Protein-packed overnight oats with berries. Prep 5 jars on Sunday for easy grab-and-go breakfasts!",
+    caption:
+      "Protein-packed overnight oats with berries. Prep 5 jars on Sunday for easy grab-and-go breakfasts!",
     cooking_time_minutes: 5,
     tags: ["breakfast", "healthy", "mealprep", "oats"],
     ingredients: [
@@ -235,7 +244,8 @@ posts_data = [
   %{
     user: user4,
     photo_url: "https://images.unsplash.com/photo-1585032226651-759b368d7246?w=800",
-    caption: "Spicy Korean kimchi fried rice - perfect way to use leftover rice! The crispy bottom is the best part.",
+    caption:
+      "Spicy Korean kimchi fried rice - perfect way to use leftover rice! The crispy bottom is the best part.",
     cooking_time_minutes: 20,
     tags: ["korean", "rice", "spicy", "lunch"],
     ingredients: [
@@ -262,7 +272,7 @@ posts_data = [
 ]
 
 Enum.each(posts_data, fn post_data ->
-  {:ok, post} = 
+  {:ok, post} =
     %Post{}
     |> Post.changeset(%{
       user_id: post_data.user.id,
@@ -297,4 +307,6 @@ Enum.each(posts_data, fn post_data ->
   end)
 end)
 
-IO.puts("Seeded #{length(created_users)} users and #{length(posts_data)} posts with ingredients, steps, tools, and tags!")
+IO.puts(
+  "Seeded #{length(created_users)} users and #{length(posts_data)} posts with ingredients, steps, tools, and tags!"
+)

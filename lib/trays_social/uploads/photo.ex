@@ -7,7 +7,8 @@ defmodule TraysSocial.Uploads.Photo do
   """
 
   @upload_directory "priv/static/uploads"
-  @max_file_size 10 * 1024 * 1024  # 10MB
+  # 10MB
+  @max_file_size 10 * 1024 * 1024
   @allowed_extensions ~w(.jpg .jpeg .png .heic)
 
   @doc """
@@ -96,7 +97,8 @@ defmodule TraysSocial.Uploads.Photo do
 
     case File.rm(full_path) do
       :ok -> :ok
-      {:error, :enoent} -> :ok  # Already deleted
+      # Already deleted
+      {:error, :enoent} -> :ok
       {:error, reason} -> {:error, reason}
     end
   end
