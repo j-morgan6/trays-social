@@ -180,8 +180,8 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
         |> log_in_user(user)
         |> live(~p"/@#{user.username}")
 
-      assert html =~ "No posts yet"
-      assert html =~ "Share your first post"
+      assert html =~ "No recipes yet"
+      assert html =~ "Share your first recipe"
     end
 
     test "shows empty posts state for other user with no posts", %{conn: conn} do
@@ -189,7 +189,7 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
 
       {:ok, _view, html} = live(conn, ~p"/@#{user.username}")
 
-      assert html =~ "No posts yet"
+      assert html =~ "No recipes yet"
     end
   end
 end

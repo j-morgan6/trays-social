@@ -94,6 +94,19 @@ defmodule TraysSocialWeb.ProfileLive.Show do
 
   def format_count(n), do: "#{n}"
 
+  def format_cooking_time(nil), do: nil
+
+  def format_cooking_time(minutes) when minutes >= 60 do
+    hours = div(minutes, 60)
+    remaining = rem(minutes, 60)
+
+    if remaining == 0,
+      do: "#{hours}h",
+      else: "#{hours}h #{remaining}min"
+  end
+
+  def format_cooking_time(minutes), do: "#{minutes} min"
+
   defp toggle_follow(socket, current_user) do
     target_user = socket.assigns.user
     is_following = socket.assigns.is_following

@@ -88,38 +88,85 @@
     <% end %>
   </div>
 
-  <%!-- Posts Grid --%>
-  <%= if @loading do %>
-    <div class="grid grid-cols-3 gap-1">
-      <%= for _ <- 1..9 do %>
-        <.loading_skeleton type="card" class="aspect-square rounded-none" />
-      <% end %>
+  <%!-- Recipes Section --%>
+  <div class="mt-6">
+    <div class="text-xs font-semibold uppercase tracking-[1.5px] text-base-content/50 mb-4">
+      Recipes
     </div>
-  <% else %>
-    <%= if Enum.empty?(@posts) do %>
-      <.empty_state message="No posts yet">
-        <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @user.id do %>
-          <.button href={~p"/posts/new"} variant="primary">
-            Share your first post
-          </.button>
-        <% end %>
-      </.empty_state>
-    <% else %>
-      <div class="grid grid-cols-3 gap-1">
-        <%= for post <- @posts do %>
-          <.link
-            href={~p"/posts/#{post.id}"}
-            class="aspect-square overflow-hidden block animate-fade-in"
-          >
-            <.lazy_image
-              id={"profile-post-#{post.id}"}
-              src={TraysSocial.Uploads.ImageProcessor.thumb_url(post.photo_url)}
-              alt={post.caption}
-              class="w-full h-full object-cover hover:opacity-90 transition-opacity"
-            />
-          </.link>
+
+    <%= if @loading do %>
+      <%!-- Loading: hero skeleton + grid skeletons --%>
+      <.loading_skeleton type="card" class="w-full aspect-[16/7] md:rounded-xl rounded-none" />
+      <div class="grid grid-cols-2 gap-0.5 md:gap-2 mt-0.5 md:mt-2">
+        <%= for _ <- 1..4 do %>
+          <.loading_skeleton type="card" class="aspect-square md:aspect-[4/3] md:rounded-lg rounded-none" />
         <% end %>
       </div>
+    <% else %>
+      <%= if Enum.empty?(@posts) do %>
+        <.empty_state message="No recipes yet">
+          <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @user.id do %>
+            <.button href={~p"/posts/new"} variant="primary">
+              Share your first recipe
+            </.button>
+          <% end %>
+        </.empty_state>
+      <% else %>
+        <%!-- Hero Post (most recent) --%>
+        <% [hero | grid_posts] = @posts %>
+        <.link
+          href={~p"/posts/#{hero.id}"}
+          class="block relative overflow-hidden md:rounded-xl aspect-[4/3] md:aspect-[16/7] animate-fade-in group"
+        >
+          <.lazy_image
+            id={"profile-hero-#{hero.id}"}
+            src={TraysSocial.Uploads.ImageProcessor.thumb_url(hero.photo_url)}
+            alt={hero.caption}
+            class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+          />
+          <div class="absolute inset-x-0 bottom-0 pt-16 pb-4 px-4 md:pb-5 md:px-6 bg-gradient-to-t from-black/55 to-transparent">
+            <div class="text-white font-bold text-sm md:text-lg leading-tight">{hero.caption}</div>
+            <div class="flex gap-3 mt-1 text-white/80 text-xs md:text-sm">
+              <span>{format_cooking_time(hero.cooking_time_minutes)}</span>
+              <%= if hero.difficulty do %>
+                <span class="capitalize">{hero.difficulty}</span>
+              <% end %>
+              <span>{format_count(hero.like_count)} likes</span>
+            </div>
+          </div>
+        </.link>
+
+        <%!-- Grid Posts (remaining) --%>
+        <%= if grid_posts != [] do %>
+          <div class="grid grid-cols-2 gap-0.5 md:gap-2 mt-0.5 md:mt-2">
+            <%= for post <- grid_posts do %>
+              <.link
+                href={~p"/posts/#{post.id}"}
+                class="block relative overflow-hidden aspect-square md:aspect-[4/3] md:rounded-lg animate-fade-in group"
+              >
+                <.lazy_image
+                  id={"profile-post-#{post.id}"}
+                  src={TraysSocial.Uploads.ImageProcessor.thumb_url(post.photo_url)}
+                  alt={post.caption}
+                  class="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                />
+                <%!-- Desktop: hover overlay --%>
+                <div class="hidden md:flex absolute inset-x-0 bottom-0 pt-10 pb-3 px-3 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-col justify-end">
+                  <div class="text-white font-semibold text-sm leading-tight truncate">{post.caption}</div>
+                  <div class="flex gap-2 mt-0.5 text-white/80 text-xs">
+                    <span>{format_cooking_time(post.cooking_time_minutes)}</span>
+                    <span>{format_count(post.like_count)} likes</span>
+                  </div>
+                </div>
+                <%!-- Mobile: like badge --%>
+                <div class="md:hidden absolute bottom-1.5 left-1.5 bg-black/50 text-white text-[0.6rem] font-semibold px-1.5 py-0.5 rounded">
+                  {format_count(post.like_count)} likes
+                </div>
+              </.link>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
     <% end %>
-  <% end %>
+  </div>
 </div>
