@@ -1,18 +1,20 @@
-<div class="mx-auto max-w-4xl px-4 py-8">
+<div class="mx-auto max-w-[820px] px-4 py-8">
   <%!-- Profile Header --%>
-  <div class="flex items-start gap-8 mb-8 pb-8 border-b">
+  <div class="flex items-start gap-5 md:gap-7 pb-6 border-b border-base-300">
     <%!-- Profile Photo --%>
     <div class="flex-shrink-0">
-      <.user_avatar username={@user.username} photo_url={@user.profile_photo_url} size="2xl" />
+      <div class="w-[72px] h-[72px] md:w-24 md:h-24">
+        <.user_avatar username={@user.username} photo_url={@user.profile_photo_url} size="2xl" />
+      </div>
     </div>
 
     <%!-- Profile Info --%>
-    <div class="flex-1">
-      <div class="flex items-center gap-4 mb-4">
-        <h1 class="text-2xl font-semibold">{@user.username}</h1>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-3 mb-1">
+        <h1 class="text-lg md:text-xl font-bold truncate">@{@user.username}</h1>
 
         <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @user.id do %>
-          <.button href={~p"/users/settings"} variant="secondary">
+          <.button href={~p"/users/settings"} variant="secondary" class="btn-sm">
             Edit Profile
           </.button>
         <% else %>
@@ -31,45 +33,59 @@
         <% end %>
       </div>
 
-      <%!-- Stats --%>
-      <div class="flex gap-8 mb-4">
-        <div>
-          <%= if @loading do %>
-            <.loading_skeleton type="text" class="w-16 h-4" />
-          <% else %>
-            <span class="font-semibold">{@post_count}</span>
-            <span class="text-base-content/60">
-              {if @post_count == 1, do: "post", else: "posts"}
-            </span>
-          <% end %>
-        </div>
-        <div>
-          <%= if @loading do %>
-            <.loading_skeleton type="text" class="w-20 h-4" />
-          <% else %>
-            <span class="font-semibold">{@follower_count}</span>
-            <span class="text-base-content/60">
-              {if @follower_count == 1, do: "follower", else: "followers"}
-            </span>
-          <% end %>
-        </div>
-        <div>
-          <%= if @loading do %>
-            <.loading_skeleton type="text" class="w-20 h-4" />
-          <% else %>
-            <span class="font-semibold">{@following_count}</span>
-            <span class="text-base-content/60">following</span>
-          <% end %>
-        </div>
-      </div>
-
       <%!-- Bio --%>
       <%= if @user.bio do %>
-        <div class="mt-4">
-          <p class="whitespace-pre-wrap">{@user.bio}</p>
-        </div>
+        <p class="text-sm text-base-content/70 leading-relaxed mt-1 max-w-[480px]">{@user.bio}</p>
       <% end %>
+
+      <%!-- Stats — inline on desktop --%>
+      <div class="hidden md:flex gap-6 mt-4">
+        <%= if @loading do %>
+          <.loading_skeleton type="text" class="w-16 h-4" />
+          <.loading_skeleton type="text" class="w-20 h-4" />
+          <.loading_skeleton type="text" class="w-20 h-4" />
+        <% else %>
+          <div>
+            <span class="font-bold">{format_count(@post_count)}</span>
+            <span class="text-base-content/60 ml-1">
+              {if @post_count == 1, do: "post", else: "posts"}
+            </span>
+          </div>
+          <div>
+            <span class="font-bold">{format_count(@follower_count)}</span>
+            <span class="text-base-content/60 ml-1">
+              {if @follower_count == 1, do: "follower", else: "followers"}
+            </span>
+          </div>
+          <div>
+            <span class="font-bold">{format_count(@following_count)}</span>
+            <span class="text-base-content/60 ml-1">following</span>
+          </div>
+        <% end %>
+      </div>
     </div>
+  </div>
+
+  <%!-- Stats — centered columns on mobile --%>
+  <div class="flex md:hidden justify-around py-3 border-b border-base-300">
+    <%= if @loading do %>
+      <.loading_skeleton type="text" class="w-12 h-8" />
+      <.loading_skeleton type="text" class="w-12 h-8" />
+      <.loading_skeleton type="text" class="w-12 h-8" />
+    <% else %>
+      <div class="text-center">
+        <div class="font-bold text-base">{format_count(@post_count)}</div>
+        <div class="text-xs text-base-content/60 uppercase tracking-wide">Posts</div>
+      </div>
+      <div class="text-center">
+        <div class="font-bold text-base">{format_count(@follower_count)}</div>
+        <div class="text-xs text-base-content/60 uppercase tracking-wide">Followers</div>
+      </div>
+      <div class="text-center">
+        <div class="font-bold text-base">{format_count(@following_count)}</div>
+        <div class="text-xs text-base-content/60 uppercase tracking-wide">Following</div>
+      </div>
+    <% end %>
   </div>
 
   <%!-- Posts Grid --%>

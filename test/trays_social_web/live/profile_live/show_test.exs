@@ -134,12 +134,11 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
 
       # Follow the user
       html = render_click(view, "toggle-follow")
-      assert html =~ "Following"
+      assert html =~ "toggle-follow\">\n              Following"
 
       # Unfollow the user
       html = render_click(view, "toggle-follow")
-      assert html =~ "Follow"
-      refute html =~ "Following"
+      assert html =~ "toggle-follow\">\n              Follow\n"
     end
 
     test "displays follower and following counts", %{conn: conn} do

@@ -75,6 +75,25 @@ defmodule TraysSocialWeb.ProfileLive.Show do
     end
   end
 
+  @doc false
+  def format_count(n) when n >= 1_000_000 do
+    formatted = Float.round(n / 1_000_000, 1)
+
+    if formatted == trunc(formatted),
+      do: "#{trunc(formatted)}M",
+      else: "#{formatted}M"
+  end
+
+  def format_count(n) when n >= 1_000 do
+    formatted = Float.round(n / 1_000, 1)
+
+    if formatted == trunc(formatted),
+      do: "#{trunc(formatted)}k",
+      else: "#{formatted}k"
+  end
+
+  def format_count(n), do: "#{n}"
+
   defp toggle_follow(socket, current_user) do
     target_user = socket.assigns.user
     is_following = socket.assigns.is_following
