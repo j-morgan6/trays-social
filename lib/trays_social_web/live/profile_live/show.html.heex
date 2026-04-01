@@ -2,10 +2,8 @@
   <%!-- Profile Header --%>
   <div class="flex items-start gap-5 md:gap-7 pb-6 border-b border-base-300">
     <%!-- Profile Photo --%>
-    <div class="flex-shrink-0">
-      <div class="w-[72px] h-[72px] md:w-24 md:h-24">
-        <.user_avatar username={@user.username} photo_url={@user.profile_photo_url} size="2xl" />
-      </div>
+    <div class="flex-shrink-0 w-[72px] h-[72px] md:w-24 md:h-24 overflow-hidden rounded-full [&_div]:!w-full [&_div]:!h-full [&_span]:!text-2xl md:[&_span]:!text-3xl">
+      <.user_avatar username={@user.username} photo_url={@user.profile_photo_url} size="2xl" />
     </div>
 
     <%!-- Profile Info --%>
