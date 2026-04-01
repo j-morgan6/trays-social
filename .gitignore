@@ -2,6 +2,7 @@
 .stride_auth.md
 2026-02-04-food-social-app-design.md
 2026-02-10-ui-polish-elevated-design.md
+.superpowers/
 
 # Phoenix / Elixir standard ignores
 /_build
@@ -41,3 +42,8 @@ ELIXIR_PLUGIN_IMPROVEMENTS.md
 
 # Planning docs (private)
 /docs/plans/
+
+# Design exploration
+color_theme.md
+logo-ideas.html
+docs/superpowers/specs/

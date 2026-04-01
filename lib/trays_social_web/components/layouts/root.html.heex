@@ -7,6 +7,9 @@
     <.live_title default="TraysSocial" suffix=" · Phoenix Framework">
       {assigns[:page_title]}
     </.live_title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
@@ -30,14 +33,20 @@
       })();
     </script>
   </head>
-  <body class="bg-base-100">
+  <body class="bg-base-200">
     <%!-- Professional App Header --%>
     <header class="sticky top-0 z-50 bg-base-100 border-b border-base-300 shadow-sm">
       <div class="navbar max-w-7xl mx-auto px-4">
         <%!-- Logo/Brand --%>
         <div class="navbar-start">
-          <.link href={~p"/"} class="btn btn-ghost normal-case text-xl font-bold text-primary">
-            [LOGO] Trays
+          <.link href={~p"/"} class="btn btn-ghost normal-case text-xl font-bold text-primary gap-2 px-2">
+            <svg viewBox="0 0 56 56" class="w-9 h-9" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="6" width="50" height="44" rx="10" stroke="#2E7D32" stroke-width="2.5" fill="none"/>
+              <rect x="7.5" y="10.5" width="18.5" height="13.5" rx="5" fill="#A5D6A7"/>
+              <circle cx="17" cy="36" r="8" fill="#FFB300"/>
+              <rect x="29" y="10.5" width="19.5" height="34" rx="5" fill="#1B5E20"/>
+            </svg>
+            <span style="font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; letter-spacing: -0.01em;">trays</span>
           </.link>
         </div>
 
