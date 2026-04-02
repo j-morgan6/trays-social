@@ -70,8 +70,7 @@ if config_env() == :prod do
   config :trays_social, TraysSocialWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
-      ip: {0, 0, 0, 0},
-      port: port
+      ip: {0, 0, 0, 0}
     ],
     secret_key_base: secret_key_base
 
