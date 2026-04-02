@@ -22,6 +22,12 @@ defmodule TraysSocialWeb.Router do
     plug :accepts, ["json"]
   end
 
+  # Health check — no auth, no SSL redirect
+  scope "/", TraysSocialWeb do
+    pipe_through :api
+    get "/health", HealthController, :check
+  end
+
   scope "/", TraysSocialWeb do
     pipe_through :browser
 
