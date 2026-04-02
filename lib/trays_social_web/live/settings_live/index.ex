@@ -63,8 +63,8 @@ defmodule TraysSocialWeb.SettingsLive.Index do
           {:ok, user} ->
             {:noreply,
              socket
-             |> assign(:user, user)
-             |> put_flash(:info, "Profile updated successfully")}
+             |> put_flash(:info, "Profile updated successfully")
+             |> push_navigate(to: ~p"/@#{user.username}")}
 
           {:error, %Ecto.Changeset{} = changeset} ->
             {:noreply, assign(socket, changeset: changeset)}
