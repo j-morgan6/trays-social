@@ -110,12 +110,11 @@
 
             <%!-- User Dropdown --%>
             <div class="dropdown dropdown-end">
-              <label tabindex="0" class="btn btn-ghost btn-circle avatar placeholder">
+              <label tabindex="0" class="cursor-pointer">
                 <.user_avatar
                   username={@current_scope.user.username}
                   photo_url={@current_scope.user.profile_photo_url}
                   size="md"
-                  class=""
                 />
               </label>
               <ul
