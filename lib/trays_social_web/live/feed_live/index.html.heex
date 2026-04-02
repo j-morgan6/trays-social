@@ -55,17 +55,7 @@
     <% end %>
 
     <%= if @no_posts do %>
-      <.empty_state message="Nothing here yet — be the first to post something delicious!">
-        <%= if assigns[:current_scope] && @current_scope.user do %>
-          <.button href={~p"/posts/new"} variant="primary">
-            Create your first post
-          </.button>
-        <% else %>
-          <.button href={~p"/users/log-in"} variant="primary">
-            Log in to post
-          </.button>
-        <% end %>
-      </.empty_state>
+      <.empty_state message="No posts yet. Check back soon!" />
     <% else %>
       <%!-- Stream of post cards --%>
       <div id="posts" phx-update="stream" class="space-y-6">
