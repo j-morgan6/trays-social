@@ -3,6 +3,7 @@ defmodule TraysSocialWeb.UserRegistrationController do
 
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.User
+  alias TraysSocialWeb.UserAuth
 
   def new(conn, _params) do
     changeset = User.registration_changeset(%User{}, %{}, validate_unique: false)
@@ -11,13 +12,10 @@ defmodule TraysSocialWeb.UserRegistrationController do
 
   def create(conn, %{"user" => user_params}) do
     case Accounts.register_user(user_params) do
-      {:ok, _user} ->
+      {:ok, user} ->
         conn
-        |> put_flash(
-          :info,
-          "Account created successfully! Please log in."
-        )
-        |> redirect(to: ~p"/users/log-in")
+        |> put_flash(:info, "Welcome to Trays!")
+        |> UserAuth.log_in_user(user)
 
       {:error, %Ecto.Changeset{} = changeset} ->
         render(conn, :new, changeset: changeset)
