@@ -1,291 +1,328 @@
 <div class="mx-auto max-w-2xl px-4 py-8 pb-12">
-  <.header>
-    Create New Post
-    <:subtitle>Share your recipe with the community</:subtitle>
-  </.header>
+  <%= if @post_type == nil do %>
+    <%!-- Type Picker --%>
+    <div class="flex flex-col items-center justify-center min-h-[60vh]">
+      <h1 class="text-2xl font-bold text-base-content mb-8">What are you sharing?</h1>
 
-  <.form
-    :let={f}
-    for={@changeset}
-    id="post-form"
-    phx-change="validate"
-    phx-submit="save"
-  >
-    <%!-- Photos --%>
-    <div class="mb-8">
-      <label class="block text-sm font-semibold mb-2">
-        Photos <span class="text-error">*</span>
-      </label>
+      <div class="w-full max-w-sm space-y-4">
+        <button
+          phx-click="select-type"
+          phx-value-type="recipe"
+          class="w-full p-6 rounded-2xl border-2 border-base-300 bg-base-100 hover:border-primary hover:bg-primary/5 transition-all duration-200 text-center cursor-pointer"
+        >
+          <h2 class="text-xl font-bold text-base-content">Recipe</h2>
+          <p class="text-sm text-base-content/60 mt-1">Share how you made it</p>
+        </button>
 
-      <.live_file_input upload={@uploads.photos} class="sr-only" />
+        <button
+          phx-click="select-type"
+          phx-value-type="post"
+          class="w-full p-6 rounded-2xl border-2 border-base-300 bg-base-100 hover:border-primary hover:bg-primary/5 transition-all duration-200 text-center cursor-pointer"
+        >
+          <h2 class="text-xl font-bold text-base-content">Post</h2>
+          <p class="text-sm text-base-content/60 mt-1">Share what you're eating</p>
+        </button>
+      </div>
 
-      <div
-        id="photo-drop-zone"
-        class="rounded-xl border-2 border-dashed border-base-300 overflow-hidden transition-colors duration-200 phx-drop-target:border-primary phx-drop-target:bg-primary/5"
-        phx-drop-target={@uploads.photos.ref}
+      <.link navigate={~p"/"} class="mt-8 text-sm text-base-content/50 hover:text-base-content">
+        Cancel
+      </.link>
+    </div>
+  <% else %>
+    <%!-- Form Header --%>
+    <div class="mb-6">
+      <button
+        type="button"
+        phx-click="back-to-picker"
+        class="btn btn-ghost btn-sm gap-1 mb-4"
       >
-        <%= if @uploads.photos.entries == [] do %>
-          <label
-            for={@uploads.photos.ref}
-            class="flex flex-col items-center justify-center py-14 px-6 text-center cursor-pointer"
-          >
-            <div class="w-16 h-16 rounded-full bg-base-200 flex items-center justify-center mb-4">
-              <.icon name="hero-camera" class="size-8 text-base-content/40" />
-            </div>
-            <p class="font-medium text-base-content">Drop photos here</p>
-            <p class="text-sm text-base-content/50 mt-1">or click to browse — up to 5 photos</p>
-            <p class="text-xs text-base-content/40 mt-3">PNG, JPG, HEIC up to 10MB each</p>
-          </label>
-        <% else %>
-          <div class="p-3 grid grid-cols-3 gap-2">
-            <%= for entry <- @uploads.photos.entries do %>
-              <div class="relative aspect-square rounded-lg overflow-hidden bg-base-200">
-                <.live_img_preview entry={entry} class="w-full h-full object-cover" />
+        <.icon name="hero-arrow-left" class="size-4" /> Back
+      </button>
+      <.header>
+        <%= if @post_type == "recipe", do: "Create Recipe", else: "Create Post" %>
+        <:subtitle>
+          <%= if @post_type == "recipe",
+            do: "Share your recipe with the community",
+            else: "Share what you're eating" %>
+        </:subtitle>
+      </.header>
+    </div>
 
-                <%= if entry.progress > 0 && entry.progress < 100 do %>
-                  <div class="absolute inset-0 flex items-center justify-center bg-black/40">
-                    <span class="text-white text-sm font-bold">{trunc(entry.progress)}%</span>
-                  </div>
-                <% end %>
+    <.form
+      :let={f}
+      for={@changeset}
+      id="post-form"
+      phx-change="validate"
+      phx-submit="save"
+    >
+      <%!-- Photos --%>
+      <div class="mb-8">
+        <label class="block text-sm font-semibold mb-2">
+          Photos <span class="text-error">*</span>
+        </label>
 
-                <button
-                  type="button"
-                  class="absolute top-1 right-1 btn btn-circle btn-xs bg-black/50 hover:bg-black/70 border-0 text-white"
-                  phx-click="cancel-upload"
-                  phx-value-ref={entry.ref}
-                >
-                  <.icon name="hero-x-mark" class="size-3" />
-                </button>
+        <.live_file_input upload={@uploads.photos} class="sr-only" />
+
+        <div
+          id="photo-drop-zone"
+          class="rounded-xl border-2 border-dashed border-base-300 overflow-hidden transition-colors duration-200 phx-drop-target:border-primary phx-drop-target:bg-primary/5"
+          phx-drop-target={@uploads.photos.ref}
+        >
+          <%= if @uploads.photos.entries == [] do %>
+            <label
+              for={@uploads.photos.ref}
+              class="flex flex-col items-center justify-center py-14 px-6 text-center cursor-pointer"
+            >
+              <div class="w-16 h-16 rounded-full bg-base-200 flex items-center justify-center mb-4">
+                <.icon name="hero-camera" class="size-8 text-base-content/40" />
               </div>
-            <% end %>
+              <p class="font-medium text-base-content">Drop photos here</p>
+              <p class="text-sm text-base-content/50 mt-1">or click to browse — up to 5 photos</p>
+              <p class="text-xs text-base-content/40 mt-3">PNG, JPG, HEIC up to 10MB each</p>
+            </label>
+          <% else %>
+            <div class="p-3 grid grid-cols-3 gap-2">
+              <%= for entry <- @uploads.photos.entries do %>
+                <div class="relative aspect-square rounded-lg overflow-hidden bg-base-200">
+                  <.live_img_preview entry={entry} class="w-full h-full object-cover" />
 
-            <%= if length(@uploads.photos.entries) < 5 do %>
-              <label
-                for={@uploads.photos.ref}
-                class="aspect-square rounded-lg border-2 border-dashed border-base-300 flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
-              >
-                <.icon name="hero-plus" class="size-6 text-base-content/40" />
-                <p class="text-xs text-base-content/40 mt-1">Add more</p>
-              </label>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
+                  <%= if entry.progress > 0 && entry.progress < 100 do %>
+                    <div class="absolute inset-0 flex items-center justify-center bg-black/40">
+                      <span class="text-white text-sm font-bold">{trunc(entry.progress)}%</span>
+                    </div>
+                  <% end %>
 
-      <%= for entry <- @uploads.photos.entries do %>
-        <%= for err <- upload_errors(@uploads.photos, entry) do %>
-          <p class="mt-2 text-sm text-error flex items-center gap-1">
-            <.icon name="hero-exclamation-circle" class="size-4" />
-            {entry.client_name}: {error_to_string(err)}
-          </p>
-        <% end %>
-      <% end %>
-      <%= for err <- upload_errors(@uploads.photos) do %>
-        <p class="mt-2 text-sm text-error flex items-center gap-1">
-          <.icon name="hero-exclamation-circle" class="size-4" />
-          {error_to_string(err)}
-        </p>
-      <% end %>
-    </div>
+                  <button
+                    type="button"
+                    class="absolute top-1 right-1 btn btn-circle btn-xs bg-black/50 hover:bg-black/70 border-0 text-white"
+                    phx-click="cancel-upload"
+                    phx-value-ref={entry.ref}
+                  >
+                    <.icon name="hero-x-mark" class="size-3" />
+                  </button>
+                </div>
+              <% end %>
 
-    <%!-- Caption --%>
-    <.input
-      field={f[:caption]}
-      type="textarea"
-      label="Caption"
-      placeholder="Describe your dish..."
-      required
-      phx-debounce="300"
-    />
-
-    <%!-- Ingredients --%>
-    <div class="mt-8">
-      <div class="flex items-center justify-between mb-3">
-        <div>
-          <h3 class="font-semibold text-base-content">
-            Ingredients <span class="text-error">*</span>
-          </h3>
-          <p class="text-xs text-base-content/50">At least one required</p>
-        </div>
-        <button type="button" class="btn btn-sm btn-ghost gap-1" phx-click="add-ingredient">
-          <.icon name="hero-plus" class="size-4" /> Add
-        </button>
-      </div>
-
-      <div class="space-y-2">
-        <%= for {row_id, display_idx} <- Enum.with_index(@ingredient_rows) do %>
-          <div class="flex gap-2 items-center">
-            <span class="text-xs font-semibold text-base-content/40 w-5 shrink-0 text-right">
-              {display_idx + 1}
-            </span>
-            <input
-              type="text"
-              name={"post[ingredients][#{row_id}][name]"}
-              placeholder="Ingredient name"
-              required
-              class="input input-bordered input-sm flex-1 min-w-0"
-            />
-            <input
-              type="text"
-              name={"post[ingredients][#{row_id}][quantity]"}
-              placeholder="Qty"
-              class="input input-bordered input-sm w-20"
-            />
-            <input
-              type="text"
-              name={"post[ingredients][#{row_id}][unit]"}
-              placeholder="Unit"
-              class="input input-bordered input-sm w-20"
-            />
-            <input
-              type="hidden"
-              name={"post[ingredients][#{row_id}][order]"}
-              value={display_idx}
-            />
-            <%= if length(@ingredient_rows) > 1 do %>
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm btn-square text-error shrink-0"
-                phx-click="remove-ingredient"
-                phx-value-id={row_id}
-              >
-                <.icon name="hero-trash" class="size-4" />
-              </button>
-            <% else %>
-              <div class="w-8 shrink-0"></div>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
-    </div>
-
-    <%!-- Cooking Steps --%>
-    <div class="mt-8">
-      <div class="flex items-center justify-between mb-3">
-        <div>
-          <h3 class="font-semibold text-base-content">
-            Cooking Steps <span class="text-error">*</span>
-          </h3>
-          <p class="text-xs text-base-content/50">At least one required</p>
-        </div>
-        <button type="button" class="btn btn-sm btn-ghost gap-1" phx-click="add-step">
-          <.icon name="hero-plus" class="size-4" /> Add
-        </button>
-      </div>
-
-      <div class="space-y-2">
-        <%= for {row_id, display_idx} <- Enum.with_index(@step_rows) do %>
-          <div class="flex gap-2 items-start">
-            <span class="text-xs font-semibold text-base-content/40 w-5 shrink-0 text-right mt-2">
-              {display_idx + 1}
-            </span>
-            <textarea
-              name={"post[cooking_steps][#{row_id}][description]"}
-              placeholder="Describe this step..."
-              required
-              rows="2"
-              class="textarea textarea-bordered textarea-sm flex-1 min-w-0 resize-none"
-            ></textarea>
-            <input
-              type="hidden"
-              name={"post[cooking_steps][#{row_id}][order]"}
-              value={display_idx}
-            />
-            <%= if length(@step_rows) > 1 do %>
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm btn-square text-error shrink-0 mt-1"
-                phx-click="remove-step"
-                phx-value-id={row_id}
-              >
-                <.icon name="hero-trash" class="size-4" />
-              </button>
-            <% else %>
-              <div class="w-8 shrink-0"></div>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
-    </div>
-
-    <%!-- Tools (optional) --%>
-    <div class="mt-8">
-      <div class="flex items-center justify-between mb-3">
-        <div>
-          <h3 class="font-semibold text-base-content">
-            Tools <span class="text-xs font-normal text-base-content/50">(optional)</span>
-          </h3>
-        </div>
-        <button type="button" class="btn btn-sm btn-ghost gap-1" phx-click="add-tool">
-          <.icon name="hero-plus" class="size-4" /> Add
-        </button>
-      </div>
-
-      <%= if @tool_rows == [] do %>
-        <p class="text-sm text-base-content/40 italic">No tools added</p>
-      <% else %>
-        <div class="space-y-2">
-          <%= for {row_id, display_idx} <- Enum.with_index(@tool_rows) do %>
-            <div class="flex gap-2 items-center">
-              <input
-                type="text"
-                name={"post[tools][#{row_id}][name]"}
-                placeholder="e.g. cast iron pan, blender"
-                class="input input-bordered input-sm flex-1 min-w-0"
-              />
-              <input
-                type="hidden"
-                name={"post[tools][#{row_id}][order]"}
-                value={display_idx}
-              />
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm btn-square text-error shrink-0"
-                phx-click="remove-tool"
-                phx-value-id={row_id}
-              >
-                <.icon name="hero-trash" class="size-4" />
-              </button>
+              <%= if length(@uploads.photos.entries) < 5 do %>
+                <label
+                  for={@uploads.photos.ref}
+                  class="aspect-square rounded-lg border-2 border-dashed border-base-300 flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                >
+                  <.icon name="hero-plus" class="size-6 text-base-content/40" />
+                  <p class="text-xs text-base-content/40 mt-1">Add more</p>
+                </label>
+              <% end %>
             </div>
           <% end %>
         </div>
+
+        <%= for entry <- @uploads.photos.entries do %>
+          <%= for err <- upload_errors(@uploads.photos, entry) do %>
+            <p class="mt-2 text-sm text-error flex items-center gap-1">
+              <.icon name="hero-exclamation-circle" class="size-4" />
+              {entry.client_name}: {error_to_string(err)}
+            </p>
+          <% end %>
+        <% end %>
+        <%= for err <- upload_errors(@uploads.photos) do %>
+          <p class="mt-2 text-sm text-error flex items-center gap-1">
+            <.icon name="hero-exclamation-circle" class="size-4" />
+            {error_to_string(err)}
+          </p>
+        <% end %>
+      </div>
+
+      <%!-- Caption --%>
+      <.input
+        field={f[:caption]}
+        type="textarea"
+        label="Caption"
+        placeholder="Describe your dish..."
+        phx-debounce="300"
+      />
+
+      <%= if @post_type == "recipe" do %>
+        <%!-- Ingredients --%>
+        <div class="mt-8">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="font-semibold text-base-content">
+                Ingredients <span class="text-error">*</span>
+              </h3>
+              <p class="text-xs text-base-content/50">At least one required</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-ghost gap-1" phx-click="add-ingredient">
+              <.icon name="hero-plus" class="size-4" /> Add
+            </button>
+          </div>
+
+          <div class="space-y-2">
+            <%= for {row_id, display_idx} <- Enum.with_index(@ingredient_rows) do %>
+              <div class="flex gap-2 items-center">
+                <span class="text-xs font-semibold text-base-content/40 w-5 shrink-0 text-right">
+                  {display_idx + 1}
+                </span>
+                <input
+                  type="text"
+                  name={"post[ingredients][#{row_id}][name]"}
+                  placeholder="Ingredient name"
+                  required
+                  class="input input-bordered input-sm flex-1 min-w-0"
+                />
+                <input
+                  type="text"
+                  name={"post[ingredients][#{row_id}][quantity]"}
+                  placeholder="Qty"
+                  class="input input-bordered input-sm w-20"
+                />
+                <input
+                  type="text"
+                  name={"post[ingredients][#{row_id}][unit]"}
+                  placeholder="Unit"
+                  class="input input-bordered input-sm w-20"
+                />
+                <input
+                  type="hidden"
+                  name={"post[ingredients][#{row_id}][order]"}
+                  value={display_idx}
+                />
+                <%= if length(@ingredient_rows) > 1 do %>
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-sm btn-square text-error shrink-0"
+                    phx-click="remove-ingredient"
+                    phx-value-id={row_id}
+                  >
+                    <.icon name="hero-trash" class="size-4" />
+                  </button>
+                <% else %>
+                  <div class="w-8 shrink-0"></div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <%!-- Cooking Steps --%>
+        <div class="mt-8">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="font-semibold text-base-content">
+                Cooking Steps <span class="text-error">*</span>
+              </h3>
+              <p class="text-xs text-base-content/50">At least one required</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-ghost gap-1" phx-click="add-step">
+              <.icon name="hero-plus" class="size-4" /> Add
+            </button>
+          </div>
+
+          <div class="space-y-2">
+            <%= for {row_id, display_idx} <- Enum.with_index(@step_rows) do %>
+              <div class="flex gap-2 items-start">
+                <span class="text-xs font-semibold text-base-content/40 w-5 shrink-0 text-right mt-2">
+                  {display_idx + 1}
+                </span>
+                <textarea
+                  name={"post[cooking_steps][#{row_id}][description]"}
+                  placeholder="Describe this step..."
+                  required
+                  rows="2"
+                  class="textarea textarea-bordered textarea-sm flex-1 min-w-0 resize-none"
+                ></textarea>
+                <input
+                  type="hidden"
+                  name={"post[cooking_steps][#{row_id}][order]"}
+                  value={display_idx}
+                />
+                <%= if length(@step_rows) > 1 do %>
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-sm btn-square text-error shrink-0 mt-1"
+                    phx-click="remove-step"
+                    phx-value-id={row_id}
+                  >
+                    <.icon name="hero-trash" class="size-4" />
+                  </button>
+                <% else %>
+                  <div class="w-8 shrink-0"></div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <%!-- Tools (optional) --%>
+        <div class="mt-8">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="font-semibold text-base-content">
+                Tools <span class="text-xs font-normal text-base-content/50">(optional)</span>
+              </h3>
+            </div>
+            <button type="button" class="btn btn-sm btn-ghost gap-1" phx-click="add-tool">
+              <.icon name="hero-plus" class="size-4" /> Add
+            </button>
+          </div>
+
+          <%= if @tool_rows == [] do %>
+            <p class="text-sm text-base-content/40 italic">No tools added</p>
+          <% else %>
+            <div class="space-y-2">
+              <%= for {row_id, display_idx} <- Enum.with_index(@tool_rows) do %>
+                <div class="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    name={"post[tools][#{row_id}][name]"}
+                    placeholder="e.g. cast iron pan, blender"
+                    class="input input-bordered input-sm flex-1 min-w-0"
+                  />
+                  <input
+                    type="hidden"
+                    name={"post[tools][#{row_id}][order]"}
+                    value={display_idx}
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-sm btn-square text-error shrink-0"
+                    phx-click="remove-tool"
+                    phx-value-id={row_id}
+                  >
+                    <.icon name="hero-trash" class="size-4" />
+                  </button>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <%!-- Recipe Details --%>
+        <div class="mt-8">
+          <h3 class="font-semibold text-base-content mb-4">Details</h3>
+
+          <div class="grid grid-cols-2 gap-4">
+            <.input
+              field={f[:cooking_time_minutes]}
+              type="number"
+              label="Cooking Time (minutes)"
+              required
+              min="1"
+              phx-debounce="300"
+            />
+            <.input
+              field={f[:servings]}
+              type="number"
+              label="Servings"
+              placeholder="e.g. 4"
+              min="1"
+              phx-debounce="300"
+            />
+          </div>
+        </div>
       <% end %>
-    </div>
 
-    <%!-- Metadata --%>
-    <div class="mt-8">
-      <h3 class="font-semibold text-base-content mb-4">Details</h3>
-
-      <div class="grid grid-cols-2 gap-4">
-        <.input
-          field={f[:cooking_time_minutes]}
-          type="number"
-          label="Cooking Time (minutes)"
-          required
-          min="1"
-          phx-debounce="300"
-        />
-        <.input
-          field={f[:servings]}
-          type="number"
-          label="Servings"
-          placeholder="e.g. 4"
-          min="1"
-          phx-debounce="300"
-        />
-      </div>
-
-      <div class="mt-4">
-        <.input
-          field={f[:difficulty]}
-          type="select"
-          label="Difficulty"
-          prompt="Select difficulty"
-          options={[{"Easy", "easy"}, {"Medium", "medium"}, {"Hard", "hard"}]}
-        />
-      </div>
-
-      <div class="mt-4">
+      <%!-- Tags (both types) --%>
+      <div class="mt-8">
         <label class="block text-sm font-semibold mb-2">
           Tags
           <span class="text-xs font-normal text-base-content/50">
@@ -301,13 +338,13 @@
         />
         <p class="mt-1 text-xs text-base-content/40">Separate multiple tags with commas</p>
       </div>
-    </div>
 
-    <%!-- Submit --%>
-    <div class="mt-10">
-      <.button phx-disable-with="Publishing..." class="w-full btn-lg">
-        Publish Post
-      </.button>
-    </div>
-  </.form>
+      <%!-- Submit --%>
+      <div class="mt-10">
+        <.button phx-disable-with="Publishing..." class="w-full btn-lg">
+          Publish
+        </.button>
+      </div>
+    </.form>
+  <% end %>
 </div>

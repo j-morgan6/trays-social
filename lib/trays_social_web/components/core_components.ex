@@ -303,22 +303,24 @@ defmodule TraysSocialWeb.CoreComponents do
           {@post.caption}
         </p>
 
-        <%!-- Metadata Row --%>
-        <div class="flex items-center gap-4 text-sm text-base-content/60">
-          <%= if @post.cooking_time_minutes do %>
-            <div class="flex items-center gap-1">
-              <span>[ICON]</span>
-              <span>{@post.cooking_time_minutes} min</span>
-            </div>
-          <% end %>
+        <%!-- Metadata Row (recipe only) --%>
+        <%= if @post.type == "recipe" do %>
+          <div class="flex items-center gap-4 text-sm text-base-content/60">
+            <%= if @post.cooking_time_minutes do %>
+              <div class="flex items-center gap-1">
+                <span>[ICON]</span>
+                <span>{@post.cooking_time_minutes} min</span>
+              </div>
+            <% end %>
 
-          <%= if Ecto.assoc_loaded?(@post.ingredients) && !Enum.empty?(@post.ingredients) do %>
-            <div class="flex items-center gap-1">
-              <span>[ICON]</span>
-              <span>{length(@post.ingredients)} ingredients</span>
-            </div>
-          <% end %>
-        </div>
+            <%= if Ecto.assoc_loaded?(@post.ingredients) && !Enum.empty?(@post.ingredients) do %>
+              <div class="flex items-center gap-1">
+                <span>[ICON]</span>
+                <span>{length(@post.ingredients)} ingredients</span>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
       </div>
     </.link>
     """

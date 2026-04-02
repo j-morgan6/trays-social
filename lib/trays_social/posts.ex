@@ -269,13 +269,40 @@ defmodule TraysSocial.Posts do
 
   """
   def change_post(%Post{} = post, attrs \\ %{}) do
-    post
-    |> Post.changeset(attrs)
-    |> Ecto.Changeset.cast_assoc(:ingredients, with: &Ingredient.changeset/2)
-    |> Ecto.Changeset.cast_assoc(:tools, with: &Tool.changeset/2)
-    |> Ecto.Changeset.cast_assoc(:cooking_steps, with: &CookingStep.changeset/2)
-    |> Ecto.Changeset.cast_assoc(:post_tags, with: &PostTag.changeset/2)
-    |> Ecto.Changeset.cast_assoc(:post_photos, with: &PostPhoto.changeset/2)
+    changeset =
+      post
+      |> Post.changeset(attrs)
+      |> Ecto.Changeset.cast_assoc(:post_tags, with: &PostTag.changeset/2)
+      |> Ecto.Changeset.cast_assoc(:post_photos, with: &PostPhoto.changeset/2)
+
+    type = Ecto.Changeset.get_field(changeset, :type)
+
+    if type == "recipe" do
+      changeset
+      |> Ecto.Changeset.cast_assoc(:ingredients, with: &Ingredient.changeset/2)
+      |> Ecto.Changeset.cast_assoc(:tools, with: &Tool.changeset/2)
+      |> Ecto.Changeset.cast_assoc(:cooking_steps, with: &CookingStep.changeset/2)
+      |> validate_recipe_associations()
+    else
+      changeset
+    end
+  end
+
+  defp validate_recipe_associations(changeset) do
+    changeset
+    |> validate_assoc_length(:ingredients, min: 1)
+    |> validate_assoc_length(:cooking_steps, min: 1)
+  end
+
+  defp validate_assoc_length(changeset, field, opts) do
+    min = Keyword.get(opts, :min, 0)
+    assoc = Ecto.Changeset.get_field(changeset, field) || []
+
+    if length(assoc) < min do
+      Ecto.Changeset.add_error(changeset, field, "must have at least #{min}")
+    else
+      changeset
+    end
   end
 
   @doc """

@@ -476,7 +476,9 @@ defmodule TraysSocial.AccountsTest do
           caption: "Test post",
           photo_url: "https://example.com/photo.jpg",
           cooking_time_minutes: 30,
-          user_id: user.id
+          user_id: user.id,
+          ingredients: [%{name: "Test ingredient", quantity: "1", unit: "cup"}],
+          cooking_steps: [%{description: "Test step", order: 0}]
         })
 
       assert {:ok, _user} = Accounts.delete_account(user)

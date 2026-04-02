@@ -10,26 +10,46 @@ defmodule TraysSocialWeb.PostLive.New do
 
   @impl true
   def mount(_params, _session, socket) do
-    changeset = Posts.change_post(%Post{})
-
     socket =
       socket
       |> assign(:page_title, "Create Post")
       |> assign(:current_tab, :new_post)
-      |> assign(:changeset, changeset)
-      |> assign(:ingredient_rows, [0])
-      |> assign(:next_ingredient_id, 1)
-      |> assign(:step_rows, [0])
-      |> assign(:next_step_id, 1)
-      |> assign(:tool_rows, [])
-      |> assign(:next_tool_id, 0)
-      |> allow_upload(:photos,
-        accept: ~w(.jpg .jpeg .png .heic),
-        max_entries: 5,
-        max_file_size: Photo.max_file_size()
-      )
+      |> assign(:post_type, nil)
 
     {:ok, socket}
+  end
+
+  defp init_form(socket, type) do
+    changeset = Posts.change_post(%Post{}, %{type: type})
+
+    socket
+    |> assign(:post_type, type)
+    |> assign(:changeset, changeset)
+    |> assign(:ingredient_rows, [0])
+    |> assign(:next_ingredient_id, 1)
+    |> assign(:step_rows, [0])
+    |> assign(:next_step_id, 1)
+    |> assign(:tool_rows, [])
+    |> assign(:next_tool_id, 0)
+    |> allow_upload(:photos,
+      accept: ~w(.jpg .jpeg .png .heic),
+      max_entries: 5,
+      max_file_size: Photo.max_file_size()
+    )
+  end
+
+  @impl true
+  def handle_event("select-type", %{"type" => type}, socket) when type in ~w(recipe post) do
+    {:noreply, init_form(socket, type)}
+  end
+
+  @impl true
+  def handle_event("back-to-picker", _, socket) do
+    socket =
+      socket
+      |> assign(:post_type, nil)
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -190,7 +210,12 @@ defmodule TraysSocialWeb.PostLive.New do
 
   defp create_post(socket, post_params) do
     require Logger
-    post_params = Map.put(post_params, "user_id", socket.assigns.current_scope.user.id)
+
+    post_params =
+      post_params
+      |> Map.put("user_id", socket.assigns.current_scope.user.id)
+      |> Map.put("type", socket.assigns.post_type)
+
     Logger.warning("create_post params: #{inspect(Map.keys(post_params))}")
 
     case Posts.create_post(post_params) do

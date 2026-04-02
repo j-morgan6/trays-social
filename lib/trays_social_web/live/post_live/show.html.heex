@@ -68,26 +68,23 @@
     <% end %>
   </div>
 
-  <%!-- Meta chips --%>
-  <div class="flex flex-wrap gap-2 mt-4">
-    <%= if @post.cooking_time_minutes do %>
-      <span class="inline-flex items-center gap-1.5 bg-base-200 text-base-content/70 text-sm px-3 py-1.5 rounded-full">
-        <.icon name="hero-clock" class="size-4" />
-        {@post.cooking_time_minutes} minutes
-      </span>
-    <% end %>
-    <%= if @post.difficulty do %>
-      <span class="inline-flex items-center bg-base-200 text-base-content/70 text-sm px-3 py-1.5 rounded-full">
-        {String.capitalize(@post.difficulty)}
-      </span>
-    <% end %>
-    <%= if @post.servings do %>
-      <span class="inline-flex items-center gap-1.5 bg-base-200 text-base-content/70 text-sm px-3 py-1.5 rounded-full">
-        <.icon name="hero-user-group" class="size-4" />
-        {if @post.servings == 1, do: "1 serving", else: "#{@post.servings} servings"}
-      </span>
-    <% end %>
-  </div>
+  <%!-- Meta chips (recipe only) --%>
+  <%= if @post.type == "recipe" do %>
+    <div class="flex flex-wrap gap-2 mt-4">
+      <%= if @post.cooking_time_minutes do %>
+        <span class="inline-flex items-center gap-1.5 bg-base-200 text-base-content/70 text-sm px-3 py-1.5 rounded-full">
+          <.icon name="hero-clock" class="size-4" />
+          {@post.cooking_time_minutes} minutes
+        </span>
+      <% end %>
+      <%= if @post.servings do %>
+        <span class="inline-flex items-center gap-1.5 bg-base-200 text-base-content/70 text-sm px-3 py-1.5 rounded-full">
+          <.icon name="hero-user-group" class="size-4" />
+          {if @post.servings == 1, do: "1 serving", else: "#{@post.servings} servings"}
+        </span>
+      <% end %>
+    </div>
+  <% end %>
 
   <%!-- Like button --%>
   <div class="mt-4 flex items-center gap-4">
@@ -108,60 +105,63 @@
   <p class="mt-4 text-base text-base-content leading-relaxed">{@post.caption}</p>
 
   <%!-- Ingredients --%>
-  <%= if !Enum.empty?(@post.ingredients) do %>
-    <div class="mt-8">
-      <h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3">
-        Ingredients
-      </h2>
-      <ul class="space-y-2">
-        <%= for ingredient <- Enum.sort_by(@post.ingredients, & &1.order) do %>
-          <li class="flex items-baseline gap-2 text-sm">
-            <%= if ingredient.quantity do %>
-              <span class="font-medium text-base-content/70 shrink-0 tabular-nums">
-                {ingredient.quantity}{if ingredient.unit, do: " #{ingredient.unit}"}
+  <%= if @post.type == "recipe" do %>
+    <%!-- Ingredients --%>
+    <%= if !Enum.empty?(@post.ingredients) do %>
+      <div class="mt-8">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3">
+          Ingredients
+        </h2>
+        <ul class="space-y-2">
+          <%= for ingredient <- Enum.sort_by(@post.ingredients, & &1.order) do %>
+            <li class="flex items-baseline gap-2 text-sm">
+              <%= if ingredient.quantity do %>
+                <span class="font-medium text-base-content/70 shrink-0 tabular-nums">
+                  {ingredient.quantity}{if ingredient.unit, do: " #{ingredient.unit}"}
+                </span>
+              <% end %>
+              <span class="text-base-content">{ingredient.name}</span>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <%!-- Tools --%>
+    <%= if !Enum.empty?(@post.tools) do %>
+      <div class="mt-8">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3">
+          Tools
+        </h2>
+        <ul class="space-y-1.5">
+          <%= for tool <- Enum.sort_by(@post.tools, & &1.order) do %>
+            <li class="flex items-center gap-2 text-sm text-base-content">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
+              {tool.name}
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <%!-- Cooking Steps --%>
+    <%= if !Enum.empty?(@post.cooking_steps) do %>
+      <div class="mt-8">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3">
+          Steps
+        </h2>
+        <ol class="space-y-4">
+          <%= for step <- Enum.sort_by(@post.cooking_steps, & &1.order) do %>
+            <li class="flex gap-3 text-sm">
+              <span class="font-bold text-primary shrink-0 w-5 text-right">
+                {step.order + 1}.
               </span>
-            <% end %>
-            <span class="text-base-content">{ingredient.name}</span>
-          </li>
-        <% end %>
-      </ul>
-    </div>
-  <% end %>
-
-  <%!-- Tools --%>
-  <%= if !Enum.empty?(@post.tools) do %>
-    <div class="mt-8">
-      <h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3">
-        Tools
-      </h2>
-      <ul class="space-y-1.5">
-        <%= for tool <- Enum.sort_by(@post.tools, & &1.order) do %>
-          <li class="flex items-center gap-2 text-sm text-base-content">
-            <span class="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
-            {tool.name}
-          </li>
-        <% end %>
-      </ul>
-    </div>
-  <% end %>
-
-  <%!-- Cooking Steps --%>
-  <%= if !Enum.empty?(@post.cooking_steps) do %>
-    <div class="mt-8">
-      <h2 class="text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-3">
-        Steps
-      </h2>
-      <ol class="space-y-4">
-        <%= for step <- Enum.sort_by(@post.cooking_steps, & &1.order) do %>
-          <li class="flex gap-3 text-sm">
-            <span class="font-bold text-primary shrink-0 w-5 text-right">
-              {step.order + 1}.
-            </span>
-            <p class="text-base-content leading-relaxed">{step.description}</p>
-          </li>
-        <% end %>
-      </ol>
-    </div>
+              <p class="text-base-content leading-relaxed">{step.description}</p>
+            </li>
+          <% end %>
+        </ol>
+      </div>
+    <% end %>
   <% end %>
 
   <%!-- Tags --%>

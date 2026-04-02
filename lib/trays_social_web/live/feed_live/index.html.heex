@@ -137,22 +137,19 @@
 
               <%!-- Gradient + chips overlaid on bottom of photo --%>
               <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pt-8 pb-3 px-3 flex items-end gap-2">
-                <%= if post.cooking_time_minutes do %>
-                  <span class="inline-flex items-center gap-1 bg-black/50 text-white text-xs font-medium px-2 py-1 rounded-full backdrop-blur-sm">
-                    <.icon name="hero-clock" class="size-3" />
-                    {post.cooking_time_minutes} min
-                  </span>
-                <% end %>
-                <%= if post.difficulty do %>
-                  <span class="inline-flex items-center bg-black/50 text-white text-xs font-medium px-2 py-1 rounded-full backdrop-blur-sm">
-                    {String.capitalize(post.difficulty)}
-                  </span>
-                <% end %>
-                <%= if post.servings do %>
-                  <span class="inline-flex items-center gap-1 bg-black/50 text-white text-xs font-medium px-2 py-1 rounded-full backdrop-blur-sm">
-                    <.icon name="hero-user-group" class="size-3" />
-                    {post.servings}
-                  </span>
+                <%= if post.type == "recipe" do %>
+                  <%= if post.cooking_time_minutes do %>
+                    <span class="inline-flex items-center gap-1 bg-black/50 text-white text-xs font-medium px-2 py-1 rounded-full backdrop-blur-sm">
+                      <.icon name="hero-clock" class="size-3" />
+                      {post.cooking_time_minutes} min
+                    </span>
+                  <% end %>
+                  <%= if post.servings do %>
+                    <span class="inline-flex items-center gap-1 bg-black/50 text-white text-xs font-medium px-2 py-1 rounded-full backdrop-blur-sm">
+                      <.icon name="hero-user-group" class="size-3" />
+                      {post.servings}
+                    </span>
+                  <% end %>
                 <% end %>
               </div>
             </div>
@@ -165,7 +162,7 @@
               </p>
 
               <%!-- Recipe preview snippet --%>
-              <%= if Ecto.assoc_loaded?(post.ingredients) && !Enum.empty?(post.ingredients) do %>
+              <%= if post.type == "recipe" && Ecto.assoc_loaded?(post.ingredients) && !Enum.empty?(post.ingredients) do %>
                 <% preview_ingredients =
                   post.ingredients
                   |> Enum.sort_by(& &1.order)

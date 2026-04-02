@@ -16,7 +16,9 @@ defmodule TraysSocial.PostsTest do
   @valid_attrs %{
     photo_url: "https://example.com/photo.jpg",
     caption: "Delicious homemade pasta",
-    cooking_time_minutes: 45
+    cooking_time_minutes: 45,
+    ingredients: [%{name: "Pasta", quantity: "1", unit: "lb", order: 0}],
+    cooking_steps: [%{description: "Cook pasta", order: 0}]
   }
   @invalid_attrs %{photo_url: nil, caption: nil, cooking_time_minutes: nil}
 
@@ -261,29 +263,28 @@ defmodule TraysSocial.PostsTest do
       assert "must be greater than 0" in errors_on(changeset).servings
     end
 
-    test "create_post/1 validates difficulty inclusion" do
+    test "create_post/1 validates type inclusion" do
       user = user_fixture()
 
       attrs =
         @valid_attrs
         |> Map.put(:user_id, user.id)
-        |> Map.put(:difficulty, "impossible")
+        |> Map.put(:type, "invalid")
 
       assert {:error, %Ecto.Changeset{} = changeset} = Posts.create_post(attrs)
-      assert "is invalid" in errors_on(changeset).difficulty
+      assert "is invalid" in errors_on(changeset).type
     end
 
-    test "create_post/1 with valid difficulty values" do
+    test "create_post/1 with type post requires only photo_url and user_id" do
       user = user_fixture()
 
-      for difficulty <- ~w(easy medium hard) do
-        attrs =
-          @valid_attrs
-          |> Map.put(:user_id, user.id)
-          |> Map.put(:difficulty, difficulty)
+      attrs = %{
+        photo_url: "https://example.com/photo.jpg",
+        type: "post",
+        user_id: user.id
+      }
 
-        assert {:ok, %Post{difficulty: ^difficulty}} = Posts.create_post(attrs)
-      end
+      assert {:ok, %Post{type: "post"}} = Posts.create_post(attrs)
     end
 
     test "create_post/1 defaults like_count and comment_count to 0" do
@@ -306,7 +307,7 @@ defmodule TraysSocial.PostsTest do
     test "update_post/2 with invalid data returns error changeset" do
       %{post: post} = create_user_and_post()
 
-      assert {:error, %Ecto.Changeset{}} = Posts.update_post(post, %{caption: nil})
+      assert {:error, %Ecto.Changeset{}} = Posts.update_post(post, %{photo_url: nil})
     end
 
     test "update_post/2 can update cooking_time_minutes" do
@@ -776,9 +777,27 @@ defmodule TraysSocial.PostsTest do
     test "validates required fields" do
       changeset = Post.changeset(%Post{}, %{})
       assert errors_on(changeset)[:photo_url] != nil
-      assert errors_on(changeset)[:caption] != nil
-      assert errors_on(changeset)[:cooking_time_minutes] != nil
       assert errors_on(changeset)[:user_id] != nil
+    end
+
+    test "caption is optional" do
+      changeset = Post.changeset(%Post{}, %{photo_url: "url", user_id: 1})
+      refute errors_on(changeset)[:caption]
+    end
+
+    test "cooking_time_minutes required for recipe type" do
+      changeset = Post.changeset(%Post{}, %{photo_url: "url", user_id: 1, type: "recipe"})
+      assert errors_on(changeset)[:cooking_time_minutes] != nil
+    end
+
+    test "cooking_time_minutes not required for post type" do
+      changeset = Post.changeset(%Post{}, %{photo_url: "url", user_id: 1, type: "post"})
+      refute errors_on(changeset)[:cooking_time_minutes]
+    end
+
+    test "validates type inclusion" do
+      changeset = Post.changeset(%Post{}, %{photo_url: "url", user_id: 1, type: "invalid"})
+      assert "is invalid" in errors_on(changeset).type
     end
 
     test "accepts valid optional fields" do
@@ -787,14 +806,12 @@ defmodule TraysSocial.PostsTest do
         caption: "caption",
         cooking_time_minutes: 10,
         user_id: 1,
-        servings: 4,
-        difficulty: "easy"
+        servings: 4
       }
 
       changeset = Post.changeset(%Post{}, attrs)
       assert changeset.valid?
       assert Ecto.Changeset.get_change(changeset, :servings) == 4
-      assert Ecto.Changeset.get_change(changeset, :difficulty) == "easy"
     end
   end
 

@@ -125,9 +125,8 @@
           <div class="absolute inset-x-0 bottom-0 pt-16 pb-4 px-4 md:pb-5 md:px-6 bg-gradient-to-t from-black/55 to-transparent">
             <div class="text-white font-bold text-sm md:text-lg leading-tight">{hero.caption}</div>
             <div class="flex gap-3 mt-1 text-white/80 text-xs md:text-sm">
-              <span>{format_cooking_time(hero.cooking_time_minutes)}</span>
-              <%= if hero.difficulty do %>
-                <span class="capitalize">{hero.difficulty}</span>
+              <%= if hero.type == "recipe" && hero.cooking_time_minutes do %>
+                <span>{format_cooking_time(hero.cooking_time_minutes)}</span>
               <% end %>
               <span>{format_count(hero.like_count)} likes</span>
             </div>

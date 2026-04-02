@@ -42,22 +42,32 @@ defmodule TraysSocialWeb.PostLive.NewTest do
     {user, view, html}
   end
 
-  describe "New post page" do
+  defp authenticated_live_with_type(conn, path, type) do
+    {user, view, _html} = authenticated_live(conn, path)
+    html = render_click(view, "select-type", %{"type" => type})
+    {user, view, html}
+  end
+
+  defp select_type(view, type) do
+    html = render_click(view, "select-type", %{"type" => type})
+    {view, html}
+  end
+
+  describe "Type picker" do
     test "redirects unauthenticated user to login", %{conn: conn} do
       assert {:error, redirect} = live(conn, ~p"/posts/new")
       assert {:redirect, %{to: to}} = redirect
       assert to =~ "/users/log-in"
     end
 
-    test "authenticated user can access new post form", %{conn: conn} do
+    test "shows type picker on initial load", %{conn: conn} do
       {_user, _view, html} = authenticated_live(conn, ~p"/posts/new")
 
-      assert html =~ "Create New Post"
-      assert html =~ "Share your recipe with the community"
-      assert html =~ "Caption"
-      assert html =~ "Ingredients"
-      assert html =~ "Cooking Steps"
-      assert html =~ "Publish Post"
+      assert html =~ "What are you sharing?"
+      assert html =~ "Recipe"
+      assert html =~ "Share how you made it"
+      assert html =~ "Post"
+      assert html =~ "Share what you&#39;re eating"
     end
 
     test "page title is set to Create Post", %{conn: conn} do
@@ -65,69 +75,108 @@ defmodule TraysSocialWeb.PostLive.NewTest do
       assert html =~ "Create Post"
     end
 
-    test "shows difficulty select options", %{conn: conn} do
-      {_user, _view, html} = authenticated_live(conn, ~p"/posts/new")
+    test "selecting Recipe shows recipe form", %{conn: conn} do
+      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_view, html} = select_type(view, "recipe")
 
-      assert html =~ "Easy"
-      assert html =~ "Medium"
-      assert html =~ "Hard"
-      assert html =~ "Select difficulty"
+      assert html =~ "Create Recipe"
+      assert html =~ "Caption"
+      assert html =~ "Ingredients"
+      assert html =~ "Cooking Steps"
+      assert html =~ "Publish"
     end
 
-    test "shows tags input field", %{conn: conn} do
-      {_user, _view, html} = authenticated_live(conn, ~p"/posts/new")
+    test "selecting Post shows minimal post form", %{conn: conn} do
+      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_view, html} = select_type(view, "post")
 
+      assert html =~ "Create Post"
+      assert html =~ "Caption"
       assert html =~ "Tags"
-      assert html =~ "post[tags_input]"
-      assert html =~ "Separate multiple tags with commas"
+      refute html =~ "Ingredients"
+      refute html =~ "Cooking Steps"
+      refute html =~ "Cooking Time"
     end
 
+    test "back button returns to type picker", %{conn: conn} do
+      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      select_type(view, "recipe")
+
+      html = render_click(view, "back-to-picker")
+
+      assert html =~ "What are you sharing?"
+      refute html =~ "Ingredients"
+    end
+  end
+
+  describe "Recipe form" do
     test "shows photo upload area", %{conn: conn} do
-      {_user, _view, html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_view, html} = select_type(view, "recipe")
 
       assert html =~ "Photos"
       assert html =~ "Drop photos here"
       assert html =~ "up to 5 photos"
     end
 
+    test "shows tags input field", %{conn: conn} do
+      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_view, html} = select_type(view, "recipe")
+
+      assert html =~ "Tags"
+      assert html =~ "post[tags_input]"
+      assert html =~ "Separate multiple tags with commas"
+    end
+
     test "initial state has one ingredient row, one step row, no tool rows", %{conn: conn} do
-      {_user, _view, html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_view, html} = select_type(view, "recipe")
 
       assert html =~ "post[ingredients][0][name]"
       assert html =~ "post[cooking_steps][0][description]"
       assert html =~ "No tools added"
       assert html =~ "Drop photos here"
     end
+
+    test "does not show difficulty select", %{conn: conn} do
+      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_view, html} = select_type(view, "recipe")
+
+      refute html =~ "Select difficulty"
+    end
   end
 
   describe "validate event" do
     test "form validates on change with empty fields", %{conn: conn} do
       {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      select_type(view, "recipe")
 
       html =
         view
         |> form("#post-form", post: %{caption: "", cooking_time_minutes: ""})
         |> render_change()
 
-      assert html =~ "Create New Post"
+      assert html =~ "Create Recipe"
     end
 
     test "validates with valid caption and cooking time", %{conn: conn} do
       {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      select_type(view, "recipe")
 
       html =
         view
         |> form("#post-form",
-          post: %{caption: "Delicious pasta", cooking_time_minutes: 30, difficulty: "easy"}
+          post: %{caption: "Delicious pasta", cooking_time_minutes: 30}
         )
         |> render_change()
 
-      assert html =~ "Create New Post"
+      assert html =~ "Create Recipe"
       refute html =~ "can&#39;t be blank"
     end
 
     test "shows validation error for caption exceeding max length", %{conn: conn} do
       {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      select_type(view, "recipe")
 
       long_caption = String.duplicate("a", 501)
 
@@ -141,6 +190,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
 
     test "shows validation error for negative cooking time", %{conn: conn} do
       {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      select_type(view, "recipe")
 
       html =
         view
@@ -152,6 +202,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
 
     test "validates with negative servings", %{conn: conn} do
       {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      select_type(view, "recipe")
 
       html =
         view
@@ -166,7 +217,8 @@ defmodule TraysSocialWeb.PostLive.NewTest do
 
   describe "ingredient management" do
     test "add and remove ingredient rows", %{conn: conn} do
-      {_user, view, html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_view, html} = select_type(view, "recipe")
 
       assert html =~ "post[ingredients][0][name]"
 
@@ -180,7 +232,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
     end
 
     test "adding multiple ingredients increments IDs correctly", %{conn: conn} do
-      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       render_click(view, "add-ingredient")
       render_click(view, "add-ingredient")
@@ -193,7 +245,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
     end
 
     test "removing middle ingredient preserves others", %{conn: conn} do
-      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       render_click(view, "add-ingredient")
       render_click(view, "add-ingredient")
@@ -208,7 +260,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
 
   describe "step management" do
     test "add and remove step rows", %{conn: conn} do
-      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       html = render_click(view, "add-step")
       assert html =~ "post[cooking_steps][0][description]"
@@ -220,7 +272,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
     end
 
     test "adding multiple steps increments IDs correctly", %{conn: conn} do
-      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       render_click(view, "add-step")
       html = render_click(view, "add-step")
@@ -231,7 +283,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
     end
 
     test "removing middle step preserves others", %{conn: conn} do
-      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       render_click(view, "add-step")
       render_click(view, "add-step")
@@ -246,7 +298,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
 
   describe "tool management" do
     test "add and remove tool rows", %{conn: conn} do
-      {_user, view, html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       assert html =~ "No tools added"
 
@@ -264,7 +316,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
     end
 
     test "adding multiple tools increments IDs correctly", %{conn: conn} do
-      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       render_click(view, "add-tool")
       render_click(view, "add-tool")
@@ -276,7 +328,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
     end
 
     test "removing all tools shows empty state", %{conn: conn} do
-      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       render_click(view, "add-tool")
       html = render_click(view, "remove-tool", %{"id" => "0"})
@@ -287,19 +339,19 @@ defmodule TraysSocialWeb.PostLive.NewTest do
 
   describe "save event without photos" do
     test "save without photos keeps user on form", %{conn: conn} do
-      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       view
       |> form("#post-form", post: %{caption: "Test caption", cooking_time_minutes: 30})
       |> render_submit()
 
       html = render(view)
-      assert html =~ "Create New Post"
-      assert html =~ "Publish Post"
+      assert html =~ "Create Recipe"
+      assert html =~ "Publish"
     end
 
     test "save without photos triggers the no-photo error path", %{conn: conn} do
-      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       # Submit with valid form data but no photos
       # This exercises the empty entries path in handle_event("save")
@@ -309,13 +361,13 @@ defmodule TraysSocialWeb.PostLive.NewTest do
 
       # User should stay on the form (not redirected)
       html = render(view)
-      assert html =~ "Create New Post"
+      assert html =~ "Create Recipe"
     end
   end
 
   describe "file upload" do
     test "can upload a photo and see cancel button", %{conn: conn} do
-      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       photo =
         file_input(view, "#post-form", :photos, [
@@ -330,7 +382,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
     end
 
     test "upload with multiple photos shows all previews", %{conn: conn} do
-      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       photos =
         file_input(view, "#post-form", :photos, [
@@ -347,7 +399,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
 
   describe "upload error display" do
     test "too many files triggers error in rendered output", %{conn: conn} do
-      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       photo =
         file_input(view, "#post-form", :photos, [
@@ -366,7 +418,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
     end
 
     test "non-accepted file type triggers error in rendered output", %{conn: conn} do
-      {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
+      {_user, view, _html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
       photo =
         file_input(view, "#post-form", :photos, [
