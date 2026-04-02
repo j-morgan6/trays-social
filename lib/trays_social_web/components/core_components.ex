@@ -181,9 +181,9 @@ defmodule TraysSocialWeb.CoreComponents do
       <%= if @photo_url do %>
         <div class={[
           @size_class,
-          "rounded-full ring-2 ring-transparent hover:ring-primary/40 transition-all duration-200"
+          "rounded-full overflow-hidden ring-2 ring-transparent hover:ring-primary/40 transition-all duration-200"
         ]}>
-          <img src={@photo_url} alt={@username} />
+          <img src={@photo_url} alt={@username} class="w-full h-full object-cover" />
         </div>
       <% else %>
         <div class={[
