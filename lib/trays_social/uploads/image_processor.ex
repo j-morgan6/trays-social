@@ -8,8 +8,6 @@ defmodule TraysSocial.Uploads.ImageProcessor do
   - _large: 1200px wide, aspect ratio preserved (post detail)
   """
 
-  @upload_directory "priv/static"
-
   @doc """
   Generates 3 size variants for an uploaded image.
 
@@ -21,7 +19,8 @@ defmodule TraysSocial.Uploads.ImageProcessor do
   Returns {:ok, public_url} or {:error, reason}.
   """
   def process(public_url) when is_binary(public_url) do
-    original_path = Path.join(@upload_directory, String.trim_leading(public_url, "/"))
+    filename = Path.basename(public_url)
+    original_path = Path.join(TraysSocial.Uploads.Photo.upload_dir(), filename)
 
     with :ok <- generate_thumb(original_path),
          :ok <- generate_medium(original_path),

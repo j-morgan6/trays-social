@@ -6,10 +6,17 @@ defmodule TraysSocial.Uploads.Photo do
   In production, can be configured to use S3 or similar cloud storage.
   """
 
-  @upload_directory "priv/static/uploads"
   # 10MB
   @max_file_size 10 * 1024 * 1024
   @allowed_extensions ~w(.jpg .jpeg .png .heic)
+
+  @doc """
+  Returns the configured upload directory.
+  Defaults to "priv/static/uploads" in dev, configurable via UPLOAD_DIR in prod.
+  """
+  def upload_dir do
+    Application.get_env(:trays_social, :upload_dir, "priv/static/uploads")
+  end
 
   @doc """
   Stores an uploaded file and returns the public URL.
@@ -26,8 +33,10 @@ defmodule TraysSocial.Uploads.Photo do
   def store(%Plug.Upload{} = upload) do
     with :ok <- validate_extension(upload.filename),
          :ok <- validate_size(upload.path) do
+      dir = upload_dir()
+      File.mkdir_p!(dir)
       destination = generate_filename(upload.filename)
-      full_path = Path.join(@upload_directory, destination)
+      full_path = Path.join(dir, destination)
 
       case File.cp(upload.path, full_path) do
         :ok ->
@@ -93,7 +102,7 @@ defmodule TraysSocial.Uploads.Photo do
   """
   def delete(public_url) when is_binary(public_url) do
     filename = Path.basename(public_url)
-    full_path = Path.join(@upload_directory, filename)
+    full_path = Path.join(upload_dir(), filename)
 
     case File.rm(full_path) do
       :ok -> :ok

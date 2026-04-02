@@ -62,6 +62,11 @@ if config_env() == :prod do
 
   config :trays_social, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # Upload directory — must be a persistent path on Fly.io (volume mount)
+  if upload_dir = System.get_env("UPLOAD_DIR") do
+    config :trays_social, :upload_dir, upload_dir
+  end
+
   config :trays_social, TraysSocialWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

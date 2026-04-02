@@ -15,6 +15,11 @@ kill_signal = 'SIGTERM'
 [env]
   PHX_HOST = 'trays-social-review.fly.dev'
   PORT = '8080'
+  UPLOAD_DIR = '/data/uploads'
+
+[mounts]
+  source = 'uploads_data'
+  destination = '/data'
 
 [http_service]
   internal_port = 8080

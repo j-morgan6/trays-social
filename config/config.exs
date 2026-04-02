@@ -22,7 +22,8 @@ config :trays_social, :scopes,
 
 config :trays_social,
   ecto_repos: [TraysSocial.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  upload_dir: "priv/static/uploads"
 
 # Configure the endpoint
 config :trays_social, TraysSocialWeb.Endpoint,
