@@ -25,6 +25,7 @@ defmodule TraysSocialWeb.PostLive.New do
     socket
     |> assign(:post_type, type)
     |> assign(:changeset, changeset)
+    |> assign(:form_params, %{})
     |> assign(:ingredient_rows, [0])
     |> assign(:next_ingredient_id, 1)
     |> assign(:step_rows, [0])
@@ -61,7 +62,10 @@ defmodule TraysSocialWeb.PostLive.New do
       |> Posts.change_post(post_params)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, changeset: changeset)}
+    {:noreply,
+     socket
+     |> assign(:changeset, changeset)
+     |> assign(:form_params, post_params)}
   end
 
   @impl true
@@ -247,4 +251,8 @@ defmodule TraysSocialWeb.PostLive.New do
   defp error_to_string(:not_accepted), do: "File type not accepted"
   defp error_to_string(:too_many_files), do: "Too many files selected"
   defp error_to_string(err), do: "Upload error: #{inspect(err)}"
+
+  defp field_value(form_params, section, row_id, field) do
+    get_in(form_params, [section, to_string(row_id), field]) || ""
+  end
 end
