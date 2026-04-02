@@ -54,6 +54,8 @@ defmodule TraysSocialWeb.PostLive.New do
 
   @impl true
   def handle_event("validate", %{"post" => post_params}, socket) do
+    post_params = Map.put(post_params, "type", socket.assigns.post_type)
+
     changeset =
       %Post{}
       |> Posts.change_post(post_params)
@@ -126,6 +128,8 @@ defmodule TraysSocialWeb.PostLive.New do
 
   @impl true
   def handle_event("save", %{"post" => post_params}, socket) do
+    post_params = Map.put(post_params, "type", socket.assigns.post_type)
+
     case socket.assigns.uploads.photos.entries do
       [] ->
         changeset =
