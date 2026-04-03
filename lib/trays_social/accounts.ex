@@ -99,6 +99,23 @@ defmodule TraysSocial.Accounts do
     |> Repo.insert()
   end
 
+  @doc """
+  Finds an existing user by apple_id or creates a new one.
+
+  Returns `{:ok, user}` on success or `{:error, changeset}` on failure.
+  """
+  def find_or_create_apple_user(%{apple_id: apple_id} = attrs) do
+    case Repo.get_by(User, apple_id: apple_id) do
+      nil ->
+        %User{}
+        |> User.apple_registration_changeset(Map.new(attrs, fn {k, v} -> {to_string(k), v} end))
+        |> Repo.insert()
+
+      user ->
+        {:ok, user}
+    end
+  end
+
   ## Settings
 
   @doc """

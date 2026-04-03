@@ -32,6 +32,9 @@ config :swoosh, :api_client, false
 # Disable rate limiting in tests
 config :trays_social, :disable_rate_limiting, true
 
+# Mock Apple token verification in tests
+config :trays_social, :apple_token_verifier, TraysSocial.Accounts.AppleAuthMock
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 

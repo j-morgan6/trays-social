@@ -57,6 +57,7 @@ defmodule TraysSocialWeb.Router do
   scope "/api/v1/auth", TraysSocialWeb.API.V1, as: :api_v1_auth do
     pipe_through [:api, :api_rate_limit_login]
     post "/login", AuthController, :login
+    post "/apple", AuthController, :apple
   end
 
   # API v1 — authenticated routes

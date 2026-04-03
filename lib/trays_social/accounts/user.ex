@@ -11,6 +11,7 @@ defmodule TraysSocial.Accounts.User do
     field :username, :string
     field :bio, :string
     field :profile_photo_url, :string
+    field :apple_id, :string
 
     timestamps(type: :utc_datetime)
   end
@@ -50,6 +51,33 @@ defmodule TraysSocial.Accounts.User do
 
   Validates username, bio, and profile_photo_url fields.
   """
+  @doc """
+  A user changeset for Apple Sign In registration.
+
+  Validates email and stores apple_id, but does not require a password.
+  Username is optional at registration (set later via profile update).
+  """
+  def apple_registration_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:email, :username, :apple_id])
+    |> validate_required([:email, :apple_id])
+    |> validate_format(:email, ~r/^[^@,;\s]+@[^@,;\s]+$/,
+      message: "must have the @ sign and no spaces"
+    )
+    |> validate_length(:email, max: 160)
+    |> unique_constraint(:email)
+    |> unique_constraint(:apple_id)
+    |> maybe_validate_username(opts)
+  end
+
+  defp maybe_validate_username(changeset, opts) do
+    if get_change(changeset, :username) do
+      validate_username(changeset, opts)
+    else
+      changeset
+    end
+  end
+
   def profile_changeset(user, attrs, opts \\ []) do
     user
     |> cast(attrs, [:username, :bio, :profile_photo_url])
