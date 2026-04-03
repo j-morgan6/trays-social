@@ -12,6 +12,7 @@ defmodule TraysSocial.Application do
       TraysSocial.Repo,
       {DNSCluster, query: Application.get_env(:trays_social, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: TraysSocial.PubSub},
+      {Task.Supervisor, name: TraysSocial.PushTaskSupervisor},
       # Start a worker by calling: TraysSocial.Worker.start_link(arg)
       # {TraysSocial.Worker, arg},
       # Start to serve requests, typically the last entry

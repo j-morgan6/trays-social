@@ -76,6 +76,9 @@ defmodule TraysSocialWeb.Router do
     post "/posts/:post_id/like", LikeController, :create
     delete "/posts/:post_id/like", LikeController, :delete
 
+    post "/devices", DeviceController, :create
+    delete "/devices/:token", DeviceController, :delete
+
     get "/users/:username", UserController, :show
     get "/users/:username/posts", UserController, :posts
     post "/users/:username/follow", UserController, :follow

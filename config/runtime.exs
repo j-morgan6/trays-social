@@ -86,6 +86,18 @@ if config_env() == :prod do
     end
   end
 
+  # APNs push notifications (requires Apple Developer Account .p8 key)
+  if apns_key_id = System.get_env("APNS_KEY_ID") do
+    config :trays_social,
+      push_notifications_enabled: true,
+      apns_topic: System.get_env("APNS_TOPIC", "com.trays.social")
+
+    config :pigeon, :apns,
+      key_id: apns_key_id,
+      team_id: System.get_env("APNS_TEAM_ID"),
+      key: System.get_env("APNS_P8_KEY")
+  end
+
   config :trays_social, TraysSocialWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
