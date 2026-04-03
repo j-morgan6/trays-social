@@ -76,4 +76,24 @@ defmodule TraysSocialWeb.ConnCase do
   defp maybe_set_token_authenticated_at(token, authenticated_at) do
     TraysSocial.AccountsFixtures.override_token_authenticated_at(token, authenticated_at)
   end
+
+  @doc """
+  Setup helper that registers a user and sets up an API-authenticated connection.
+
+      setup :register_and_api_authenticate_user
+
+  Stores the API-authenticated conn, user, and raw token in test context.
+  """
+  def register_and_api_authenticate_user(%{conn: conn}) do
+    user = TraysSocial.AccountsFixtures.user_fixture()
+    token = TraysSocial.Accounts.generate_user_api_token(user)
+    encoded_token = Base.encode64(token)
+
+    conn =
+      conn
+      |> Plug.Conn.put_req_header("authorization", "Bearer #{encoded_token}")
+      |> Plug.Conn.put_req_header("accept", "application/json")
+
+    %{conn: conn, user: user, api_token: token}
+  end
 end

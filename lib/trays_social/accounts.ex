@@ -354,6 +354,31 @@ defmodule TraysSocial.Accounts do
     :ok
   end
 
+  @doc """
+  Generates an API token for mobile app authentication.
+  """
+  def generate_user_api_token(user) do
+    {token, user_token} = UserToken.build_api_token(user)
+    Repo.insert!(user_token)
+    token
+  end
+
+  @doc """
+  Gets the user with the given API token.
+  """
+  def get_user_by_api_token(token) do
+    {:ok, query} = UserToken.verify_api_token_query(token)
+    Repo.one(query)
+  end
+
+  @doc """
+  Deletes the given API token.
+  """
+  def delete_user_api_token(token) do
+    from(UserToken, where: [token: ^token, context: "api"]) |> Repo.delete_all()
+    :ok
+  end
+
   ## Token helper
 
   defp update_user_and_delete_all_tokens(changeset) do

@@ -62,9 +62,28 @@ if config_env() == :prod do
 
   config :trays_social, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
-  # Upload directory — must be a persistent path on Fly.io (volume mount)
-  if upload_dir = System.get_env("UPLOAD_DIR") do
-    config :trays_social, :upload_dir, upload_dir
+  # Storage backend — S3 for production, local for dev/test
+  if s3_bucket = System.get_env("S3_BUCKET") do
+    config :trays_social,
+      storage_backend: :s3,
+      s3_bucket: s3_bucket,
+      s3_base_url: System.get_env("S3_BASE_URL") || "https://#{s3_bucket}.fly.storage.tigris.dev"
+
+    config :ex_aws,
+      access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
+      secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY"),
+      region: System.get_env("AWS_REGION", "auto")
+
+    if s3_endpoint = System.get_env("S3_ENDPOINT") do
+      config :ex_aws, :s3,
+        scheme: "https://",
+        host: s3_endpoint
+    end
+  else
+    # Fallback to local uploads with optional custom dir
+    if upload_dir = System.get_env("UPLOAD_DIR") do
+      config :trays_social, :upload_dir, upload_dir
+    end
   end
 
   config :trays_social, TraysSocialWeb.Endpoint,

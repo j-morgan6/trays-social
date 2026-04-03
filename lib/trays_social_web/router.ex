@@ -22,6 +22,18 @@ defmodule TraysSocialWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :api_auth do
+    plug TraysSocialWeb.API.AuthPlug
+  end
+
+  pipeline :api_rate_limit_login do
+    plug TraysSocialWeb.API.RateLimitPlug, max_requests: 10, interval_ms: 60_000
+  end
+
+  pipeline :api_rate_limit_register do
+    plug TraysSocialWeb.API.RateLimitPlug, max_requests: 5, interval_ms: 60_000
+  end
+
   # Health check — no auth, no SSL redirect
   scope "/", TraysSocialWeb do
     pipe_through :api
@@ -36,10 +48,17 @@ defmodule TraysSocialWeb.Router do
     live "/@:username", ProfileLive.Show, :show
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", TraysSocialWeb do
-  #   pipe_through :api
-  # end
+  # API v1 — unauthenticated routes
+  scope "/api/v1", TraysSocialWeb.API.V1, as: :api_v1 do
+    pipe_through :api
+  end
+
+  # API v1 — authenticated routes
+  scope "/api/v1", TraysSocialWeb.API.V1, as: :api_v1 do
+    pipe_through [:api, :api_auth]
+
+    post "/uploads", UploadController, :create
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:trays_social, :dev_routes) do

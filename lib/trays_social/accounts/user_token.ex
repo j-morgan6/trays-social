@@ -48,6 +48,34 @@ defmodule TraysSocial.Accounts.UserToken do
   end
 
   @doc """
+  Generates a token for API authentication (mobile apps).
+
+  Similar to session tokens, API tokens are stored as raw bytes (not hashed)
+  since they are transmitted over HTTPS and stored securely by the mobile app.
+  API tokens do not expire automatically — they persist until the user logs out
+  or changes their password.
+  """
+  def build_api_token(user) do
+    token = :crypto.strong_rand_bytes(@rand_size)
+    {token, %UserToken{token: token, context: "api", user_id: user.id}}
+  end
+
+  @doc """
+  Checks if the API token is valid and returns its underlying lookup query.
+
+  The query returns the user found by the token, if any.
+  API tokens do not expire (no time-based validity check).
+  """
+  def verify_api_token_query(token) do
+    query =
+      from token in by_token_and_context_query(token, "api"),
+        join: user in assoc(token, :user),
+        select: user
+
+    {:ok, query}
+  end
+
+  @doc """
   Checks if the token is valid and returns its underlying lookup query.
 
   The query returns the user found by the token, if any, along with the token's creation time.

@@ -686,6 +686,45 @@ defmodule TraysSocial.AccountsTest do
     end
   end
 
+  describe "generate_user_api_token/1" do
+    setup do
+      %{user: user_fixture()}
+    end
+
+    test "generates a token", %{user: user} do
+      token = Accounts.generate_user_api_token(user)
+      assert user_token = Repo.get_by(UserToken, token: token)
+      assert user_token.context == "api"
+    end
+  end
+
+  describe "get_user_by_api_token/1" do
+    setup do
+      user = user_fixture()
+      token = Accounts.generate_user_api_token(user)
+      %{user: user, token: token}
+    end
+
+    test "returns user by token", %{user: user, token: token} do
+      assert api_user = Accounts.get_user_by_api_token(token)
+      assert api_user.id == user.id
+    end
+
+    test "does not return user for invalid token" do
+      refute Accounts.get_user_by_api_token("oops")
+    end
+  end
+
+  describe "delete_user_api_token/1" do
+    test "deletes the token", %{} do
+      user = user_fixture()
+      token = Accounts.generate_user_api_token(user)
+      assert Accounts.get_user_by_api_token(token)
+      assert Accounts.delete_user_api_token(token) == :ok
+      refute Accounts.get_user_by_api_token(token)
+    end
+  end
+
   describe "inspect/2 for the User module" do
     test "does not include password" do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""
