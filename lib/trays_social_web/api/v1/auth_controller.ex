@@ -110,6 +110,33 @@ defmodule TraysSocialWeb.API.V1.AuthController do
     json(conn, %{data: Map.merge(user_json(user), %{needs_username: needs_username})})
   end
 
+  def update_me(conn, params) do
+    user = conn.assigns.current_user
+    attrs = Map.take(params, ["username", "bio", "profile_photo_url"])
+
+    case Accounts.update_user_profile(user, attrs) do
+      {:ok, updated_user} ->
+        json(conn, %{data: user_json(updated_user)})
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  def delete_me(conn, _params) do
+    user = conn.assigns.current_user
+
+    case Accounts.delete_account(user) do
+      {:ok, _} ->
+        json(conn, %{data: %{message: "account deleted"}})
+
+      {:error, _} ->
+        conn
+        |> put_status(:internal_server_error)
+        |> json(%{errors: [%{message: "failed to delete account"}]})
+    end
+  end
+
   defp user_json(user) do
     %{
       id: user.id,

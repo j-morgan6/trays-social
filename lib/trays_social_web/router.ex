@@ -67,6 +67,8 @@ defmodule TraysSocialWeb.Router do
     post "/uploads", UploadController, :create
     delete "/auth/logout", AuthController, :logout
     get "/auth/me", AuthController, :me
+    put "/auth/me", AuthController, :update_me
+    delete "/auth/me", AuthController, :delete_me
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

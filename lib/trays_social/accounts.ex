@@ -241,19 +241,48 @@ defmodule TraysSocial.Accounts do
     import Ecto.Query
 
     Repo.transaction(fn ->
-      # Soft delete all user's posts
-      now = DateTime.utc_now(:second)
+      user_id = user.id
 
-      from(p in TraysSocial.Posts.Post,
-        where: p.user_id == ^user.id and is_nil(p.deleted_at)
-      )
-      |> Repo.update_all(set: [deleted_at: now])
-
-      # Delete all user tokens to log them out everywhere
-      from(t in UserToken, where: t.user_id == ^user.id)
+      # Delete comments by this user
+      from(c in TraysSocial.Posts.Comment, where: c.user_id == ^user_id)
       |> Repo.delete_all()
 
-      user
+      # Delete likes by this user
+      from(l in TraysSocial.Posts.PostLike, where: l.user_id == ^user_id)
+      |> Repo.delete_all()
+
+      # Delete notifications (both as recipient and actor)
+      from(n in TraysSocial.Notifications.Notification, where: n.user_id == ^user_id or n.actor_id == ^user_id)
+      |> Repo.delete_all()
+
+      # Delete follows
+      from(f in Follow, where: f.follower_id == ^user_id or f.followed_id == ^user_id)
+      |> Repo.delete_all()
+
+      # Delete post associations then posts (user deletion requires full cleanup)
+      post_ids =
+        from(p in TraysSocial.Posts.Post, where: p.user_id == ^user_id, select: p.id)
+        |> Repo.all()
+
+      if post_ids != [] do
+        from(i in TraysSocial.Posts.Ingredient, where: i.post_id in ^post_ids) |> Repo.delete_all()
+        from(s in TraysSocial.Posts.CookingStep, where: s.post_id in ^post_ids) |> Repo.delete_all()
+        from(t in TraysSocial.Posts.Tool, where: t.post_id in ^post_ids) |> Repo.delete_all()
+        from(t in TraysSocial.Posts.PostTag, where: t.post_id in ^post_ids) |> Repo.delete_all()
+        from(ph in TraysSocial.Posts.PostPhoto, where: ph.post_id in ^post_ids) |> Repo.delete_all()
+        from(l in TraysSocial.Posts.PostLike, where: l.post_id in ^post_ids) |> Repo.delete_all()
+        from(c in TraysSocial.Posts.Comment, where: c.post_id in ^post_ids) |> Repo.delete_all()
+      end
+
+      from(p in TraysSocial.Posts.Post, where: p.user_id == ^user_id)
+      |> Repo.delete_all()
+
+      # Delete all user tokens to log them out everywhere
+      from(t in UserToken, where: t.user_id == ^user_id)
+      |> Repo.delete_all()
+
+      # Delete the user record itself (Apple App Store requirement)
+      Repo.delete!(user)
     end)
   end
 

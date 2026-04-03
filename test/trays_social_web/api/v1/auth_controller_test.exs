@@ -162,6 +162,65 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
     end
   end
 
+  describe "PUT /api/v1/auth/me" do
+    setup :register_and_api_authenticate_user
+
+    test "updates username", %{conn: conn} do
+      conn = put(conn, ~p"/api/v1/auth/me", %{username: "newname"})
+
+      assert %{"data" => %{"username" => "newname"}} = json_response(conn, 200)
+    end
+
+    test "updates bio", %{conn: conn} do
+      conn = put(conn, ~p"/api/v1/auth/me", %{bio: "I love cooking"})
+
+      assert %{"data" => %{"bio" => "I love cooking"}} = json_response(conn, 200)
+    end
+
+    test "returns error for invalid username", %{conn: conn} do
+      conn = put(conn, ~p"/api/v1/auth/me", %{username: "ab"})
+
+      assert %{"errors" => errors} = json_response(conn, 422)
+      assert Enum.any?(errors, fn e -> e["field"] == "username" end)
+    end
+
+    test "requires authentication", %{} do
+      conn =
+        build_conn()
+        |> put_req_header("accept", "application/json")
+        |> put(~p"/api/v1/auth/me", %{bio: "test"})
+
+      assert json_response(conn, 401)
+    end
+  end
+
+  describe "DELETE /api/v1/auth/me" do
+    setup :register_and_api_authenticate_user
+
+    test "deletes account and revokes tokens", %{conn: conn, user: user, api_token: token} do
+      conn = delete(conn, ~p"/api/v1/auth/me")
+
+      assert %{"data" => %{"message" => "account deleted"}} = json_response(conn, 200)
+
+      # Token should be revoked
+      refute TraysSocial.Accounts.get_user_by_api_token(token)
+
+      # User should be deleted
+      assert_raise Ecto.NoResultsError, fn ->
+        TraysSocial.Repo.get!(TraysSocial.Accounts.User, user.id)
+      end
+    end
+
+    test "requires authentication", %{} do
+      conn =
+        build_conn()
+        |> put_req_header("accept", "application/json")
+        |> delete(~p"/api/v1/auth/me")
+
+      assert json_response(conn, 401)
+    end
+  end
+
   describe "full register then authenticate flow" do
     test "can register and use returned token", %{conn: conn} do
       # Register

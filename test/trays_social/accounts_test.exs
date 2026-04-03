@@ -466,7 +466,7 @@ defmodule TraysSocial.AccountsTest do
   end
 
   describe "delete_account/1" do
-    test "soft deletes user's posts and removes tokens" do
+    test "deletes user, soft-deletes posts, and removes tokens" do
       user = user_fixture()
       _token = Accounts.generate_user_session_token(user)
 
@@ -481,19 +481,22 @@ defmodule TraysSocial.AccountsTest do
           cooking_steps: [%{description: "Test step", order: 0}]
         })
 
-      assert {:ok, _user} = Accounts.delete_account(user)
+      assert {:ok, _} = Accounts.delete_account(user)
 
-      # Post should be soft-deleted
-      updated_post = TraysSocial.Repo.get!(TraysSocial.Posts.Post, post.id)
-      assert updated_post.deleted_at != nil
+      # Post should be deleted
+      refute TraysSocial.Repo.get(TraysSocial.Posts.Post, post.id)
 
       # All tokens should be deleted
       refute TraysSocial.Repo.get_by(UserToken, user_id: user.id)
+
+      # User record should be deleted
+      refute TraysSocial.Repo.get(User, user.id)
     end
 
     test "works when user has no posts or tokens" do
       user = user_fixture()
-      assert {:ok, _user} = Accounts.delete_account(user)
+      assert {:ok, _} = Accounts.delete_account(user)
+      refute TraysSocial.Repo.get(User, user.id)
     end
   end
 
