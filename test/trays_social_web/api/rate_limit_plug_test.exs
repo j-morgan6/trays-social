@@ -4,6 +4,10 @@ defmodule TraysSocialWeb.API.RateLimitPlugTest do
   alias TraysSocialWeb.API.RateLimitPlug
 
   setup %{conn: conn} do
+    # Enable rate limiting for these tests (disabled by default in test env)
+    Application.put_env(:trays_social, :disable_rate_limiting, false)
+    on_exit(fn -> Application.put_env(:trays_social, :disable_rate_limiting, true) end)
+
     conn =
       conn
       |> put_req_header("accept", "application/json")

@@ -18,6 +18,14 @@ defmodule TraysSocialWeb.API.RateLimitPlug do
   end
 
   def call(conn, %{max_requests: max_requests, interval_ms: interval_ms}) do
+    if Application.get_env(:trays_social, :disable_rate_limiting, false) do
+      conn
+    else
+      do_rate_limit(conn, max_requests, interval_ms)
+    end
+  end
+
+  defp do_rate_limit(conn, max_requests, interval_ms) do
     client_ip = conn.remote_ip |> :inet.ntoa() |> to_string()
     bucket_key = "api_rate_limit:#{conn.request_path}:#{client_ip}"
 

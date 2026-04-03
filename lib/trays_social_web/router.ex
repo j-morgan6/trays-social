@@ -49,8 +49,14 @@ defmodule TraysSocialWeb.Router do
   end
 
   # API v1 — unauthenticated routes
-  scope "/api/v1", TraysSocialWeb.API.V1, as: :api_v1 do
-    pipe_through :api
+  scope "/api/v1/auth", TraysSocialWeb.API.V1, as: :api_v1_auth do
+    pipe_through [:api, :api_rate_limit_register]
+    post "/register", AuthController, :register
+  end
+
+  scope "/api/v1/auth", TraysSocialWeb.API.V1, as: :api_v1_auth do
+    pipe_through [:api, :api_rate_limit_login]
+    post "/login", AuthController, :login
   end
 
   # API v1 — authenticated routes
@@ -58,6 +64,8 @@ defmodule TraysSocialWeb.Router do
     pipe_through [:api, :api_auth]
 
     post "/uploads", UploadController, :create
+    delete "/auth/logout", AuthController, :logout
+    get "/auth/me", AuthController, :me
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
