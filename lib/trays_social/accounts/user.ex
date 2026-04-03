@@ -47,11 +47,6 @@ defmodule TraysSocial.Accounts.User do
   end
 
   @doc """
-  A user changeset for updating profile information.
-
-  Validates username, bio, and profile_photo_url fields.
-  """
-  @doc """
   A user changeset for Apple Sign In registration.
 
   Validates email and stores apple_id, but does not require a password.
@@ -78,6 +73,11 @@ defmodule TraysSocial.Accounts.User do
     end
   end
 
+  @doc """
+  A user changeset for updating profile information.
+
+  Validates username, bio, and profile_photo_url fields.
+  """
   def profile_changeset(user, attrs, opts \\ []) do
     user
     |> cast(attrs, [:username, :bio, :profile_photo_url])
