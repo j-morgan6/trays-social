@@ -175,11 +175,23 @@ defmodule TraysSocial.Posts do
       [%Post{}, ...]
 
   """
-  def list_posts_by_user(user_id) do
+  def get_post_count(user_id) do
     Post
     |> where([p], p.user_id == ^user_id and is_nil(p.deleted_at))
-    |> order_by([p], desc: p.inserted_at)
-    |> preload([:user])
+    |> Repo.aggregate(:count)
+  end
+
+  def list_posts_by_user(user_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit)
+    cursor_id = Keyword.get(opts, :cursor_id)
+    cursor_time = Keyword.get(opts, :cursor_time)
+
+    Post
+    |> where([p], p.user_id == ^user_id and is_nil(p.deleted_at))
+    |> cursor_where(cursor_id, cursor_time)
+    |> order_by([p], desc: p.inserted_at, desc: p.id)
+    |> then(fn q -> if limit, do: limit(q, ^limit), else: q end)
+    |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags, :post_photos])
     |> Repo.all()
   end
 

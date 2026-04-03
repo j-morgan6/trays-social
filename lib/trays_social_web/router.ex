@@ -69,6 +69,17 @@ defmodule TraysSocialWeb.Router do
     get "/auth/me", AuthController, :me
     put "/auth/me", AuthController, :update_me
     delete "/auth/me", AuthController, :delete_me
+
+    get "/feed", FeedController, :index
+    resources "/posts", PostController, only: [:show, :create, :delete]
+
+    post "/posts/:post_id/like", LikeController, :create
+    delete "/posts/:post_id/like", LikeController, :delete
+
+    get "/users/:username", UserController, :show
+    get "/users/:username/posts", UserController, :posts
+    post "/users/:username/follow", UserController, :follow
+    delete "/users/:username/follow", UserController, :unfollow
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
