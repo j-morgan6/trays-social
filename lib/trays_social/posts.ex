@@ -418,6 +418,35 @@ defmodule TraysSocial.Posts do
   end
 
   @doc """
+  Returns cursor-paginated comments for a post, oldest first, with user preloaded.
+  """
+  def list_comments_paginated(post_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 20)
+    cursor_id = Keyword.get(opts, :cursor_id)
+    cursor_time = Keyword.get(opts, :cursor_time)
+
+    query =
+      Comment
+      |> where([c], c.post_id == ^post_id and is_nil(c.deleted_at))
+      |> order_by([c], asc: c.inserted_at, asc: c.id)
+      |> limit(^limit)
+      |> preload(:user)
+
+    query =
+      if cursor_id && cursor_time do
+        where(
+          query,
+          [c],
+          c.inserted_at > ^cursor_time or (c.inserted_at == ^cursor_time and c.id > ^cursor_id)
+        )
+      else
+        query
+      end
+
+    Repo.all(query)
+  end
+
+  @doc """
   Creates a comment on a post and increments comment_count atomically.
   """
   def create_comment(%Post{} = post, user, attrs) do
@@ -479,5 +508,90 @@ defmodule TraysSocial.Posts do
     else
       {:error, :unauthorized}
     end
+  end
+
+  ## Bookmarks
+
+  alias TraysSocial.Posts.Bookmark
+
+  @doc """
+  Bookmarks a post for a user (saves to My Tray).
+  """
+  def create_bookmark(user_id, post_id) do
+    %Bookmark{}
+    |> Bookmark.changeset(%{user_id: user_id, post_id: post_id})
+    |> Repo.insert()
+  end
+
+  @doc """
+  Removes a bookmark.
+  """
+  def delete_bookmark(user_id, post_id) do
+    case Repo.get_by(Bookmark, user_id: user_id, post_id: post_id) do
+      nil -> {:error, :not_found}
+      bookmark -> Repo.delete(bookmark)
+    end
+  end
+
+  @doc """
+  Lists bookmarked posts for a user with cursor pagination, newest first.
+  """
+  def list_bookmarks(user_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 20)
+    cursor_id = Keyword.get(opts, :cursor_id)
+    cursor_time = Keyword.get(opts, :cursor_time)
+
+    query =
+      Bookmark
+      |> where([b], b.user_id == ^user_id)
+      |> join(:inner, [b], p in Post, on: b.post_id == p.id and is_nil(p.deleted_at))
+      |> order_by([b], desc: b.inserted_at, desc: b.id)
+      |> limit(^limit)
+      |> preload([b, p], post: {p, [:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags]})
+
+    query =
+      if cursor_id && cursor_time do
+        where(
+          query,
+          [b],
+          b.inserted_at < ^cursor_time or (b.inserted_at == ^cursor_time and b.id < ^cursor_id)
+        )
+      else
+        query
+      end
+
+    Repo.all(query)
+  end
+
+  @doc """
+  Returns true if the user has bookmarked the post.
+  """
+  def bookmarked?(user_id, post_id) do
+    Bookmark
+    |> where([b], b.user_id == ^user_id and b.post_id == ^post_id)
+    |> Repo.exists?()
+  end
+
+  @doc """
+  Returns a MapSet of post IDs (from the given list) that the user has bookmarked.
+  """
+  def bookmarked_post_ids_for_user(_user_id, []), do: MapSet.new()
+
+  def bookmarked_post_ids_for_user(user_id, post_ids) do
+    Bookmark
+    |> where([b], b.user_id == ^user_id and b.post_id in ^post_ids)
+    |> select([b], b.post_id)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  @doc """
+  Returns the count of bookmarks on posts authored by the given user.
+  """
+  def save_count_for_user(user_id) do
+    Bookmark
+    |> join(:inner, [b], p in Post, on: b.post_id == p.id)
+    |> where([b, p], p.user_id == ^user_id)
+    |> Repo.aggregate(:count)
   end
 end

@@ -12,8 +12,9 @@ defmodule TraysSocialWeb.API.V1.PostController do
     try do
       post = Posts.get_post!(id)
       liked_post_ids = Posts.liked_post_ids_for_user(user.id, [post.id])
+      bookmarked_post_ids = Posts.bookmarked_post_ids_for_user(user.id, [post.id])
 
-      json(conn, %{data: PostJSON.render(post, %{liked_post_ids: liked_post_ids})})
+      json(conn, %{data: PostJSON.render(post, %{liked_post_ids: liked_post_ids, bookmarked_post_ids: bookmarked_post_ids})})
     rescue
       Ecto.NoResultsError -> {:error, :not_found}
     end

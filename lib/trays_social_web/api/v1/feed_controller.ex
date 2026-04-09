@@ -18,11 +18,13 @@ defmodule TraysSocialWeb.API.V1.FeedController do
         cursor_time: cursor_time
       )
 
-    liked_post_ids = Posts.liked_post_ids_for_user(user.id, Enum.map(posts, & &1.id))
+    post_ids = Enum.map(posts, & &1.id)
+    liked_post_ids = Posts.liked_post_ids_for_user(user.id, post_ids)
+    bookmarked_post_ids = Posts.bookmarked_post_ids_for_user(user.id, post_ids)
     next_cursor = encode_cursor(List.last(posts))
 
     json(conn, %{
-      data: PostJSON.render_list(posts, %{liked_post_ids: liked_post_ids}),
+      data: PostJSON.render_list(posts, %{liked_post_ids: liked_post_ids, bookmarked_post_ids: bookmarked_post_ids}),
       cursor: next_cursor
     })
   end

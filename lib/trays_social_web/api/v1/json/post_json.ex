@@ -7,6 +7,7 @@ defmodule TraysSocialWeb.API.V1.JSON.PostJSON do
 
   def render(post, opts \\ %{}) do
     liked_post_ids = Map.get(opts, :liked_post_ids, MapSet.new())
+    bookmarked_post_ids = Map.get(opts, :bookmarked_post_ids, MapSet.new())
 
     %{
       id: post.id,
@@ -17,6 +18,7 @@ defmodule TraysSocialWeb.API.V1.JSON.PostJSON do
       like_count: post.like_count,
       comment_count: post.comment_count,
       liked_by_current_user: MapSet.member?(liked_post_ids, post.id),
+      bookmarked_by_current_user: MapSet.member?(bookmarked_post_ids, post.id),
       inserted_at: post.inserted_at,
       user: render_user(post.user),
       photos: render_photos(post),
