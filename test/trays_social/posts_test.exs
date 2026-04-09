@@ -82,20 +82,39 @@ defmodule TraysSocial.PostsTest do
       end
     end
 
-    test "list_posts/1 with for_user_id shows only followed users' posts when user follows someone" do
+    test "list_posts/1 with for_user_id shows all posts when user follows fewer than 5 people" do
       poster = user_fixture()
       follower = user_fixture()
       other_poster = user_fixture()
 
       post_fixture(%{user_id: poster.id, caption: "Followed post"})
-      post_fixture(%{user_id: other_poster.id, caption: "Not followed post"})
+      post_fixture(%{user_id: other_poster.id, caption: "Discovery post"})
 
-      # Create a follow relationship
+      # Following < 5 people shows discovery feed (all posts)
       TraysSocial.Accounts.follow_user(follower, poster)
 
       posts = Posts.list_posts(for_user_id: follower.id)
-      assert length(posts) == 1
-      assert hd(posts).caption == "Followed post"
+      assert length(posts) == 2
+    end
+
+    test "list_posts/1 with for_user_id shows only followed posts when user follows 5+ people" do
+      follower = user_fixture()
+
+      # Create 5 followed users with posts
+      followed_posts =
+        for _ <- 1..5 do
+          poster = user_fixture()
+          TraysSocial.Accounts.follow_user(follower, poster)
+          post_fixture(%{user_id: poster.id, caption: "Followed post"})
+        end
+
+      # Create an unfollowed user with a post
+      unfollowed = user_fixture()
+      post_fixture(%{user_id: unfollowed.id, caption: "Not followed post"})
+
+      posts = Posts.list_posts(for_user_id: follower.id)
+      assert length(posts) == length(followed_posts)
+      assert Enum.all?(posts, &(&1.caption == "Followed post"))
     end
 
     test "list_posts/1 with for_user_id shows all posts when user follows nobody" do

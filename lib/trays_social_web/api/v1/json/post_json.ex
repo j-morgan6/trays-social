@@ -58,7 +58,7 @@ defmodule TraysSocialWeb.API.V1.JSON.PostJSON do
 
   defp render_ingredients(post) do
     ingredients = Map.get(post, :ingredients) || []
-    Enum.map(ingredients, fn i -> %{name: i.name, quantity: i.quantity} end)
+    Enum.map(ingredients, fn i -> %{name: i.name, quantity: i.quantity, unit: i.unit} end)
   end
 
   defp render_cooking_steps(post) do

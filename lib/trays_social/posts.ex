@@ -38,9 +38,14 @@ defmodule TraysSocial.Posts do
     cursor_time = Keyword.get(opts, :cursor_time)
     for_user_id = Keyword.get(opts, :for_user_id)
 
-    personalized =
-      for_user_id &&
-        Follow |> where([f], f.follower_id == ^for_user_id) |> Repo.exists?()
+    follow_count =
+      if for_user_id do
+        Follow |> where([f], f.follower_id == ^for_user_id) |> Repo.aggregate(:count)
+      else
+        0
+      end
+
+    personalized = for_user_id && follow_count >= 5
 
     Post
     |> where([p], is_nil(p.deleted_at))
