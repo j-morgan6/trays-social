@@ -51,6 +51,49 @@ defmodule TraysSocial.Notifications do
   end
 
   @doc """
+  Returns cursor-paginated notifications for a user, newest first, with actor and post preloaded.
+  """
+  def list_notifications_paginated(user_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 20)
+    cursor_id = Keyword.get(opts, :cursor_id)
+    cursor_time = Keyword.get(opts, :cursor_time)
+
+    query =
+      Notification
+      |> where([n], n.user_id == ^user_id)
+      |> order_by([n], desc: n.inserted_at, desc: n.id)
+      |> limit(^limit)
+      |> preload([:actor, :post])
+
+    query =
+      if cursor_id && cursor_time do
+        where(
+          query,
+          [n],
+          n.inserted_at < ^cursor_time or (n.inserted_at == ^cursor_time and n.id < ^cursor_id)
+        )
+      else
+        query
+      end
+
+    Repo.all(query)
+  end
+
+  @doc """
+  Marks specific notifications as read by their IDs. Only marks notifications belonging to the user.
+  """
+  def mark_read(user_id, notification_ids) when is_list(notification_ids) do
+    now = DateTime.utc_now(:second)
+
+    {count, _} =
+      Notification
+      |> where([n], n.user_id == ^user_id and n.id in ^notification_ids and is_nil(n.read_at))
+      |> Repo.update_all(set: [read_at: now])
+
+    {:ok, count}
+  end
+
+  @doc """
   Marks all unread notifications as read for a user. Broadcasts the read event.
   """
   def mark_all_read(user_id) do
