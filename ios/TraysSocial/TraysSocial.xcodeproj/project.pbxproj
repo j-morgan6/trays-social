@@ -25,9 +25,11 @@
 		C2AE627280A704249C268EF4 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45AD072C42CEDFF1299909E3 /* WelcomeView.swift */; };
 		D7B58D50FFE71B87C36FA3FF /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15E25A27F96B53A311D1785A /* AppState.swift */; };
 		DC9FFDCAB43C8DE2FD2A03B9 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB5079D934DE75DD36A85EB1 /* User.swift */; };
+		E0633D5901A6A1D5BAEBDE1A /* TraySelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3F588384DD243E16F1473D /* TraySelector.swift */; };
 		E0A787E2FF9F33EFC71ED9F6 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C93766A15ABE17B0D19005CA /* MainView.swift */; };
 		E4090C8BFAECC75C5D6D5508 /* Comment.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9A82C055235B8D4E103AF95 /* Comment.swift */; };
 		E8B99702B0C78EFBE2B961E8 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CE90967D6918BD229185514 /* LoginView.swift */; };
+		F692F33E69675A559BBA3597 /* BottomBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B3AA5EA01086BDCFF78E26A /* BottomBar.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,10 +44,12 @@
 		39068B4368423677CA387168 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		45AD072C42CEDFF1299909E3 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		4CE90967D6918BD229185514 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		5B3AA5EA01086BDCFF78E26A /* BottomBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomBar.swift; sourceTree = "<group>"; };
 		67DCD1E3A70C9F29DFD5035C /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		7C95FC39F4695EA3AF4C37A5 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 		802ABCDA09713C4678248278 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		90B7815F88CA31767867F48D /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		AC3F588384DD243E16F1473D /* TraySelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraySelector.swift; sourceTree = "<group>"; };
 		ACB88CDBE65F5F63DB2CD860 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		C0CF540F6F0306A9E936193E /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
 		C93766A15ABE17B0D19005CA /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
@@ -131,6 +135,7 @@
 			children = (
 				C93766A15ABE17B0D19005CA /* MainView.swift */,
 				575F684E8C543C333A8A9D89 /* Auth */,
+				84E90902F6F81BFED3F5139C /* Components */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -143,6 +148,15 @@
 				257BD59C9143F329A0240F72 /* TraysSocialApp.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		84E90902F6F81BFED3F5139C /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				5B3AA5EA01086BDCFF78E26A /* BottomBar.swift */,
+				AC3F588384DD243E16F1473D /* TraySelector.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		FCAB5EDF7E4EF9119007CA60 /* Models */ = {
@@ -236,6 +250,7 @@
 				D7B58D50FFE71B87C36FA3FF /* AppState.swift in Sources */,
 				78BC4163185A479319E05EB4 /* AuthService.swift in Sources */,
 				9943152E1E4E6B2049563EAA /* AuthViewModel.swift in Sources */,
+				F692F33E69675A559BBA3597 /* BottomBar.swift in Sources */,
 				E4090C8BFAECC75C5D6D5508 /* Comment.swift in Sources */,
 				919AE1F9F4CA872FBEEFE0BE /* Configuration.swift in Sources */,
 				BE727916AF64F4EA2D762814 /* KeychainService.swift in Sources */,
@@ -244,6 +259,7 @@
 				7EB4D3772E068CBBDE1D244E /* Post.swift in Sources */,
 				BAE221C8716562D3F5253854 /* PushNotificationService.swift in Sources */,
 				9280D37823B72E4D7F07A8F3 /* RegisterView.swift in Sources */,
+				E0633D5901A6A1D5BAEBDE1A /* TraySelector.swift in Sources */,
 				BD00C5D666CF7BEBDA198327 /* TraysSocialApp.swift in Sources */,
 				DC9FFDCAB43C8DE2FD2A03B9 /* User.swift in Sources */,
 				4ED1313D6240155C2216987E /* UsernamePickerView.swift in Sources */,

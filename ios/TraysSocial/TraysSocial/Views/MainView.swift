@@ -2,41 +2,145 @@ import SwiftUI
 
 struct MainView: View {
     @Environment(AppState.self) private var appState
+    @State private var showCreatePost = false
+    @State private var showProfile = false
+    @State private var showNotifications = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Top bar
-            HStack {
-                Text("Trays")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.white)
+        @Bindable var state = appState
 
-                Spacer()
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Top bar
+                HStack {
+                    Text("Trays")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
 
-                // Bell icon placeholder
-                Button(action: {}) {
-                    Image(systemName: "bell")
-                        .foregroundStyle(.gray)
+                    Spacer()
+
+                    Button {
+                        showNotifications = true
+                    } label: {
+                        Image(systemName: "bell")
+                            .font(.body)
+                            .foregroundStyle(.gray)
+                            .overlay(alignment: .topTrailing) {
+                                Circle()
+                                    .fill(.orange)
+                                    .frame(width: 8, height: 8)
+                                    .offset(x: 2, y: -2)
+                            }
+                    }
                 }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
 
-            // Tray selector placeholder
-            Text("Tray navigation built in W64")
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Tray selector
+                TraySelector(selectedTray: $state.selectedTray)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
 
-            // Bottom bar placeholder
-            HStack {
-                Spacer()
-                Text("Bottom bar built in W64")
-                    .foregroundStyle(.secondary)
-                Spacer()
+                // Swipeable tray content
+                TabView(selection: $state.selectedTray) {
+                    FeedTrayPlaceholder()
+                        .tag(AppState.TrayTab.feed)
+
+                    FindTrayPlaceholder()
+                        .tag(AppState.TrayTab.find)
+
+                    MyTrayPlaceholder()
+                        .tag(AppState.TrayTab.myTray)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+
+                // Bottom bar
+                BottomBar(
+                    onCreateTap: { showCreatePost = true },
+                    onProfileTap: { showProfile = true },
+                    profilePhotoURL: appState.currentUser?.profilePhotoUrl
+                )
             }
-            .padding(.vertical, 12)
             .background(.black)
+            .navigationDestination(isPresented: $showNotifications) {
+                NotificationsPlaceholder()
+            }
+            .navigationDestination(isPresented: $showProfile) {
+                ProfilePlaceholder()
+            }
+            .sheet(isPresented: $showCreatePost) {
+                CreatePostPlaceholder()
+            }
         }
-        .background(.black)
+    }
+}
+
+// MARK: - Placeholder Views (replaced in subsequent tasks)
+
+private struct FeedTrayPlaceholder: View {
+    var body: some View {
+        VStack {
+            Spacer()
+            Text("Feed Tray")
+                .foregroundStyle(.secondary)
+            Text("Built in W65")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct FindTrayPlaceholder: View {
+    var body: some View {
+        VStack {
+            Spacer()
+            Text("Find Tray")
+                .foregroundStyle(.secondary)
+            Text("Built in W66")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct MyTrayPlaceholder: View {
+    var body: some View {
+        VStack {
+            Spacer()
+            Text("My Tray")
+                .foregroundStyle(.secondary)
+            Text("Built in W67")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct NotificationsPlaceholder: View {
+    var body: some View {
+        Text("Notifications — Built in W72")
+            .foregroundStyle(.secondary)
+            .navigationTitle("Notifications")
+    }
+}
+
+private struct ProfilePlaceholder: View {
+    var body: some View {
+        Text("Profile — Built in W71")
+            .foregroundStyle(.secondary)
+            .navigationTitle("Profile")
+    }
+}
+
+private struct CreatePostPlaceholder: View {
+    var body: some View {
+        Text("Create Post — Built in W70")
+            .foregroundStyle(.secondary)
     }
 }
