@@ -80,6 +80,8 @@ defmodule TraysSocialWeb.Router do
     post "/posts/:post_id/comments", CommentController, :create
     delete "/comments/:id", CommentController, :delete
 
+    get "/search", SearchController, :index
+
     get "/notifications", NotificationController, :index
     post "/notifications/read", NotificationController, :mark_read
 

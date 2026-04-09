@@ -505,4 +505,30 @@ defmodule TraysSocial.Accounts do
   def has_follows?(user_id) do
     from(f in Follow, where: f.follower_id == ^user_id) |> Repo.exists?()
   end
+
+  @doc """
+  Searches users by username. Returns up to `limit` results.
+  """
+  def search_users(query_string, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 20)
+
+    if query_string && query_string != "" do
+      sanitized = "%#{sanitize_like(query_string)}%"
+
+      User
+      |> where([u], ilike(u.username, ^sanitized))
+      |> order_by([u], asc: u.username)
+      |> limit(^limit)
+      |> Repo.all()
+    else
+      []
+    end
+  end
+
+  defp sanitize_like(string) do
+    string
+    |> String.replace("\\", "\\\\")
+    |> String.replace("%", "\\%")
+    |> String.replace("_", "\\_")
+  end
 end

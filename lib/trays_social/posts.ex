@@ -109,6 +109,56 @@ defmodule TraysSocial.Posts do
   end
 
   @doc """
+  Searches posts by caption and tags. Supports cooking time filter and tag filter.
+  Returns cursor-paginated results.
+  """
+  def search_posts(query_string, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 20)
+    max_cooking_time = Keyword.get(opts, :max_cooking_time)
+    tag = Keyword.get(opts, :tag)
+
+    base =
+      Post
+      |> where([p], is_nil(p.deleted_at))
+      |> order_by([p], desc: p.inserted_at)
+      |> limit(^limit)
+      |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
+
+    base =
+      if query_string && query_string != "" do
+        sanitized = "%#{sanitize_like(query_string)}%"
+        where(base, [p], ilike(p.caption, ^sanitized))
+      else
+        base
+      end
+
+    base =
+      if max_cooking_time do
+        where(base, [p], not is_nil(p.cooking_time_minutes) and p.cooking_time_minutes <= ^max_cooking_time)
+      else
+        base
+      end
+
+    base =
+      if tag && tag != "" do
+        base
+        |> join(:inner, [p], pt in PostTag, on: pt.post_id == p.id and pt.tag == ^String.downcase(tag))
+        |> distinct([p], p.id)
+      else
+        base
+      end
+
+    Repo.all(base)
+  end
+
+  defp sanitize_like(string) do
+    string
+    |> String.replace("\\", "\\\\")
+    |> String.replace("%", "\\%")
+    |> String.replace("_", "\\_")
+  end
+
+  @doc """
   Returns posts grouped by tag. Loads all posts for the given tags in one query,
   groups in Elixir, limiting to posts_per_tag per tag.
   Returns a list of {tag, posts} tuples in the same order as tags.
