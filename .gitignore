@@ -47,3 +47,11 @@ ELIXIR_PLUGIN_IMPROVEMENTS.md
 color_theme.md
 logo-ideas.html
 docs/superpowers/specs/
+
+# iOS / Xcode
+ios/TraysSocial/TraysSocial.xcodeproj/xcuserdata/
+ios/TraysSocial/TraysSocial.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcuserstate
+xcuserdata/
+DerivedData/
+build/
