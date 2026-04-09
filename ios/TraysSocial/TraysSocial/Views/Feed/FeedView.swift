@@ -58,7 +58,7 @@ struct FeedView: View {
             }
         }
         .navigationDestination(item: $navigateToPost) { post in
-            PostDetailPlaceholder(postId: post.id)
+            PostDetailView(postId: post.id)
         }
         .navigationDestination(item: $navigateToUser) { username in
             UserProfilePlaceholder(username: username)

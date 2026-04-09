@@ -63,39 +63,15 @@ struct MainView: View {
             }
             .background(.black)
             .navigationDestination(isPresented: $showNotifications) {
-                NotificationsPlaceholder()
+                NotificationsView()
             }
             .navigationDestination(isPresented: $showProfile) {
-                ProfilePlaceholder()
+                ProfileView(username: appState.currentUser?.username ?? "")
             }
             .sheet(isPresented: $showCreatePost) {
-                CreatePostPlaceholder()
+                CreatePostView()
             }
         }
     }
 }
 
-// MARK: - Placeholder Views (replaced in subsequent tasks)
-
-private struct NotificationsPlaceholder: View {
-    var body: some View {
-        Text("Notifications — Built in W72")
-            .foregroundStyle(.secondary)
-            .navigationTitle("Notifications")
-    }
-}
-
-private struct ProfilePlaceholder: View {
-    var body: some View {
-        Text("Profile — Built in W71")
-            .foregroundStyle(.secondary)
-            .navigationTitle("Profile")
-    }
-}
-
-private struct CreatePostPlaceholder: View {
-    var body: some View {
-        Text("Create Post — Built in W70")
-            .foregroundStyle(.secondary)
-    }
-}
