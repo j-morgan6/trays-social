@@ -46,10 +46,10 @@ struct MainView: View {
                     FeedView()
                         .tag(AppState.TrayTab.feed)
 
-                    FindTrayPlaceholder()
+                    FindView()
                         .tag(AppState.TrayTab.find)
 
-                    MyTrayPlaceholder()
+                    MyTrayView()
                         .tag(AppState.TrayTab.myTray)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
@@ -76,36 +76,6 @@ struct MainView: View {
 }
 
 // MARK: - Placeholder Views (replaced in subsequent tasks)
-
-private struct FindTrayPlaceholder: View {
-    var body: some View {
-        VStack {
-            Spacer()
-            Text("Find Tray")
-                .foregroundStyle(.secondary)
-            Text("Built in W66")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
-private struct MyTrayPlaceholder: View {
-    var body: some View {
-        VStack {
-            Spacer()
-            Text("My Tray")
-                .foregroundStyle(.secondary)
-            Text("Built in W67")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
 
 private struct NotificationsPlaceholder: View {
     var body: some View {
