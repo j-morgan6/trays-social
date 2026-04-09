@@ -12,10 +12,31 @@ final class AppState {
         case myTray = 2
     }
 
+    var isValidatingToken = false
+
     init() {
         // Check for existing token on launch
         if KeychainService.getToken() != nil {
             isAuthenticated = true
+            validateToken()
+        }
+    }
+
+    private func validateToken() {
+        isValidatingToken = true
+        Task {
+            do {
+                let user = try await AuthService.fetchMe()
+                await MainActor.run {
+                    self.currentUser = user
+                    self.isValidatingToken = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.handleUnauthorized()
+                    self.isValidatingToken = false
+                }
+            }
         }
     }
 
