@@ -43,7 +43,7 @@ struct MainView: View {
 
                 // Swipeable tray content
                 TabView(selection: $state.selectedTray) {
-                    FeedTrayPlaceholder()
+                    FeedView()
                         .tag(AppState.TrayTab.feed)
 
                     FindTrayPlaceholder()
@@ -76,21 +76,6 @@ struct MainView: View {
 }
 
 // MARK: - Placeholder Views (replaced in subsequent tasks)
-
-private struct FeedTrayPlaceholder: View {
-    var body: some View {
-        VStack {
-            Spacer()
-            Text("Feed Tray")
-                .foregroundStyle(.secondary)
-            Text("Built in W65")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
 
 private struct FindTrayPlaceholder: View {
     var body: some View {
