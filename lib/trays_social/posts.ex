@@ -75,11 +75,13 @@ defmodule TraysSocial.Posts do
   Returns trending posts (highest like_count), excluding soft deleted.
   """
   def list_trending_posts(limit \\ 10) do
+    seven_days_ago = DateTime.utc_now() |> DateTime.add(-7, :day)
+
     Post
-    |> where([p], is_nil(p.deleted_at))
+    |> where([p], is_nil(p.deleted_at) and p.inserted_at >= ^seven_days_ago)
     |> order_by([p], desc: p.like_count, desc: p.inserted_at)
     |> limit(^limit)
-    |> preload([:user, :post_photos])
+    |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
     |> Repo.all()
   end
 

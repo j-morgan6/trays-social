@@ -507,8 +507,55 @@ defmodule TraysSocial.Accounts do
   end
 
   @doc """
-  Searches users by username. Returns up to `limit` results.
+  Returns a cursor-paginated list of users who follow the given user.
   """
+  def list_followers(user_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 20)
+    cursor_id = Keyword.get(opts, :cursor_id)
+
+    query =
+      Follow
+      |> where([f], f.followed_id == ^user_id)
+      |> join(:inner, [f], u in User, on: u.id == f.follower_id)
+      |> order_by([f], desc: f.inserted_at)
+      |> limit(^limit)
+      |> select([f, u], u)
+
+    query =
+      if cursor_id do
+        where(query, [f], f.follower_id < ^cursor_id)
+      else
+        query
+      end
+
+    Repo.all(query)
+  end
+
+  @doc """
+  Returns a cursor-paginated list of users the given user follows.
+  """
+  def list_following(user_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 20)
+    cursor_id = Keyword.get(opts, :cursor_id)
+
+    query =
+      Follow
+      |> where([f], f.follower_id == ^user_id)
+      |> join(:inner, [f], u in User, on: u.id == f.followed_id)
+      |> order_by([f], desc: f.inserted_at)
+      |> limit(^limit)
+      |> select([f, u], u)
+
+    query =
+      if cursor_id do
+        where(query, [f], f.followed_id < ^cursor_id)
+      else
+        query
+      end
+
+    Repo.all(query)
+  end
+
   def search_users(query_string, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
 

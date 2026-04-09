@@ -6,6 +6,18 @@ defmodule TraysSocialWeb.API.V1.PostController do
   alias TraysSocial.Posts
   alias TraysSocialWeb.API.V1.JSON.PostJSON
 
+  def trending(conn, _params) do
+    user = conn.assigns.current_user
+    posts = Posts.list_trending_posts(20)
+    post_ids = Enum.map(posts, & &1.id)
+    liked_post_ids = Posts.liked_post_ids_for_user(user.id, post_ids)
+    bookmarked_post_ids = Posts.bookmarked_post_ids_for_user(user.id, post_ids)
+
+    json(conn, %{
+      data: PostJSON.render_list(posts, %{liked_post_ids: liked_post_ids, bookmarked_post_ids: bookmarked_post_ids})
+    })
+  end
+
   def show(conn, %{"id" => id}) do
     user = conn.assigns.current_user
 

@@ -71,6 +71,7 @@ defmodule TraysSocialWeb.Router do
     delete "/auth/me", AuthController, :delete_me
 
     get "/feed", FeedController, :index
+    get "/posts/trending", PostController, :trending
     resources "/posts", PostController, only: [:show, :create, :delete]
 
     post "/posts/:post_id/like", LikeController, :create
@@ -94,6 +95,8 @@ defmodule TraysSocialWeb.Router do
 
     get "/users/:username", UserController, :show
     get "/users/:username/posts", UserController, :posts
+    get "/users/:username/followers", UserController, :followers
+    get "/users/:username/following", UserController, :following
     post "/users/:username/follow", UserController, :follow
     delete "/users/:username/follow", UserController, :unfollow
   end

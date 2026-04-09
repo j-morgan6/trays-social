@@ -76,6 +76,58 @@ defmodule TraysSocialWeb.API.V1.UserController do
     end
   end
 
+  def followers(conn, %{"username" => username}) do
+    current_user = conn.assigns.current_user
+
+    case Accounts.get_user_by_username(username) do
+      nil ->
+        {:error, :not_found}
+
+      user ->
+        cursor_id = parse_int(conn.params["cursor_id"])
+        followers = Accounts.list_followers(user.id, limit: @page_size, cursor_id: cursor_id)
+
+        json(conn, %{
+          data: Enum.map(followers, &user_list_json(&1, current_user))
+        })
+    end
+  end
+
+  def following(conn, %{"username" => username}) do
+    current_user = conn.assigns.current_user
+
+    case Accounts.get_user_by_username(username) do
+      nil ->
+        {:error, :not_found}
+
+      user ->
+        cursor_id = parse_int(conn.params["cursor_id"])
+        following = Accounts.list_following(user.id, limit: @page_size, cursor_id: cursor_id)
+
+        json(conn, %{
+          data: Enum.map(following, &user_list_json(&1, current_user))
+        })
+    end
+  end
+
+  defp user_list_json(user, current_user) do
+    %{
+      id: user.id,
+      username: user.username,
+      bio: user.bio,
+      profile_photo_url: user.profile_photo_url,
+      followed_by_current_user: Accounts.following?(current_user.id, user.id)
+    }
+  end
+
+  defp parse_int(nil), do: nil
+  defp parse_int(val) when is_binary(val) do
+    case Integer.parse(val) do
+      {int, _} -> int
+      :error -> nil
+    end
+  end
+
   defp user_profile_json(user, current_user) do
     %{
       id: user.id,
