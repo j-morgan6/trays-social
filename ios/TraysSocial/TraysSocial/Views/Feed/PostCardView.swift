@@ -47,15 +47,19 @@ struct PostCardView: View {
                 .padding(10)
             }
             .overlay(alignment: .topTrailing) {
-                // + Tray button
+                // Tray button
                 Button(action: { onTrayTap?() }) {
-                    Text("+ Tray")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Theme.accent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    let isBookmarked = post.bookmarkedByCurrentUser ?? false
+                    HStack(spacing: 4) {
+                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                        Text(isBookmarked ? "Saved" : "+ Tray")
+                    }
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(isBookmarked ? Theme.primary : Theme.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(isBookmarked ? Theme.primary.opacity(0.2) : .ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .padding(10)
             }

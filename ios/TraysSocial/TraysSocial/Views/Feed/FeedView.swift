@@ -11,7 +11,7 @@ struct FeedView: View {
                 ForEach(viewModel.posts) { post in
                     PostCardView(
                         post: post,
-                        onTrayTap: { bookmarkPost(post) },
+                        onTrayTap: { toggleBookmark(post) },
                         onUserTap: { navigateToUser = post.user.username }
                     )
                     .onTapGesture {
@@ -59,9 +59,30 @@ struct FeedView: View {
         }
     }
 
-    private func bookmarkPost(_ post: Post) {
+    private func toggleBookmark(_ post: Post) {
+        let wasBookmarked = post.bookmarkedByCurrentUser ?? false
+
+        // Optimistic UI update
+        if let index = viewModel.posts.firstIndex(where: { $0.id == post.id }) {
+            let p = viewModel.posts[index]
+            viewModel.posts[index] = Post(
+                id: p.id, type: p.type, caption: p.caption,
+                cookingTimeMinutes: p.cookingTimeMinutes, servings: p.servings,
+                likeCount: p.likeCount, commentCount: p.commentCount,
+                likedByCurrentUser: p.likedByCurrentUser,
+                bookmarkedByCurrentUser: !wasBookmarked,
+                insertedAt: p.insertedAt, user: p.user, photos: p.photos,
+                ingredients: p.ingredients, cookingSteps: p.cookingSteps,
+                tools: p.tools, tags: p.tags
+            )
+        }
+
         Task {
-            try? await APIClient.shared.post(path: "/bookmarks/\(post.id)")
+            if wasBookmarked {
+                _ = try? await APIClient.shared.delete(path: "/bookmarks/\(post.id)") as EmptyResponse
+            } else {
+                try? await APIClient.shared.post(path: "/bookmarks/\(post.id)")
+            }
         }
     }
 }
