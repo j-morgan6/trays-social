@@ -58,7 +58,13 @@ struct PostCardView: View {
                     .foregroundStyle(isBookmarked ? Theme.primary : Theme.accent)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(isBookmarked ? Theme.primary.opacity(0.2) : .ultraThinMaterial)
+                    .background {
+                        if isBookmarked {
+                            Theme.primary.opacity(0.2)
+                        } else {
+                            Color.black.opacity(0.5)
+                        }
+                    }
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .padding(10)
