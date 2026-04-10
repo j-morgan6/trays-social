@@ -97,19 +97,20 @@ final class CreatePostViewModel {
             var params: [String: Any] = [
                 "type": postType.rawValue,
                 "caption": caption,
-                "post_photos": [["photo_url": photoURL, "position": 0]]
+                "photo_url": photoURL,
+                "post_photos": [["url": photoURL, "position": 0]]
             ]
 
             if postType == .recipe {
                 if let time = Int(cookingTimeMinutes) { params["cooking_time_minutes"] = time }
                 if let srv = Int(servings) { params["servings"] = srv }
-                params["ingredients"] = ingredients.enumerated().map { i, ing in
+                params["ingredients"] = ingredients.enumerated().map { (i, ing) -> [String: Any] in
                     ["name": ing.name, "quantity": ing.quantity, "unit": ing.unit, "order": i]
                 }
-                params["cooking_steps"] = steps.enumerated().map { i, step in
+                params["cooking_steps"] = steps.enumerated().map { (i, step) -> [String: Any] in
                     ["description": step.description, "order": i]
                 }
-                params["tools"] = tools.enumerated().map { i, tool in
+                params["tools"] = tools.enumerated().map { (i, tool) -> [String: Any] in
                     ["name": tool, "order": i]
                 }
             }
