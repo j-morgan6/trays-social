@@ -129,9 +129,11 @@ final class CreatePostViewModel {
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
 
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse, (200...201).contains(httpResponse.statusCode) else {
-                errorMessage = "Failed to create post"
+                let httpResponse = response as? HTTPURLResponse
+                let body = String(data: data, encoding: .utf8) ?? "no body"
+                errorMessage = "Failed to create post (\(httpResponse?.statusCode ?? 0)): \(body)"
                 isPublishing = false
                 return false
             }
