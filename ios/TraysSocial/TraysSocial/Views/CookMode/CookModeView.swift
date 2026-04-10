@@ -24,7 +24,7 @@ struct CookModeView: View {
 
                 Text(title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
                     .lineLimit(1)
 
                 Spacer()
@@ -63,7 +63,7 @@ struct CookModeView: View {
                 if currentStep < steps.count {
                     Text(steps[currentStep].instruction)
                         .font(.system(size: 26, weight: .regular))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.text)
                         .multilineTextAlignment(.center)
                         .lineSpacing(6)
                         .padding(.horizontal, 24)

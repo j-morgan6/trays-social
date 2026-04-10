@@ -99,7 +99,7 @@ struct FindView: View {
                             VStack(alignment: .leading) {
                                 Text(user.username)
                                     .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(Theme.text)
                                 if let bio = user.bio {
                                     Text(bio)
                                         .font(.caption)
@@ -210,7 +210,7 @@ private struct TrendingCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(post.caption ?? "Recipe")
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
                     .lineLimit(1)
 
                 Text("@\(post.user.username)")

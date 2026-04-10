@@ -85,7 +85,7 @@ struct MyTrayView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(post.caption ?? "Recipe")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.text)
                             .lineLimit(1)
 
                         HStack(spacing: 6) {

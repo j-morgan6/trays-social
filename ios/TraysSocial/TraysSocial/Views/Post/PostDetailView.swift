@@ -110,7 +110,7 @@ struct PostDetailView: View {
             if let caption = post.caption {
                 Text(caption)
                     .font(.title3.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
             }
 
             HStack {
@@ -161,12 +161,12 @@ struct PostDetailView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Ingredients")
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.text)
 
                     ForEach(post.ingredients) { ingredient in
                         HStack {
                             Text(ingredient.name)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.text)
                             Spacer()
                             Text([ingredient.quantity, ingredient.unit].compactMap { $0 }.joined(separator: " "))
                                 .foregroundStyle(.secondary)
@@ -180,7 +180,7 @@ struct PostDetailView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Steps")
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.text)
 
                     ForEach(post.cookingSteps) { step in
                         HStack(alignment: .top, spacing: 12) {
@@ -193,7 +193,7 @@ struct PostDetailView: View {
 
                             Text(step.instruction)
                                 .font(.subheadline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.text)
                         }
                     }
                 }
@@ -203,7 +203,7 @@ struct PostDetailView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Tools")
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.text)
 
                     FlowLayout(spacing: 8) {
                         ForEach(post.tools) { tool in
@@ -248,7 +248,7 @@ struct PostDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Comments (\(viewModel.comments.count))")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.text)
                 .padding(.horizontal, 16)
 
             ForEach(viewModel.comments) { comment in
@@ -258,7 +258,7 @@ struct PostDetailView: View {
                         HStack {
                             Text(comment.user.username)
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.text)
                             Text(comment.insertedAt.timeAgo())
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)

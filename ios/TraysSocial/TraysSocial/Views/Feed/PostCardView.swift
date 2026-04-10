@@ -66,7 +66,7 @@ struct PostCardView: View {
                 if let caption = post.caption, !caption.isEmpty {
                     Text(post.isRecipe ? caption : caption)
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.text)
                         .lineLimit(2)
                 }
 

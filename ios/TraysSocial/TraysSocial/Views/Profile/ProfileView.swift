@@ -34,7 +34,7 @@ struct ProfileView: View {
 
                         Text(user.username)
                             .font(.title2.weight(.bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.text)
 
                         if let bio = user.bio, !bio.isEmpty {
                             Text(bio)
@@ -130,7 +130,7 @@ struct ProfileView: View {
         VStack(spacing: 2) {
             Text("\(value)")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.text)
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -209,7 +209,7 @@ struct SettingsView: View {
                     appState.logout()
                     dismiss()
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.text)
 
                 Button("Delete account") {
                     showDeleteConfirm = true

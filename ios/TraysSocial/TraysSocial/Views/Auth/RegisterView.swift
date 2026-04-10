@@ -8,7 +8,7 @@ struct RegisterView: View {
         VStack(spacing: 24) {
             Text("Create account")
                 .font(.title.bold())
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.text)
 
             VStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {

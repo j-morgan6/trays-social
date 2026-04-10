@@ -16,7 +16,7 @@ struct WelcomeView: View {
                 VStack(spacing: 8) {
                     Text("Trays")
                         .font(.system(size: 48, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.text)
 
                     Text("Find something to eat")
                         .font(.subheadline)

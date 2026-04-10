@@ -8,7 +8,7 @@ struct LoginView: View {
         VStack(spacing: 24) {
             Text("Log in")
                 .font(.title.bold())
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.text)
 
             VStack(spacing: 16) {
                 TextField("Email", text: $viewModel.email)

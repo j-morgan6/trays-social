@@ -8,7 +8,7 @@ struct UsernamePickerView: View {
         VStack(spacing: 24) {
             Text("Choose a username")
                 .font(.title.bold())
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.text)
 
             Text("This is how other cooks will find you on Trays.")
                 .font(.subheadline)
