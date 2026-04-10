@@ -56,7 +56,7 @@ struct ProfileView: View {
                         HStack(spacing: 12) {
                             Button("Edit Profile") { showEditProfile = true }
                                 .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Theme.text)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
                                 .background(Theme.surface)
