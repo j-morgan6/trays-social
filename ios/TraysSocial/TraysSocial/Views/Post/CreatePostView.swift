@@ -176,15 +176,25 @@ struct CreatePostView: View {
                     .frame(width: 50)
                 TextField("Unit", text: $viewModel.newIngredientUnit)
                     .frame(width: 50)
-                Button { viewModel.addIngredient() } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(Theme.primary)
-                }
+                    .onSubmit { viewModel.addIngredient() }
             }
             .font(.subheadline)
             .padding(10)
             .background(Theme.surface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            Button { viewModel.addIngredient() } label: {
+                HStack {
+                    Image(systemName: "plus")
+                    Text("Add Ingredient")
+                }
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Theme.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Theme.primary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
         }
 
         // Steps
@@ -206,17 +216,25 @@ struct CreatePostView: View {
                 .font(.subheadline)
             }
 
-            HStack {
-                TextField("Describe the step", text: $viewModel.newStepText)
-                Button { viewModel.addStep() } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(Theme.primary)
+            TextField("Describe the step", text: $viewModel.newStepText)
+                .font(.subheadline)
+                .padding(10)
+                .background(Theme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .onSubmit { viewModel.addStep() }
+
+            Button { viewModel.addStep() } label: {
+                HStack {
+                    Image(systemName: "plus")
+                    Text("Add Step")
                 }
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Theme.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Theme.primary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
-            .font(.subheadline)
-            .padding(10)
-            .background(Theme.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
         }
 
         // Tools
@@ -242,17 +260,25 @@ struct CreatePostView: View {
                 }
             }
 
-            HStack {
-                TextField("Tool name", text: $viewModel.newToolName)
-                Button { viewModel.addTool() } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(Theme.primary)
+            TextField("Tool name", text: $viewModel.newToolName)
+                .font(.subheadline)
+                .padding(10)
+                .background(Theme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .onSubmit { viewModel.addTool() }
+
+            Button { viewModel.addTool() } label: {
+                HStack {
+                    Image(systemName: "plus")
+                    Text("Add Tool")
                 }
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Theme.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Theme.primary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
-            .font(.subheadline)
-            .padding(10)
-            .background(Theme.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
         }
     }
 }
