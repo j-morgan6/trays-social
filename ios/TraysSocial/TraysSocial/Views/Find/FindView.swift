@@ -26,11 +26,11 @@ struct FindView: View {
                     }
                 }
                 .padding(12)
-                .background(Color.white.opacity(0.06))
+                .background(Theme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        .stroke(Theme.surface, lineWidth: 1)
                 )
                 .padding(.horizontal, 16)
 
@@ -44,11 +44,11 @@ struct FindView: View {
                                     .foregroundStyle(viewModel.activeFilter == chip ? .white : Color(.systemGray))
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 8)
-                                    .background(viewModel.activeFilter == chip ? Theme.accent : Color.white.opacity(0.06))
+                                    .background(viewModel.activeFilter == chip ? Theme.accent : Theme.surface)
                                     .clipShape(Capsule())
                                     .overlay(
                                         Capsule()
-                                            .stroke(Color.white.opacity(viewModel.activeFilter == chip ? 0 : 0.12), lineWidth: 1)
+                                            .stroke(Theme.surface.opacity(viewModel.activeFilter == chip ? 0 : 1), lineWidth: 1)
                                     )
                             }
                         }
@@ -126,7 +126,7 @@ struct FindView: View {
                     LazyVStack(spacing: 0) {
                         ForEach(viewModel.posts) { post in
                             PostCardView(post: post)
-                            Divider().background(Color.white.opacity(0.06))
+                            Divider().background(Theme.surface)
                         }
                     }
                 }
@@ -224,7 +224,7 @@ private struct TrendingCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                .stroke(Theme.surface, lineWidth: 1)
         )
     }
 

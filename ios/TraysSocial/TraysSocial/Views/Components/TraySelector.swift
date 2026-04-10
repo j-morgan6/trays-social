@@ -18,7 +18,7 @@ struct TraySelector: View {
                         .padding(.vertical, 10)
                         .background(
                             selectedTray == tray
-                                ? Color.white.opacity(0.08)
+                                ? Theme.surface
                                 : Color.clear
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -27,11 +27,11 @@ struct TraySelector: View {
             }
         }
         .padding(3)
-        .background(Color.white.opacity(0.04))
+        .background(Theme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(Theme.surface, lineWidth: 1)
         )
     }
 }

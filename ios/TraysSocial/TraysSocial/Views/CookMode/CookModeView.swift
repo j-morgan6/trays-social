@@ -40,7 +40,7 @@ struct CookModeView: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Rectangle()
-                        .fill(Color.white.opacity(0.1))
+                        .fill(Theme.surface)
                     Rectangle()
                         .fill(Theme.accent)
                         .frame(width: geo.size.width * progress)
@@ -125,7 +125,7 @@ struct CookModeView: View {
                     .foregroundStyle(.gray)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 14)
-                    .background(Color.white.opacity(0.06))
+                    .background(Theme.surface)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .opacity(currentStep > 0 ? 1 : 0.3)

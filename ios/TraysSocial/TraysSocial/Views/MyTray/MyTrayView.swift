@@ -19,14 +19,14 @@ struct MyTrayView: View {
                         Image(systemName: "list.bullet")
                             .foregroundStyle(viewModel.showGrid ? .gray : .orange)
                             .padding(6)
-                            .background(Color.white.opacity(viewModel.showGrid ? 0.04 : 0.08))
+                            .background(Theme.surface)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                     Button { viewModel.showGrid = true } label: {
                         Image(systemName: "square.grid.2x2")
                             .foregroundStyle(viewModel.showGrid ? .orange : .gray)
                             .padding(6)
-                            .background(Color.white.opacity(viewModel.showGrid ? 0.08 : 0.04))
+                            .background(Theme.surface)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                 }

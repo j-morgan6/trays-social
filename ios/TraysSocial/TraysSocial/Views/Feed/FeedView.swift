@@ -24,7 +24,7 @@ struct FeedView: View {
                     }
 
                     Divider()
-                        .background(Color.white.opacity(0.06))
+                        .background(Theme.surface)
                 }
 
                 if viewModel.isLoadingMore {

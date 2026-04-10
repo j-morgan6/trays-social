@@ -17,13 +17,13 @@ struct LoginView: View {
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
                     .padding()
-                    .background(.white.opacity(0.08))
+                    .background(Theme.surface)
                     .cornerRadius(12)
 
                 SecureField("Password", text: $viewModel.password)
                     .textContentType(.password)
                     .padding()
-                    .background(.white.opacity(0.08))
+                    .background(Theme.surface)
                     .cornerRadius(12)
             }
 

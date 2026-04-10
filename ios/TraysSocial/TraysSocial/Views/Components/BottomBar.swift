@@ -56,7 +56,7 @@ struct BottomBar: View {
         .background(Theme.background)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Color.white.opacity(0.08))
+                .fill(Theme.surface)
                 .frame(height: 1)
         }
     }

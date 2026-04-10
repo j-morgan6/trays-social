@@ -29,11 +29,11 @@ enum Theme {
     /// Secondary text — subdued
     static let textSecondary = Color(hex: 0x757575)
 
-    /// Subtle borders and dividers
-    static let border = Color.white.opacity(0.08)
+    /// Subtle borders and dividers — adapts to light/dark
+    static let border = Color("Surface")
 
-    /// Subtle background for inputs, chips, etc.
-    static let inputBackground = Color.white.opacity(0.06)
+    /// Subtle background for inputs, chips, cards — adapts to light/dark
+    static let inputBackground = Color("Surface")
 }
 
 // MARK: - Hex Color Initializer

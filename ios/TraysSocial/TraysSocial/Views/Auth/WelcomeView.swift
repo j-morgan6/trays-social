@@ -47,7 +47,7 @@ struct WelcomeView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
-                    .background(.white.opacity(0.1))
+                    .background(Theme.surface)
                     .cornerRadius(12)
 
                     Button("Create account") {

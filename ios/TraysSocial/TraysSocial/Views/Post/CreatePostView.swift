@@ -49,7 +49,7 @@ struct CreatePostView: View {
                             .foregroundStyle(.gray)
                             .frame(maxWidth: .infinity)
                             .frame(height: 200)
-                            .background(Color.white.opacity(0.06))
+                            .background(Theme.surface)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                     }
@@ -66,7 +66,7 @@ struct CreatePostView: View {
                         .lineLimit(3...6)
                         .textFieldStyle(.plain)
                         .padding(12)
-                        .background(Color.white.opacity(0.06))
+                        .background(Theme.surface)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     if viewModel.postType == .recipe {
@@ -77,7 +77,7 @@ struct CreatePostView: View {
                     TextField("Tags (comma separated)", text: $viewModel.tags)
                         .textFieldStyle(.plain)
                         .padding(12)
-                        .background(Color.white.opacity(0.06))
+                        .background(Theme.surface)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     if let error = viewModel.errorMessage {
@@ -136,7 +136,7 @@ struct CreatePostView: View {
                 TextField("30", text: $viewModel.cookingTimeMinutes)
                     .keyboardType(.numberPad)
                     .padding(10)
-                    .background(Color.white.opacity(0.06))
+                    .background(Theme.surface)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
 
@@ -147,7 +147,7 @@ struct CreatePostView: View {
                 TextField("4", text: $viewModel.servings)
                     .keyboardType(.numberPad)
                     .padding(10)
-                    .background(Color.white.opacity(0.06))
+                    .background(Theme.surface)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
         }
@@ -183,7 +183,7 @@ struct CreatePostView: View {
             }
             .font(.subheadline)
             .padding(10)
-            .background(Color.white.opacity(0.06))
+            .background(Theme.surface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
 
@@ -215,7 +215,7 @@ struct CreatePostView: View {
             }
             .font(.subheadline)
             .padding(10)
-            .background(Color.white.opacity(0.06))
+            .background(Theme.surface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
 
@@ -237,7 +237,7 @@ struct CreatePostView: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(Color.white.opacity(0.06))
+                    .background(Theme.surface)
                     .clipShape(Capsule())
                 }
             }
@@ -251,7 +251,7 @@ struct CreatePostView: View {
             }
             .font(.subheadline)
             .padding(10)
-            .background(Color.white.opacity(0.06))
+            .background(Theme.surface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
     }

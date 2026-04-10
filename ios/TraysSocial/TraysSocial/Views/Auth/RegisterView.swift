@@ -17,7 +17,7 @@ struct RegisterView: View {
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .padding()
-                        .background(.white.opacity(0.08))
+                        .background(Theme.surface)
                         .cornerRadius(12)
 
                     if !viewModel.username.isEmpty && !viewModel.isUsernameValid {
@@ -33,14 +33,14 @@ struct RegisterView: View {
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
                     .padding()
-                    .background(.white.opacity(0.08))
+                    .background(Theme.surface)
                     .cornerRadius(12)
 
                 VStack(alignment: .leading, spacing: 4) {
                     SecureField("Password", text: $viewModel.password)
                         .textContentType(.newPassword)
                         .padding()
-                        .background(.white.opacity(0.08))
+                        .background(Theme.surface)
                         .cornerRadius(12)
 
                     if !viewModel.password.isEmpty && !viewModel.isPasswordValid {

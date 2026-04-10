@@ -59,14 +59,14 @@ struct ProfileView: View {
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
-                                .background(Color.white.opacity(0.1))
+                                .background(Theme.surface)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
 
                             Button { showSettings = true } label: {
                                 Image(systemName: "gearshape")
                                     .foregroundStyle(.gray)
                                     .padding(10)
-                                    .background(Color.white.opacity(0.1))
+                                    .background(Theme.surface)
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                             }
                         }
@@ -80,7 +80,7 @@ struct ProfileView: View {
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
-                                .background(user.followedByCurrentUser == true ? Color.white.opacity(0.1) : Theme.primary)
+                                .background(user.followedByCurrentUser == true ? Theme.surface : Theme.primary)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .padding(.horizontal, 16)
@@ -137,7 +137,7 @@ struct ProfileView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
-        .background(Color.white.opacity(0.04))
+        .background(Theme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -160,13 +160,13 @@ struct EditProfileView: View {
             VStack(spacing: 16) {
                 TextField("Username", text: $username)
                     .padding(12)
-                    .background(Color.white.opacity(0.06))
+                    .background(Theme.surface)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
                 TextField("Bio", text: $bio, axis: .vertical)
                     .lineLimit(3...6)
                     .padding(12)
-                    .background(Color.white.opacity(0.06))
+                    .background(Theme.surface)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
                 Spacer()

@@ -212,7 +212,7 @@ struct PostDetailView: View {
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .background(Color.white.opacity(0.06))
+                                .background(Theme.surface)
                                 .clipShape(Capsule())
                         }
                     }
@@ -233,7 +233,7 @@ struct PostDetailView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(Color.white.opacity(0.06))
+                        .background(Theme.surface)
                         .clipShape(Capsule())
                 }
             }
@@ -283,7 +283,7 @@ struct PostDetailView: View {
                 TextField("Add a comment...", text: $viewModel.commentText)
                     .textFieldStyle(.plain)
                     .padding(10)
-                    .background(Color.white.opacity(0.06))
+                    .background(Theme.surface)
                     .clipShape(RoundedRectangle(cornerRadius: 20))
 
                 if !viewModel.commentText.isEmpty {
