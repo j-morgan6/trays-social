@@ -77,6 +77,11 @@ final class CreatePostViewModel {
     func removeTool(at index: Int) { tools.remove(at: index) }
 
     func publish() async -> Bool {
+        // Auto-add any pending input before publishing
+        if !newIngredientName.isEmpty { addIngredient() }
+        if !newStepText.isEmpty { addStep() }
+        if !newToolName.isEmpty { addTool() }
+
         guard let photoData else {
             errorMessage = "Please select a photo"
             return false
