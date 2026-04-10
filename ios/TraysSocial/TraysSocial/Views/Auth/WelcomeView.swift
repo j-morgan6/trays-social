@@ -54,7 +54,7 @@ struct WelcomeView: View {
                         showRegister = true
                     }
                     .font(.body.weight(.medium))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Theme.accent)
                 }
                 .padding(.horizontal, 24)
 
@@ -75,7 +75,7 @@ struct WelcomeView: View {
                     .frame(height: 40)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.black)
+            .background(Theme.background)
             .navigationDestination(isPresented: $showLogin) {
                 LoginView(viewModel: viewModel)
             }

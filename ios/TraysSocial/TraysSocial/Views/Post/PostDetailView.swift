@@ -8,7 +8,7 @@ struct PostDetailView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             if viewModel.isLoading {
-                ProgressView().tint(.orange)
+                ProgressView().tint(Theme.accent)
             } else if let post = viewModel.post {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
@@ -51,9 +51,9 @@ struct PostDetailView: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 12)
-                            .background(.orange)
+                            .background(Theme.accent)
                             .clipShape(Capsule())
-                            .shadow(color: .orange.opacity(0.3), radius: 8, y: 4)
+                            .shadow(color: Theme.accent.opacity(0.3), radius: 8, y: 4)
                             .padding(.trailing, 16)
                             .padding(.bottom, 70)
                         }
@@ -61,7 +61,7 @@ struct PostDetailView: View {
                 }
             }
         }
-        .background(.black)
+        .background(Theme.background)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.loadPost(id: postId)
@@ -186,9 +186,9 @@ struct PostDetailView: View {
                         HStack(alignment: .top, spacing: 12) {
                             Text("\(step.position)")
                                 .font(.caption.weight(.bold))
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(Theme.accent)
                                 .frame(width: 24, height: 24)
-                                .background(Color.orange.opacity(0.15))
+                                .background(Theme.accent.opacity(0.15))
                                 .clipShape(Circle())
 
                             Text(step.instruction)
@@ -292,7 +292,7 @@ struct PostDetailView: View {
                     } label: {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.title2)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Theme.accent)
                     }
                     .disabled(viewModel.isSendingComment)
                 }

@@ -74,14 +74,14 @@ struct RegisterView: View {
                         .frame(height: 50)
                 }
             }
-            .background(viewModel.canRegister ? .orange : .gray.opacity(0.3))
+            .background(viewModel.canRegister ? Theme.accent : .gray.opacity(0.3))
             .cornerRadius(12)
             .disabled(!viewModel.canRegister)
 
             Spacer()
         }
         .padding(24)
-        .background(.black)
+        .background(Theme.background)
         .onDisappear { viewModel.clearError() }
     }
 }

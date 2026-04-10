@@ -42,7 +42,7 @@ struct MyTrayView: View {
         }
         .overlay {
             if viewModel.isLoading && viewModel.posts.isEmpty {
-                ProgressView().tint(.orange)
+                ProgressView().tint(Theme.accent)
             } else if viewModel.posts.isEmpty && !viewModel.isLoading {
                 VStack(spacing: 8) {
                     Text("Your tray is empty")
@@ -92,7 +92,7 @@ struct MyTrayView: View {
                             if let time = post.cookingTimeMinutes {
                                 Text("\(time) min")
                                     .font(.caption)
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(Theme.accent)
                             }
                             if let servings = post.servings {
                                 Text("|\(servings) servings")

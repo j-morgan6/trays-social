@@ -44,6 +44,7 @@
 		E6F36149B52A5781300385E9 /* PostDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E77FB4C5F704EABC3090A7B5 /* PostDetailView.swift */; };
 		E8B99702B0C78EFBE2B961E8 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CE90967D6918BD229185514 /* LoginView.swift */; };
 		EC345A008BE401F2EDD5421D /* MyTrayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF1EA4D0A316329D1C02CB8 /* MyTrayViewModel.swift */; };
+		F2BF3A3ADB396931C925D745 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D40053541A36E996D238B572 /* Theme.swift */; };
 		F692F33E69675A559BBA3597 /* BottomBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B3AA5EA01086BDCFF78E26A /* BottomBar.swift */; };
 		F72C0EFB417B4AF95EEB0B6F /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7AB3435C8A95FE1C2FE7E38 /* NotificationsView.swift */; };
 /* End PBXBuildFile section */
@@ -61,7 +62,7 @@
 		25DDF4D71B30FEDDB90E828E /* FindView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindView.swift; sourceTree = "<group>"; };
 		32D2EAB385C443516BBDD921 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3540592DA46CF395AEEAA5C0 /* CreatePostViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostViewModel.swift; sourceTree = "<group>"; };
-		3587970859E9F845326FE543 /* TraysSocial.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TraysSocial.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3587970859E9F845326FE543 /* TraysSocial.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TraysSocial.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3893002E61AAB0716240E1B9 /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
 		39068B4368423677CA387168 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		45AD072C42CEDFF1299909E3 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
@@ -81,6 +82,7 @@
 		C9A82C055235B8D4E103AF95 /* Comment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Comment.swift; sourceTree = "<group>"; };
 		CB5079D934DE75DD36A85EB1 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		D23E08E42283C36392DFBEA9 /* CookModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookModeView.swift; sourceTree = "<group>"; };
+		D40053541A36E996D238B572 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		D730369827269A7072F416A2 /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedViewModel.swift; sourceTree = "<group>"; };
 		DBD01D0EB9310C72D911EC60 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		DC60D2B53505A6374F68AFBB /* PostViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostViewModel.swift; sourceTree = "<group>"; };
@@ -224,6 +226,7 @@
 			children = (
 				15E25A27F96B53A311D1785A /* AppState.swift */,
 				39068B4368423677CA387168 /* Configuration.swift */,
+				D40053541A36E996D238B572 /* Theme.swift */,
 				257BD59C9143F329A0240F72 /* TraysSocialApp.swift */,
 			);
 			path = App;
@@ -304,7 +307,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2640;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					47BF1FF91ACD6CD6BBCBB2AC = {
+						DevelopmentTeam = "";
+					};
+				};
 			};
 			buildConfigurationList = 2C9519EE39CD9810A0752FB8 /* Build configuration list for PBXProject "TraysSocial" */;
 			developmentRegion = en;
@@ -374,6 +382,7 @@
 				6FE9A6006F066A65428A5164 /* ProfileViewModel.swift in Sources */,
 				BAE221C8716562D3F5253854 /* PushNotificationService.swift in Sources */,
 				9280D37823B72E4D7F07A8F3 /* RegisterView.swift in Sources */,
+				F2BF3A3ADB396931C925D745 /* Theme.swift in Sources */,
 				E0633D5901A6A1D5BAEBDE1A /* TraySelector.swift in Sources */,
 				BD00C5D666CF7BEBDA198327 /* TraysSocialApp.swift in Sources */,
 				DC9FFDCAB43C8DE2FD2A03B9 /* User.swift in Sources */,
@@ -388,7 +397,7 @@
 		0A97BADD9137E1FB8483C388 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				API_BASE_URL = "http://localhost:4000";
+				API_BASE_URL = "https://trays-social-review.fly.dev";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
@@ -409,7 +418,7 @@
 		16ED6ED67F6A5E7FAB9F1D49 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				API_BASE_URL = "https://trays-social.fly.dev";
+				API_BASE_URL = "https://trays-social-review.fly.dev";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
@@ -462,10 +471,9 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = 6TN2AZM26U;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -479,7 +487,6 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
@@ -521,10 +528,9 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = 6TN2AZM26U;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -545,7 +551,6 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;

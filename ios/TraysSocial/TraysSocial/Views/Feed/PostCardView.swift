@@ -51,7 +51,7 @@ struct PostCardView: View {
                 Button(action: { onTrayTap?() }) {
                     Text("+ Tray")
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Theme.accent)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(.ultraThinMaterial)
@@ -117,7 +117,7 @@ struct PostCardView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
-        .background(.black)
+        .background(Theme.background)
     }
 
     private var photoPlaceholder: some View {

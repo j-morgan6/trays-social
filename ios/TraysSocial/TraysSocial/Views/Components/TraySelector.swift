@@ -13,7 +13,7 @@ struct TraySelector: View {
                 } label: {
                     Text(tray.label)
                         .font(.subheadline.weight(selectedTray == tray ? .semibold : .regular))
-                        .foregroundStyle(selectedTray == tray ? .orange : Color(.systemGray))
+                        .foregroundStyle(selectedTray == tray ? Theme.accent : Color(.systemGray))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(

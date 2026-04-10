@@ -44,7 +44,7 @@ struct FindView: View {
                                     .foregroundStyle(viewModel.activeFilter == chip ? .white : Color(.systemGray))
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 8)
-                                    .background(viewModel.activeFilter == chip ? .orange : Color.white.opacity(0.06))
+                                    .background(viewModel.activeFilter == chip ? Theme.accent : Color.white.opacity(0.06))
                                     .clipShape(Capsule())
                                     .overlay(
                                         Capsule()
@@ -78,7 +78,7 @@ struct FindView: View {
         if viewModel.isSearching {
             HStack {
                 Spacer()
-                ProgressView().tint(.orange)
+                ProgressView().tint(Theme.accent)
                 Spacer()
             }
             .padding(.top, 40)
@@ -154,7 +154,7 @@ struct FindView: View {
         if viewModel.isLoadingTrending {
             HStack {
                 Spacer()
-                ProgressView().tint(.orange)
+                ProgressView().tint(Theme.accent)
                 Spacer()
             }
             .padding(.top, 40)
@@ -201,7 +201,7 @@ private struct TrendingCard: View {
                 }
 
                 if let time = post.cookingTimeMinutes {
-                    BadgePill(text: "\(time) min", color: .orange)
+                    BadgePill(text: "\(time) min", color: Theme.accent)
                         .padding(6)
                 }
             }

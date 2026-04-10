@@ -6,7 +6,7 @@ struct NotificationsView: View {
     var body: some View {
         ScrollView {
             if viewModel.isLoading {
-                ProgressView().tint(.orange).padding(.top, 60)
+                ProgressView().tint(Theme.accent).padding(.top, 60)
             } else if viewModel.notifications.isEmpty {
                 VStack(spacing: 8) {
                     Text("No notifications yet")
@@ -48,7 +48,7 @@ struct NotificationsView: View {
                 }
             }
         }
-        .background(.black)
+        .background(Theme.background)
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.load() }
@@ -118,7 +118,7 @@ private struct NotificationRow: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(notification.isRead ? Color.clear : Color.orange.opacity(0.04))
+            .background(notification.isRead ? Color.clear : Theme.accent.opacity(0.04))
         }
         .buttonStyle(.plain)
     }

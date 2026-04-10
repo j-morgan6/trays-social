@@ -15,9 +15,9 @@ struct BottomBar: View {
                     .font(.title2.weight(.medium))
                     .foregroundStyle(.white)
                     .frame(width: 48, height: 48)
-                    .background(.orange)
+                    .background(Theme.accent)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .shadow(color: .orange.opacity(0.25), radius: 8, y: 4)
+                    .shadow(color: Theme.accent.opacity(0.25), radius: 8, y: 4)
             }
 
             Spacer()
@@ -53,7 +53,7 @@ struct BottomBar: View {
             Spacer()
         }
         .padding(.vertical, 10)
-        .background(.black)
+        .background(Theme.background)
         .overlay(alignment: .top) {
             Rectangle()
                 .fill(Color.white.opacity(0.08))

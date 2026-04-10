@@ -10,7 +10,7 @@ struct ProfileView: View {
     var body: some View {
         ScrollView {
             if viewModel.isLoading {
-                ProgressView().tint(.orange).padding(.top, 60)
+                ProgressView().tint(Theme.accent).padding(.top, 60)
             } else if let user = viewModel.user {
                 VStack(spacing: 20) {
                     // Avatar + Name
@@ -80,7 +80,7 @@ struct ProfileView: View {
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
-                                .background(user.followedByCurrentUser == true ? Color.white.opacity(0.1) : .orange)
+                                .background(user.followedByCurrentUser == true ? Color.white.opacity(0.1) : Theme.primary)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .padding(.horizontal, 16)
@@ -110,7 +110,7 @@ struct ProfileView: View {
                 .padding(.top, 16)
             }
         }
-        .background(.black)
+        .background(Theme.background)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.loadProfile(username: username, currentUserId: appState.currentUser?.id)
@@ -172,7 +172,7 @@ struct EditProfileView: View {
                 Spacer()
             }
             .padding(16)
-            .background(.black)
+            .background(Theme.background)
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -218,7 +218,7 @@ struct SettingsView: View {
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
-            .background(.black)
+            .background(Theme.background)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

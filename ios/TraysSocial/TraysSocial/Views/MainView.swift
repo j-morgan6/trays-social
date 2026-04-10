@@ -15,7 +15,7 @@ struct MainView: View {
                 HStack {
                     Text("Trays")
                         .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.text)
 
                     Spacer()
 
@@ -27,7 +27,7 @@ struct MainView: View {
                             .foregroundStyle(.gray)
                             .overlay(alignment: .topTrailing) {
                                 Circle()
-                                    .fill(.orange)
+                                    .fill(Theme.accent)
                                     .frame(width: 8, height: 8)
                                     .offset(x: 2, y: -2)
                             }
@@ -61,7 +61,7 @@ struct MainView: View {
                     profilePhotoURL: appState.currentUser?.profilePhotoUrl
                 )
             }
-            .background(.black)
+            .background(Theme.background)
             .navigationDestination(isPresented: $showNotifications) {
                 NotificationsView()
             }

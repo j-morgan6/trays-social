@@ -40,7 +40,7 @@ struct FeedView: View {
         .overlay {
             if viewModel.isLoading && viewModel.posts.isEmpty {
                 ProgressView()
-                    .tint(.orange)
+                    .tint(Theme.accent)
             } else if viewModel.posts.isEmpty && !viewModel.isLoading {
                 VStack(spacing: 8) {
                     Text("No recipes yet")

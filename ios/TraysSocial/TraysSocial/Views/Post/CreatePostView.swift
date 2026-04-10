@@ -107,13 +107,13 @@ struct CreatePostView: View {
                                 .frame(height: 50)
                         }
                     }
-                    .background(.orange)
+                    .background(Theme.accent)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .disabled(viewModel.isPublishing)
                 }
                 .padding(16)
             }
-            .background(.black)
+            .background(Theme.background)
             .navigationTitle("New \(viewModel.postType == .recipe ? "Recipe" : "Post")")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -178,7 +178,7 @@ struct CreatePostView: View {
                     .frame(width: 50)
                 Button { viewModel.addIngredient() } label: {
                     Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Theme.accent)
                 }
             }
             .font(.subheadline)
@@ -195,7 +195,7 @@ struct CreatePostView: View {
             ForEach(Array(viewModel.steps.enumerated()), id: \.element.id) { index, step in
                 HStack(alignment: .top) {
                     Text("\(index + 1).")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Theme.accent)
                     Text(step.description)
                     Spacer()
                     Button { viewModel.removeStep(at: index) } label: {
@@ -210,7 +210,7 @@ struct CreatePostView: View {
                 TextField("Describe the step", text: $viewModel.newStepText)
                 Button { viewModel.addStep() } label: {
                     Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Theme.accent)
                 }
             }
             .font(.subheadline)
@@ -246,7 +246,7 @@ struct CreatePostView: View {
                 TextField("Tool name", text: $viewModel.newToolName)
                 Button { viewModel.addTool() } label: {
                     Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Theme.accent)
                 }
             }
             .font(.subheadline)

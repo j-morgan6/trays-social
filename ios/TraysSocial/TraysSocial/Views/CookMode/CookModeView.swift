@@ -42,7 +42,7 @@ struct CookModeView: View {
                     Rectangle()
                         .fill(Color.white.opacity(0.1))
                     Rectangle()
-                        .fill(.orange)
+                        .fill(Theme.accent)
                         .frame(width: geo.size.width * progress)
                         .animation(.easeInOut(duration: 0.3), value: currentStep)
                 }
@@ -83,14 +83,14 @@ struct CookModeView: View {
                         Text("Start \(formatTime(detected)) timer?")
                     }
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Theme.accent)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 14)
-                    .background(Color.orange.opacity(0.12))
+                    .background(Theme.accent.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(.orange.opacity(0.3), lineWidth: 1)
+                            .stroke(Theme.accent.opacity(0.3), lineWidth: 1)
                     )
                 }
                 .padding(.bottom, 16)
@@ -146,7 +146,7 @@ struct CookModeView: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 14)
-                        .background(.orange)
+                        .background(Theme.accent)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 } else {
@@ -164,7 +164,7 @@ struct CookModeView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
         }
-        .background(.black)
+        .background(Theme.background)
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = true
         }
