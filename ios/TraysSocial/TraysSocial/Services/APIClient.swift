@@ -65,7 +65,7 @@ actor APIClient {
 
     // MARK: - Multipart Upload
 
-    func upload(path: String, imageData: Data, filename: String) async throws -> UploadResponse {
+    func upload(path: String, imageData: Data, filename: String) async throws -> String {
         let boundary = UUID().uuidString
         var request = try buildRequest(method: "POST", path: path)
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
@@ -79,7 +79,8 @@ actor APIClient {
 
         request.httpBody = body
 
-        return try await execute(request)
+        let response: UploadResponseWrapper = try await execute(request)
+        return response.data.url
     }
 
     // MARK: - Private

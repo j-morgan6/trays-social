@@ -17,8 +17,12 @@ struct MessageResponse: Decodable, Sendable {
     }
 }
 
-struct UploadResponse: Decodable, Sendable {
-    let url: String
+struct UploadResponseWrapper: Decodable, Sendable {
+    let data: UploadData
+
+    struct UploadData: Decodable, Sendable {
+        let url: String
+    }
 }
 
 struct EmptyResponse: Decodable, Sendable {}

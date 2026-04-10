@@ -87,7 +87,7 @@ final class CreatePostViewModel {
 
         do {
             // Upload photo first
-            let uploadResponse = try await APIClient.shared.upload(
+            let photoURL = try await APIClient.shared.upload(
                 path: "/uploads",
                 imageData: photoData,
                 filename: "photo.jpg"
@@ -97,7 +97,7 @@ final class CreatePostViewModel {
             var params: [String: Any] = [
                 "type": postType.rawValue,
                 "caption": caption,
-                "post_photos": [["photo_url": uploadResponse.url, "position": 0]]
+                "post_photos": [["photo_url": photoURL, "position": 0]]
             ]
 
             if postType == .recipe {
