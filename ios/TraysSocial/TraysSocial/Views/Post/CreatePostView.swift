@@ -107,7 +107,7 @@ struct CreatePostView: View {
                                 .frame(height: 50)
                         }
                     }
-                    .background(Theme.accent)
+                    .background(Theme.primary)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .disabled(viewModel.isPublishing)
                 }
@@ -178,7 +178,7 @@ struct CreatePostView: View {
                     .frame(width: 50)
                 Button { viewModel.addIngredient() } label: {
                     Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(Theme.accent)
+                        .foregroundStyle(Theme.primary)
                 }
             }
             .font(.subheadline)
@@ -195,7 +195,7 @@ struct CreatePostView: View {
             ForEach(Array(viewModel.steps.enumerated()), id: \.element.id) { index, step in
                 HStack(alignment: .top) {
                     Text("\(index + 1).")
-                        .foregroundStyle(Theme.accent)
+                        .foregroundStyle(Theme.primary)
                     Text(step.description)
                     Spacer()
                     Button { viewModel.removeStep(at: index) } label: {
@@ -210,7 +210,7 @@ struct CreatePostView: View {
                 TextField("Describe the step", text: $viewModel.newStepText)
                 Button { viewModel.addStep() } label: {
                     Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(Theme.accent)
+                        .foregroundStyle(Theme.primary)
                 }
             }
             .font(.subheadline)
@@ -246,7 +246,7 @@ struct CreatePostView: View {
                 TextField("Tool name", text: $viewModel.newToolName)
                 Button { viewModel.addTool() } label: {
                     Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(Theme.accent)
+                        .foregroundStyle(Theme.primary)
                 }
             }
             .font(.subheadline)

@@ -51,9 +51,9 @@ struct PostDetailView: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 12)
-                            .background(Theme.accent)
+                            .background(Theme.primary)
                             .clipShape(Capsule())
-                            .shadow(color: Theme.accent.opacity(0.3), radius: 8, y: 4)
+                            .shadow(color: Theme.primary.opacity(0.3), radius: 8, y: 4)
                             .padding(.trailing, 16)
                             .padding(.bottom, 70)
                         }

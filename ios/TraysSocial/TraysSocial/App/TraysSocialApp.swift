@@ -14,7 +14,7 @@ struct TraysSocialApp: App {
                 }
             }
             .environment(appState)
-            .preferredColorScheme(.dark)
+            // Respects system light/dark mode setting
         }
     }
 }

@@ -53,7 +53,7 @@ struct UsernamePickerView: View {
                         .frame(height: 50)
                 }
             }
-            .background(viewModel.isUsernameValid ? Theme.accent : .gray.opacity(0.3))
+            .background(viewModel.isUsernameValid ? Theme.primary : .gray.opacity(0.3))
             .cornerRadius(12)
             .disabled(!viewModel.isUsernameValid || viewModel.isLoading)
 

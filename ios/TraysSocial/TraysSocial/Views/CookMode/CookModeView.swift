@@ -146,7 +146,7 @@ struct CookModeView: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 14)
-                        .background(Theme.accent)
+                        .background(Theme.primary)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 } else {

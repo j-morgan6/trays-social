@@ -15,9 +15,9 @@ struct BottomBar: View {
                     .font(.title2.weight(.medium))
                     .foregroundStyle(.white)
                     .frame(width: 48, height: 48)
-                    .background(Theme.accent)
+                    .background(Theme.primary)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .shadow(color: Theme.accent.opacity(0.25), radius: 8, y: 4)
+                    .shadow(color: Theme.primary.opacity(0.25), radius: 8, y: 4)
             }
 
             Spacer()

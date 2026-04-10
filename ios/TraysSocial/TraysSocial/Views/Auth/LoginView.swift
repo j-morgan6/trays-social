@@ -50,7 +50,7 @@ struct LoginView: View {
                         .frame(height: 50)
                 }
             }
-            .background(viewModel.canLogin ? Theme.accent : .gray.opacity(0.3))
+            .background(viewModel.canLogin ? Theme.primary : .gray.opacity(0.3))
             .cornerRadius(12)
             .disabled(!viewModel.canLogin)
 
