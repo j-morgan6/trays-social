@@ -23,7 +23,6 @@ targets:
         CURRENT_PROJECT_VERSION: 1
         MARKETING_VERSION: 1.0.0
         GENERATE_INFOPLIST_FILE: false
-        UIUserInterfaceStyle: Dark
         API_BASE_URL: "https://trays-social-review.fly.dev"
       configs:
         debug:

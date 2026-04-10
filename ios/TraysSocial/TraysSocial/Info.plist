@@ -31,8 +31,6 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
-	<key>UIUserInterfaceStyle</key>
-	<string>Dark</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Trays needs camera access to take photos of your recipes</string>
 	<key>NSPhotoLibraryUsageDescription</key>
