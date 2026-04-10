@@ -57,12 +57,6 @@ struct FeedView: View {
                 await viewModel.loadFeed()
             }
         }
-        .navigationDestination(item: $navigateToPost) { post in
-            PostDetailView(postId: post.id)
-        }
-        .navigationDestination(item: $navigateToUser) { username in
-            UserProfilePlaceholder(username: username)
-        }
     }
 
     private func bookmarkPost(_ post: Post) {
