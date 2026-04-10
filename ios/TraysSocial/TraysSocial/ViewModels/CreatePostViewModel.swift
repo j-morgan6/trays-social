@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 
+@MainActor
 @Observable
 final class CreatePostViewModel {
     var postType: PostType = .recipe

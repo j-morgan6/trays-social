@@ -1,6 +1,6 @@
 import Foundation
 
-struct Post: Codable, Identifiable {
+struct Post: Codable, Identifiable, Sendable {
     let id: Int
     let type: String
     let caption: String?
@@ -29,33 +29,33 @@ struct Post: Codable, Identifiable {
     }
 }
 
-struct PostUser: Codable, Identifiable {
+struct PostUser: Codable, Identifiable, Sendable {
     let id: Int
     let username: String
     let profilePhotoUrl: String?
 }
 
-struct PostPhoto: Codable {
+struct PostPhoto: Codable, Sendable {
     let url: String
     let thumbUrl: String?
     let mediumUrl: String?
     let position: Int
 }
 
-struct Ingredient: Codable, Identifiable {
+struct Ingredient: Codable, Identifiable, Sendable {
     var id: String { "\(name)-\(quantity ?? "")" }
     let name: String
     let quantity: String?
     let unit: String?
 }
 
-struct CookingStep: Codable, Identifiable {
+struct CookingStep: Codable, Identifiable, Sendable {
     var id: Int { position }
     let position: Int
     let instruction: String
 }
 
-struct Tool: Codable, Identifiable {
+struct Tool: Codable, Identifiable, Sendable {
     var id: String { name }
     let name: String
 }

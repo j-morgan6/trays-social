@@ -231,11 +231,13 @@ struct CookModeView: View {
     private func startTimer(seconds: Int) {
         timerRemaining = seconds
         timerActive = true
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            if timerRemaining > 0 {
-                timerRemaining -= 1
-            } else {
-                stopTimer()
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [self] _ in
+            Task { @MainActor in
+                if timerRemaining > 0 {
+                    timerRemaining -= 1
+                } else {
+                    stopTimer()
+                }
             }
         }
     }

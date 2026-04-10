@@ -1,6 +1,6 @@
 import Foundation
 
-struct AppNotification: Codable, Identifiable {
+struct AppNotification: Codable, Identifiable, Sendable {
     let id: Int
     let type: String
     let readAt: Date?
@@ -11,13 +11,13 @@ struct AppNotification: Codable, Identifiable {
     var isRead: Bool { readAt != nil }
 }
 
-struct NotificationActor: Codable {
+struct NotificationActor: Codable, Sendable {
     let id: Int
     let username: String
     let profilePhotoUrl: String?
 }
 
-struct NotificationPost: Codable {
+struct NotificationPost: Codable, Sendable {
     let id: Int
     let thumbnailUrl: String?
 }

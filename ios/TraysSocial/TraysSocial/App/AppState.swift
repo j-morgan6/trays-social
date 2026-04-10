@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 @Observable
 final class AppState {
     var isAuthenticated = false
@@ -27,15 +28,11 @@ final class AppState {
         Task {
             do {
                 let user = try await AuthService.fetchMe()
-                await MainActor.run {
-                    self.currentUser = user
-                    self.isValidatingToken = false
-                }
+                self.currentUser = user
+                self.isValidatingToken = false
             } catch {
-                await MainActor.run {
-                    self.handleUnauthorized()
-                    self.isValidatingToken = false
-                }
+                self.handleUnauthorized()
+                self.isValidatingToken = false
             }
         }
     }

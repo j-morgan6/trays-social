@@ -27,11 +27,11 @@ enum APIError: LocalizedError {
     }
 }
 
-struct FieldError: Decodable {
+struct FieldError: Decodable, Sendable {
     let field: String?
     let message: String
 }
 
-struct ErrorResponse: Decodable {
+struct ErrorResponse: Decodable, Sendable {
     let errors: [FieldError]
 }

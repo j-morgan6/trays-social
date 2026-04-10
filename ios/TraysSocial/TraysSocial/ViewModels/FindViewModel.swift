@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 
+@MainActor
 @Observable
 final class FindViewModel {
     var searchText = ""
@@ -86,7 +87,7 @@ final class FindViewModel {
     }
 }
 
-struct SearchResults: Decodable {
+struct SearchResults: Decodable, Sendable {
     let posts: [Post]
     let users: [User]
 }

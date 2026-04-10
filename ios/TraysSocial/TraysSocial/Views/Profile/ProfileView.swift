@@ -230,7 +230,7 @@ struct SettingsView: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Delete", role: .destructive) {
                     Task {
-                        try? await APIClient.shared.delete(path: "/auth/me")
+                        _ = try? await APIClient.shared.delete(path: "/auth/me") as EmptyResponse
                         appState.handleUnauthorized()
                         dismiss()
                     }

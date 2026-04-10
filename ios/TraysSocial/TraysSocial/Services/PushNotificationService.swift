@@ -15,11 +15,11 @@ enum PushNotificationService {
 
     static func registerDeviceToken(_ tokenData: Data) async {
         let token = tokenData.map { String(format: "%02.2hhx", $0) }.joined()
-        try? await APIClient.shared.post(path: "/devices", body: ["token": token, "platform": "ios"])
+        _ = try? await APIClient.shared.post(path: "/devices", body: ["token": token, "platform": "ios"])
     }
 
     static func unregisterDeviceToken(_ tokenData: Data) async {
         let token = tokenData.map { String(format: "%02.2hhx", $0) }.joined()
-        try? await APIClient.shared.delete(path: "/devices/\(token)")
+        _ = try? await APIClient.shared.delete(path: "/devices/\(token)") as EmptyResponse
     }
 }

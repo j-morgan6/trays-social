@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 @Observable
 final class PostViewModel {
     var post: Post?
@@ -27,7 +28,7 @@ final class PostViewModel {
     }
 
     func toggleLike() {
-        guard var p = post else { return }
+        guard let p = post else { return }
         let wasLiked = p.likedByCurrentUser
         // Optimistic update
         post = Post(

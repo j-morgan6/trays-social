@@ -1,6 +1,6 @@
 import Foundation
 
-struct User: Codable, Identifiable {
+struct User: Codable, Identifiable, Sendable {
     let id: Int
     let username: String
     let email: String?
@@ -15,7 +15,7 @@ struct User: Codable, Identifiable {
     let followedByCurrentUser: Bool?
 }
 
-struct AuthResponse: Decodable {
+struct AuthResponse: Decodable, Sendable {
     let token: String
     let user: User
     let needsUsername: Bool?

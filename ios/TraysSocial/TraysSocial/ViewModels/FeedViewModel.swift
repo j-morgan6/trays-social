@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 @Observable
 final class FeedViewModel {
     var posts: [Post] = []

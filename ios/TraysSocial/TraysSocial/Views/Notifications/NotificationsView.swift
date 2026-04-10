@@ -95,7 +95,7 @@ private struct NotificationRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(notificationText)
                         .font(.subheadline)
-                        .foregroundStyle(notification.isRead ? .secondary : .white)
+                        .foregroundColor(notification.isRead ? .secondary : .white)
                         .lineLimit(2)
 
                     Text(notification.insertedAt.timeAgo())

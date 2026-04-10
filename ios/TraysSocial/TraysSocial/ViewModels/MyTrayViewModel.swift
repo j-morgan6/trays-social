@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 @Observable
 final class MyTrayViewModel {
     var posts: [Post] = []

@@ -4,6 +4,7 @@ import PhotosUI
 struct CreatePostView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = CreatePostViewModel()
+    @State private var selectedPhoto: PhotosPickerItem?
 
     var body: some View {
         NavigationStack {
@@ -16,17 +17,29 @@ struct CreatePostView: View {
                     }
                     .pickerStyle(.segmented)
 
-                    // Photo picker
-                    PhotosPicker(selection: $viewModel.selectedPhoto, matching: .images) {
-                        if let image = viewModel.photoImage {
-                            image
-                                .resizable()
-                                .scaledToFill()
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 200)
-                                .clipped()
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        } else {
+                    // Photo display + picker
+                    if let image = viewModel.photoImage {
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 200)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(alignment: .bottomTrailing) {
+                                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                                    Text("Change")
+                                        .font(.caption.weight(.medium))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(.ultraThinMaterial)
+                                        .clipShape(Capsule())
+                                        .padding(8)
+                                }
+                            }
+                    } else {
+                        PhotosPicker(selection: $selectedPhoto, matching: .images) {
                             VStack(spacing: 8) {
                                 Image(systemName: "camera")
                                     .font(.title)
@@ -40,9 +53,13 @@ struct CreatePostView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                     }
-                    .onChange(of: viewModel.selectedPhoto) {
-                        Task { await viewModel.loadPhoto() }
-                    }
+
+                    // Load photo when selection changes
+                    EmptyView()
+                        .onChange(of: selectedPhoto) {
+                            viewModel.selectedPhoto = selectedPhoto
+                            Task { await viewModel.loadPhoto() }
+                        }
 
                     // Caption
                     TextField("Caption", text: $viewModel.caption, axis: .vertical)

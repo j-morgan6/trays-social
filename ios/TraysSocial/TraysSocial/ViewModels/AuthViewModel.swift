@@ -1,6 +1,7 @@
 import SwiftUI
 import AuthenticationServices
 
+@MainActor
 @Observable
 final class AuthViewModel {
     var email = ""
@@ -100,7 +101,6 @@ final class AuthViewModel {
                     pendingToken = response.token
                     pendingUser = response.user
                     needsUsername = true
-                    // Store token temporarily so the username update call is authenticated
                     KeychainService.save(token: response.token)
                 } else {
                     appState.login(token: response.token, user: response.user)
@@ -120,7 +120,7 @@ final class AuthViewModel {
     }
 
     func setUsername(appState: AppState) async {
-        guard isUsernameValid, let token = pendingToken, let user = pendingUser else { return }
+        guard isUsernameValid, let token = pendingToken, pendingUser != nil else { return }
 
         isLoading = true
         errorMessage = nil
