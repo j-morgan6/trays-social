@@ -44,7 +44,7 @@ struct WelcomeView: View {
                         showLogin = true
                     }
                     .font(.body.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.text)
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
                     .background(Theme.surface)
