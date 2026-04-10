@@ -48,9 +48,9 @@ defmodule TraysSocialWeb.API.V1.JSON.PostJSON do
 
     Enum.map(photos, fn photo ->
       %{
-        url: photo.photo_url,
-        thumb_url: ImageProcessor.thumb_url(photo.photo_url),
-        medium_url: ImageProcessor.medium_url(photo.photo_url),
+        url: photo.url,
+        thumb_url: ImageProcessor.thumb_url(photo.url),
+        medium_url: ImageProcessor.medium_url(photo.url),
         position: photo.position
       }
     end)
