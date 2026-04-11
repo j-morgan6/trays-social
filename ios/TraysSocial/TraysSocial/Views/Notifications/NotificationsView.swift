@@ -79,7 +79,7 @@ private struct NotificationRow: View {
                     .fill(Color(.systemGray4))
                     .frame(width: 40, height: 40)
                     .overlay {
-                        if let url = notification.actor?.profilePhotoUrl, let imageURL = URL(string: url) {
+                        if let url = notification.actor?.profilePhotoUrl, let imageURL = url.asBackendURL {
                             AsyncImage(url: imageURL) { image in
                                 image.resizable().scaledToFill()
                             } placeholder: { Color.clear }
@@ -107,7 +107,7 @@ private struct NotificationRow: View {
 
                 // Post thumbnail
                 if let post = notification.post, let thumb = post.thumbnailUrl {
-                    AsyncImage(url: URL(string: thumb)) { image in
+                    AsyncImage(url: thumb.asBackendURL) { image in
                         image.resizable().scaledToFill()
                     } placeholder: {
                         Rectangle().fill(Color(.systemGray5))
@@ -154,4 +154,5 @@ private struct NotificationRow: View {
 
         return text
     }
+
 }

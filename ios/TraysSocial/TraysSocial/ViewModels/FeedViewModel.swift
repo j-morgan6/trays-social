@@ -53,4 +53,12 @@ final class FeedViewModel {
         hasMore = true
         await loadFeed()
     }
+
+    /// Replace a post in the feed with an updated version (e.g. after the user mutates it in PostDetailView).
+    /// No-op if the post is no longer in the loaded page (user paginated past it).
+    func applyPostUpdate(_ post: Post) {
+        if let index = posts.firstIndex(where: { $0.id == post.id }) {
+            posts[index] = post
+        }
+    }
 }

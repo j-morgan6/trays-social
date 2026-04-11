@@ -3,14 +3,14 @@ import SwiftUI
 struct PostCardView: View {
     let post: Post
     var onTrayTap: (() -> Void)?
-    var onUserTap: (() -> Void)?
+    var onLikeTap: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Photo with badges
             ZStack(alignment: .bottom) {
                 if let photoURL = post.primaryPhotoURL {
-                    AsyncImage(url: fullURL(photoURL)) { phase in
+                    AsyncImage(url: photoURL.asBackendURL) { phase in
                         switch phase {
                         case .success(let image):
                             image
@@ -46,29 +46,6 @@ struct PostCardView: View {
                 }
                 .padding(10)
             }
-            .overlay(alignment: .topTrailing) {
-                // Tray button
-                Button(action: { onTrayTap?() }) {
-                    let isBookmarked = post.bookmarkedByCurrentUser ?? false
-                    HStack(spacing: 4) {
-                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                        Text(isBookmarked ? "Saved" : "+ Tray")
-                    }
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(isBookmarked ? Theme.primary : Theme.accent)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background {
-                        if isBookmarked {
-                            Theme.primary.opacity(0.2)
-                        } else {
-                            Color.black.opacity(0.5)
-                        }
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                .padding(10)
-            }
 
             // Post info
             VStack(alignment: .leading, spacing: 6) {
@@ -82,13 +59,13 @@ struct PostCardView: View {
 
                 // Author + time + counts
                 HStack {
-                    Button(action: { onUserTap?() }) {
+                    NavigationLink(value: post.user.username) {
                         HStack(spacing: 6) {
                             Circle()
                                 .fill(Color(.systemGray4))
                                 .frame(width: 20, height: 20)
                                 .overlay {
-                                    if let url = post.user.profilePhotoUrl, let imageURL = fullURL(url) {
+                                    if let url = post.user.profilePhotoUrl, let imageURL = url.asBackendURL {
                                         AsyncImage(url: imageURL) { image in
                                             image.resizable().scaledToFill()
                                         } placeholder: {
@@ -111,14 +88,32 @@ struct PostCardView: View {
                                 .font(.caption)
                                 .foregroundStyle(Color(.systemGray2))
                         }
+                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.borderless)
 
                     Spacer()
 
                     HStack(spacing: 12) {
-                        Label("\(post.likeCount)", systemImage: "heart")
+                        Button(action: { onLikeTap?() }) {
+                            Label("\(post.likeCount)", systemImage: post.likedByCurrentUser ? "heart.fill" : "heart")
+                                .foregroundStyle(post.likedByCurrentUser ? .red : Color(.systemGray2))
+                                .padding(.vertical, 4)
+                                .padding(.horizontal, 4)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.borderless)
+
                         Label("\(post.commentCount)", systemImage: "bubble.right")
+
+                        Button(action: { onTrayTap?() }) {
+                            Image(systemName: (post.bookmarkedByCurrentUser ?? false) ? "bookmark.fill" : "bookmark")
+                                .foregroundStyle((post.bookmarkedByCurrentUser ?? false) ? Theme.accent : Color(.systemGray2))
+                                .padding(.vertical, 4)
+                                .padding(.horizontal, 6)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.borderless)
                     }
                     .font(.caption)
                     .foregroundStyle(Color(.systemGray2))
@@ -136,12 +131,6 @@ struct PostCardView: View {
             .frame(height: 240)
     }
 
-    private func fullURL(_ path: String) -> URL? {
-        if path.hasPrefix("http") {
-            return URL(string: path)
-        }
-        return URL(string: Configuration.apiBaseURL + path)
-    }
 }
 
 // MARK: - Badge Pill

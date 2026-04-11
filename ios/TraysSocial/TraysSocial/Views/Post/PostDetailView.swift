@@ -33,6 +33,7 @@ struct PostDetailView: View {
                         // Spacer for comment input
                         Spacer().frame(height: 80)
                     }
+                    .containerRelativeFrame(.horizontal, alignment: .leading)
                 }
 
                 // Comment input bar
@@ -81,11 +82,12 @@ struct PostDetailView: View {
         if post.photos.count > 1 {
             TabView {
                 ForEach(post.photos.sorted(by: { $0.position < $1.position }), id: \.position) { photo in
-                    AsyncImage(url: fullURL(photo.url)) { image in
+                    AsyncImage(url: photo.url.asBackendURL) { image in
                         image.resizable().scaledToFill()
                     } placeholder: {
                         Rectangle().fill(Color(.systemGray5))
                     }
+                    .containerRelativeFrame(.horizontal)
                     .frame(height: 300)
                     .clipped()
                 }
@@ -93,11 +95,12 @@ struct PostDetailView: View {
             .tabViewStyle(.page)
             .frame(height: 300)
         } else if let url = post.primaryPhotoURL {
-            AsyncImage(url: fullURL(url)) { image in
+            AsyncImage(url: url.asBackendURL) { image in
                 image.resizable().scaledToFill()
             } placeholder: {
                 Rectangle().fill(Color(.systemGray5))
             }
+            .containerRelativeFrame(.horizontal)
             .frame(height: 300)
             .clipped()
         }
@@ -220,6 +223,7 @@ struct PostDetailView: View {
             }
         }
         .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Tags
@@ -272,6 +276,7 @@ struct PostDetailView: View {
             }
         }
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Comment Input
@@ -303,10 +308,6 @@ struct PostDetailView: View {
         }
     }
 
-    private func fullURL(_ path: String) -> URL? {
-        if path.hasPrefix("http") { return URL(string: path) }
-        return URL(string: Configuration.apiBaseURL + path)
-    }
 }
 
 // MARK: - Flow Layout (for tools)
@@ -327,15 +328,31 @@ struct FlowLayout: Layout {
     }
 
     private func layout(subviews: Subviews, proposal: ProposedViewSize) -> (size: CGSize, positions: [CGPoint]) {
-        let maxWidth = proposal.width ?? .infinity
+        // Pre-measure every subview so we can compute a finite fallback width
+        // when SwiftUI calls us during a measurement pass with an unspecified proposal.
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let naturalWidth = sizes.reduce(0) { $0 + $1.width }
+            + CGFloat(max(0, sizes.count - 1)) * spacing
+
+        // If the parent proposes a finite width, wrap to fit it.
+        // If the proposal is nil/infinite (measurement phase), use the natural
+        // single-row width so we NEVER report .infinity back up the view tree.
+        let maxWidth: CGFloat = {
+            if let proposed = proposal.width, proposed.isFinite {
+                return proposed
+            }
+            return naturalWidth
+        }()
+
         var positions: [CGPoint] = []
         var x: CGFloat = 0
         var y: CGFloat = 0
         var rowHeight: CGFloat = 0
+        var maxRowWidth: CGFloat = 0
 
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
+        for size in sizes {
             if x + size.width > maxWidth && x > 0 {
+                maxRowWidth = max(maxRowWidth, x - spacing)
                 x = 0
                 y += rowHeight + spacing
                 rowHeight = 0
@@ -344,8 +361,13 @@ struct FlowLayout: Layout {
             rowHeight = max(rowHeight, size.height)
             x += size.width + spacing
         }
+        // Account for the final row.
+        maxRowWidth = max(maxRowWidth, x - (sizes.isEmpty ? 0 : spacing))
 
-        return (CGSize(width: maxWidth, height: y + rowHeight), positions)
+        // Report the actual content extent, not the proposed width — this prevents
+        // the layout from telling its parent "I need infinite width" and forcing
+        // the enclosing ScrollView/VStack wider than the viewport.
+        return (CGSize(width: maxRowWidth, height: y + rowHeight), positions)
     }
 }
 

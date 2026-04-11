@@ -7,7 +7,7 @@ options:
   createIntermediateGroups: true
 settings:
   base:
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: "6TN2AZM26U"
     SWIFT_VERSION: "6.0"
 targets:
   TraysSocial:
@@ -20,9 +20,10 @@ targets:
         INFOPLIST_FILE: TraysSocial/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.trays.social
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        CURRENT_PROJECT_VERSION: 1
+        CURRENT_PROJECT_VERSION: 3
         MARKETING_VERSION: 1.0.0
         GENERATE_INFOPLIST_FILE: false
+        TARGETED_DEVICE_FAMILY: "1"
         API_BASE_URL: "https://trays-social-review.fly.dev"
       configs:
         debug:

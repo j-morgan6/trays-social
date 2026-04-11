@@ -24,6 +24,7 @@
 		919AE1F9F4CA872FBEEFE0BE /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39068B4368423677CA387168 /* Configuration.swift */; };
 		9280D37823B72E4D7F07A8F3 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CF540F6F0306A9E936193E /* RegisterView.swift */; };
 		9943152E1E4E6B2049563EAA /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B7815F88CA31767867F48D /* AuthViewModel.swift */; };
+		9F4B2BB2DD63E2B1B1373704 /* String+BackendURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35EDA5485F0DD3EE87C9FF0F /* String+BackendURL.swift */; };
 		A4DC16ED6BAE818151AF8FF1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 32D2EAB385C443516BBDD921 /* Assets.xcassets */; };
 		A9A34BEDF00A118C90677E42 /* FindViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100430FDF305D5E74355F4BC /* FindViewModel.swift */; };
 		AB4C02FA789E916C7F685875 /* CreatePostViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3540592DA46CF395AEEAA5C0 /* CreatePostViewModel.swift */; };
@@ -63,6 +64,7 @@
 		32D2EAB385C443516BBDD921 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3540592DA46CF395AEEAA5C0 /* CreatePostViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostViewModel.swift; sourceTree = "<group>"; };
 		3587970859E9F845326FE543 /* TraysSocial.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TraysSocial.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		35EDA5485F0DD3EE87C9FF0F /* String+BackendURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+BackendURL.swift"; sourceTree = "<group>"; };
 		3893002E61AAB0716240E1B9 /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
 		39068B4368423677CA387168 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		45AD072C42CEDFF1299909E3 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
@@ -195,6 +197,7 @@
 				32D2EAB385C443516BBDD921 /* Assets.xcassets */,
 				E1F2C835D7AE2AADBA2B60A0 /* Info.plist */,
 				674D497F777ED1F19916DF3D /* App */,
+				653C9FB2FF21B9FCF753DC7A /* Extensions */,
 				FCAB5EDF7E4EF9119007CA60 /* Models */,
 				094B5FE2F062F0C2AEDDE086 /* Preview Content */,
 				1DFC01C6D482625EBE263D9E /* Services */,
@@ -219,6 +222,14 @@
 				4034FAD552C97CAE58316AEF /* Profile */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		653C9FB2FF21B9FCF753DC7A /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				35EDA5485F0DD3EE87C9FF0F /* String+BackendURL.swift */,
+			);
+			path = Extensions;
 			sourceTree = "<group>";
 		};
 		674D497F777ED1F19916DF3D /* App */ = {
@@ -310,7 +321,7 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					47BF1FF91ACD6CD6BBCBB2AC = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = 6TN2AZM26U;
 					};
 				};
 			};
@@ -382,6 +393,7 @@
 				6FE9A6006F066A65428A5164 /* ProfileViewModel.swift in Sources */,
 				BAE221C8716562D3F5253854 /* PushNotificationService.swift in Sources */,
 				9280D37823B72E4D7F07A8F3 /* RegisterView.swift in Sources */,
+				9F4B2BB2DD63E2B1B1373704 /* String+BackendURL.swift in Sources */,
 				F2BF3A3ADB396931C925D745 /* Theme.swift in Sources */,
 				E0633D5901A6A1D5BAEBDE1A /* TraySelector.swift in Sources */,
 				BD00C5D666CF7BEBDA198327 /* TraysSocialApp.swift in Sources */,
@@ -400,7 +412,7 @@
 				API_BASE_URL = "https://trays-social-review.fly.dev";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -410,8 +422,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.trays.social;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				UIUserInterfaceStyle = Dark;
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -421,7 +432,7 @@
 				API_BASE_URL = "https://trays-social-review.fly.dev";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -431,8 +442,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.trays.social;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				UIUserInterfaceStyle = Dark;
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -471,7 +481,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 6TN2AZM26U;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -528,7 +538,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 6TN2AZM26U;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;

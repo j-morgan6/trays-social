@@ -29,7 +29,7 @@ struct BottomBar: View {
                         .fill(Color(.systemGray4))
                         .frame(width: 32, height: 32)
                         .overlay {
-                            if let url = profilePhotoURL, let imageURL = URL(string: url) {
+                            if let url = profilePhotoURL, let imageURL = url.asBackendURL {
                                 AsyncImage(url: imageURL) { image in
                                     image.resizable().scaledToFill()
                                 } placeholder: {
@@ -60,4 +60,5 @@ struct BottomBar: View {
                 .frame(height: 1)
         }
     }
+
 }

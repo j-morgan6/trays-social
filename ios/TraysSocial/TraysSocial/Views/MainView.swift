@@ -62,6 +62,12 @@ struct MainView: View {
                 )
             }
             .background(Theme.background)
+            .navigationDestination(for: Post.self) { post in
+                PostDetailView(postId: post.id)
+            }
+            .navigationDestination(for: String.self) { username in
+                ProfileView(username: username)
+            }
             .navigationDestination(isPresented: $showNotifications) {
                 NotificationsView()
             }

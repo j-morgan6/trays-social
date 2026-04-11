@@ -2,21 +2,19 @@ import SwiftUI
 
 struct FeedView: View {
     @State private var viewModel = FeedViewModel()
-    @State private var navigateToPost: Post?
-    @State private var navigateToUser: String?
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(viewModel.posts) { post in
-                    PostCardView(
-                        post: post,
-                        onTrayTap: { toggleBookmark(post) },
-                        onUserTap: { navigateToUser = post.user.username }
-                    )
-                    .onTapGesture {
-                        navigateToPost = post
+                    NavigationLink(value: post) {
+                        PostCardView(
+                            post: post,
+                            onTrayTap: { toggleBookmark(post) },
+                            onLikeTap: { toggleLike(post) }
+                        )
                     }
+                    .buttonStyle(.plain)
                     .onAppear {
                         if post.id == viewModel.posts.last?.id {
                             Task { await viewModel.loadMore() }
@@ -57,6 +55,11 @@ struct FeedView: View {
                 await viewModel.loadFeed()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .postUpdated)) { notification in
+            if let updated = notification.userInfo?["post"] as? Post {
+                viewModel.applyPostUpdate(updated)
+            }
+        }
     }
 
     private func toggleBookmark(_ post: Post) {
@@ -81,16 +84,38 @@ struct FeedView: View {
             if wasBookmarked {
                 _ = try? await APIClient.shared.delete(path: "/bookmarks/\(post.id)") as EmptyResponse
             } else {
-                try? await APIClient.shared.post(path: "/bookmarks/\(post.id)")
+                _ = try? await APIClient.shared.post(path: "/bookmarks/\(post.id)")
             }
         }
     }
-}
 
-// Conform Post and String to Hashable for navigationDestination(item:)
-extension Post: Hashable {
-    static func == (lhs: Post, rhs: Post) -> Bool { lhs.id == rhs.id }
-    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+    private func toggleLike(_ post: Post) {
+        let wasLiked = post.likedByCurrentUser
+
+        // Optimistic UI update
+        if let index = viewModel.posts.firstIndex(where: { $0.id == post.id }) {
+            let p = viewModel.posts[index]
+            viewModel.posts[index] = Post(
+                id: p.id, type: p.type, caption: p.caption,
+                cookingTimeMinutes: p.cookingTimeMinutes, servings: p.servings,
+                likeCount: max(0, p.likeCount + (wasLiked ? -1 : 1)),
+                commentCount: p.commentCount,
+                likedByCurrentUser: !wasLiked,
+                bookmarkedByCurrentUser: p.bookmarkedByCurrentUser,
+                insertedAt: p.insertedAt, user: p.user, photos: p.photos,
+                ingredients: p.ingredients, cookingSteps: p.cookingSteps,
+                tools: p.tools, tags: p.tags
+            )
+        }
+
+        Task {
+            if wasLiked {
+                _ = try? await APIClient.shared.delete(path: "/posts/\(post.id)/like") as EmptyResponse
+            } else {
+                _ = try? await APIClient.shared.post(path: "/posts/\(post.id)/like")
+            }
+        }
+    }
 }
 
 extension String: @retroactive Identifiable {

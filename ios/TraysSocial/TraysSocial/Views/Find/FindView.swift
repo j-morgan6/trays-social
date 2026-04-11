@@ -188,7 +188,7 @@ private struct TrendingCard: View {
             // Photo
             ZStack(alignment: .bottomLeading) {
                 if let url = post.primaryPhotoURL {
-                    AsyncImage(url: fullURL(url)) { image in
+                    AsyncImage(url: url.asBackendURL) { image in
                         image.resizable().scaledToFill()
                     } placeholder: {
                         Rectangle().fill(Color(.systemGray5))
@@ -228,8 +228,4 @@ private struct TrendingCard: View {
         )
     }
 
-    private func fullURL(_ path: String) -> URL? {
-        if path.hasPrefix("http") { return URL(string: path) }
-        return URL(string: Configuration.apiBaseURL + path)
-    }
 }

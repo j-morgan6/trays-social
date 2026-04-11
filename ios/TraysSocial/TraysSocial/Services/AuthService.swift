@@ -22,6 +22,12 @@ enum AuthService {
         let username: String
     }
 
+    struct UpdateProfileRequest: Encodable {
+        let username: String
+        let bio: String
+        let profilePhotoUrl: String?
+    }
+
     static func register(email: String, username: String, password: String) async throws -> AuthResponse {
         let body = RegisterRequest(email: email, username: username, password: password)
         let response: DataResponse<AuthResponse> = try await APIClient.shared.post(path: "/auth/register", body: body)
@@ -47,6 +53,16 @@ enum AuthService {
 
     static func updateUsername(_ username: String) async throws -> User {
         let body = UpdateUsernameRequest(username: username)
+        let response: DataResponse<User> = try await APIClient.shared.put(path: "/auth/me", body: body)
+        return response.data
+    }
+
+    static func updateProfile(username: String, bio: String, profilePhotoUrl: String?) async throws -> User {
+        let body = UpdateProfileRequest(
+            username: username,
+            bio: bio,
+            profilePhotoUrl: profilePhotoUrl
+        )
         let response: DataResponse<User> = try await APIClient.shared.put(path: "/auth/me", body: body)
         return response.data
     }
