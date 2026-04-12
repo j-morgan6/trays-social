@@ -157,6 +157,21 @@
       </div>
     </header>
 
+    <%!-- Email confirmation banner --%>
+    <%= if @current_scope && is_nil(@current_scope.user.confirmed_at) do %>
+      <div class="bg-warning/10 border-b border-warning/30 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4 text-sm">
+          <p class="text-warning-content">
+            Please confirm your email address to post, comment, and interact with others.
+            Check your inbox for the confirmation link.
+          </p>
+          <.link href={~p"/users/confirmation/resend"} method="post" class="btn btn-warning btn-xs shrink-0">
+            Resend email
+          </.link>
+        </div>
+      </div>
+    <% end %>
+
     <%!-- Main Content --%>
     <main class="min-h-screen py-8 pb-24 md:pb-8">
       {@inner_content}

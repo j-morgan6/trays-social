@@ -425,6 +425,35 @@ defmodule TraysSocial.Accounts do
     :ok
   end
 
+  @doc """
+  Delivers confirmation instructions to the given user.
+  """
+  def deliver_user_confirmation_instructions(%User{} = user, confirmation_url_fun)
+      when is_function(confirmation_url_fun, 1) do
+    {encoded_token, user_token} = UserToken.build_email_token(user, "confirm")
+    Repo.insert!(user_token)
+    UserNotifier.deliver_confirmation_instructions(user, confirmation_url_fun.(encoded_token))
+  end
+
+  @doc """
+  Confirms a user by the given token.
+
+  If the token matches, the user is confirmed and the token is deleted.
+  """
+  def confirm_user_by_token(token) do
+    with {:ok, query} <- UserToken.verify_confirmation_token_query(token),
+         %User{} = user <- Repo.one(query) do
+      Repo.transact(fn ->
+        with {:ok, user} <- Repo.update(User.confirm_changeset(user)) do
+          Repo.delete_all(UserToken.user_and_contexts_query(user.id, ["confirm"]))
+          {:ok, user}
+        end
+      end)
+    else
+      _ -> :error
+    end
+  end
+
   ## Token helper
 
   defp update_user_and_delete_all_tokens(changeset) do

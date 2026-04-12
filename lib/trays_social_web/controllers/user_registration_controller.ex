@@ -13,8 +13,13 @@ defmodule TraysSocialWeb.UserRegistrationController do
   def create(conn, %{"user" => user_params}) do
     case Accounts.register_user(user_params) do
       {:ok, user} ->
+        Accounts.deliver_user_confirmation_instructions(
+          user,
+          &url(~p"/users/confirm/#{&1}")
+        )
+
         conn
-        |> put_flash(:info, "Welcome to Trays!")
+        |> put_flash(:info, "Welcome to Trays! Please check your email to confirm your account.")
         |> UserAuth.log_in_user(user)
 
       {:error, %Ecto.Changeset{} = changeset} ->

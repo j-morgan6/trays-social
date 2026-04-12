@@ -34,6 +34,10 @@ defmodule TraysSocialWeb.Router do
     plug TraysSocialWeb.API.RateLimitPlug, max_requests: 5, interval_ms: 60_000
   end
 
+  pipeline :api_require_confirmed do
+    plug TraysSocialWeb.API.RequireConfirmedPlug
+  end
+
   # Health check — no auth, no SSL redirect
   scope "/", TraysSocialWeb do
     pipe_through :api
@@ -60,11 +64,10 @@ defmodule TraysSocialWeb.Router do
     post "/apple", AuthController, :apple
   end
 
-  # API v1 — authenticated routes
+  # API v1 — authenticated routes (read-only + account management)
   scope "/api/v1", TraysSocialWeb.API.V1, as: :api_v1 do
     pipe_through [:api, :api_auth]
 
-    post "/uploads", UploadController, :create
     delete "/auth/logout", AuthController, :logout
     get "/auth/me", AuthController, :me
     put "/auth/me", AuthController, :update_me
@@ -72,14 +75,9 @@ defmodule TraysSocialWeb.Router do
 
     get "/feed", FeedController, :index
     get "/posts/trending", PostController, :trending
-    resources "/posts", PostController, only: [:show, :create, :delete]
-
-    post "/posts/:post_id/like", LikeController, :create
-    delete "/posts/:post_id/like", LikeController, :delete
+    get "/posts/:id", PostController, :show
 
     get "/posts/:post_id/comments", CommentController, :index
-    post "/posts/:post_id/comments", CommentController, :create
-    delete "/comments/:id", CommentController, :delete
 
     get "/search", SearchController, :index
 
@@ -87,8 +85,6 @@ defmodule TraysSocialWeb.Router do
     post "/notifications/read", NotificationController, :mark_read
 
     get "/bookmarks", BookmarkController, :index
-    post "/bookmarks/:post_id", BookmarkController, :create
-    delete "/bookmarks/:post_id", BookmarkController, :delete
 
     post "/devices", DeviceController, :create
     delete "/devices/:token", DeviceController, :delete
@@ -97,6 +93,25 @@ defmodule TraysSocialWeb.Router do
     get "/users/:username/posts", UserController, :posts
     get "/users/:username/followers", UserController, :followers
     get "/users/:username/following", UserController, :following
+  end
+
+  # API v1 — authenticated + confirmed email required (write actions)
+  scope "/api/v1", TraysSocialWeb.API.V1, as: :api_v1 do
+    pipe_through [:api, :api_auth, :api_require_confirmed]
+
+    post "/uploads", UploadController, :create
+    post "/posts", PostController, :create
+    delete "/posts/:id", PostController, :delete
+
+    post "/posts/:post_id/like", LikeController, :create
+    delete "/posts/:post_id/like", LikeController, :delete
+
+    post "/posts/:post_id/comments", CommentController, :create
+    delete "/comments/:id", CommentController, :delete
+
+    post "/bookmarks/:post_id", BookmarkController, :create
+    delete "/bookmarks/:post_id", BookmarkController, :delete
+
     post "/users/:username/follow", UserController, :follow
     delete "/users/:username/follow", UserController, :unfollow
   end
@@ -151,5 +166,7 @@ defmodule TraysSocialWeb.Router do
     get "/users/log-in/:token", UserSessionController, :confirm
     post "/users/log-in", UserSessionController, :create
     delete "/users/log-out", UserSessionController, :delete
+    get "/users/confirm/:token", UserConfirmationController, :confirm
+    post "/users/confirmation/resend", UserConfirmationController, :resend
   end
 end

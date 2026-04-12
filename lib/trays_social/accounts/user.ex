@@ -63,6 +63,7 @@ defmodule TraysSocial.Accounts.User do
     |> unique_constraint(:email)
     |> unique_constraint(:apple_id)
     |> maybe_validate_username(opts)
+    |> put_change(:confirmed_at, DateTime.utc_now(:second))
   end
 
   defp maybe_validate_username(changeset, opts) do

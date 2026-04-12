@@ -9,6 +9,7 @@ defmodule TraysSocial.Accounts.UserToken do
   # It is very important to keep the magic link token expiry short,
   # since someone with access to the email may take over the account.
   @magic_link_validity_in_minutes 15
+  @confirm_validity_in_days 7
   @change_email_validity_in_days 7
   @session_validity_in_days 14
 
@@ -176,6 +177,38 @@ defmodule TraysSocial.Accounts.UserToken do
       :error ->
         :error
     end
+  end
+
+  @doc """
+  Checks if the confirmation token is valid and returns its underlying lookup query.
+
+  The query returns the user found by the token, if any.
+  Confirmation tokens are valid for #{@confirm_validity_in_days} days.
+  """
+  def verify_confirmation_token_query(token) do
+    case Base.url_decode64(token, padding: false) do
+      {:ok, decoded_token} ->
+        hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
+
+        query =
+          from token in by_token_and_context_query(hashed_token, "confirm"),
+            join: user in assoc(token, :user),
+            where: token.inserted_at > ago(^@confirm_validity_in_days, "day"),
+            where: token.sent_to == user.email,
+            select: user
+
+        {:ok, query}
+
+      :error ->
+        :error
+    end
+  end
+
+  @doc """
+  Returns a query to find all tokens for a user with the given contexts.
+  """
+  def user_and_contexts_query(user_id, contexts) do
+    from t in UserToken, where: t.user_id == ^user_id and t.context in ^contexts
   end
 
   defp by_token_and_context_query(token, context) do

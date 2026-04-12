@@ -44,6 +44,7 @@ config :trays_social, TraysSocialWeb.Endpoint,
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
 config :trays_social, TraysSocial.Mailer, adapter: Swoosh.Adapters.Local
+config :trays_social, :mailer_from_email, "noreply@trays.social"
 
 # Configure esbuild (the version is required)
 config :esbuild,

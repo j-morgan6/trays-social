@@ -215,6 +215,22 @@ defmodule TraysSocialWeb.UserAuth do
     end
   end
 
+  @doc """
+  Plug for routes that require the user to have confirmed their email.
+  """
+  def require_confirmed_user(conn, _opts) do
+    user = conn.assigns.current_scope && conn.assigns.current_scope.user
+
+    if user && user.confirmed_at do
+      conn
+    else
+      conn
+      |> Controller.put_flash(:error, "You must confirm your email to do that.")
+      |> Controller.redirect(to: ~p"/")
+      |> halt()
+    end
+  end
+
   defp maybe_store_return_to(%{method: "GET"} = conn) do
     put_session(conn, :user_return_to, current_path(conn))
   end
@@ -241,6 +257,22 @@ defmodule TraysSocialWeb.UserAuth do
         socket
         |> LiveView.put_flash(:error, "You must log in to access this page.")
         |> LiveView.redirect(to: ~p"/users/log-in")
+
+      {:halt, socket}
+    end
+  end
+
+  def on_mount(:require_confirmed_user, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+    user = socket.assigns.current_scope && socket.assigns.current_scope.user
+
+    if user && user.confirmed_at do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> LiveView.put_flash(:error, "You must confirm your email to do that.")
+        |> LiveView.redirect(to: ~p"/")
 
       {:halt, socket}
     end

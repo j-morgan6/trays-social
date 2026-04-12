@@ -9,6 +9,10 @@ defmodule TraysSocialWeb.API.V1.AuthController do
   def register(conn, %{"email" => email, "username" => username, "password" => password}) do
     case Accounts.register_user(%{email: email, username: username, password: password}) do
       {:ok, user} ->
+        Accounts.deliver_user_confirmation_instructions(user, fn token ->
+          TraysSocialWeb.Endpoint.url() <> "/users/confirm/" <> token
+        end)
+
         token = Accounts.generate_user_api_token(user)
         encoded_token = Base.encode64(token)
 

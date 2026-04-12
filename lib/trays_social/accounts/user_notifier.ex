@@ -6,10 +6,12 @@ defmodule TraysSocial.Accounts.UserNotifier do
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
+    from_email = Application.get_env(:trays_social, :mailer_from_email, "noreply@trays.social")
+
     email =
       new()
       |> to(recipient)
-      |> from({"TraysSocial", "contact@example.com"})
+      |> from({"Trays", from_email})
       |> subject(subject)
       |> text_body(body)
 
@@ -65,7 +67,10 @@ defmodule TraysSocial.Accounts.UserNotifier do
     """)
   end
 
-  defp deliver_confirmation_instructions(user, url) do
+  @doc """
+  Deliver instructions to confirm a user's email address.
+  """
+  def deliver_confirmation_instructions(user, url) do
     deliver(user.email, "Confirmation instructions", """
 
     ==============================
