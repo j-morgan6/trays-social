@@ -12,33 +12,11 @@ struct MyTrayView: View {
                     .foregroundStyle(.secondary)
 
                 Spacer()
-
-                // Grid/List toggle
-                HStack(spacing: 4) {
-                    Button { viewModel.showGrid = false } label: {
-                        Image(systemName: "list.bullet")
-                            .foregroundStyle(viewModel.showGrid ? .gray : .orange)
-                            .padding(6)
-                            .background(Theme.surface)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                    }
-                    Button { viewModel.showGrid = true } label: {
-                        Image(systemName: "square.grid.2x2")
-                            .foregroundStyle(viewModel.showGrid ? .orange : .gray)
-                            .padding(6)
-                            .background(Theme.surface)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                    }
-                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
 
-            if viewModel.showGrid {
-                gridView
-            } else {
-                listView
-            }
+            listView
         }
         .overlay {
             if viewModel.isLoading && viewModel.posts.isEmpty {
@@ -122,34 +100,6 @@ struct MyTrayView: View {
             }
         }
         .listStyle(.plain)
-        .refreshable { await viewModel.refresh() }
-    }
-
-    // MARK: - Grid View
-
-    private var gridView: some View {
-        ScrollView {
-            LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 4) {
-                ForEach(viewModel.posts) { post in
-                    NavigationLink(value: post) {
-                        if let url = post.primaryPhotoURL {
-                            AsyncImage(url: url.asBackendURL) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                Rectangle().fill(Color(.systemGray5))
-                            }
-                            .frame(height: 160)
-                            .clipped()
-                        } else {
-                            Rectangle()
-                                .fill(Color(.systemGray5))
-                                .frame(height: 160)
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, 2)
-        }
         .refreshable { await viewModel.refresh() }
     }
 

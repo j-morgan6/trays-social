@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FindView: View {
     @State private var viewModel = FindViewModel()
+    @FocusState private var isSearchFocused: Bool
 
     private let filterChips = ["Under 30 min", "Breakfast", "Dinner", "Vegetarian", "Dessert", "Vegan"]
 
@@ -13,8 +14,10 @@ struct FindView: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.gray)
                     TextField("Search recipes, ingredients, cooks...", text: $viewModel.searchText)
+                        .focused($isSearchFocused)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                        .onSubmit { viewModel.search() }
                         .onChange(of: viewModel.searchText) {
                             viewModel.search()
                         }

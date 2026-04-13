@@ -34,11 +34,21 @@ final class FindViewModel {
 
     func search() {
         searchTask?.cancel()
+
+        // Nothing to search — clear results and bail
+        guard !searchText.isEmpty || activeFilter != nil else {
+            posts = []
+            users = []
+            isSearching = false
+            return
+        }
+
         searchTask = Task {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
 
             isSearching = true
+            defer { isSearching = false }
 
             do {
                 var queryItems: [URLQueryItem] = []
@@ -62,11 +72,15 @@ final class FindViewModel {
                     posts = response.data.posts
                     users = response.data.users
                 }
+            } catch is CancellationError {
+                // Task was cancelled — next search will take over
             } catch {
-                // Silently fail
+                // API error — clear stale results
+                if !Task.isCancelled {
+                    posts = []
+                    users = []
+                }
             }
-
-            isSearching = false
         }
     }
 

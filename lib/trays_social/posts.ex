@@ -134,7 +134,17 @@ defmodule TraysSocial.Posts do
     base =
       if query_string && query_string != "" do
         sanitized = "%#{sanitize_like(query_string)}%"
-        where(base, [p], ilike(p.caption, ^sanitized))
+
+        base
+        |> join(:left, [p], i in Ingredient, on: i.post_id == p.id, as: :ingredient)
+        |> join(:left, [p], pt in PostTag, on: pt.post_id == p.id, as: :search_tag)
+        |> where(
+          [p, ingredient: i, search_tag: pt],
+          ilike(p.caption, ^sanitized) or
+            ilike(i.name, ^sanitized) or
+            ilike(pt.tag, ^sanitized)
+        )
+        |> distinct([p], [desc: p.inserted_at, asc: p.id])
       else
         base
       end

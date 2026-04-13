@@ -1,15 +1,16 @@
 import SwiftUI
 
+struct NotificationRoute: Hashable {}
+
 struct MainView: View {
     @Environment(AppState.self) private var appState
     @State private var showCreatePost = false
-    @State private var showProfile = false
-    @State private var showNotifications = false
+    @State private var path = NavigationPath()
 
     var body: some View {
         @Bindable var state = appState
 
-        NavigationStack {
+        NavigationStack(path: $path) {
             VStack(spacing: 0) {
                 // Top bar
                 HStack {
@@ -20,7 +21,7 @@ struct MainView: View {
                     Spacer()
 
                     Button {
-                        showNotifications = true
+                        path.append(NotificationRoute())
                     } label: {
                         Image(systemName: "bell")
                             .font(.body)
@@ -57,7 +58,9 @@ struct MainView: View {
                 // Bottom bar
                 BottomBar(
                     onCreateTap: { showCreatePost = true },
-                    onProfileTap: { showProfile = true },
+                    onProfileTap: {
+                        path.append(appState.currentUser?.username ?? "")
+                    },
                     profilePhotoURL: appState.currentUser?.profilePhotoUrl
                 )
             }
@@ -68,11 +71,8 @@ struct MainView: View {
             .navigationDestination(for: String.self) { username in
                 ProfileView(username: username)
             }
-            .navigationDestination(isPresented: $showNotifications) {
+            .navigationDestination(for: NotificationRoute.self) { _ in
                 NotificationsView()
-            }
-            .navigationDestination(isPresented: $showProfile) {
-                ProfileView(username: appState.currentUser?.username ?? "")
             }
             .sheet(isPresented: $showCreatePost) {
                 CreatePostView()
@@ -80,4 +80,3 @@ struct MainView: View {
         }
     }
 }
-

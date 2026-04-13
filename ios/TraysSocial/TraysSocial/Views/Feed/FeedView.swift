@@ -16,9 +16,7 @@ struct FeedView: View {
                     }
                     .buttonStyle(.plain)
                     .onAppear {
-                        if post.id == viewModel.posts.last?.id {
-                            Task { await viewModel.loadMore() }
-                        }
+                        prefetchIfNeeded(post)
                     }
 
                     Divider()
@@ -86,6 +84,14 @@ struct FeedView: View {
             } else {
                 _ = try? await APIClient.shared.post(path: "/bookmarks/\(post.id)")
             }
+        }
+    }
+
+    private func prefetchIfNeeded(_ post: Post) {
+        let threshold = 5
+        guard let index = viewModel.posts.firstIndex(where: { $0.id == post.id }) else { return }
+        if index >= viewModel.posts.count - threshold {
+            Task { await viewModel.loadMore() }
         }
     }
 

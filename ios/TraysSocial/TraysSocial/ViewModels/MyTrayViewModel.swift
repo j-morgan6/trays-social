@@ -6,8 +6,6 @@ final class MyTrayViewModel {
     var posts: [Post] = []
     var isLoading = false
     var cursor: String?
-    var showGrid = false
-
     func load() async {
         guard !isLoading else { return }
         isLoading = true
