@@ -27,6 +27,11 @@ struct LoginView: View {
                     .cornerRadius(12)
             }
 
+            Toggle("Remember me", isOn: $viewModel.rememberMe)
+                .font(.subheadline)
+                .foregroundStyle(Theme.text)
+                .tint(Theme.primary)
+
             if let error = viewModel.errorMessage {
                 Text(error)
                     .font(.caption)
@@ -54,10 +59,29 @@ struct LoginView: View {
             .cornerRadius(12)
             .disabled(!viewModel.canLogin)
 
+            if viewModel.hasSavedCredential {
+                Button {
+                    Task { await viewModel.loginWithBiometrics(appState: appState) }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "faceid")
+                        Text("Sign in with Face ID")
+                    }
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Theme.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(Theme.surface)
+                    .cornerRadius(12)
+                }
+                .disabled(viewModel.isLoading)
+            }
+
             Spacer()
         }
         .padding(24)
         .background(Theme.background)
+        .onAppear { viewModel.checkBiometricAvailability() }
         .onDisappear { viewModel.clearError() }
     }
 }

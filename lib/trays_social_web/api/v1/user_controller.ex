@@ -35,7 +35,8 @@ defmodule TraysSocialWeb.API.V1.UserController do
           Posts.list_posts_by_user(user.id,
             limit: @page_size,
             cursor_id: cursor_id,
-            cursor_time: cursor_time
+            cursor_time: cursor_time,
+            filter: params["filter"]
           )
 
         liked_post_ids = Posts.liked_post_ids_for_user(current_user.id, Enum.map(posts, & &1.id))
@@ -108,6 +109,61 @@ defmodule TraysSocialWeb.API.V1.UserController do
           data: Enum.map(following, &user_list_json(&1, current_user))
         })
     end
+  end
+
+  def block(conn, %{"username" => username}) do
+    current_user = conn.assigns.current_user
+
+    case Accounts.get_user_by_username(username) do
+      nil -> {:error, :not_found}
+      user ->
+        case Accounts.block_user(current_user.id, user.id) do
+          {:ok, _} -> json(conn, %{data: %{message: "User blocked"}})
+          {:error, changeset} ->
+            errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)
+            conn |> put_status(:unprocessable_entity) |> json(%{errors: errors})
+        end
+    end
+  end
+
+  def unblock(conn, %{"username" => username}) do
+    current_user = conn.assigns.current_user
+
+    case Accounts.get_user_by_username(username) do
+      nil -> {:error, :not_found}
+      user ->
+        Accounts.unblock_user(current_user.id, user.id)
+        json(conn, %{data: %{message: "User unblocked"}})
+    end
+  end
+
+  def update_muted_keywords(conn, %{"keywords" => keywords}) when is_list(keywords) do
+    current_user = conn.assigns.current_user
+    user = Accounts.get_user!(current_user.id)
+
+    case Accounts.set_muted_keywords(user, keywords) do
+      {:ok, updated} ->
+        json(conn, %{data: %{muted_keywords: updated.muted_keywords}})
+      {:error, _} ->
+        conn |> put_status(:unprocessable_entity) |> json(%{errors: %{keywords: ["invalid"]}})
+    end
+  end
+
+  def list_blocked_users(conn, _params) do
+    current_user = conn.assigns.current_user
+    blocked = Accounts.list_blocked_users(current_user.id)
+
+    json(conn, %{
+      data: Enum.map(blocked, fn u ->
+        %{id: u.id, username: u.username, profile_photo_url: u.profile_photo_url}
+      end)
+    })
+  end
+
+  def muted_keywords(conn, _params) do
+    current_user = conn.assigns.current_user
+    keywords = Accounts.get_muted_keywords(current_user.id)
+    json(conn, %{data: %{muted_keywords: keywords}})
   end
 
   defp user_list_json(user, current_user) do

@@ -1,5 +1,6 @@
 import SwiftUI
 import AuthenticationServices
+import LocalAuthentication
 
 @MainActor
 @Observable
@@ -9,6 +10,8 @@ final class AuthViewModel {
     var password = ""
     var isLoading = false
     var errorMessage: String?
+    var rememberMe = false
+    var hasSavedCredential = false
 
     // Apple Sign In state
     var needsUsername = false
@@ -36,6 +39,10 @@ final class AuthViewModel {
         isEmailValid && !password.isEmpty && !isLoading
     }
 
+    func checkBiometricAvailability() {
+        hasSavedCredential = KeychainService.hasBiometricCredential()
+    }
+
     func register(appState: AppState) async {
         isLoading = true
         errorMessage = nil
@@ -59,9 +66,41 @@ final class AuthViewModel {
         do {
             let response = try await AuthService.login(email: email, password: password)
             appState.login(token: response.token, user: response.user)
+            if rememberMe {
+                KeychainService.saveBiometricCredential(email: email, password: password)
+            }
         } catch let error as APIError {
             if case .unauthorized = error {
                 errorMessage = "Invalid email or password."
+            } else {
+                errorMessage = error.errorDescription
+            }
+        } catch {
+            errorMessage = "Something went wrong. Please try again."
+        }
+
+        isLoading = false
+    }
+
+    func loginWithBiometrics(appState: AppState) async {
+        isLoading = true
+        errorMessage = nil
+
+        guard let credential = KeychainService.getBiometricCredential() else {
+            errorMessage = "Could not retrieve saved credentials."
+            hasSavedCredential = false
+            isLoading = false
+            return
+        }
+
+        do {
+            let response = try await AuthService.login(email: credential.email, password: credential.password)
+            appState.login(token: response.token, user: response.user)
+        } catch let error as APIError {
+            if case .unauthorized = error {
+                errorMessage = "Saved credentials are no longer valid. Please log in manually."
+                KeychainService.deleteBiometricCredential()
+                hasSavedCredential = false
             } else {
                 errorMessage = error.errorDescription
             }

@@ -12,6 +12,7 @@ defmodule TraysSocial.Accounts.User do
     field :bio, :string
     field :profile_photo_url, :string
     field :apple_id, :string
+    field :muted_keywords, {:array, :string}, default: []
 
     timestamps(type: :utc_datetime)
   end

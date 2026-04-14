@@ -7,6 +7,8 @@ struct ProfileView: View {
     @State private var viewModel = ProfileViewModel()
     @State private var showEditProfile = false
     @State private var showSettings = false
+    @State private var showReportUser = false
+    @State private var showBlockConfirm = false
 
     var body: some View {
         ScrollView {
@@ -48,8 +50,14 @@ struct ProfileView: View {
                     // Stats
                     HStack(spacing: 16) {
                         statBox(value: user.postCount ?? 0, label: "Recipes")
-                        statBox(value: user.followerCount ?? 0, label: "Followers")
-                        statBox(value: user.followingCount ?? 0, label: "Following")
+                        NavigationLink(value: FollowListRoute(username: user.username, mode: .followers)) {
+                            statBox(value: user.followerCount ?? 0, label: "Followers")
+                        }
+                        .buttonStyle(.plain)
+                        NavigationLink(value: FollowListRoute(username: user.username, mode: .following)) {
+                            statBox(value: user.followingCount ?? 0, label: "Following")
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     // Action button
@@ -85,6 +93,22 @@ struct ProfileView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .padding(.horizontal, 16)
+                    }
+
+                    // Content filter
+                    Picker("Filter", selection: Bindable(viewModel).filter) {
+                        Text("All").tag("all")
+                        Text("Posts").tag("posts")
+                        Text("Recipes").tag("recipes")
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .onChange(of: viewModel.filter) {
+                        Task {
+                            if let user = viewModel.user {
+                                await viewModel.loadPosts(username: user.username)
+                            }
+                        }
                     }
 
                     // Posts grid
@@ -132,6 +156,39 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
+        }
+        .sheet(isPresented: $showReportUser) {
+            if let user = viewModel.user {
+                ReportSheetView(targetType: "user", targetId: user.id)
+            }
+        }
+        .toolbar {
+            if !viewModel.isOwnProfile, viewModel.user != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("Block User", role: .destructive) {
+                            if let user = viewModel.user {
+                                blockUser(user.username)
+                            }
+                        }
+                        Button("Report User", role: .destructive) {
+                            showReportUser = true
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .foregroundStyle(.gray)
+                    }
+                }
+            }
+        }
+    }
+
+    private func blockUser(_ username: String) {
+        Task {
+            do {
+                let _: MessageResponse = try await APIClient.shared.post(path: "/users/\(username)/block")
+                // Pop back to previous screen
+            } catch { }
         }
     }
 
@@ -358,20 +415,44 @@ struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirm = false
+    @AppStorage("colorScheme") private var colorSchemePreference = "system"
 
     var body: some View {
         NavigationStack {
             List {
-                Button("Log out") {
-                    appState.logout()
-                    dismiss()
+                Section("Appearance") {
+                    Picker("Mode", selection: $colorSchemePreference) {
+                        Text("System").tag("system")
+                        Text("Light").tag("light")
+                        Text("Dark").tag("dark")
+                    }
+                    .pickerStyle(.segmented)
                 }
-                .foregroundStyle(Theme.text)
 
-                Button("Delete account") {
-                    showDeleteConfirm = true
+                Section("Content Filters") {
+                    NavigationLink("Blocked Users") {
+                        BlockedUsersView()
+                    }
+                    .foregroundStyle(Theme.text)
+
+                    NavigationLink("Muted Keywords") {
+                        MutedKeywordsView()
+                    }
+                    .foregroundStyle(Theme.text)
                 }
-                .foregroundStyle(.red)
+
+                Section {
+                    Button("Log out") {
+                        appState.logout()
+                        dismiss()
+                    }
+                    .foregroundStyle(Theme.text)
+
+                    Button("Delete account") {
+                        showDeleteConfirm = true
+                    }
+                    .foregroundStyle(.red)
+                }
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)

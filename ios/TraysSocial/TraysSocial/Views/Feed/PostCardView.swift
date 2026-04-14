@@ -17,7 +17,7 @@ struct PostCardView: View {
                                 .resizable()
                                 .scaledToFill()
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 240)
+                                .frame(height: 300)
                                 .clipped()
                         case .failure:
                             photoPlaceholder
@@ -63,7 +63,7 @@ struct PostCardView: View {
                         HStack(spacing: 6) {
                             Circle()
                                 .fill(Color(.systemGray4))
-                                .frame(width: 20, height: 20)
+                                .frame(width: 40, height: 40)
                                 .overlay {
                                     if let url = post.user.profilePhotoUrl, let imageURL = url.asBackendURL {
                                         AsyncImage(url: imageURL) { image in
@@ -71,21 +71,21 @@ struct PostCardView: View {
                                         } placeholder: {
                                             Color.clear
                                         }
-                                        .frame(width: 20, height: 20)
+                                        .frame(width: 40, height: 40)
                                         .clipShape(Circle())
                                     }
                                 }
 
                             Text(post.user.username)
-                                .font(.caption)
+                                .font(.headline)
                                 .foregroundStyle(.gray)
 
                             Text("|")
-                                .font(.caption2)
+                                .font(.subheadline)
                                 .foregroundStyle(Color(.systemGray3))
 
                             Text(post.insertedAt.timeAgo())
-                                .font(.caption)
+                                .font(.subheadline)
                                 .foregroundStyle(Color(.systemGray2))
                         }
                         .contentShape(Rectangle())
@@ -115,7 +115,7 @@ struct PostCardView: View {
                         }
                         .buttonStyle(.borderless)
                     }
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(Color(.systemGray2))
                 }
             }
@@ -128,7 +128,7 @@ struct PostCardView: View {
     private var photoPlaceholder: some View {
         Rectangle()
             .fill(Color(.systemGray6))
-            .frame(height: 240)
+            .frame(height: 300)
     }
 
 }

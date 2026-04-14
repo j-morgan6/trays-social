@@ -37,5 +37,7 @@
 	<string>Trays needs photo library access to add photos to your recipes</string>
 	<key>API_BASE_URL</key>
 	<string>$(API_BASE_URL)</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Trays uses Face ID to securely sign you in</string>
 </dict>
 </plist>

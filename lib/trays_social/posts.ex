@@ -37,6 +37,8 @@ defmodule TraysSocial.Posts do
     cursor_id = Keyword.get(opts, :cursor_id)
     cursor_time = Keyword.get(opts, :cursor_time)
     for_user_id = Keyword.get(opts, :for_user_id)
+    blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
+    muted_keywords = Keyword.get(opts, :muted_keywords, [])
 
     follow_count =
       if for_user_id do
@@ -48,13 +50,28 @@ defmodule TraysSocial.Posts do
     personalized = for_user_id && follow_count >= 5
 
     Post
-    |> where([p], is_nil(p.deleted_at))
+    |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
+    |> exclude_blocked_users(blocked_user_ids)
+    |> exclude_muted_keywords(muted_keywords)
     |> filter_followed_feed(for_user_id, personalized)
     |> cursor_where(cursor_id, cursor_time)
     |> order_by([p], desc: p.inserted_at, desc: p.id)
     |> then(fn q -> if limit, do: limit(q, ^limit), else: q end)
     |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags, :post_photos])
     |> Repo.all()
+  end
+
+  defp exclude_blocked_users(query, []), do: query
+  defp exclude_blocked_users(query, blocked_ids) do
+    where(query, [p], p.user_id not in ^blocked_ids)
+  end
+
+  defp exclude_muted_keywords(query, []), do: query
+  defp exclude_muted_keywords(query, keywords) do
+    Enum.reduce(keywords, query, fn keyword, q ->
+      pattern = "%" <> String.downcase(keyword) <> "%"
+      where(q, [p], not ilike(p.caption, ^pattern))
+    end)
   end
 
   defp filter_followed_feed(query, _user_id, nil), do: query
@@ -83,7 +100,7 @@ defmodule TraysSocial.Posts do
     seven_days_ago = DateTime.utc_now() |> DateTime.add(-7, :day)
 
     Post
-    |> where([p], is_nil(p.deleted_at) and p.inserted_at >= ^seven_days_ago)
+    |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at) and p.inserted_at >= ^seven_days_ago)
     |> order_by([p], desc: p.like_count, desc: p.inserted_at)
     |> limit(^limit)
     |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
@@ -95,7 +112,7 @@ defmodule TraysSocial.Posts do
   """
   def list_recent_posts(limit \\ 10) do
     Post
-    |> where([p], is_nil(p.deleted_at))
+    |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
     |> order_by([p], desc: p.inserted_at)
     |> limit(^limit)
     |> preload([:user, :post_photos])
@@ -107,7 +124,7 @@ defmodule TraysSocial.Posts do
   """
   def list_top_tags(limit \\ 6) do
     PostTag
-    |> join(:inner, [pt], p in Post, on: p.id == pt.post_id and is_nil(p.deleted_at))
+    |> join(:inner, [pt], p in Post, on: p.id == pt.post_id and is_nil(p.deleted_at) and is_nil(p.removed_at))
     |> group_by([pt], pt.tag)
     |> order_by([pt], desc: count(pt.id))
     |> limit(^limit)
@@ -126,7 +143,7 @@ defmodule TraysSocial.Posts do
 
     base =
       Post
-      |> where([p], is_nil(p.deleted_at))
+      |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
       |> order_by([p], desc: p.inserted_at)
       |> limit(^limit)
       |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
@@ -196,7 +213,7 @@ defmodule TraysSocial.Posts do
   defp fetch_tag_post_rows(tags) do
     Post
     |> join(:inner, [p], pt in PostTag, on: pt.post_id == p.id and pt.tag in ^tags)
-    |> where([p], is_nil(p.deleted_at))
+    |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
     |> order_by([p, pt], asc: pt.tag, desc: p.inserted_at)
     |> select([p, pt], {pt.tag, p.id})
     |> Repo.all()
@@ -244,7 +261,7 @@ defmodule TraysSocial.Posts do
   """
   def get_post_count(user_id) do
     Post
-    |> where([p], p.user_id == ^user_id and is_nil(p.deleted_at))
+    |> where([p], p.user_id == ^user_id and is_nil(p.deleted_at) and is_nil(p.removed_at))
     |> Repo.aggregate(:count)
   end
 
@@ -252,15 +269,21 @@ defmodule TraysSocial.Posts do
     limit = Keyword.get(opts, :limit)
     cursor_id = Keyword.get(opts, :cursor_id)
     cursor_time = Keyword.get(opts, :cursor_time)
+    filter = Keyword.get(opts, :filter)
 
     Post
-    |> where([p], p.user_id == ^user_id and is_nil(p.deleted_at))
+    |> where([p], p.user_id == ^user_id and is_nil(p.deleted_at) and is_nil(p.removed_at))
+    |> filter_by_type(filter)
     |> cursor_where(cursor_id, cursor_time)
     |> order_by([p], desc: p.inserted_at, desc: p.id)
     |> then(fn q -> if limit, do: limit(q, ^limit), else: q end)
     |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags, :post_photos])
     |> Repo.all()
   end
+
+  defp filter_by_type(query, "recipes"), do: where(query, [p], p.type == "recipe")
+  defp filter_by_type(query, "posts"), do: where(query, [p], p.type != "recipe")
+  defp filter_by_type(query, _), do: query
 
   @doc """
   Gets a single post.
@@ -278,7 +301,7 @@ defmodule TraysSocial.Posts do
   """
   def get_post!(id) do
     Post
-    |> where([p], is_nil(p.deleted_at))
+    |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
     |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags, :post_photos])
     |> Repo.get!(id)
   end
@@ -334,6 +357,16 @@ defmodule TraysSocial.Posts do
   def delete_post(%Post{} = post) do
     post
     |> Ecto.Changeset.change(%{deleted_at: DateTime.utc_now(:second)})
+    |> Repo.update()
+  end
+
+  def remove_post(%Post{} = post, %{removed_by_id: removed_by_id, reason: reason}) do
+    post
+    |> Ecto.Changeset.change(%{
+      removed_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      removed_by_id: removed_by_id,
+      removed_reason: reason
+    })
     |> Repo.update()
   end
 
@@ -611,7 +644,7 @@ defmodule TraysSocial.Posts do
     query =
       Bookmark
       |> where([b], b.user_id == ^user_id)
-      |> join(:inner, [b], p in Post, on: b.post_id == p.id and is_nil(p.deleted_at))
+      |> join(:inner, [b], p in Post, on: b.post_id == p.id and is_nil(p.deleted_at) and is_nil(p.removed_at))
       |> order_by([b], desc: b.inserted_at, desc: b.id)
       |> limit(^limit)
       |> preload([b, p], post: {p, [:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags]})

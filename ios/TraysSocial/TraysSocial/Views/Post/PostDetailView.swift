@@ -4,6 +4,7 @@ struct PostDetailView: View {
     let postId: Int
     @State private var viewModel = PostViewModel()
     @State private var showCookMode = false
+    @State private var showReport = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -64,6 +65,18 @@ struct PostDetailView: View {
         }
         .background(Theme.background)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button("Report Post", role: .destructive) {
+                        showReport = true
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .foregroundStyle(.gray)
+                }
+            }
+        }
         .task {
             await viewModel.loadPost(id: postId)
             await viewModel.loadComments(postId: postId)
@@ -72,6 +85,9 @@ struct PostDetailView: View {
             if let post = viewModel.post {
                 CookModeView(steps: post.cookingSteps, title: post.caption ?? "Recipe")
             }
+        }
+        .sheet(isPresented: $showReport) {
+            ReportSheetView(targetType: "post", targetId: postId)
         }
     }
 

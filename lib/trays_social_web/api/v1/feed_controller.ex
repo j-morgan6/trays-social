@@ -1,6 +1,7 @@
 defmodule TraysSocialWeb.API.V1.FeedController do
   use TraysSocialWeb, :controller
 
+  alias TraysSocial.Accounts
   alias TraysSocial.Posts
   alias TraysSocialWeb.API.V1.JSON.PostJSON
 
@@ -10,12 +11,17 @@ defmodule TraysSocialWeb.API.V1.FeedController do
     user = conn.assigns.current_user
     {cursor_id, cursor_time} = decode_cursor(params["cursor"])
 
+    blocked_ids = Accounts.blocked_user_ids(user.id)
+    muted_keywords = Accounts.get_muted_keywords(user.id)
+
     posts =
       Posts.list_posts(
         for_user_id: user.id,
         limit: @page_size,
         cursor_id: cursor_id,
-        cursor_time: cursor_time
+        cursor_time: cursor_time,
+        blocked_user_ids: blocked_ids,
+        muted_keywords: muted_keywords
       )
 
     post_ids = Enum.map(posts, & &1.id)

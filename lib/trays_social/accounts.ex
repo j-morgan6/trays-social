@@ -585,6 +585,66 @@ defmodule TraysSocial.Accounts do
     Repo.all(query)
   end
 
+  # --- Blocking ---
+
+  alias TraysSocial.Accounts.UserBlock
+
+  def block_user(blocker_id, blocked_id) do
+    result =
+      %UserBlock{}
+      |> UserBlock.changeset(%{blocker_id: blocker_id, blocked_id: blocked_id})
+      |> Repo.insert(on_conflict: :nothing)
+
+    # Auto-unfollow both directions
+    from(f in Follow, where: f.follower_id == ^blocker_id and f.followed_id == ^blocked_id) |> Repo.delete_all()
+    from(f in Follow, where: f.follower_id == ^blocked_id and f.followed_id == ^blocker_id) |> Repo.delete_all()
+
+    result
+  end
+
+  def unblock_user(blocker_id, blocked_id) do
+    from(b in UserBlock, where: b.blocker_id == ^blocker_id and b.blocked_id == ^blocked_id)
+    |> Repo.delete_all()
+
+    :ok
+  end
+
+  def blocked?(blocker_id, blocked_id) do
+    UserBlock
+    |> where([b], b.blocker_id == ^blocker_id and b.blocked_id == ^blocked_id)
+    |> Repo.exists?()
+  end
+
+  def blocked_user_ids(user_id) do
+    UserBlock
+    |> where([b], b.blocker_id == ^user_id)
+    |> select([b], b.blocked_id)
+    |> Repo.all()
+  end
+
+  def list_blocked_users(user_id) do
+    UserBlock
+    |> where([b], b.blocker_id == ^user_id)
+    |> preload(:blocked)
+    |> Repo.all()
+    |> Enum.map(& &1.blocked)
+  end
+
+  def set_muted_keywords(user, keywords) when is_list(keywords) do
+    cleaned = keywords |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+
+    user
+    |> Ecto.Changeset.change(%{muted_keywords: cleaned})
+    |> Repo.update()
+  end
+
+  def get_muted_keywords(user_id) do
+    User
+    |> where([u], u.id == ^user_id)
+    |> select([u], u.muted_keywords)
+    |> Repo.one() || []
+  end
+
   def search_users(query_string, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
 

@@ -5,6 +5,7 @@ import SwiftUI
 final class ProfileViewModel {
     var user: User?
     var posts: [Post] = []
+    var filter: String = "all"
     var isLoading = false
     var isOwnProfile = false
 
@@ -14,13 +15,23 @@ final class ProfileViewModel {
             let response: DataResponse<User> = try await APIClient.shared.get(path: "/users/\(username)")
             user = response.data
             isOwnProfile = response.data.id == currentUserId
+            await loadPosts(username: username)
+        } catch { }
+        isLoading = false
+    }
 
+    func loadPosts(username: String) async {
+        var queryItems: [URLQueryItem] = []
+        if filter != "all" {
+            queryItems.append(.init(name: "filter", value: filter))
+        }
+        do {
             let postsResponse: PaginatedResponse<[Post]> = try await APIClient.shared.get(
-                path: "/users/\(username)/posts"
+                path: "/users/\(username)/posts",
+                queryItems: queryItems
             )
             posts = postsResponse.data
         } catch { }
-        isLoading = false
     }
 
     func toggleFollow() {

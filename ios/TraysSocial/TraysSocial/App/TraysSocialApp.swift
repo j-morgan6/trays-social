@@ -3,6 +3,15 @@ import SwiftUI
 @main
 struct TraysSocialApp: App {
     @State private var appState = AppState()
+    @AppStorage("colorScheme") private var colorSchemePreference = "system"
+
+    private var preferredScheme: ColorScheme? {
+        switch colorSchemePreference {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
+    }
 
     init() {
         // 50MB memory / 200MB disk cache for images
@@ -22,7 +31,7 @@ struct TraysSocialApp: App {
                 }
             }
             .environment(appState)
-            // Respects system light/dark mode setting
+            .preferredColorScheme(preferredScheme)
         }
     }
 }

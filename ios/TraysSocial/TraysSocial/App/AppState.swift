@@ -48,12 +48,14 @@ final class AppState {
             try? await APIClient.shared.delete(path: "/auth/logout")
         }
         KeychainService.deleteToken()
+        KeychainService.deleteBiometricCredential()
         currentUser = nil
         isAuthenticated = false
     }
 
     func handleUnauthorized() {
         KeychainService.deleteToken()
+        KeychainService.deleteBiometricCredential()
         currentUser = nil
         isAuthenticated = false
     }

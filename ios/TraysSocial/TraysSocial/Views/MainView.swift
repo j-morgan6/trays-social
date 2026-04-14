@@ -74,6 +74,9 @@ struct MainView: View {
             .navigationDestination(for: NotificationRoute.self) { _ in
                 NotificationsView()
             }
+            .navigationDestination(for: FollowListRoute.self) { route in
+                FollowListView(route: route)
+            }
             .sheet(isPresented: $showCreatePost) {
                 CreatePostView()
             }

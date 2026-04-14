@@ -11,8 +11,11 @@ defmodule TraysSocial.Posts.Post do
     field :like_count, :integer, default: 0
     field :comment_count, :integer, default: 0
     field :deleted_at, :utc_datetime
+    field :removed_at, :utc_datetime
+    field :removed_reason, :string
 
     belongs_to :user, TraysSocial.Accounts.User
+    belongs_to :removed_by, TraysSocial.Accounts.User
 
     has_many :ingredients, TraysSocial.Posts.Ingredient
     has_many :tools, TraysSocial.Posts.Tool

@@ -14,7 +14,7 @@ struct BottomBar: View {
                 Image(systemName: "plus")
                     .font(.title2.weight(.medium))
                     .foregroundStyle(.white)
-                    .frame(width: 48, height: 48)
+                    .frame(width: 40, height: 40)
                     .background(Theme.primary)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .shadow(color: Theme.primary.opacity(0.25), radius: 8, y: 4)
@@ -24,35 +24,29 @@ struct BottomBar: View {
 
             // Profile button
             Button(action: onProfileTap) {
-                VStack(spacing: 3) {
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 32, height: 32)
-                        .overlay {
-                            if let url = profilePhotoURL, let imageURL = url.asBackendURL {
-                                AsyncImage(url: imageURL) { image in
-                                    image.resizable().scaledToFill()
-                                } placeholder: {
-                                    Image(systemName: "person.fill")
-                                        .foregroundStyle(.gray)
-                                }
-                                .frame(width: 32, height: 32)
-                                .clipShape(Circle())
-                            } else {
+                Circle()
+                    .fill(Color(.systemGray4))
+                    .frame(width: 28, height: 28)
+                    .overlay {
+                        if let url = profilePhotoURL, let imageURL = url.asBackendURL {
+                            AsyncImage(url: imageURL) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
                                 Image(systemName: "person.fill")
                                     .foregroundStyle(.gray)
                             }
+                            .frame(width: 28, height: 28)
+                            .clipShape(Circle())
+                        } else {
+                            Image(systemName: "person.fill")
+                                .foregroundStyle(.gray)
                         }
-
-                    Text("Profile")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Color(.systemGray))
-                }
+                    }
             }
 
             Spacer()
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 6)
         .background(Theme.background)
         .overlay(alignment: .top) {
             Rectangle()

@@ -2,12 +2,13 @@ import SwiftUI
 
 struct TraySelector: View {
     @Binding var selectedTray: AppState.TrayTab
+    @Namespace private var indicatorNamespace
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(AppState.TrayTab.allCases, id: \.rawValue) { tray in
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(.easeInOut(duration: 0.25)) {
                         selectedTray = tray
                     }
                 } label: {
@@ -16,16 +17,18 @@ struct TraySelector: View {
                         .foregroundStyle(selectedTray == tray ? Theme.primary : Color(.systemGray))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(
-                            selectedTray == tray
-                                ? Theme.surface
-                                : Color.clear
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
+                .background {
+                    if selectedTray == tray {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Theme.surface)
+                            .matchedGeometryEffect(id: "activeTab", in: indicatorNamespace)
+                    }
+                }
             }
         }
+        .animation(.easeInOut(duration: 0.25), value: selectedTray)
         .padding(3)
         .background(Theme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 10))

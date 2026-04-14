@@ -38,6 +38,10 @@ defmodule TraysSocialWeb.Router do
     plug TraysSocialWeb.API.RequireConfirmedPlug
   end
 
+  pipeline :api_rate_limit_reports do
+    plug TraysSocialWeb.API.RateLimitPlug, max_requests: 10, interval_ms: 3_600_000
+  end
+
   # Health check — no auth, no SSL redirect
   scope "/", TraysSocialWeb do
     pipe_through :api
@@ -89,6 +93,10 @@ defmodule TraysSocialWeb.Router do
     post "/devices", DeviceController, :create
     delete "/devices/:token", DeviceController, :delete
 
+    get "/blocked-users", UserController, :list_blocked_users
+    get "/muted-keywords", UserController, :muted_keywords
+    put "/muted-keywords", UserController, :update_muted_keywords
+
     get "/users/:username", UserController, :show
     get "/users/:username/posts", UserController, :posts
     get "/users/:username/followers", UserController, :followers
@@ -114,6 +122,16 @@ defmodule TraysSocialWeb.Router do
 
     post "/users/:username/follow", UserController, :follow
     delete "/users/:username/follow", UserController, :unfollow
+
+    post "/users/:username/block", UserController, :block
+    delete "/users/:username/block", UserController, :unblock
+  end
+
+  # API v1 — reports (rate limited separately)
+  scope "/api/v1", TraysSocialWeb.API.V1, as: :api_v1 do
+    pipe_through [:api, :api_auth, :api_require_confirmed, :api_rate_limit_reports]
+
+    post "/reports", ReportController, :create
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
@@ -131,6 +149,13 @@ defmodule TraysSocialWeb.Router do
       live_dashboard "/dashboard", metrics: TraysSocialWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
+  end
+
+  # Admin routes — require authenticated user
+  scope "/admin", TraysSocialWeb.Admin do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live "/reports", ReportsLive, :index
   end
 
   ## Authentication routes
