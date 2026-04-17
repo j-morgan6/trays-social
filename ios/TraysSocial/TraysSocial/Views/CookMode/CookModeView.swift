@@ -100,7 +100,7 @@ struct CookModeView: View {
                 VStack(spacing: 4) {
                     Text(formatTime(timerRemaining))
                         .font(.system(size: 36, weight: .bold, design: .monospaced))
-                        .foregroundStyle(timerRemaining <= 10 ? .red : .orange)
+                        .foregroundStyle(timerRemaining <= 10 ? .red : Theme.accent)
 
                     Button("Cancel timer") {
                         stopTimer()
@@ -156,7 +156,7 @@ struct CookModeView: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 24)
                             .padding(.vertical, 14)
-                            .background(.green)
+                            .background(Theme.primary)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }

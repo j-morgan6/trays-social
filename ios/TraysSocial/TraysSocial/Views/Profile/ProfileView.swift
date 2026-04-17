@@ -196,14 +196,14 @@ struct ProfileView: View {
         VStack(spacing: 2) {
             Text("\(value)")
                 .font(.headline)
-                .foregroundStyle(Theme.text)
+                .foregroundStyle(Theme.primary)
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
-        .background(Theme.surface)
+        .background(Theme.secondary.opacity(0.25))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 

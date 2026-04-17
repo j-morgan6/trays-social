@@ -172,7 +172,7 @@ struct PostDetailView: View {
 
                     Button { viewModel.toggleBookmark() } label: {
                         Image(systemName: post.bookmarkedByCurrentUser == true ? "bookmark.fill" : "bookmark")
-                            .foregroundStyle(post.bookmarkedByCurrentUser == true ? Theme.accent : .gray)
+                            .foregroundStyle(post.bookmarkedByCurrentUser == true ? Theme.accent : Color(.systemGray2))
                             .frame(minWidth: 44, minHeight: 44)
                             .contentShape(Rectangle())
                     }
@@ -253,11 +253,11 @@ struct PostDetailView: View {
                     FlowLayout(spacing: 8) {
                         ForEach(post.tools) { tool in
                             Text(tool.name)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(Theme.primary)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .background(Theme.surface)
+                                .background(Theme.secondary.opacity(0.35))
                                 .clipShape(Capsule())
                         }
                     }
@@ -275,11 +275,11 @@ struct PostDetailView: View {
             HStack(spacing: 6) {
                 ForEach(post.tags, id: \.self) { tag in
                     Text("#\(tag)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Theme.primary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(Theme.surface)
+                        .background(Theme.secondary.opacity(0.35))
                         .clipShape(Capsule())
                 }
             }

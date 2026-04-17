@@ -36,10 +36,10 @@ struct PostCardView: View {
                     // Cooking time + servings
                     HStack(spacing: 6) {
                         if let time = post.cookingTimeMinutes {
-                            BadgePill(text: "\(time) min", color: .orange)
+                            BadgePill(text: "\(time) min", color: Theme.accent)
                         }
                         if let servings = post.servings {
-                            BadgePill(text: "\(servings) servings", color: Color(.systemGray))
+                            BadgePill(text: "\(servings) servings", color: Theme.primary)
                         }
                     }
 

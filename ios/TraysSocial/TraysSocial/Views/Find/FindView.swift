@@ -48,15 +48,11 @@ struct FindView: View {
                             Button { viewModel.toggleFilter(chip) } label: {
                                 Text(chip)
                                     .font(.caption.weight(.medium))
-                                    .foregroundStyle(viewModel.activeFilter == chip ? .white : Color(.systemGray))
+                                    .foregroundStyle(viewModel.activeFilter == chip ? .white : Theme.primary)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 8)
-                                    .background(viewModel.activeFilter == chip ? Theme.accent : Theme.surface)
+                                    .background(viewModel.activeFilter == chip ? Theme.primary : Theme.secondary.opacity(0.3))
                                     .clipShape(Capsule())
-                                    .overlay(
-                                        Capsule()
-                                            .stroke(Theme.surface.opacity(viewModel.activeFilter == chip ? 0 : 1), lineWidth: 1)
-                                    )
                             }
                         }
                     }
@@ -252,11 +248,11 @@ private struct TrendingCard: View {
             .padding(.horizontal, 4)
             .padding(.vertical, 6)
         }
-        .background(Color(.systemGray6).opacity(0.3))
+        .background(Theme.secondary.opacity(0.18))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(Theme.surface, lineWidth: 1)
+                .stroke(Theme.secondary.opacity(0.35), lineWidth: 1)
         )
     }
 
