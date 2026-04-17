@@ -5,11 +5,14 @@ defmodule TraysSocialWeb.API.V1.SearchController do
   alias TraysSocial.Accounts
   alias TraysSocialWeb.API.V1.JSON.PostJSON
 
+  @max_query_length 100
+  @max_tag_length 50
+
   def index(conn, params) do
     user = conn.assigns.current_user
-    query = params["q"] || ""
+    query = sanitize(params["q"], @max_query_length) || ""
     max_cooking_time = parse_int(params["max_cooking_time"])
-    tag = params["tag"]
+    tag = sanitize(params["tag"], @max_tag_length)
 
     posts =
       Posts.search_posts(query,
@@ -56,4 +59,14 @@ defmodule TraysSocialWeb.API.V1.SearchController do
   end
 
   defp parse_int(val) when is_integer(val), do: val
+  defp parse_int(_), do: nil
+
+  defp sanitize(nil, _max), do: nil
+  defp sanitize(value, max) when is_binary(value) do
+    case value |> String.trim() |> String.slice(0, max) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+  defp sanitize(_, _), do: nil
 end

@@ -630,13 +630,25 @@ defmodule TraysSocial.Accounts do
     |> Enum.map(& &1.blocked)
   end
 
+  @max_muted_keywords 100
+  @max_muted_keyword_length 50
+
   def set_muted_keywords(user, keywords) when is_list(keywords) do
-    cleaned = keywords |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+    cleaned =
+      keywords
+      |> Enum.filter(&is_binary/1)
+      |> Enum.map(&String.trim/1)
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.map(&String.slice(&1, 0, @max_muted_keyword_length))
+      |> Enum.uniq()
+      |> Enum.take(@max_muted_keywords)
 
     user
     |> Ecto.Changeset.change(%{muted_keywords: cleaned})
     |> Repo.update()
   end
+
+  def set_muted_keywords(_user, _), do: {:error, :invalid_keywords}
 
   def get_muted_keywords(user_id) do
     User

@@ -26,8 +26,13 @@ defmodule TraysSocialWeb.API.RateLimitPlug do
   end
 
   defp do_rate_limit(conn, max_requests, interval_ms) do
-    client_ip = conn.remote_ip |> :inet.ntoa() |> to_string()
-    bucket_key = "api_rate_limit:#{conn.request_path}:#{client_ip}"
+    identity =
+      case conn.assigns do
+        %{current_user: %{id: id}} when not is_nil(id) -> "user:#{id}"
+        _ -> "ip:#{conn.remote_ip |> :inet.ntoa() |> to_string()}"
+      end
+
+    bucket_key = "api_rate_limit:#{conn.request_path}:#{identity}"
 
     case Hammer.check_rate(bucket_key, interval_ms, max_requests) do
       {:allow, _count} ->

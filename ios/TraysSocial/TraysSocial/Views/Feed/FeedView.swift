@@ -5,7 +5,7 @@ struct FeedView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 0) {
+            LazyVStack(spacing: 12) {
                 ForEach(viewModel.posts) { post in
                     NavigationLink(value: post) {
                         PostCardView(
@@ -13,14 +13,12 @@ struct FeedView: View {
                             onTrayTap: { toggleBookmark(post) },
                             onLikeTap: { toggleLike(post) }
                         )
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .onAppear {
                         prefetchIfNeeded(post)
                     }
-
-                    Divider()
-                        .background(Theme.surface)
                 }
 
                 if viewModel.isLoadingMore {

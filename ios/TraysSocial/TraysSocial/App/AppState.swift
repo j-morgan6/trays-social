@@ -6,6 +6,7 @@ final class AppState {
     var isAuthenticated = false
     var currentUser: User?
     var selectedTray: TrayTab = .feed
+    var navigationPath = NavigationPath()
 
     enum TrayTab: Int, CaseIterable {
         case feed = 0
@@ -14,6 +15,20 @@ final class AppState {
     }
 
     var isValidatingToken = false
+
+    var isEmailVerified: Bool {
+        currentUser?.isEmailConfirmed ?? false
+    }
+
+    func refreshCurrentUser() async {
+        guard isAuthenticated else { return }
+        do {
+            let user = try await AuthService.fetchMe()
+            self.currentUser = user
+        } catch {
+            // Leave existing state untouched on transient errors
+        }
+    }
 
     init() {
         // Check for existing token on launch

@@ -17,15 +17,19 @@ struct FindView: View {
                         .focused($isSearchFocused)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                        .onSubmit { viewModel.search() }
-                        .onChange(of: viewModel.searchText) {
+                        .submitLabel(.search)
+                        .onChange(of: viewModel.searchText) { _, _ in
                             viewModel.search()
                         }
                     if !viewModel.searchText.isEmpty {
-                        Button { viewModel.clearSearch() } label: {
+                        Button {
+                            viewModel.clearSearch()
+                            isSearchFocused = false
+                        } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.gray)
                         }
+                        .buttonStyle(.borderless)
                     }
                 }
                 .padding(12)
@@ -69,8 +73,12 @@ struct FindView: View {
             }
             .padding(.top, 8)
         }
+        .scrollDismissesKeyboard(.interactively)
         .task {
             await viewModel.loadTrending()
+        }
+        .onDisappear {
+            viewModel.cancelInFlight()
         }
     }
 
@@ -95,25 +103,40 @@ struct FindView: View {
                         .padding(.horizontal, 16)
 
                     ForEach(viewModel.users) { user in
-                        HStack(spacing: 10) {
-                            Circle()
-                                .fill(Color(.systemGray4))
-                                .frame(width: 36, height: 36)
-                            VStack(alignment: .leading) {
-                                Text(user.username)
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(Theme.text)
-                                if let bio = user.bio {
-                                    Text(bio)
-                                        .font(.caption)
-                                        .foregroundStyle(.gray)
-                                        .lineLimit(1)
+                        NavigationLink(value: user.username) {
+                            HStack(spacing: 10) {
+                                Circle()
+                                    .fill(Color(.systemGray4))
+                                    .frame(width: 36, height: 36)
+                                    .overlay {
+                                        if let urlString = user.profilePhotoUrl, let url = urlString.asBackendURL {
+                                            AsyncImage(url: url) { image in
+                                                image.resizable().scaledToFill()
+                                            } placeholder: {
+                                                Color.clear
+                                            }
+                                            .frame(width: 36, height: 36)
+                                            .clipShape(Circle())
+                                        }
+                                    }
+                                VStack(alignment: .leading) {
+                                    Text(user.username)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(Theme.text)
+                                    if let bio = user.bio {
+                                        Text(bio)
+                                            .font(.caption)
+                                            .foregroundStyle(.gray)
+                                            .lineLimit(1)
+                                    }
                                 }
+                                Spacer()
                             }
-                            Spacer()
+                            .contentShape(Rectangle())
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 4)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 4)
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -126,10 +149,13 @@ struct FindView: View {
                         .foregroundStyle(.gray)
                         .padding(.horizontal, 16)
 
-                    LazyVStack(spacing: 0) {
+                    LazyVStack(spacing: 12) {
                         ForEach(viewModel.posts) { post in
-                            PostCardView(post: post)
-                            Divider().background(Theme.surface)
+                            NavigationLink(value: post) {
+                                PostCardView(post: post)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -172,7 +198,10 @@ struct FindView: View {
 
                 LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 8) {
                     ForEach(viewModel.trendingPosts) { post in
-                        TrendingCard(post: post)
+                        NavigationLink(value: post) {
+                            TrendingCard(post: post)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 16)

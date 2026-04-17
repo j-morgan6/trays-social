@@ -29,6 +29,7 @@ defmodule TraysSocialWeb.API.V1.PostController do
       json(conn, %{data: PostJSON.render(post, %{liked_post_ids: liked_post_ids, bookmarked_post_ids: bookmarked_post_ids})})
     rescue
       Ecto.NoResultsError -> {:error, :not_found}
+      Ecto.Query.CastError -> {:error, :not_found}
     end
   end
 
@@ -65,6 +66,7 @@ defmodule TraysSocialWeb.API.V1.PostController do
       end
     rescue
       Ecto.NoResultsError -> {:error, :not_found}
+      Ecto.Query.CastError -> {:error, :not_found}
     end
   end
 end

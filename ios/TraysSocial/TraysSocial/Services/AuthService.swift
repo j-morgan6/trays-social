@@ -66,4 +66,8 @@ enum AuthService {
         let response: DataResponse<User> = try await APIClient.shared.put(path: "/auth/me", body: body)
         return response.data
     }
+
+    static func resendConfirmation() async throws {
+        _ = try await APIClient.shared.post(path: "/auth/resend-confirmation")
+    }
 }

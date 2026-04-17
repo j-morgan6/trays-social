@@ -25,7 +25,11 @@ struct TraysSocialApp: App {
         WindowGroup {
             Group {
                 if appState.isAuthenticated {
-                    MainView()
+                    if appState.isEmailVerified || appState.currentUser == nil {
+                        MainView()
+                    } else {
+                        EmailVerificationGateView()
+                    }
                 } else {
                     WelcomeView()
                 }

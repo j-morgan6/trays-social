@@ -29,6 +29,7 @@ defmodule TraysSocialWeb.API.V1.CommentController do
       })
     rescue
       Ecto.NoResultsError -> {:error, :not_found}
+      Ecto.Query.CastError -> {:error, :not_found}
     end
   end
 
@@ -49,6 +50,7 @@ defmodule TraysSocialWeb.API.V1.CommentController do
       end
     rescue
       Ecto.NoResultsError -> {:error, :not_found}
+      Ecto.Query.CastError -> {:error, :not_found}
     end
   end
 
@@ -68,6 +70,7 @@ defmodule TraysSocialWeb.API.V1.CommentController do
       end
     rescue
       Ecto.NoResultsError -> {:error, :not_found}
+      Ecto.Query.CastError -> {:error, :not_found}
     end
   end
 

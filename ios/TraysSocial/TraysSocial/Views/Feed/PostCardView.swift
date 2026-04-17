@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PostCardView: View {
+    @Environment(AppState.self) private var appState
     let post: Post
     var onTrayTap: (() -> Void)?
     var onLikeTap: (() -> Void)?
@@ -59,7 +60,9 @@ struct PostCardView: View {
 
                 // Author + time + counts
                 HStack {
-                    NavigationLink(value: post.user.username) {
+                    Button {
+                        appState.navigationPath.append(post.user.username)
+                    } label: {
                         HStack(spacing: 6) {
                             Circle()
                                 .fill(Color(.systemGray4))
@@ -94,23 +97,22 @@ struct PostCardView: View {
 
                     Spacer()
 
-                    HStack(spacing: 12) {
+                    HStack(spacing: 4) {
                         Button(action: { onLikeTap?() }) {
                             Label("\(post.likeCount)", systemImage: post.likedByCurrentUser ? "heart.fill" : "heart")
                                 .foregroundStyle(post.likedByCurrentUser ? .red : Color(.systemGray2))
-                                .padding(.vertical, 4)
-                                .padding(.horizontal, 4)
+                                .frame(minWidth: 44, minHeight: 44)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.borderless)
 
                         Label("\(post.commentCount)", systemImage: "bubble.right")
+                            .frame(minWidth: 44, minHeight: 44)
 
                         Button(action: { onTrayTap?() }) {
                             Image(systemName: (post.bookmarkedByCurrentUser ?? false) ? "bookmark.fill" : "bookmark")
                                 .foregroundStyle((post.bookmarkedByCurrentUser ?? false) ? Theme.accent : Color(.systemGray2))
-                                .padding(.vertical, 4)
-                                .padding(.horizontal, 6)
+                                .frame(minWidth: 44, minHeight: 44)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.borderless)

@@ -17,6 +17,7 @@ defmodule TraysSocialWeb.API.V1.LikeController do
       end
     rescue
       Ecto.NoResultsError -> {:error, :not_found}
+      Ecto.Query.CastError -> {:error, :not_found}
     end
   end
 
@@ -32,6 +33,7 @@ defmodule TraysSocialWeb.API.V1.LikeController do
       end
     rescue
       Ecto.NoResultsError -> {:error, :not_found}
+      Ecto.Query.CastError -> {:error, :not_found}
     end
   end
 end

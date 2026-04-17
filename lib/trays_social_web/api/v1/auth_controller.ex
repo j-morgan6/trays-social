@@ -141,6 +141,20 @@ defmodule TraysSocialWeb.API.V1.AuthController do
     end
   end
 
+  def resend_confirmation(conn, _params) do
+    user = conn.assigns.current_user
+
+    if user.confirmed_at do
+      json(conn, %{data: %{message: "already confirmed"}})
+    else
+      Accounts.deliver_user_confirmation_instructions(user, fn token ->
+        TraysSocialWeb.Endpoint.url() <> "/users/confirm/" <> token
+      end)
+
+      json(conn, %{data: %{message: "confirmation email sent"}})
+    end
+  end
+
   defp user_json(user) do
     %{
       id: user.id,
@@ -148,7 +162,8 @@ defmodule TraysSocialWeb.API.V1.AuthController do
       username: user.username,
       bio: user.bio,
       profile_photo_url: user.profile_photo_url,
-      inserted_at: user.inserted_at
+      inserted_at: user.inserted_at,
+      confirmed_at: user.confirmed_at
     }
   end
 end

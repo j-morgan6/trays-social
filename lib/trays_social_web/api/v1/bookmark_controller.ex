@@ -43,6 +43,7 @@ defmodule TraysSocialWeb.API.V1.BookmarkController do
       end
     rescue
       Ecto.NoResultsError -> {:error, :not_found}
+      Ecto.Query.CastError -> {:error, :not_found}
     end
   end
 

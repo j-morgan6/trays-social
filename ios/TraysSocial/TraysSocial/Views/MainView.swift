@@ -5,12 +5,11 @@ struct NotificationRoute: Hashable {}
 struct MainView: View {
     @Environment(AppState.self) private var appState
     @State private var showCreatePost = false
-    @State private var path = NavigationPath()
 
     var body: some View {
         @Bindable var state = appState
 
-        NavigationStack(path: $path) {
+        NavigationStack(path: $state.navigationPath) {
             VStack(spacing: 0) {
                 // Top bar
                 HStack {
@@ -21,7 +20,7 @@ struct MainView: View {
                     Spacer()
 
                     Button {
-                        path.append(NotificationRoute())
+                        state.navigationPath.append(NotificationRoute())
                     } label: {
                         Image(systemName: "bell")
                             .font(.body)
@@ -59,7 +58,7 @@ struct MainView: View {
                 BottomBar(
                     onCreateTap: { showCreatePost = true },
                     onProfileTap: {
-                        path.append(appState.currentUser?.username ?? "")
+                        state.navigationPath.append(appState.currentUser?.username ?? "")
                     },
                     profilePhotoURL: appState.currentUser?.profilePhotoUrl
                 )
@@ -81,5 +80,6 @@ struct MainView: View {
                 CreatePostView()
             }
         }
+        .tint(Theme.primary)
     }
 }

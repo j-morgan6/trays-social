@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PostDetailView: View {
+    @Environment(AppState.self) private var appState
     let postId: Int
     @State private var viewModel = PostViewModel()
     @State private var showCookMode = false
@@ -133,24 +134,49 @@ struct PostDetailView: View {
             }
 
             HStack {
-                Circle().fill(Color(.systemGray4)).frame(width: 24, height: 24)
-                Text(post.user.username)
-                    .font(.subheadline)
-                    .foregroundStyle(.gray)
+                Button {
+                    appState.navigationPath.append(post.user.username)
+                } label: {
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(Color(.systemGray4))
+                            .frame(width: 28, height: 28)
+                            .overlay {
+                                if let urlString = post.user.profilePhotoUrl, let url = urlString.asBackendURL {
+                                    AsyncImage(url: url) { image in
+                                        image.resizable().scaledToFill()
+                                    } placeholder: { Color.clear }
+                                    .frame(width: 28, height: 28)
+                                    .clipShape(Circle())
+                                }
+                            }
+                        Text(post.user.username)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Theme.text)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
 
                 Spacer()
 
                 // Actions
-                HStack(spacing: 16) {
+                HStack(spacing: 4) {
                     Button { viewModel.toggleLike() } label: {
                         Label("\(post.likeCount)", systemImage: post.likedByCurrentUser ? "heart.fill" : "heart")
                             .foregroundStyle(post.likedByCurrentUser ? .red : .gray)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.borderless)
 
                     Button { viewModel.toggleBookmark() } label: {
                         Image(systemName: post.bookmarkedByCurrentUser == true ? "bookmark.fill" : "bookmark")
-                            .foregroundStyle(post.bookmarkedByCurrentUser == true ? .orange : .gray)
+                            .foregroundStyle(post.bookmarkedByCurrentUser == true ? Theme.accent : .gray)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.borderless)
                 }
                 .font(.subheadline)
             }

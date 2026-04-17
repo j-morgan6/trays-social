@@ -42,6 +42,7 @@ final class ProfileViewModel {
         self.user = User(
             id: user.id, username: user.username, email: user.email, bio: user.bio,
             profilePhotoUrl: user.profilePhotoUrl, insertedAt: user.insertedAt,
+            confirmedAt: user.confirmedAt,
             postCount: user.postCount,
             followerCount: (user.followerCount ?? 0) + (wasFollowing ? -1 : 1),
             followingCount: user.followingCount,

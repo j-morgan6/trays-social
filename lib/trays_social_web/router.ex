@@ -42,6 +42,21 @@ defmodule TraysSocialWeb.Router do
     plug TraysSocialWeb.API.RateLimitPlug, max_requests: 10, interval_ms: 3_600_000
   end
 
+  # Generous per-user/IP limit for read and account endpoints.
+  pipeline :api_rate_limit_read do
+    plug TraysSocialWeb.API.RateLimitPlug, max_requests: 300, interval_ms: 60_000
+  end
+
+  # Stricter limit for write actions (likes, comments, follows, bookmarks, posts).
+  pipeline :api_rate_limit_write do
+    plug TraysSocialWeb.API.RateLimitPlug, max_requests: 60, interval_ms: 60_000
+  end
+
+  # Very strict limit for resend confirmation to prevent email abuse.
+  pipeline :api_rate_limit_resend do
+    plug TraysSocialWeb.API.RateLimitPlug, max_requests: 3, interval_ms: 600_000
+  end
+
   # Health check — no auth, no SSL redirect
   scope "/", TraysSocialWeb do
     pipe_through :api
@@ -68,9 +83,16 @@ defmodule TraysSocialWeb.Router do
     post "/apple", AuthController, :apple
   end
 
+  # Resend confirmation — very strict limit, separate scope
+  scope "/api/v1", TraysSocialWeb.API.V1, as: :api_v1 do
+    pipe_through [:api, :api_auth, :api_rate_limit_resend]
+
+    post "/auth/resend-confirmation", AuthController, :resend_confirmation
+  end
+
   # API v1 — authenticated routes (read-only + account management)
   scope "/api/v1", TraysSocialWeb.API.V1, as: :api_v1 do
-    pipe_through [:api, :api_auth]
+    pipe_through [:api, :api_auth, :api_rate_limit_read]
 
     delete "/auth/logout", AuthController, :logout
     get "/auth/me", AuthController, :me
@@ -105,7 +127,7 @@ defmodule TraysSocialWeb.Router do
 
   # API v1 — authenticated + confirmed email required (write actions)
   scope "/api/v1", TraysSocialWeb.API.V1, as: :api_v1 do
-    pipe_through [:api, :api_auth, :api_require_confirmed]
+    pipe_through [:api, :api_auth, :api_require_confirmed, :api_rate_limit_write]
 
     post "/uploads", UploadController, :create
     post "/posts", PostController, :create

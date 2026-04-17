@@ -5,12 +5,13 @@ struct CreatePostView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = CreatePostViewModel()
     @State private var selectedPhoto: PhotosPickerItem?
+    @State private var keyboardVisible = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // Type picker
+                    // Type picker — also swipe horizontally on the form to toggle
                     Picker("Type", selection: $viewModel.postType) {
                         Text("Recipe").tag(CreatePostViewModel.PostType.recipe)
                         Text("Post").tag(CreatePostViewModel.PostType.post)
@@ -112,16 +113,39 @@ struct CreatePostView: View {
                     .disabled(viewModel.isPublishing)
                 }
                 .padding(16)
+                .gesture(
+                    DragGesture(minimumDistance: 40)
+                        .onEnded { value in
+                            // Only act on clearly horizontal swipes and only when the keyboard is down,
+                            // to avoid destroying in-progress text or fighting keyboard gestures.
+                            guard !keyboardVisible else { return }
+                            let dx = value.translation.width
+                            let dy = value.translation.height
+                            guard abs(dx) > 60, abs(dx) > abs(dy) * 1.5 else { return }
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                viewModel.postType = dx < 0 ? .post : .recipe
+                            }
+                        }
+                )
             }
             .background(Theme.background)
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                keyboardVisible = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                keyboardVisible = false
+            }
             .navigationTitle("New \(viewModel.postType == .recipe ? "Recipe" : "Post")")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.primary)
                 }
             }
         }
+        .tint(Theme.primary)
     }
 
     // MARK: - Recipe Fields

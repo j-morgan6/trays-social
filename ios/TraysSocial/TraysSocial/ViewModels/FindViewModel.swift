@@ -94,10 +94,18 @@ final class FindViewModel {
     }
 
     func clearSearch() {
+        searchTask?.cancel()
+        searchTask = nil
         searchText = ""
         activeFilter = nil
         posts = []
         users = []
+        isSearching = false
+    }
+
+    func cancelInFlight() {
+        searchTask?.cancel()
+        searchTask = nil
     }
 }
 

@@ -7,12 +7,15 @@ struct User: Codable, Identifiable, Sendable {
     let bio: String?
     let profilePhotoUrl: String?
     let insertedAt: Date?
+    let confirmedAt: Date?
 
     // Profile-specific fields (optional, not always present)
     let postCount: Int?
     let followerCount: Int?
     let followingCount: Int?
     let followedByCurrentUser: Bool?
+
+    var isEmailConfirmed: Bool { confirmedAt != nil }
 }
 
 struct AuthResponse: Decodable, Sendable {
