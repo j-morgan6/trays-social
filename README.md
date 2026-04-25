@@ -28,3 +28,20 @@ Trays Social combines visual content sharing with structured recipe documentatio
 - Ingredient based search
 - Recipe collections
 - Mobile applications
+
+## First-time setup
+
+After cloning the repo:
+
+```bash
+brew bundle              # installs SwiftFormat, SwiftLint, xcodegen
+./scripts/setup-hooks.sh # activates pre-commit and pre-push hooks
+```
+
+Hooks run automatically on `git commit` and `git push`. To reproduce manually:
+
+- `./scripts/lint-ios.sh` — strict-mode lint of the iOS tree
+- `./scripts/lint-ios.sh --fix` — same, with auto-fix applied
+- `./scripts/build-ios-release.sh` — Release build (matches pre-push)
+
+Bypass with `git commit --no-verify` or `git push --no-verify` only in emergencies; run the corresponding manual script before your next non-bypassed commit.
