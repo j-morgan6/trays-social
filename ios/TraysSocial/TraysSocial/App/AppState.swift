@@ -24,7 +24,7 @@ final class AppState {
         guard isAuthenticated else { return }
         do {
             let user = try await AuthService.fetchMe()
-            self.currentUser = user
+            currentUser = user
         } catch {
             // Leave existing state untouched on transient errors
         }

@@ -18,7 +18,9 @@ struct Post: Codable, Identifiable, Sendable, Hashable {
     let tools: [Tool]
     let tags: [String]
 
-    var isRecipe: Bool { type == "recipe" }
+    var isRecipe: Bool {
+        type == "recipe"
+    }
 
     var primaryPhotoURL: String? {
         photos.sorted(by: { $0.position < $1.position }).first?.url
@@ -43,19 +45,28 @@ struct PostPhoto: Codable, Sendable, Hashable {
 }
 
 struct Ingredient: Codable, Identifiable, Sendable, Hashable {
-    var id: String { "\(name)-\(quantity ?? "")" }
+    var id: String {
+        "\(name)-\(quantity ?? "")"
+    }
+
     let name: String
     let quantity: String?
     let unit: String?
 }
 
 struct CookingStep: Codable, Identifiable, Sendable, Hashable {
-    var id: Int { position }
+    var id: Int {
+        position
+    }
+
     let position: Int
     let instruction: String
 }
 
 struct Tool: Codable, Identifiable, Sendable, Hashable {
-    var id: String { name }
+    var id: String {
+        name
+    }
+
     let name: String
 }

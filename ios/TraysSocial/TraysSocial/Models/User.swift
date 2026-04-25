@@ -15,7 +15,9 @@ struct User: Codable, Identifiable, Sendable {
     let followingCount: Int?
     let followedByCurrentUser: Bool?
 
-    var isEmailConfirmed: Bool { confirmedAt != nil }
+    var isEmailConfirmed: Bool {
+        confirmedAt != nil
+    }
 }
 
 struct AuthResponse: Decodable, Sendable {

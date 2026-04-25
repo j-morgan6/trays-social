@@ -1,0 +1,8 @@
+--swiftversion 6.0
+
+--exclude **/.build
+--exclude **/DerivedData
+
+# Disabled: strips Sendable conformances. Wrong for Swift 6 strict concurrency
+# where Sendable on structs is load-bearing for actor-boundary safety.
+--disable redundantSendable

@@ -59,7 +59,7 @@ struct MutedKeywordsView: View {
         do {
             let response: DataResponse<MutedKeywordsResponse> = try await APIClient.shared.get(path: "/muted-keywords")
             keywords = response.data.mutedKeywords
-        } catch { }
+        } catch {}
         isLoading = false
     }
 
@@ -72,7 +72,7 @@ struct MutedKeywordsView: View {
                 path: "/muted-keywords",
                 body: KeywordsRequest(keywords: keywords)
             )
-        } catch { }
+        } catch {}
     }
 }
 

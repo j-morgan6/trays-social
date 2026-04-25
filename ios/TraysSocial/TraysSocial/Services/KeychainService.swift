@@ -1,6 +1,6 @@
 import Foundation
-import Security
 import LocalAuthentication
+import Security
 
 enum KeychainService {
     private static let service = "com.trays.social.api-token"
@@ -12,7 +12,7 @@ enum KeychainService {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account
+            kSecAttrAccount as String: account,
         ]
 
         // Delete existing item first
@@ -31,7 +31,7 @@ enum KeychainService {
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
         ]
 
         var result: AnyObject?
@@ -39,7 +39,8 @@ enum KeychainService {
 
         guard status == errSecSuccess,
               let data = result as? Data,
-              let token = String(data: data, encoding: .utf8) else {
+              let token = String(data: data, encoding: .utf8)
+        else {
             return nil
         }
 
@@ -50,7 +51,7 @@ enum KeychainService {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account
+            kSecAttrAccount as String: account,
         ]
 
         SecItemDelete(query as CFDictionary)
@@ -79,7 +80,7 @@ enum KeychainService {
                 kSecAttrService as String: credentialService,
                 kSecAttrAccount as String: account,
                 kSecValueData as String: data,
-                kSecAttrAccessControl as String: access
+                kSecAttrAccessControl as String: access,
             ]
             SecItemAdd(query as CFDictionary, nil)
         }
@@ -92,19 +93,21 @@ enum KeychainService {
                 kSecAttrService as String: credentialService,
                 kSecAttrAccount as String: account,
                 kSecReturnData as String: true,
-                kSecMatchLimit as String: kSecMatchLimitOne
+                kSecMatchLimit as String: kSecMatchLimitOne,
             ]
             var result: AnyObject?
             guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
                   let data = result as? Data,
-                  let str = String(data: data, encoding: .utf8) else {
+                  let str = String(data: data, encoding: .utf8)
+            else {
                 return nil
             }
             return str
         }
 
         guard let email = retrieve(account: credentialEmailAccount),
-              let password = retrieve(account: credentialPasswordAccount) else {
+              let password = retrieve(account: credentialPasswordAccount)
+        else {
             return nil
         }
         return (email, password)
@@ -118,7 +121,7 @@ enum KeychainService {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: credentialService,
             kSecAttrAccount as String: credentialEmailAccount,
-            kSecUseAuthenticationContext as String: context
+            kSecUseAuthenticationContext as String: context,
         ]
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -128,7 +131,7 @@ enum KeychainService {
     static func deleteBiometricCredential() {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: credentialService
+            kSecAttrService as String: credentialService,
         ]
         SecItemDelete(query as CFDictionary)
     }

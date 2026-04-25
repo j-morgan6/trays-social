@@ -42,7 +42,7 @@ struct PostDetailView: View {
                 commentInputBar(post)
 
                 // Start Cooking button (recipes only)
-                if post.isRecipe && !post.cookingSteps.isEmpty {
+                if post.isRecipe, !post.cookingSteps.isEmpty {
                     VStack {
                         Spacer()
                         HStack {
@@ -146,8 +146,8 @@ struct PostDetailView: View {
                                     AsyncImage(url: url) { image in
                                         image.resizable().scaledToFill()
                                     } placeholder: { Color.clear }
-                                    .frame(width: 28, height: 28)
-                                    .clipShape(Circle())
+                                        .frame(width: 28, height: 28)
+                                        .clipShape(Circle())
                                 }
                             }
                         Text(post.user.username)
@@ -213,7 +213,7 @@ struct PostDetailView: View {
                             Text(ingredient.name)
                                 .foregroundStyle(Theme.text)
                             Spacer()
-                            Text([ingredient.quantity, ingredient.unit].compactMap { $0 }.joined(separator: " "))
+                            Text([ingredient.quantity, ingredient.unit].compactMap(\.self).joined(separator: " "))
                                 .foregroundStyle(.secondary)
                         }
                         .font(.subheadline)
@@ -290,7 +290,7 @@ struct PostDetailView: View {
 
     // MARK: - Comments
 
-    private func commentsSection(_ post: Post) -> some View {
+    private func commentsSection(_: Post) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Comments (\(viewModel.comments.count))")
                 .font(.headline)
@@ -349,7 +349,6 @@ struct PostDetailView: View {
             .background(.ultraThinMaterial)
         }
     }
-
 }
 
 // MARK: - Flow Layout (for tools)
@@ -357,12 +356,12 @@ struct PostDetailView: View {
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) -> CGSize {
         let result = layout(subviews: subviews, proposal: proposal)
         return result.size
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) {
         let result = layout(subviews: subviews, proposal: proposal)
         for (index, position) in result.positions.enumerated() {
             subviews[index].place(at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y), proposal: .unspecified)
@@ -393,7 +392,7 @@ struct FlowLayout: Layout {
         var maxRowWidth: CGFloat = 0
 
         for size in sizes {
-            if x + size.width > maxWidth && x > 0 {
+            if x + size.width > maxWidth, x > 0 {
                 maxRowWidth = max(maxRowWidth, x - spacing)
                 x = 0
                 y += rowHeight + spacing
@@ -412,4 +411,3 @@ struct FlowLayout: Layout {
         return (CGSize(width: maxRowWidth, height: y + rowHeight), positions)
     }
 }
-

@@ -24,7 +24,7 @@ final class NotificationsViewModel {
     }
 
     var unreadCount: Int {
-        notifications.filter { !$0.isRead }.count
+        notifications.count(where: { !$0.isRead })
     }
 
     func load() async {
@@ -32,7 +32,7 @@ final class NotificationsViewModel {
         do {
             let response: PaginatedResponse<[AppNotification]> = try await APIClient.shared.get(path: "/notifications")
             notifications = response.data
-        } catch { }
+        } catch {}
         isLoading = false
     }
 

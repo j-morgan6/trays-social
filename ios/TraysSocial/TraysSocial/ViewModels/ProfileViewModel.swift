@@ -16,7 +16,7 @@ final class ProfileViewModel {
             user = response.data
             isOwnProfile = response.data.id == currentUserId
             await loadPosts(username: username)
-        } catch { }
+        } catch {}
         isLoading = false
     }
 
@@ -31,7 +31,7 @@ final class ProfileViewModel {
                 queryItems: queryItems
             )
             posts = postsResponse.data
-        } catch { }
+        } catch {}
     }
 
     func toggleFollow() {

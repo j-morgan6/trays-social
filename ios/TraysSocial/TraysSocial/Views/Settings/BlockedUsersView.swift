@@ -22,8 +22,8 @@ struct BlockedUsersView: View {
                                 AsyncImage(url: imageURL) { image in
                                     image.resizable().scaledToFill()
                                 } placeholder: { Color.clear }
-                                .frame(width: 36, height: 36)
-                                .clipShape(Circle())
+                                    .frame(width: 36, height: 36)
+                                    .clipShape(Circle())
                             } else {
                                 Image(systemName: "person.fill")
                                     .foregroundStyle(.gray)
@@ -63,7 +63,7 @@ struct BlockedUsersView: View {
         do {
             let response: DataResponse<[BlockedUser]> = try await APIClient.shared.get(path: "/blocked-users")
             blockedUsers = response.data
-        } catch { }
+        } catch {}
         isLoading = false
     }
 
@@ -71,6 +71,6 @@ struct BlockedUsersView: View {
         do {
             let _: MessageResponse = try await APIClient.shared.delete(path: "/users/\(user.username)/block")
             blockedUsers.removeAll { $0.id == user.id }
-        } catch { }
+        } catch {}
     }
 }

@@ -1,5 +1,5 @@
-import SwiftUI
 import AuthenticationServices
+import SwiftUI
 
 struct WelcomeView: View {
     @Environment(AppState.self) private var appState

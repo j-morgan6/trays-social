@@ -24,7 +24,7 @@ struct UsernamePickerView: View {
                     .background(Theme.surface)
                     .cornerRadius(12)
 
-                if !viewModel.username.isEmpty && !viewModel.isUsernameValid {
+                if !viewModel.username.isEmpty, !viewModel.isUsernameValid {
                     Text("3-30 characters, letters, numbers, underscores only")
                         .font(.caption2)
                         .foregroundStyle(.red)

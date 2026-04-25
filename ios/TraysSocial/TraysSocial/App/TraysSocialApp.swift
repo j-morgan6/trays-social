@@ -7,9 +7,9 @@ struct TraysSocialApp: App {
 
     private var preferredScheme: ColorScheme? {
         switch colorSchemePreference {
-        case "light": return .light
-        case "dark": return .dark
-        default: return nil
+        case "light": .light
+        case "dark": .dark
+        default: nil
         }
     }
 

@@ -1,6 +1,6 @@
 import Foundation
-import UserNotifications
 import UIKit
+import UserNotifications
 
 enum PushNotificationService {
     static func requestPermission() {

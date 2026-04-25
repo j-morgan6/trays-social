@@ -8,8 +8,8 @@ actor APIClient {
     private let decoder: JSONDecoder
 
     private init() {
-        self.baseURL = Configuration.apiBaseURL + "/api/v1"
-        self.session = URLSession.shared
+        baseURL = Configuration.apiBaseURL + "/api/v1"
+        session = URLSession.shared
 
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
@@ -113,7 +113,7 @@ actor APIClient {
         }
 
         switch httpResponse.statusCode {
-        case 200...201:
+        case 200 ... 201:
             return try decoder.decode(T.self, from: data)
         case 401:
             throw APIError.unauthorized

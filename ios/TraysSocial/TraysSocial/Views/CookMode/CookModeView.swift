@@ -175,10 +175,10 @@ struct CookModeView: View {
         .gesture(
             DragGesture(minimumDistance: 50)
                 .onEnded { value in
-                    if value.translation.width < -50 && currentStep < steps.count - 1 {
+                    if value.translation.width < -50, currentStep < steps.count - 1 {
                         withAnimation { currentStep += 1 }
                         stopTimer()
-                    } else if value.translation.width > 50 && currentStep > 0 {
+                    } else if value.translation.width > 50, currentStep > 0 {
                         withAnimation { currentStep -= 1 }
                         stopTimer()
                     }

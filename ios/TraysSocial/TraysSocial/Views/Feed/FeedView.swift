@@ -32,10 +32,10 @@ struct FeedView: View {
             await viewModel.refresh()
         }
         .overlay {
-            if viewModel.isLoading && viewModel.posts.isEmpty {
+            if viewModel.isLoading, viewModel.posts.isEmpty {
                 ProgressView()
                     .tint(Theme.accent)
-            } else if viewModel.posts.isEmpty && !viewModel.isLoading {
+            } else if viewModel.posts.isEmpty, !viewModel.isLoading {
                 VStack(spacing: 8) {
                     Text("No recipes yet")
                         .font(.headline)
@@ -123,10 +123,12 @@ struct FeedView: View {
 }
 
 extension String: @retroactive Identifiable {
-    public var id: String { self }
+    public var id: String {
+        self
+    }
 }
 
-// Placeholders for screens built in later tasks
+/// Placeholders for screens built in later tasks
 private struct PostDetailPlaceholder: View {
     let postId: Int
     var body: some View {

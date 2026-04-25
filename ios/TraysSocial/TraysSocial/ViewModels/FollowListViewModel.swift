@@ -24,8 +24,8 @@ final class FollowListViewModel {
 
     private var pathSegment: String {
         switch mode {
-        case .followers: return "followers"
-        case .following: return "following"
+        case .followers: "followers"
+        case .following: "following"
         }
     }
 
@@ -39,7 +39,7 @@ final class FollowListViewModel {
             users = response.data
             cursor = response.cursor
             hasMore = response.cursor != nil
-        } catch { }
+        } catch {}
         isLoading = false
     }
 
@@ -54,7 +54,7 @@ final class FollowListViewModel {
             users.append(contentsOf: response.data)
             self.cursor = response.cursor
             hasMore = response.cursor != nil
-        } catch { }
+        } catch {}
         isLoadingMore = false
     }
 }

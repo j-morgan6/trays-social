@@ -1,5 +1,5 @@
-import SwiftUI
 import PhotosUI
+import SwiftUI
 
 struct ProfileView: View {
     let username: String
@@ -26,8 +26,8 @@ struct ProfileView: View {
                                     AsyncImage(url: imageURL) { image in
                                         image.resizable().scaledToFill()
                                     } placeholder: { Color.clear }
-                                    .frame(width: 80, height: 80)
-                                    .clipShape(Circle())
+                                        .frame(width: 80, height: 80)
+                                        .clipShape(Circle())
                                 } else {
                                     Image(systemName: "person.fill")
                                         .font(.title)
@@ -188,7 +188,7 @@ struct ProfileView: View {
             do {
                 let _: MessageResponse = try await APIClient.shared.post(path: "/users/\(username)/block")
                 // Pop back to previous screen
-            } catch { }
+            } catch {}
         }
     }
 
@@ -206,7 +206,6 @@ struct ProfileView: View {
         .background(Theme.secondary.opacity(0.25))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
-
 }
 
 // MARK: - Edit Profile
@@ -251,7 +250,7 @@ struct EditProfileView: View {
                             .foregroundStyle(.gray)
                             .tracking(0.5)
                         TextField("Tell people about yourself", text: $bio, axis: .vertical)
-                            .lineLimit(3...6)
+                            .lineLimit(3 ... 6)
                             .padding(12)
                             .background(Theme.surface)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -317,7 +316,8 @@ struct EditProfileView: View {
                         .frame(width: 100, height: 100)
                         .clipShape(Circle())
                 } else if let urlString = appState.currentUser?.profilePhotoUrl,
-                          let imageURL = urlString.asBackendURL {
+                          let imageURL = urlString.asBackendURL
+                {
                     AsyncImage(url: imageURL) { image in
                         image.resizable().scaledToFill()
                     } placeholder: {
@@ -358,7 +358,7 @@ struct EditProfileView: View {
 
     private func validate() -> String? {
         let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 3 && trimmed.count <= 30 else {
+        guard trimmed.count >= 3, trimmed.count <= 30 else {
             return "Username must be 3–30 characters"
         }
         guard trimmed.range(of: #"^[a-zA-Z0-9_]+$"#, options: .regularExpression) != nil else {
@@ -406,7 +406,6 @@ struct EditProfileView: View {
             isSaving = false
         }
     }
-
 }
 
 // MARK: - Settings

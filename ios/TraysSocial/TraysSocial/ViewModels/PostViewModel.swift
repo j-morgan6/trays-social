@@ -20,7 +20,7 @@ final class PostViewModel {
         do {
             let response: DataResponse<Post> = try await APIClient.shared.get(path: "/posts/\(id)")
             post = response.data
-        } catch { }
+        } catch {}
         isLoading = false
     }
 
@@ -30,7 +30,7 @@ final class PostViewModel {
                 path: "/posts/\(postId)/comments"
             )
             comments = response.data
-        } catch { }
+        } catch {}
     }
 
     func toggleLike() {
@@ -110,7 +110,7 @@ final class PostViewModel {
                 post = updated
                 broadcastUpdate(updated)
             }
-        } catch { }
+        } catch {}
         isSendingComment = false
     }
 

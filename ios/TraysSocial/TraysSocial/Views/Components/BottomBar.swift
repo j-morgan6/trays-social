@@ -54,5 +54,4 @@ struct BottomBar: View {
                 .frame(height: 1)
         }
     }
-
 }

@@ -1,6 +1,6 @@
-import SwiftUI
 import AuthenticationServices
 import LocalAuthentication
+import SwiftUI
 
 @MainActor
 @Observable
@@ -116,10 +116,11 @@ final class AuthViewModel {
         errorMessage = nil
 
         switch result {
-        case .success(let authorization):
+        case let .success(authorization):
             guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
                   let tokenData = credential.identityToken,
-                  let identityToken = String(data: tokenData, encoding: .utf8) else {
+                  let identityToken = String(data: tokenData, encoding: .utf8)
+            else {
                 errorMessage = "Failed to get Apple credentials."
                 isLoading = false
                 return

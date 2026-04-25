@@ -5,14 +5,13 @@ struct FollowListRoute: Hashable {
     let mode: FollowListViewModel.Mode
 }
 
-
 struct FollowListView: View {
     let route: FollowListRoute
     @State private var viewModel: FollowListViewModel
 
     init(route: FollowListRoute) {
         self.route = route
-        self._viewModel = State(initialValue: FollowListViewModel(
+        _viewModel = State(initialValue: FollowListViewModel(
             username: route.username,
             mode: route.mode
         ))

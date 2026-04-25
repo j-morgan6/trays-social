@@ -83,8 +83,8 @@ private struct NotificationRow: View {
                             AsyncImage(url: imageURL) { image in
                                 image.resizable().scaledToFill()
                             } placeholder: { Color.clear }
-                            .frame(width: 40, height: 40)
-                            .clipShape(Circle())
+                                .frame(width: 40, height: 40)
+                                .clipShape(Circle())
                         } else {
                             Image(systemName: iconForType)
                                 .foregroundStyle(.gray)
@@ -134,17 +134,15 @@ private struct NotificationRow: View {
 
     private var notificationText: AttributedString {
         let username = notification.actor?.username ?? "Someone"
-        var text: AttributedString
-
-        switch notification.type {
+        var text = switch notification.type {
         case "like":
-            text = AttributedString("\(username) liked your recipe")
+            AttributedString("\(username) liked your recipe")
         case "comment":
-            text = AttributedString("\(username) commented on your recipe")
+            AttributedString("\(username) commented on your recipe")
         case "follow":
-            text = AttributedString("\(username) started following you")
+            AttributedString("\(username) started following you")
         default:
-            text = AttributedString("New notification")
+            AttributedString("New notification")
         }
 
         // Bold the username
@@ -154,5 +152,4 @@ private struct NotificationRow: View {
 
         return text
     }
-
 }

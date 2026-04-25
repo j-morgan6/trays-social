@@ -13,7 +13,7 @@ struct PostCardView: View {
                 if let photoURL = post.primaryPhotoURL {
                     AsyncImage(url: photoURL.asBackendURL) { phase in
                         switch phase {
-                        case .success(let image):
+                        case let .success(image):
                             image
                                 .resizable()
                                 .scaledToFill()
@@ -132,7 +132,6 @@ struct PostCardView: View {
             .fill(Color(.systemGray6))
             .frame(height: 300)
     }
-
 }
 
 // MARK: - Badge Pill
@@ -156,11 +155,11 @@ struct BadgePill: View {
 
 extension Date {
     func timeAgo() -> String {
-        let seconds = -self.timeIntervalSinceNow
+        let seconds = -timeIntervalSinceNow
         if seconds < 60 { return "now" }
         if seconds < 3600 { return "\(Int(seconds / 60))m" }
         if seconds < 86400 { return "\(Int(seconds / 3600))h" }
-        if seconds < 604800 { return "\(Int(seconds / 86400))d" }
-        return "\(Int(seconds / 604800))w"
+        if seconds < 604_800 { return "\(Int(seconds / 86400))d" }
+        return "\(Int(seconds / 604_800))w"
     }
 }

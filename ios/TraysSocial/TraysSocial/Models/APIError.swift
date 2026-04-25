@@ -19,10 +19,10 @@ enum APIError: LocalizedError {
         case .forbidden: "You don't have permission to do that."
         case .notFound: "Not found."
         case .unprocessableEntity: "Invalid data."
-        case .validationError(let errors):
+        case let .validationError(errors):
             errors.map { "\($0.field ?? ""): \($0.message)" }.joined(separator: "\n")
         case .rateLimited: "Too many requests. Please try again later."
-        case .serverError(let code): "Server error (\(code)). Please try again."
+        case let .serverError(code): "Server error (\(code)). Please try again."
         }
     }
 }

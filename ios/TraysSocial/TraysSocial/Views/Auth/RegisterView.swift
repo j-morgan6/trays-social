@@ -20,7 +20,7 @@ struct RegisterView: View {
                         .background(Theme.surface)
                         .cornerRadius(12)
 
-                    if !viewModel.username.isEmpty && !viewModel.isUsernameValid {
+                    if !viewModel.username.isEmpty, !viewModel.isUsernameValid {
                         Text("3-30 characters, letters, numbers, underscores only")
                             .font(.caption2)
                             .foregroundStyle(.red)
@@ -43,7 +43,7 @@ struct RegisterView: View {
                         .background(Theme.surface)
                         .cornerRadius(12)
 
-                    if !viewModel.password.isEmpty && !viewModel.isPasswordValid {
+                    if !viewModel.password.isEmpty, !viewModel.isPasswordValid {
                         Text("Must be at least 12 characters")
                             .font(.caption2)
                             .foregroundStyle(.red)

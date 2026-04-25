@@ -19,9 +19,9 @@ struct MyTrayView: View {
             listView
         }
         .overlay {
-            if viewModel.isLoading && viewModel.posts.isEmpty {
+            if viewModel.isLoading, viewModel.posts.isEmpty {
                 ProgressView().tint(Theme.accent)
-            } else if viewModel.posts.isEmpty && !viewModel.isLoading {
+            } else if viewModel.posts.isEmpty, !viewModel.isLoading {
                 VStack(spacing: 8) {
                     Text("Your tray is empty")
                         .font(.headline)
@@ -102,5 +102,4 @@ struct MyTrayView: View {
         .listStyle(.plain)
         .refreshable { await viewModel.refresh() }
     }
-
 }

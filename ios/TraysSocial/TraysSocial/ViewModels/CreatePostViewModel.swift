@@ -1,5 +1,5 @@
-import SwiftUI
 import PhotosUI
+import SwiftUI
 
 @MainActor
 @Observable
@@ -72,9 +72,17 @@ final class CreatePostViewModel {
         newToolName = ""
     }
 
-    func removeIngredient(at index: Int) { ingredients.remove(at: index) }
-    func removeStep(at index: Int) { steps.remove(at: index) }
-    func removeTool(at index: Int) { tools.remove(at: index) }
+    func removeIngredient(at index: Int) {
+        ingredients.remove(at: index)
+    }
+
+    func removeStep(at index: Int) {
+        steps.remove(at: index)
+    }
+
+    func removeTool(at index: Int) {
+        tools.remove(at: index)
+    }
 
     func publish() async -> Bool {
         // Auto-add any pending input before publishing
@@ -103,19 +111,19 @@ final class CreatePostViewModel {
                 "type": postType.rawValue,
                 "caption": caption,
                 "photo_url": photoURL,
-                "post_photos": [["url": photoURL, "position": 0]]
+                "post_photos": [["url": photoURL, "position": 0]],
             ]
 
             if postType == .recipe {
                 if let time = Int(cookingTimeMinutes) { params["cooking_time_minutes"] = time }
                 if let srv = Int(servings) { params["servings"] = srv }
-                params["ingredients"] = ingredients.enumerated().map { (i, ing) -> [String: Any] in
+                params["ingredients"] = ingredients.enumerated().map { i, ing -> [String: Any] in
                     ["name": ing.name, "quantity": ing.quantity, "unit": ing.unit, "order": i]
                 }
-                params["cooking_steps"] = steps.enumerated().map { (i, step) -> [String: Any] in
+                params["cooking_steps"] = steps.enumerated().map { i, step -> [String: Any] in
                     ["description": step.description, "order": i]
                 }
-                params["tools"] = tools.enumerated().map { (i, tool) -> [String: Any] in
+                params["tools"] = tools.enumerated().map { i, tool -> [String: Any] in
                     ["name": tool, "order": i]
                 }
             }
@@ -136,7 +144,7 @@ final class CreatePostViewModel {
             }
 
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, (200...201).contains(httpResponse.statusCode) else {
+            guard let httpResponse = response as? HTTPURLResponse, (200 ... 201).contains(httpResponse.statusCode) else {
                 let httpResponse = response as? HTTPURLResponse
                 let body = String(data: data, encoding: .utf8) ?? "no body"
                 errorMessage = "Failed to create post (\(httpResponse?.statusCode ?? 0)): \(body)"

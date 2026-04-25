@@ -8,7 +8,9 @@ struct AppNotification: Codable, Identifiable, Sendable {
     let actor: NotificationActor?
     let post: NotificationPost?
 
-    var isRead: Bool { readAt != nil }
+    var isRead: Bool {
+        readAt != nil
+    }
 }
 
 struct NotificationActor: Codable, Sendable {

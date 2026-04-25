@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ReportSheetView: View {
-    let targetType: String  // "post", "comment", or "user"
+    let targetType: String // "post", "comment", or "user"
     let targetId: Int
     @Environment(\.dismiss) private var dismiss
 
@@ -16,7 +16,7 @@ struct ReportSheetView: View {
         ("off_topic", "Off Topic"),
         ("harassment", "Harassment"),
         ("inappropriate", "Inappropriate"),
-        ("other", "Other")
+        ("other", "Other"),
     ]
 
     var body: some View {
@@ -33,7 +33,7 @@ struct ReportSheetView: View {
 
                 Section("Additional details (optional)") {
                     TextField("Tell us more...", text: $details, axis: .vertical)
-                        .lineLimit(3...6)
+                        .lineLimit(3 ... 6)
                 }
 
                 if let errorMessage {

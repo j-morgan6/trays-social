@@ -1,5 +1,5 @@
-import SwiftUI
 import PhotosUI
+import SwiftUI
 
 struct CreatePostView: View {
     @Environment(\.dismiss) private var dismiss
@@ -64,7 +64,7 @@ struct CreatePostView: View {
 
                     // Caption
                     TextField("Caption", text: $viewModel.caption, axis: .vertical)
-                        .lineLimit(3...6)
+                        .lineLimit(3 ... 6)
                         .textFieldStyle(.plain)
                         .padding(12)
                         .background(Theme.surface)

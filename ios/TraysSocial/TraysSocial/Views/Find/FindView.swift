@@ -157,7 +157,7 @@ struct FindView: View {
                 }
             }
 
-            if viewModel.posts.isEmpty && viewModel.users.isEmpty {
+            if viewModel.posts.isEmpty, viewModel.users.isEmpty {
                 VStack(spacing: 8) {
                     Text("No results")
                         .font(.headline)
@@ -255,5 +255,4 @@ private struct TrendingCard: View {
                 .stroke(Theme.secondary.opacity(0.35), lineWidth: 1)
         )
     }
-
 }
