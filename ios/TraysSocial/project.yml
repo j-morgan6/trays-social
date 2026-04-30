@@ -30,3 +30,19 @@ targets:
           API_BASE_URL: "https://trays-social-review.fly.dev"
         release:
           API_BASE_URL: "https://trays.app"
+
+schemes:
+  TraysSocial:
+    build:
+      targets:
+        TraysSocial: all
+    run:
+      config: Debug
+    archive:
+      config: Release
+    test:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
