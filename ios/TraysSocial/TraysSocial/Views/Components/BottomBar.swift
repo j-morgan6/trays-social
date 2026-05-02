@@ -6,10 +6,7 @@ struct BottomBar: View {
     var profilePhotoURL: String?
 
     var body: some View {
-        HStack {
-            Spacer()
-
-            // Create button
+        HStack(spacing: 0) {
             Button(action: onCreateTap) {
                 Image(systemName: "plus")
                     .font(.title2.weight(.medium))
@@ -19,10 +16,9 @@ struct BottomBar: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .shadow(color: Theme.primary.opacity(0.25), radius: 8, y: 4)
             }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .accessibilityLabel("Create post")
 
-            Spacer()
-
-            // Profile button
             Button(action: onProfileTap) {
                 Circle()
                     .fill(Color(.systemGray4))
@@ -43,10 +39,10 @@ struct BottomBar: View {
                         }
                     }
             }
-
-            Spacer()
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .accessibilityLabel("Profile")
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 2)
         .background(Theme.background)
         .overlay(alignment: .top) {
             Rectangle()
