@@ -113,7 +113,7 @@ struct CreatePostView: View {
                     .disabled(viewModel.isPublishing)
                 }
                 .padding(16)
-                .gesture(
+                .simultaneousGesture(
                     DragGesture(minimumDistance: 40)
                         .onEnded { value in
                             // Only act on clearly horizontal swipes and only when the keyboard is down,
