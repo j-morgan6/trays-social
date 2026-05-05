@@ -19,6 +19,12 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
       assert is_binary(data["token"])
       assert data["needs_username"] == true
       assert data["user"]["email"] == "apple@privaterelay.appleid.com"
+      # Regression: first-time Apple users have no username yet. The response
+      # must serialize the missing username as an empty string, NOT nil/null —
+      # the iOS client decodes `username` as a non-optional String and a null
+      # value crashes the decoder before the `needs_username` flag is read.
+      assert data["user"]["username"] == ""
+      refute is_nil(data["user"]["username"])
     end
 
     test "creates user with username when provided", %{conn: conn} do

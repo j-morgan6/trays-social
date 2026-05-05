@@ -159,7 +159,13 @@ defmodule TraysSocialWeb.API.V1.AuthController do
     %{
       id: user.id,
       email: user.email,
-      username: user.username,
+      # Coerce nil to empty string so iOS clients (which decode `username` as a
+      # non-optional String) can parse the response. This matters specifically
+      # for first-time Sign in with Apple: the user has no username yet, and
+      # the `needs_username: true` flag routes the client to UsernamePickerView
+      # to set one. Returning `nil` here would JSON-serialize to `null` and
+      # crash the iOS decoder before the flag can be read.
+      username: user.username || "",
       bio: user.bio,
       profile_photo_url: user.profile_photo_url,
       inserted_at: user.inserted_at,
