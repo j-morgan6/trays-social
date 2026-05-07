@@ -70,6 +70,14 @@ defmodule TraysSocialWeb.Router do
     get "/apple-app-site-association", WellKnownController, :aasa
   end
 
+  # Legal pages — public, indexable, no auth, cache-friendly
+  scope "/", TraysSocialWeb do
+    pipe_through :browser
+
+    get "/privacy", LegalController, :privacy
+    get "/terms", LegalController, :terms
+  end
+
   scope "/", TraysSocialWeb do
     pipe_through :browser
 
