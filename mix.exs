@@ -67,6 +67,7 @@ defmodule TraysSocial.MixProject do
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
+      {:earmark, "~> 1.4"},
       {:bandit, "~> 1.5"},
       # Forced override to pull in CVE patches (GHSA-9fm9-hp7p-53mf, GHSA-vq52-99r9-h5pw).
       # Pulled transitively by httpoison/swoosh/ex_aws, all capped at < 2.0;
