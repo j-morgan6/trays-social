@@ -140,8 +140,17 @@ final class AuthViewModel {
                 if response.needsUsername == true {
                     pendingToken = response.token
                     pendingUser = response.user
-                    needsUsername = true
                     KeychainService.save(token: response.token)
+
+                    // Defer the sheet-presentation flag by ~350ms so SwiftUI
+                    // fully dismisses Apple's ASAuthorizationController sheet
+                    // before our .sheet(isPresented: $needsUsername) attempts
+                    // to present UsernamePickerView. Without the delay, the
+                    // two sheet animations race in the same runloop tick and
+                    // SwiftUI swallows the second presentation, leaving the
+                    // user back on Welcome with no visible feedback. (D30.)
+                    try? await Task.sleep(for: .milliseconds(350))
+                    needsUsername = true
                 } else {
                     appState.login(token: response.token, user: response.user)
                 }
