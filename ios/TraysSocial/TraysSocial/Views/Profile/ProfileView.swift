@@ -414,6 +414,8 @@ struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirm = false
+    @State private var showPrivacy = false
+    @State private var showTerms = false
     @AppStorage("colorScheme") private var colorSchemePreference = "system"
 
     var body: some View {
@@ -436,6 +438,34 @@ struct SettingsView: View {
 
                     NavigationLink("Muted Keywords") {
                         MutedKeywordsView()
+                    }
+                    .foregroundStyle(Theme.text)
+                }
+
+                Section("Legal") {
+                    Button {
+                        showPrivacy = true
+                    } label: {
+                        HStack {
+                            Text("Privacy Policy")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .foregroundStyle(Theme.text)
+
+                    Button {
+                        showTerms = true
+                    } label: {
+                        HStack {
+                            Text("Terms of Service")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                     .foregroundStyle(Theme.text)
                 }
@@ -474,6 +504,12 @@ struct SettingsView: View {
                 }
             } message: {
                 Text("This will permanently delete your account and all your data. This cannot be undone.")
+            }
+            .sheet(isPresented: $showPrivacy) {
+                SafariView(url: URL(string: "https://trays.app/privacy")!)
+            }
+            .sheet(isPresented: $showTerms) {
+                SafariView(url: URL(string: "https://trays.app/terms")!)
             }
         }
     }
