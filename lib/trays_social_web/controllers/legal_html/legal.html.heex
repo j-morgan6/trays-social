@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>{@title} · Trays</title>
+    <link rel="stylesheet" href={~p"/legal/legal.css"} />
+  </head>
+  <body class="legal">
+    <div class="legal-shell">
+      <div class="legal-header">
+        <a class="legal-brand" href="/">Trays</a>
+        <span class="legal-meta">Effective {@effective_date} · v{@version}</span>
+      </div>
+      <article class="legal-content">
+        {raw(@body_html)}
+      </article>
+      <div class="legal-footer">
+        <p>1001366752 Ontario Inc. · <a href="mailto:support@trays.app">support@trays.app</a></p>
+        <p>Last updated {@effective_date}.</p>
+      </div>
+    </div>
+  </body>
+</html>
