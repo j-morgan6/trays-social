@@ -68,6 +68,11 @@ defmodule TraysSocial.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
+      # Forced override to pull in CVE patches (GHSA-9fm9-hp7p-53mf, GHSA-vq52-99r9-h5pw).
+      # Pulled transitively by httpoison/swoosh/ex_aws, all capped at < 2.0;
+      # 1.24+ stays within their constraint while patching the connection-pool
+      # leak and SSRF issues.
+      {:hackney, "~> 1.24", override: true},
       {:mogrify, "~> 0.9"},
       {:hammer, "~> 6.2"},
       {:ex_aws, "~> 2.5"},
