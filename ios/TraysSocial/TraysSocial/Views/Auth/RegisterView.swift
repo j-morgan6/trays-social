@@ -78,6 +78,8 @@ struct RegisterView: View {
             .cornerRadius(12)
             .disabled(!viewModel.canRegister)
 
+            LegalAcceptanceFooter()
+
             Spacer()
         }
         .padding(24)

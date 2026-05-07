@@ -25,6 +25,8 @@ struct WelcomeView: View {
 
                 Spacer()
 
+                LegalAcceptanceFooter()
+
                 // Auth buttons
                 VStack(spacing: 16) {
                     // Sign in with Apple
