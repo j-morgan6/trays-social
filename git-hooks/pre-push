@@ -1,2 +1,9 @@
 #!/usr/bin/env bash
-exec "$(git rev-parse --show-toplevel)/scripts/pre-push-ios.sh" "$@"
+
+REPO=$(git rev-parse --show-toplevel)
+
+# Tracking SDK audit — fails the push if any new tracking SDK appears
+"$REPO/scripts/audit-no-tracking-sdks.sh" || exit $?
+
+# iOS Release build
+exec "$REPO/scripts/pre-push-ios.sh" "$@"
