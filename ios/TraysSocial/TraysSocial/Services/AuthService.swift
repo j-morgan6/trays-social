@@ -28,6 +28,14 @@ enum AuthService {
         let profilePhotoUrl: String?
     }
 
+    struct ConfirmEmailRequest: Encodable {
+        let token: String
+    }
+
+    struct ConfirmEmailResponse: Decodable, Sendable {
+        let confirmed: Bool
+    }
+
     static func register(email: String, username: String, password: String) async throws -> AuthResponse {
         let body = RegisterRequest(email: email, username: username, password: password)
         let response: DataResponse<AuthResponse> = try await APIClient.shared.post(path: "/auth/register", body: body)
@@ -69,5 +77,14 @@ enum AuthService {
 
     static func resendConfirmation() async throws {
         _ = try await APIClient.shared.post(path: "/auth/resend-confirmation")
+    }
+
+    static func confirmEmail(token: String) async throws -> Bool {
+        let body = ConfirmEmailRequest(token: token)
+        let response: DataResponse<ConfirmEmailResponse> = try await APIClient.shared.post(
+            path: "/auth/confirm",
+            body: body
+        )
+        return response.data.confirmed
     }
 }

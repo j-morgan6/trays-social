@@ -63,6 +63,13 @@ defmodule TraysSocialWeb.Router do
     get "/health", HealthController, :check
   end
 
+  # Apple Universal Links discovery — Apple CDN fetches this and caches.
+  # Must serve as application/json, no redirects, no auth.
+  scope "/.well-known", TraysSocialWeb do
+    pipe_through :api
+    get "/apple-app-site-association", WellKnownController, :aasa
+  end
+
   scope "/", TraysSocialWeb do
     pipe_through :browser
 
@@ -81,6 +88,11 @@ defmodule TraysSocialWeb.Router do
     pipe_through [:api, :api_rate_limit_login]
     post "/login", AuthController, :login
     post "/apple", AuthController, :apple
+    # Confirm a registration token via Universal Link. iOS captures the link
+    # tap, extracts the token, and POSTs it here so the user record's
+    # `confirmed_at` is set. Web fallback (Safari users without the app)
+    # continues to use the LiveView confirmation flow at /users/confirm/<token>.
+    post "/confirm", AuthController, :confirm
   end
 
   # Resend confirmation — very strict limit, separate scope

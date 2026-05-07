@@ -36,6 +36,12 @@ struct TraysSocialApp: App {
             }
             .environment(appState)
             .preferredColorScheme(preferredScheme)
+            .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { userActivity in
+                // Universal Link tap. Currently we only intercept
+                // /users/confirm/<token>; AppState filters non-matching URLs.
+                guard let url = userActivity.webpageURL else { return }
+                Task { await appState.handleConfirmationDeepLink(url: url) }
+            }
         }
     }
 }

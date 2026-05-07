@@ -107,6 +107,28 @@ defmodule TraysSocialWeb.API.V1.AuthController do
     |> json(%{errors: [%{message: "identity_token is required"}]})
   end
 
+  @doc """
+  Confirms a user's email via the registration token. Called from iOS after a
+  Universal Link capture; web users hit `/users/confirm/<token>` directly.
+  """
+  def confirm(conn, %{"token" => token}) when is_binary(token) and token != "" do
+    case Accounts.confirm_user_by_token(token) do
+      {:ok, _user} ->
+        json(conn, %{data: %{confirmed: true}})
+
+      :error ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{errors: [%{message: "Invalid or expired confirmation token"}]})
+    end
+  end
+
+  def confirm(conn, _params) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: [%{message: "token is required"}]})
+  end
+
   def me(conn, _params) do
     user = conn.assigns.current_user
     needs_username = is_nil(user.username) or user.username == ""
