@@ -51,6 +51,21 @@ struct CookModeView: View {
             .clipShape(Capsule())
             .padding(.horizontal, 16)
 
+            // Food-safety disclaimer — shown only on step 1 so it greets the
+            // user when they begin cooking but does not clutter later steps.
+            // Wording matches Terms of Service §10 verbatim.
+            if currentStep == 0 {
+                Text("Recipes are user-submitted. We don't verify ingredients, allergens, or food safety — cook at your own risk.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
+                    .background(Theme.surface)
+                    .accessibilityAddTraits(.isStaticText)
+            }
+
             Spacer()
 
             // Step content
