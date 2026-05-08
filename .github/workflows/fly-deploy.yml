@@ -1,18 +1,40 @@
 # See https://fly.io/docs/app-guides/continuous-deployment-with-github-actions/
+#
+# Push-to-main triggers a sequential two-stage deploy:
+#   1. deploy_review  → trays-social-review (staging, fly.toml)
+#   2. deploy_prod    → trays-social        (prod,    fly.prod.toml)
+#
+# Prod only runs if review succeeded. There's no in-workflow override to
+# skip prod on a given push; cancel the workflow run from the GitHub UI if
+# you need to. To deploy prod outside CI (e.g. an emergency hotfix), run
+# `fly deploy --config fly.prod.toml` locally — that bypasses this workflow.
 
 name: Fly Deploy
 on:
   push:
     branches:
       - main
+
 jobs:
-  deploy:
-    name: Deploy app
+  deploy_review:
+    name: Deploy review env
     runs-on: ubuntu-latest
-    concurrency: deploy-group    # optional: ensure only one action runs at a time
+    concurrency: deploy-review
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only
+      - run: flyctl deploy --remote-only --config fly.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy_prod:
+    name: Deploy prod
+    runs-on: ubuntu-latest
+    needs: deploy_review
+    concurrency: deploy-prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only --config fly.prod.toml
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
