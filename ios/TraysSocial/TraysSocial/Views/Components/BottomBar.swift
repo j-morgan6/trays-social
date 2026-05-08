@@ -33,6 +33,12 @@ struct BottomBar: View {
                             }
                             .frame(width: 28, height: 28)
                             .clipShape(Circle())
+                            // Force SwiftUI to invalidate AsyncImage identity when the
+                            // URL changes (e.g. after the user uploads a new profile
+                            // photo). Without this, AsyncImage's internal URLCache hit
+                            // path can keep displaying the previous image even though
+                            // the parent passed a new URL string. (D34.)
+                            .id(imageURL)
                         } else {
                             Image(systemName: "person.fill")
                                 .foregroundStyle(.gray)
