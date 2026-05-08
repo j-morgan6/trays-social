@@ -63,6 +63,15 @@ defmodule TraysSocialWeb.Admin.ReportsLive do
   def render(assigns) do
     ~H"""
     <div class="max-w-4xl mx-auto p-6">
+      <nav class="flex gap-4 mb-6 text-sm border-b pb-3">
+        <.link navigate={~p"/admin/reports"} class="font-semibold underline">Reports</.link>
+        <.link navigate={~p"/admin/errors"} class="text-base-content/70 hover:underline">
+          Errors
+        </.link>
+        <.link navigate={~p"/admin/dashboard"} class="text-base-content/70 hover:underline">
+          Dashboard
+        </.link>
+      </nav>
       <h1 class="text-2xl font-bold mb-6">Reports</h1>
 
       <div class="flex gap-2 mb-6">

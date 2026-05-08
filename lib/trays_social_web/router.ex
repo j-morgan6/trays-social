@@ -3,6 +3,7 @@ defmodule TraysSocialWeb.Router do
 
   import TraysSocialWeb.UserAuth
   import ErrorTracker.Web.Router
+  import Phoenix.LiveDashboard.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -211,6 +212,20 @@ defmodule TraysSocialWeb.Router do
     pipe_through [:browser, :require_authenticated_user, TraysSocialWeb.Plugs.RequireAdmin]
 
     error_tracker_dashboard "/errors"
+  end
+
+  # Phoenix LiveDashboard — runtime stats (process tree, memory, telemetry,
+  # ETS, etc.) for the operator. Same admin gate. Separate scope from the
+  # error_tracker dashboard because each macro that opens its own
+  # live_session needs its own scope to avoid session_name collisions.
+  # Note: a dev-only mount at /dev/dashboard remains below for local
+  # convenience without requiring an admin login.
+  scope "/admin", TraysSocialWeb do
+    pipe_through [:browser, :require_authenticated_user, TraysSocialWeb.Plugs.RequireAdmin]
+
+    live_dashboard "/dashboard",
+      metrics: TraysSocialWeb.Telemetry,
+      live_session_name: :admin_live_dashboard
   end
 
   ## Authentication routes
