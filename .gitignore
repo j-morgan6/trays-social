@@ -49,6 +49,10 @@ MOBILE_PLUGIN_IDEAS.md
 # App Store launch tracking (personal notes)
 APP_STORE_LAUNCH_TODO.md
 
+# Plugin tooling caches
+.ios-from-web-guide-project.json
+.stride-env-cache
+
 # Planning docs (private)
 /docs/plans/
 
