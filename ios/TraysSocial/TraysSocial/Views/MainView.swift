@@ -81,5 +81,14 @@ struct MainView: View {
             }
         }
         .tint(Theme.primary)
+        .onChange(of: appState.currentUser?.id) { _, _ in
+            // Reset the navigation stack whenever the signed-in user changes
+            // (login as a different account, logout, or 401-driven logout via
+            // handleUnauthorized). Without this, destinations pushed for the
+            // previous user — e.g. ProfileView(username:) keyed on the old
+            // username — remain on the stack and render stale data until the
+            // user manually navigates away. (D32.)
+            state.navigationPath = NavigationPath()
+        }
     }
 }
