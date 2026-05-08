@@ -54,6 +54,10 @@ final class AppState {
 
     func login(token: String, user: User) {
         KeychainService.save(token: token)
+        // Reset before flipping isAuthenticated so MainView mounts with a
+        // fresh stack and never reads a stale destination from a prior
+        // session. (D32.)
+        navigationPath = NavigationPath()
         currentUser = user
         isAuthenticated = true
     }
@@ -66,6 +70,9 @@ final class AppState {
         KeychainService.deleteBiometricCredential()
         currentUser = nil
         isAuthenticated = false
+        // Drop pushed destinations from the previous session so the next
+        // login starts on the root view. (D32.)
+        navigationPath = NavigationPath()
     }
 
     func handleUnauthorized() {
@@ -73,6 +80,7 @@ final class AppState {
         KeychainService.deleteBiometricCredential()
         currentUser = nil
         isAuthenticated = false
+        navigationPath = NavigationPath()
     }
 
     /// Handles a Universal Link tap on a confirmation URL.
