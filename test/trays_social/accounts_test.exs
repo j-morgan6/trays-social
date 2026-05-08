@@ -92,6 +92,42 @@ defmodule TraysSocial.AccountsTest do
       assert is_nil(user.confirmed_at)
       assert is_nil(user.password)
     end
+
+    test "registering with an email NOT in :admin_emails leaves is_admin=false" do
+      {:ok, user} =
+        [email: unique_user_email()]
+        |> valid_user_attributes()
+        |> Accounts.register_user()
+
+      refute user.is_admin
+    end
+
+    test "registering with an email IN :admin_emails grants is_admin=true (case-insensitive)" do
+      original = Application.get_env(:trays_social, :admin_emails)
+      Application.put_env(:trays_social, :admin_emails, ["admin-test@example.com"])
+
+      try do
+        {:ok, mixed_case} =
+          [email: "Admin-Test@Example.com"]
+          |> valid_user_attributes()
+          |> Accounts.register_user()
+
+        assert mixed_case.is_admin
+      after
+        Application.put_env(:trays_social, :admin_emails, original)
+      end
+    end
+
+    test "is_admin is not castable from registration attrs" do
+      {:ok, user} =
+        [email: unique_user_email()]
+        |> valid_user_attributes()
+        |> Map.put(:is_admin, true)
+        |> Accounts.register_user()
+
+      # Email isn't in the allowlist; the is_admin: true in attrs is dropped.
+      refute user.is_admin
+    end
   end
 
   describe "sudo_mode?/2" do

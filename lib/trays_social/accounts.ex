@@ -97,6 +97,7 @@ defmodule TraysSocial.Accounts do
     %User{}
     |> User.registration_changeset(attrs)
     |> Repo.insert()
+    |> maybe_grant_admin()
   end
 
   @doc """
@@ -110,10 +111,44 @@ defmodule TraysSocial.Accounts do
         %User{}
         |> User.apple_registration_changeset(Map.new(attrs, fn {k, v} -> {to_string(k), v} end))
         |> Repo.insert()
+        |> maybe_grant_admin()
 
       user ->
         {:ok, user}
     end
+  end
+
+  @doc """
+  Sets the `is_admin` flag on a user. Server-side only — never accepts user input.
+  """
+  def set_admin(%User{} = user, is_admin) when is_boolean(is_admin) do
+    user
+    |> User.admin_changeset(is_admin)
+    |> Repo.update()
+  end
+
+  # If a freshly-inserted user's email matches one of the configured admin
+  # emails, flip is_admin=true. Idempotent — applies on every registration but
+  # only mutates the row when the email matches the allowlist.
+  #
+  # Apple Sign In note: when Apple returns a private relay email
+  # (`*@privaterelay.appleid.com`), it will NOT match a real-email allowlist
+  # entry. Operator must register via email/password OR manually flip is_admin
+  # in the DB after the Apple-relay registration.
+  defp maybe_grant_admin({:ok, %User{email: email} = user}) when is_binary(email) do
+    if String.downcase(email) in admin_emails() do
+      set_admin(user, true)
+    else
+      {:ok, user}
+    end
+  end
+
+  defp maybe_grant_admin(other), do: other
+
+  defp admin_emails do
+    :trays_social
+    |> Application.get_env(:admin_emails, [])
+    |> Enum.map(&String.downcase/1)
   end
 
   ## Settings

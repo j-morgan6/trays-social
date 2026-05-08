@@ -82,6 +82,7 @@ defmodule TraysSocial.MixProject do
       {:assent, "~> 0.2"},
       {:pigeon, "~> 2.0"},
       {:joken, "~> 2.6"},
+      {:error_tracker, "~> 0.9"},
       {:tidewave, "~> 0.5", only: :dev},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},

@@ -2,6 +2,7 @@ defmodule TraysSocialWeb.Router do
   use TraysSocialWeb, :router
 
   import TraysSocialWeb.UserAuth
+  import ErrorTracker.Web.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -193,11 +194,23 @@ defmodule TraysSocialWeb.Router do
     end
   end
 
-  # Admin routes — require authenticated user
+  # Admin routes — require authenticated user AND is_admin=true on the user
+  # record. Non-admins receive 404 (not 403/redirect) so admin routes are
+  # not enumerable.
   scope "/admin", TraysSocialWeb.Admin do
-    pipe_through [:browser, :require_authenticated_user]
+    pipe_through [:browser, :require_authenticated_user, TraysSocialWeb.Plugs.RequireAdmin]
 
     live "/reports", ReportsLive, :index
+  end
+
+  # ErrorTracker dashboard — same admin gate as the /admin/reports scope.
+  # Uses ErrorTracker's own Live router macro which mounts the dashboard
+  # at the given path. Captured exceptions persist to TraysSocial.Repo
+  # (see config/config.exs ErrorTracker config).
+  scope "/admin", TraysSocialWeb do
+    pipe_through [:browser, :require_authenticated_user, TraysSocialWeb.Plugs.RequireAdmin]
+
+    error_tracker_dashboard "/errors"
   end
 
   ## Authentication routes

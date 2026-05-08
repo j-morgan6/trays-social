@@ -13,8 +13,22 @@ defmodule TraysSocial.Accounts.User do
     field :profile_photo_url, :string
     field :apple_id, :string
     field :muted_keywords, {:array, :string}, default: []
+    field :is_admin, :boolean, default: false
 
     timestamps(type: :utc_datetime)
+  end
+
+  @doc """
+  Server-side-only changeset for granting/revoking admin status.
+
+  Never callable from user-supplied params — `is_admin` is intentionally
+  not in any user-facing changeset, so a malicious POST that includes
+  `is_admin: true` is silently dropped.
+
+  Use this from `TraysSocial.Accounts.set_admin/2`.
+  """
+  def admin_changeset(user, is_admin) when is_boolean(is_admin) do
+    change(user, is_admin: is_admin)
   end
 
   @doc """

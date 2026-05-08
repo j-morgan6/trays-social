@@ -46,6 +46,16 @@ config :trays_social, TraysSocialWeb.Endpoint,
 config :trays_social, TraysSocial.Mailer, adapter: Swoosh.Adapters.Local
 config :trays_social, :mailer_from_email, "noreply@trays.social"
 
+# Default admin allowlist; can be overridden by ADMIN_EMAILS env var in
+# config/runtime.exs. Emails are compared case-insensitively. Apple Sign
+# In with a private relay address will NOT match — operator must register
+# via email/password OR manually flip is_admin in the DB.
+config :trays_social, :admin_emails, ["jsm10242000@gmail.com"]
+
+# Configure ErrorTracker — captures unhandled exceptions and persists them
+# to the trays_social Postgres database. Self-hosted, no third-party calls.
+config :error_tracker, repo: TraysSocial.Repo, otp_app: :trays_social
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.25.4",

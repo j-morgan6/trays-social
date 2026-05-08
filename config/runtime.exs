@@ -24,6 +24,14 @@ config :trays_social, TraysSocialWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 if config_env() == :prod do
+  # Optional override for the admin allowlist. Comma-separated emails. If
+  # unset, falls back to the compile-time default in config/config.exs.
+  if admin_emails = System.get_env("ADMIN_EMAILS") do
+    config :trays_social,
+           :admin_emails,
+           admin_emails |> String.split(",") |> Enum.map(&String.trim/1)
+  end
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """
