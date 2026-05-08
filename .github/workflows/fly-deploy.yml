@@ -1,13 +1,15 @@
 # See https://fly.io/docs/app-guides/continuous-deployment-with-github-actions/
 #
-# Push-to-main triggers a sequential two-stage deploy:
-#   1. deploy_review  → trays-social-review (staging, fly.toml)
-#   2. deploy_prod    → trays-social        (prod,    fly.prod.toml)
+# Push-to-main triggers a sequential deploy:
+#   1. deploy_review  → trays-social-review (staging, fly.toml) — auto
+#   2. deploy_prod    → trays-social        (prod,    fly.prod.toml) — gated
 #
-# Prod only runs if review succeeded. There's no in-workflow override to
-# skip prod on a given push; cancel the workflow run from the GitHub UI if
-# you need to. To deploy prod outside CI (e.g. an emergency hotfix), run
-# `fly deploy --config fly.prod.toml` locally — that bypasses this workflow.
+# Review deploys automatically. Prod is gated by the `production` GitHub
+# Environment, which has Required Reviewers set — the deploy_prod job sits
+# in "Waiting for approval" until a reviewer clicks Approve in the GitHub
+# Actions UI. To skip prod on a given push, click Reject in the approval
+# screen. To deploy prod outside CI (emergency hotfix), run
+# `fly deploy --config fly.prod.toml` locally — bypasses CI entirely.
 
 name: Fly Deploy
 on:
@@ -32,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy_review
     concurrency: deploy-prod
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
