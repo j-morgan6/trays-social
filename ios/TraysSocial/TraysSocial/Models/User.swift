@@ -15,8 +15,18 @@ struct User: Codable, Identifiable, Sendable {
     let followingCount: Int?
     let followedByCurrentUser: Bool?
 
+    /// Admin flag — set server-side via the :admin_emails allowlist (auto-grant
+    /// on registration) or by an existing admin via Accounts.set_admin/2.
+    /// Optional in the decoder so older API responses without the key still
+    /// parse; treated as `false` when absent or null.
+    let isAdmin: Bool?
+
     var isEmailConfirmed: Bool {
         confirmedAt != nil
+    }
+
+    var hasAdminAccess: Bool {
+        isAdmin == true
     }
 }
 

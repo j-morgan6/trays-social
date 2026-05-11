@@ -416,6 +416,9 @@ struct SettingsView: View {
     @State private var showDeleteConfirm = false
     @State private var showPrivacy = false
     @State private var showTerms = false
+    @State private var showAdminReports = false
+    @State private var showAdminErrors = false
+    @State private var showAdminDashboard = false
     @AppStorage("colorScheme") private var colorSchemePreference = "system"
 
     var body: some View {
@@ -470,6 +473,49 @@ struct SettingsView: View {
                     .foregroundStyle(Theme.text)
                 }
 
+                if appState.currentUser?.hasAdminAccess == true {
+                    Section("Admin") {
+                        Button {
+                            showAdminReports = true
+                        } label: {
+                            HStack {
+                                Text("Reports")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .foregroundStyle(Theme.text)
+
+                        Button {
+                            showAdminErrors = true
+                        } label: {
+                            HStack {
+                                Text("Error Tracker")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .foregroundStyle(Theme.text)
+
+                        Button {
+                            showAdminDashboard = true
+                        } label: {
+                            HStack {
+                                Text("System Dashboard")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .foregroundStyle(Theme.text)
+                    }
+                }
+
                 Section {
                     Button("Log out") {
                         appState.logout()
@@ -510,6 +556,21 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showTerms) {
                 SafariView(url: URL(string: "https://trays.app/terms")!)
+            }
+            // Admin sheets — URL is built from the current build's API base so
+            // a Debug install opens the review env's admin pages and a Release
+            // install opens prod's. Pre-authenticated session cookie is set on
+            // the same hostname so the Safari sheet inherits the admin user's
+            // browser session if one exists. Otherwise the user gets the
+            // login screen (the admin pages are gated by RequireAdmin).
+            .sheet(isPresented: $showAdminReports) {
+                SafariView(url: URL(string: Configuration.apiBaseURL + "/admin/reports")!)
+            }
+            .sheet(isPresented: $showAdminErrors) {
+                SafariView(url: URL(string: Configuration.apiBaseURL + "/admin/errors")!)
+            }
+            .sheet(isPresented: $showAdminDashboard) {
+                SafariView(url: URL(string: Configuration.apiBaseURL + "/admin/dashboard")!)
             }
         }
     }

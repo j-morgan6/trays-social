@@ -46,7 +46,8 @@ final class ProfileViewModel {
             postCount: user.postCount,
             followerCount: (user.followerCount ?? 0) + (wasFollowing ? -1 : 1),
             followingCount: user.followingCount,
-            followedByCurrentUser: !wasFollowing
+            followedByCurrentUser: !wasFollowing,
+            isAdmin: user.isAdmin
         )
 
         Task {

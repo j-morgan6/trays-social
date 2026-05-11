@@ -191,7 +191,12 @@ defmodule TraysSocialWeb.API.V1.AuthController do
       bio: user.bio,
       profile_photo_url: user.profile_photo_url,
       inserted_at: user.inserted_at,
-      confirmed_at: user.confirmed_at
+      confirmed_at: user.confirmed_at,
+      # Surfaces to the iOS client so the Settings sheet can conditionally
+      # render the Admin section (links to /admin/reports, /admin/errors,
+      # /admin/dashboard). Per-env: flag lives on the user row in whichever
+      # database the iOS build is currently talking to.
+      is_admin: user.is_admin
     }
   end
 end
