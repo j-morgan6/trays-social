@@ -4,6 +4,15 @@ Tracks material changes to the Privacy Policy and Terms of Service.
 Effective dates in `priv/legal/{privacy,terms}.md` frontmatter must
 match the latest entry below for the corresponding document.
 
+## v1.1 — 2026-05-11
+
+Terms of Service only. Privacy Policy unchanged at v1.0.
+
+- Terms of Service v1.1: DMCA designated agent filled in (USCO #DMCA-1072608)
+  - §7 placeholders replaced with registered agent name, organization,
+    address, email, and phone
+  - Removed operator note about pending registration
+
 ## v1.0 — 2026-05-07
 
 Initial publication.

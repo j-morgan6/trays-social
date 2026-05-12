@@ -1,6 +1,6 @@
 ---
-effective_date: 2026-05-07
-version: 1.0
+effective_date: 2026-05-11
+version: 1.1
 ---
 
 # Terms of Service
@@ -52,16 +52,16 @@ In-app reporting and user blocking are how Trays handles community issues. We ma
 Trays Social complies with the U.S. Digital Millennium Copyright Act (17 U.S.C. §512). To submit a takedown notice for content you believe infringes your copyright, send a written notice to our designated agent containing all elements required by §512(c)(3): identification of the copyrighted work, the allegedly infringing material and its URL on trays.app, your contact information, a statement of good-faith belief, a statement under penalty of perjury, and your physical or electronic signature.
 
 **Designated agent:**
-- Name: `[DMCA AGENT NAME — TBD]`
-- Address: `[ADDRESS — TBD]`
-- Email: `[dmca@trays.app or similar — TBD]`
-- Phone: `[TBD]`
+- Name: DMCA Agent
+- Organization: 1001366752 Ontario Inc.
+- Address: 69 Yonge Street, 17043, Toronto, ON M5E 1Y2, Canada
+- Email: dmca@trays.app
+- Phone: +1 (647) 547-6354
+- USCO Registration: DMCA-1072608
 
 **Counter-notice:** if your content was removed and you believe the removal was a mistake, you may submit a counter-notice meeting §512(g)(3) requirements to the same agent.
 
 **Repeat infringer policy:** accounts that receive multiple substantiated takedown notices may be terminated.
-
-*(Operator note: register the agent at `dmca.copyright.gov` (~$6 / 3 years) and fill in the placeholders before this policy ships publicly.)*
 
 ## 8. Termination
 
