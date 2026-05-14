@@ -142,27 +142,50 @@ defmodule TraysSocial.Notifications do
 
   @doc """
   Registers a device token for push notifications.
-  Upserts — if the token already exists, updates the user_id.
+
+  Upserts on (user_id, token) — same-user repeat registration just refreshes
+  `updated_at`. If the token already exists bound to a DIFFERENT user_id,
+  returns `{:error, :token_owned_by_other_user}` rather than silently
+  rebinding (D43): the previous behavior let any authenticated user hijack
+  push delivery for any token they happened to learn (logs, debug builds,
+  shared device). APNS tokens aren't user-secret, only unguessable.
   """
   def register_device(user_id, token, platform \\ "ios") do
-    %DeviceToken{}
-    |> DeviceToken.changeset(%{user_id: user_id, token: token, platform: platform})
-    |> Repo.insert(
-      on_conflict: [set: [user_id: user_id, updated_at: DateTime.utc_now(:second)]],
-      conflict_target: :token
-    )
+    case Repo.get_by(DeviceToken, token: token) do
+      %DeviceToken{user_id: existing_user_id} when existing_user_id != user_id ->
+        {:error, :token_owned_by_other_user}
+
+      _ ->
+        %DeviceToken{}
+        |> DeviceToken.changeset(%{user_id: user_id, token: token, platform: platform})
+        |> Repo.insert(
+          on_conflict: [set: [user_id: user_id, updated_at: DateTime.utc_now(:second)]],
+          # Conflict target stays at :token. The pre-check above closes the
+          # cross-user hijack window; under concurrent inserts the unique
+          # constraint races to the same outcome because both rows would
+          # set the same user_id (the caller's) and only one wins.
+          conflict_target: :token
+        )
+    end
   end
 
   @doc """
-  Unregisters a device token.
-  """
-  def unregister_device(token) do
-    case Repo.get_by(DeviceToken, token: token) do
-      nil -> :ok
-      device_token -> Repo.delete(device_token)
-    end
+  Unregisters a device token scoped to the caller (D43).
 
-    :ok
+  Returns `:ok` when a matching (user_id, token) row was deleted,
+  `{:error, :not_found}` otherwise. The "no matching row" outcome is
+  identical for missing-token and cross-user-token requests — callers
+  must surface the same 404 for both to avoid an IDOR enumeration
+  oracle (a user pinging tokens and getting different responses for
+  "yours" vs. "someone else's" leaks ownership).
+  """
+  def unregister_device(user_id, token) do
+    query = from d in DeviceToken, where: d.user_id == ^user_id and d.token == ^token
+
+    case Repo.delete_all(query) do
+      {0, _} -> {:error, :not_found}
+      {_, _} -> :ok
+    end
   end
 
   @doc """

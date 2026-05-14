@@ -13,6 +13,15 @@ defmodule TraysSocialWeb.API.V1.DeviceController do
         |> put_status(:created)
         |> json(%{data: %{message: "device registered"}})
 
+      {:error, :token_owned_by_other_user} ->
+        # IDOR-safe: respond as if the token simply could not be registered
+        # rather than confirming "this token belongs to someone else." 404
+        # matches the delete branch so an attacker can't tell which tokens
+        # already exist server-side.
+        conn
+        |> put_status(:not_found)
+        |> json(%{errors: [%{message: "device not found"}]})
+
       {:error, _} ->
         conn
         |> put_status(:unprocessable_entity)
@@ -27,7 +36,18 @@ defmodule TraysSocialWeb.API.V1.DeviceController do
   end
 
   def delete(conn, %{"token" => token}) do
-    Notifications.unregister_device(token)
-    json(conn, %{data: %{message: "device unregistered"}})
+    user = conn.assigns.current_user
+
+    case Notifications.unregister_device(user.id, token) do
+      :ok ->
+        json(conn, %{data: %{message: "device unregistered"}})
+
+      {:error, :not_found} ->
+        # Missing row and cross-user row return the same 404 — the
+        # endpoint must not act as an IDOR oracle (D43).
+        conn
+        |> put_status(:not_found)
+        |> json(%{errors: [%{message: "device not found"}]})
+    end
   end
 end

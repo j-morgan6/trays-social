@@ -306,4 +306,47 @@ defmodule TraysSocial.NotificationsTest do
       assert 1 == Notifications.unread_count(user.id)
     end
   end
+
+  describe "register_device/3 and unregister_device/2 (D43)" do
+    test "same user re-registering the same token upserts cleanly" do
+      user = user_fixture()
+      assert {:ok, first} = Notifications.register_device(user.id, "tok", "ios")
+      assert {:ok, second} = Notifications.register_device(user.id, "tok", "ios")
+      # Same row, refreshed updated_at.
+      assert first.id == second.id
+      assert second.user_id == user.id
+    end
+
+    test "cross-user register returns :token_owned_by_other_user without rebinding" do
+      user_a = user_fixture()
+      user_b = user_fixture()
+      {:ok, _} = Notifications.register_device(user_a.id, "tok", "ios")
+
+      assert {:error, :token_owned_by_other_user} =
+               Notifications.register_device(user_b.id, "tok", "ios")
+
+      # A still owns the row.
+      row = TraysSocial.Repo.get_by(TraysSocial.Notifications.DeviceToken, token: "tok")
+      assert row.user_id == user_a.id
+    end
+
+    test "unregister_device deletes only when (user_id, token) match" do
+      user_a = user_fixture()
+      user_b = user_fixture()
+      {:ok, _} = Notifications.register_device(user_a.id, "tok", "ios")
+
+      # User B tries to unregister A's token — must be a no-op.
+      assert {:error, :not_found} = Notifications.unregister_device(user_b.id, "tok")
+      assert TraysSocial.Repo.get_by(TraysSocial.Notifications.DeviceToken, token: "tok")
+
+      # User A can unregister their own.
+      assert :ok = Notifications.unregister_device(user_a.id, "tok")
+      refute TraysSocial.Repo.get_by(TraysSocial.Notifications.DeviceToken, token: "tok")
+    end
+
+    test "unregister_device on nonexistent token returns :not_found" do
+      user = user_fixture()
+      assert {:error, :not_found} = Notifications.unregister_device(user.id, "never_seen")
+    end
+  end
 end
