@@ -17,6 +17,13 @@ on:
     branches:
       - main
 
+# Least-privilege GITHUB_TOKEN scope (D40). The deploy jobs only need
+# read access to clone the repo via actions/checkout — they neither write
+# back to git nor interact with issues/PRs. Override per-job if a future
+# step legitimately needs more.
+permissions:
+  contents: read
+
 jobs:
   deploy_review:
     name: Deploy review env
