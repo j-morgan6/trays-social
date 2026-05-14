@@ -20,7 +20,15 @@ struct MyTrayView: View {
         }
         .overlay {
             if viewModel.isLoading, viewModel.posts.isEmpty {
-                ProgressView().tint(Theme.accent)
+                VStack(spacing: 0) {
+                    ForEach(0 ..< 6, id: \.self) { _ in
+                        SkeletonListRow()
+                        Divider().opacity(0)
+                    }
+                    Spacer()
+                }
+                .allowsHitTesting(false)
+                .skeletonGroup(label: "Loading saved recipes")
             } else if viewModel.posts.isEmpty, !viewModel.isLoading {
                 VStack(spacing: 8) {
                     Text("Your tray is empty")

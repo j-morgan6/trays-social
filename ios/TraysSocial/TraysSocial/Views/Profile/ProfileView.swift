@@ -13,7 +13,16 @@ struct ProfileView: View {
     var body: some View {
         ScrollView {
             if viewModel.isLoading {
-                ProgressView().tint(Theme.accent).padding(.top, 60)
+                VStack(spacing: 20) {
+                    SkeletonProfileHeader()
+                    LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 8) {
+                        ForEach(0 ..< 4, id: \.self) { _ in
+                            SkeletonGridTile()
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .skeletonGroup(label: "Loading profile")
             } else if let user = viewModel.user {
                 VStack(spacing: 20) {
                     // Avatar + Name

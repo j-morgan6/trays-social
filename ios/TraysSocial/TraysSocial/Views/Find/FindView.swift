@@ -83,12 +83,13 @@ struct FindView: View {
     @ViewBuilder
     private var searchResultsView: some View {
         if viewModel.isSearching {
-            HStack {
-                Spacer()
-                ProgressView().tint(Theme.accent)
-                Spacer()
+            LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 8) {
+                ForEach(0 ..< 6, id: \.self) { _ in
+                    SkeletonGridTile()
+                }
             }
-            .padding(.top, 40)
+            .padding(.horizontal, 16)
+            .skeletonGroup(label: "Searching")
         } else {
             // Users
             if !viewModel.users.isEmpty {
@@ -177,12 +178,17 @@ struct FindView: View {
     @ViewBuilder
     private var trendingView: some View {
         if viewModel.isLoadingTrending {
-            HStack {
-                Spacer()
-                ProgressView().tint(Theme.accent)
-                Spacer()
+            VStack(alignment: .leading, spacing: 10) {
+                SkeletonShape(width: 160, height: 12, cornerRadius: 3)
+                    .padding(.horizontal, 16)
+                LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 8) {
+                    ForEach(0 ..< 6, id: \.self) { _ in
+                        SkeletonGridTile()
+                    }
+                }
+                .padding(.horizontal, 16)
             }
-            .padding(.top, 40)
+            .skeletonGroup(label: "Loading trending recipes")
         } else {
             // Trending section
             VStack(alignment: .leading, spacing: 10) {

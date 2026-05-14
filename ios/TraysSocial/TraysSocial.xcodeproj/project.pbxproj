@@ -56,6 +56,7 @@
 		F2BF3A3ADB396931C925D745 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D40053541A36E996D238B572 /* Theme.swift */; };
 		F692F33E69675A559BBA3597 /* BottomBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B3AA5EA01086BDCFF78E26A /* BottomBar.swift */; };
 		F72C0EFB417B4AF95EEB0B6F /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7AB3435C8A95FE1C2FE7E38 /* NotificationsView.swift */; };
+		F999B58E2A4463E8EEA32F18 /* Skeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659A69F30CEB602F949795FC /* Skeleton.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -73,7 +74,7 @@
 		25DDF4D71B30FEDDB90E828E /* FindView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindView.swift; sourceTree = "<group>"; };
 		32D2EAB385C443516BBDD921 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3540592DA46CF395AEEAA5C0 /* CreatePostViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostViewModel.swift; sourceTree = "<group>"; };
-		3587970859E9F845326FE543 /* TraysSocial.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TraysSocial.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3587970859E9F845326FE543 /* TraysSocial.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TraysSocial.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		35EDA5485F0DD3EE87C9FF0F /* String+BackendURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+BackendURL.swift"; sourceTree = "<group>"; };
 		3893002E61AAB0716240E1B9 /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
 		39068B4368423677CA387168 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
@@ -83,6 +84,7 @@
 		5B3AA5EA01086BDCFF78E26A /* BottomBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomBar.swift; sourceTree = "<group>"; };
 		634298CD755E9547B6A89A2F /* MutedKeywordsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MutedKeywordsView.swift; sourceTree = "<group>"; };
 		648DCE235333F94EDFB4FC82 /* TraysSocial.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TraysSocial.entitlements; sourceTree = "<group>"; };
+		659A69F30CEB602F949795FC /* Skeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skeleton.swift; sourceTree = "<group>"; };
 		6665080D2CCFA5AAD069E6F2 /* SafariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariView.swift; sourceTree = "<group>"; };
 		67DCD1E3A70C9F29DFD5035C /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		688C26D6280C49F4C236681C /* LegalAcceptanceFooter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalAcceptanceFooter.swift; sourceTree = "<group>"; };
@@ -280,6 +282,7 @@
 				5B3AA5EA01086BDCFF78E26A /* BottomBar.swift */,
 				A88C0ADB221E4D697E86CA15 /* ReportSheetView.swift */,
 				6665080D2CCFA5AAD069E6F2 /* SafariView.swift */,
+				659A69F30CEB602F949795FC /* Skeleton.swift */,
 				AC3F588384DD243E16F1473D /* TraySelector.swift */,
 			);
 			path = Components;
@@ -352,7 +355,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2640;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					47BF1FF91ACD6CD6BBCBB2AC = {
+						DevelopmentTeam = 6TN2AZM26U;
+					};
+				};
 			};
 			buildConfigurationList = 2C9519EE39CD9810A0752FB8 /* Build configuration list for PBXProject "TraysSocial" */;
 			developmentRegion = en;
@@ -430,6 +438,7 @@
 				9280D37823B72E4D7F07A8F3 /* RegisterView.swift in Sources */,
 				6CD43F086BF30F8E97A20D1F /* ReportSheetView.swift in Sources */,
 				3B8685A473157143FAFF33C1 /* SafariView.swift in Sources */,
+				F999B58E2A4463E8EEA32F18 /* Skeleton.swift in Sources */,
 				9F4B2BB2DD63E2B1B1373704 /* String+BackendURL.swift in Sources */,
 				F2BF3A3ADB396931C925D745 /* Theme.swift in Sources */,
 				E0633D5901A6A1D5BAEBDE1A /* TraySelector.swift in Sources */,
@@ -451,7 +460,6 @@
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 12;
-				DEVELOPMENT_TEAM = 6TN2AZM26U;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -473,7 +481,6 @@
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 12;
-				DEVELOPMENT_TEAM = 6TN2AZM26U;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -525,7 +532,6 @@
 				DEVELOPMENT_TEAM = 6TN2AZM26U;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -539,7 +545,6 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
@@ -584,7 +589,6 @@
 				DEVELOPMENT_TEAM = 6TN2AZM26U;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -605,7 +609,6 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;

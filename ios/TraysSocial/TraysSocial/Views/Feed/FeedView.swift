@@ -33,8 +33,16 @@ struct FeedView: View {
         }
         .overlay {
             if viewModel.isLoading, viewModel.posts.isEmpty {
-                ProgressView()
-                    .tint(Theme.accent)
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(0 ..< 4, id: \.self) { _ in
+                            SkeletonPostCard()
+                        }
+                    }
+                }
+                .allowsHitTesting(false)
+                .skeletonGroup(label: "Loading feed")
+                .transition(.opacity)
             } else if viewModel.posts.isEmpty, !viewModel.isLoading {
                 VStack(spacing: 8) {
                     Text("No recipes yet")
