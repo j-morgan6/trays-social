@@ -1,0 +1,13 @@
+# Dependabot keeps third-party GitHub Actions pinned to current SHAs so the
+# pins in fly-deploy.yml (D39) don't quietly rot. PRs come in monthly and
+# need human review before the next deploy uses the updated runner.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"
