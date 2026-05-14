@@ -190,7 +190,10 @@ defmodule TraysSocialWeb.Router do
     scope "/dev" do
       pipe_through :browser
 
-      live_dashboard "/dashboard", metrics: TraysSocialWeb.Telemetry
+      live_dashboard "/dashboard",
+        metrics: TraysSocialWeb.Telemetry,
+        ecto_repos: [TraysSocial.Repo]
+
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end
@@ -225,6 +228,7 @@ defmodule TraysSocialWeb.Router do
 
     live_dashboard "/dashboard",
       metrics: TraysSocialWeb.Telemetry,
+      ecto_repos: [TraysSocial.Repo],
       live_session_name: :admin_live_dashboard
   end
 
