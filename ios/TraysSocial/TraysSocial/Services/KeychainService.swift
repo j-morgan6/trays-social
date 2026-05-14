@@ -20,7 +20,16 @@ enum KeychainService {
 
         var addQuery = query
         addQuery[kSecValueData as String] = data
-        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        // D42: ThisDeviceOnly so the bearer is excluded from encrypted
+        // iTunes/Finder backups and Quick Start device migration. A token
+        // issued on device A must not be carried forward to device B by a
+        // restore — that would be an admission of an attacker who walked
+        // away with the source device's backup. `kSecAttrSynchronizable:
+        // false` is set explicitly as defense-in-depth, matching what the
+        // biometric credential storage below already does implicitly via
+        // its access-control flags.
+        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        addQuery[kSecAttrSynchronizable as String] = false
 
         SecItemAdd(addQuery as CFDictionary, nil)
     }
