@@ -33,10 +33,22 @@ defmodule TraysSocialWeb.WellKnownController do
     }
   }
 
+  # Pre-encode at compile time so the runtime path serves a fixed binary —
+  # no JSON re-encoding, no charset suffix, no chance of variation.
+  @aasa_json Jason.encode!(@aasa)
+
+  # D35 root cause: Bandit gzip-encodes responses when the client sends
+  # Accept-Encoding: gzip. Apple's swcd daemon historically fails to register
+  # AASA when the response is content-encoded — and "Don't gzip-compress the
+  # AASA response" is an explicit pitfall in the Universal Links docs.
+  # `content-encoding: identity` is the standard opt-out; `cache-control:
+  # no-transform` additionally forbids any intermediary (Fly proxy, CDN) from
+  # re-encoding on the way out. Both belts-and-suspenders for swcd.
   def aasa(conn, _params) do
     conn
-    |> put_resp_content_type("application/json")
-    |> put_resp_header("cache-control", "public, max-age=3600")
-    |> json(@aasa)
+    |> put_resp_content_type("application/json", nil)
+    |> put_resp_header("content-encoding", "identity")
+    |> put_resp_header("cache-control", "public, max-age=3600, no-transform")
+    |> send_resp(200, @aasa_json)
   end
 end
