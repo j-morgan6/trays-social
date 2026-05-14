@@ -220,14 +220,18 @@ defmodule TraysSocialWeb.PostLive.New do
   defp create_post(socket, post_params) do
     require Logger
 
+    user_id = socket.assigns.current_scope.user.id
+
+    # D44: user_id passed positionally; never via attrs (would be dropped
+    # anyway since Post.changeset doesn't cast it, but be explicit).
     post_params =
       post_params
-      |> Map.put("user_id", socket.assigns.current_scope.user.id)
+      |> Map.drop(["user_id"])
       |> Map.put("type", socket.assigns.post_type)
 
     Logger.warning("create_post params: #{inspect(Map.keys(post_params))}")
 
-    case Posts.create_post(post_params) do
+    case Posts.create_post(user_id, post_params) do
       {:ok, post} ->
         Logger.warning("Post created successfully, id=#{post.id}")
 

@@ -35,9 +35,13 @@ defmodule TraysSocialWeb.API.V1.PostController do
 
   def create(conn, params) do
     user = conn.assigns.current_user
-    attrs = Map.put(params, "user_id", user.id)
+    # D44: user_id is passed positionally to Posts.create_post; it is NOT
+    # mixed into the attrs map. Even a client request body claiming
+    # `{"user_id": <victim>}` gets dropped because Post.changeset has the
+    # field stripped from its cast list.
+    attrs = Map.drop(params, ["user_id"])
 
-    case Posts.create_post(attrs) do
+    case Posts.create_post(user.id, attrs) do
       {:ok, post} ->
         post = Posts.get_post!(post.id)
 

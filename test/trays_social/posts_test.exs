@@ -156,7 +156,7 @@ defmodule TraysSocial.PostsTest do
         |> Map.put(:post_tags, [%{tag: "easy"}])
         |> Map.put(:post_photos, [%{url: "https://example.com/photo.jpg", position: 0}])
 
-      {:ok, post} = Posts.create_post(attrs)
+      {:ok, post} = Posts.create_post(user.id, attrs)
       fetched = Posts.get_post!(post.id)
 
       assert length(fetched.ingredients) == 1
@@ -171,7 +171,7 @@ defmodule TraysSocial.PostsTest do
       user = user_fixture()
       attrs = Map.put(@valid_attrs, :user_id, user.id)
 
-      assert {:ok, %Post{} = post} = Posts.create_post(attrs)
+      assert {:ok, %Post{} = post} = Posts.create_post(user.id, attrs)
       assert post.photo_url == "https://example.com/photo.jpg"
       assert post.caption == "Delicious homemade pasta"
       assert post.cooking_time_minutes == 45
@@ -188,7 +188,7 @@ defmodule TraysSocial.PostsTest do
           %{name: "Tomato Sauce", quantity: "2", unit: "cups", order: 1}
         ])
 
-      assert {:ok, %Post{} = post} = Posts.create_post(attrs)
+      assert {:ok, %Post{} = post} = Posts.create_post(user.id, attrs)
       post_with_ingredients = Posts.get_post!(post.id)
       assert length(post_with_ingredients.ingredients) == 2
     end
@@ -204,7 +204,7 @@ defmodule TraysSocial.PostsTest do
           %{name: "Cutting board", order: 1}
         ])
 
-      assert {:ok, %Post{} = post} = Posts.create_post(attrs)
+      assert {:ok, %Post{} = post} = Posts.create_post(user.id, attrs)
       fetched = Posts.get_post!(post.id)
       assert length(fetched.tools) == 2
     end
@@ -220,7 +220,7 @@ defmodule TraysSocial.PostsTest do
           %{description: "Add pasta", order: 1}
         ])
 
-      assert {:ok, %Post{} = post} = Posts.create_post(attrs)
+      assert {:ok, %Post{} = post} = Posts.create_post(user.id, attrs)
       fetched = Posts.get_post!(post.id)
       assert length(fetched.cooking_steps) == 2
     end
@@ -236,13 +236,14 @@ defmodule TraysSocial.PostsTest do
           %{url: "https://example.com/b.jpg", position: 1}
         ])
 
-      assert {:ok, %Post{} = post} = Posts.create_post(attrs)
+      assert {:ok, %Post{} = post} = Posts.create_post(user.id, attrs)
       fetched = Posts.get_post!(post.id)
       assert length(fetched.post_photos) == 2
     end
 
     test "create_post/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Posts.create_post(@invalid_attrs)
+      user = user_fixture()
+      assert {:error, %Ecto.Changeset{}} = Posts.create_post(user.id, @invalid_attrs)
     end
 
     test "create_post/1 validates caption length" do
@@ -254,7 +255,7 @@ defmodule TraysSocial.PostsTest do
         |> Map.put(:user_id, user.id)
         |> Map.put(:caption, long_caption)
 
-      assert {:error, %Ecto.Changeset{} = changeset} = Posts.create_post(attrs)
+      assert {:error, %Ecto.Changeset{} = changeset} = Posts.create_post(user.id, attrs)
       assert "should be at most 500 character(s)" in errors_on(changeset).caption
     end
 
@@ -266,7 +267,7 @@ defmodule TraysSocial.PostsTest do
         |> Map.put(:user_id, user.id)
         |> Map.put(:cooking_time_minutes, -5)
 
-      assert {:error, %Ecto.Changeset{} = changeset} = Posts.create_post(attrs)
+      assert {:error, %Ecto.Changeset{} = changeset} = Posts.create_post(user.id, attrs)
       assert "must be greater than 0" in errors_on(changeset).cooking_time_minutes
     end
 
@@ -278,7 +279,7 @@ defmodule TraysSocial.PostsTest do
         |> Map.put(:user_id, user.id)
         |> Map.put(:servings, 0)
 
-      assert {:error, %Ecto.Changeset{} = changeset} = Posts.create_post(attrs)
+      assert {:error, %Ecto.Changeset{} = changeset} = Posts.create_post(user.id, attrs)
       assert "must be greater than 0" in errors_on(changeset).servings
     end
 
@@ -290,7 +291,7 @@ defmodule TraysSocial.PostsTest do
         |> Map.put(:user_id, user.id)
         |> Map.put(:type, "invalid")
 
-      assert {:error, %Ecto.Changeset{} = changeset} = Posts.create_post(attrs)
+      assert {:error, %Ecto.Changeset{} = changeset} = Posts.create_post(user.id, attrs)
       assert "is invalid" in errors_on(changeset).type
     end
 
@@ -303,16 +304,78 @@ defmodule TraysSocial.PostsTest do
         user_id: user.id
       }
 
-      assert {:ok, %Post{type: "post"}} = Posts.create_post(attrs)
+      assert {:ok, %Post{type: "post"}} = Posts.create_post(user.id, attrs)
     end
 
     test "create_post/1 defaults like_count and comment_count to 0" do
       user = user_fixture()
       attrs = Map.put(@valid_attrs, :user_id, user.id)
 
-      {:ok, post} = Posts.create_post(attrs)
+      {:ok, post} = Posts.create_post(user.id, attrs)
       assert post.like_count == 0
       assert post.comment_count == 0
+    end
+
+    test "create_post ignores user_id in attrs; only the positional arg wins (D44)" do
+      caller = user_fixture()
+      attacker = user_fixture()
+
+      # Attacker's id is in attrs as if a controller forwarded raw params.
+      attrs = Map.put(@valid_attrs, :user_id, attacker.id)
+
+      {:ok, post} = Posts.create_post(caller.id, attrs)
+
+      assert post.user_id == caller.id
+      refute post.user_id == attacker.id
+    end
+
+    test "update_post cannot re-parent a post via attrs (D44)" do
+      caller = user_fixture()
+      attacker = user_fixture()
+      post = post_fixture(user_id: caller.id)
+
+      {:ok, updated} =
+        Posts.update_post(post, %{caption: "edited", user_id: attacker.id})
+
+      assert updated.caption == "edited"
+      assert updated.user_id == caller.id
+      refute updated.user_id == attacker.id
+    end
+
+    test "create_post rejects javascript: photo_url (D44)" do
+      user = user_fixture()
+      attrs = Map.put(@valid_attrs, :photo_url, "javascript:alert(1)")
+
+      assert {:error, changeset} = Posts.create_post(user.id, attrs)
+      assert "must be an http(s) URL or app-relative path" in errors_on(changeset).photo_url
+    end
+
+    test "create_post rejects data: photo_url (D44)" do
+      user = user_fixture()
+      attrs = Map.put(@valid_attrs, :photo_url, "data:text/html,<script>alert(1)</script>")
+
+      assert {:error, changeset} = Posts.create_post(user.id, attrs)
+      assert "must be an http(s) URL or app-relative path" in errors_on(changeset).photo_url
+    end
+
+    test "create_post rejects vbscript:/file: photo_url (D44)" do
+      user = user_fixture()
+
+      for scheme <- ["vbscript:msgbox()", "file:///etc/passwd"] do
+        attrs = Map.put(@valid_attrs, :photo_url, scheme)
+        assert {:error, changeset} = Posts.create_post(user.id, attrs)
+
+        assert "must be an http(s) URL or app-relative path" in errors_on(changeset).photo_url
+      end
+    end
+
+    test "create_post accepts https and app-relative photo_url (D44)" do
+      user = user_fixture()
+
+      for url <- ["https://cdn.example.com/x.jpg", "http://example.com/y.png", "/uploads/local.jpg"] do
+        attrs = Map.put(@valid_attrs, :photo_url, url)
+        assert {:ok, _} = Posts.create_post(user.id, attrs)
+      end
     end
 
     test "update_post/2 with valid data updates the post" do
@@ -821,14 +884,14 @@ defmodule TraysSocial.PostsTest do
 
     test "accepts valid optional fields" do
       attrs = %{
-        photo_url: "url",
+        photo_url: "https://example.com/x.jpg",
         caption: "caption",
         cooking_time_minutes: 10,
-        user_id: 1,
         servings: 4
       }
 
-      changeset = Post.changeset(%Post{}, attrs)
+      # D44: user_id is no longer in the cast list; seed it via the struct.
+      changeset = Post.changeset(%Post{user_id: 1}, attrs)
       assert changeset.valid?
       assert Ecto.Changeset.get_change(changeset, :servings) == 4
     end
@@ -999,7 +1062,7 @@ defmodule TraysSocial.PostsTest do
           %{tag: "  Italian  "}
         ])
 
-      assert {:ok, %Post{} = post} = Posts.create_post(attrs)
+      assert {:ok, %Post{} = post} = Posts.create_post(user.id, attrs)
       post_with_tags = Posts.get_post!(post.id)
       tags = Enum.map(post_with_tags.post_tags, & &1.tag)
       assert "chicken" in tags

@@ -610,11 +610,10 @@ defmodule TraysSocial.AccountsTest do
 
       # Create a post for this user
       {:ok, post} =
-        TraysSocial.Posts.create_post(%{
+        TraysSocial.Posts.create_post(user.id, %{
           caption: "Test post",
           photo_url: "https://example.com/photo.jpg",
           cooking_time_minutes: 30,
-          user_id: user.id,
           ingredients: [%{name: "Test ingredient", quantity: "1", unit: "cup"}],
           cooking_steps: [%{description: "Test step", order: 0}]
         })

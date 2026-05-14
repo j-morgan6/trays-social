@@ -30,14 +30,13 @@ defmodule TraysSocial.PostsFixtures do
       caption: "some caption",
       cooking_time_minutes: 42,
       photo_url: "/uploads/test_photo.jpg",
-      user_id: user_id,
       ingredients: [%{name: "Test ingredient", quantity: "1", unit: "cup"}],
       cooking_steps: [%{description: "Test step", order: 0}]
     }
 
-    merged = Enum.into(attrs, base_attrs)
+    merged = attrs |> Map.delete(:user_id) |> Enum.into(base_attrs)
 
-    {:ok, post} = TraysSocial.Posts.create_post(merged)
+    {:ok, post} = TraysSocial.Posts.create_post(user_id, merged)
 
     # Preload associations for tests
     TraysSocial.Repo.preload(post, [:user, :post_photos])

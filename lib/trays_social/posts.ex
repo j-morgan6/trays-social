@@ -318,8 +318,14 @@ defmodule TraysSocial.Posts do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_post(attrs \\ %{}) do
-    %Post{}
+  def create_post(user_id, attrs) when is_integer(user_id) do
+    # D44: user_id is set server-side by seeding the struct BEFORE the
+    # changeset runs, so `validate_required(:user_id)` passes by reading
+    # the struct's data rather than relying on cast (which intentionally
+    # no longer accepts user_id). Even a future caller that forgets to
+    # use this 2-arity form and passes {"user_id": <victim>} in attrs
+    # cannot rewrite the FK — Post.changeset's cast list excludes it.
+    %Post{user_id: user_id}
     |> change_post(attrs)
     |> Repo.insert()
   end
