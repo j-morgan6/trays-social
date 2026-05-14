@@ -108,10 +108,15 @@ defmodule TraysSocial.Accounts do
   def find_or_create_apple_user(%{apple_id: apple_id} = attrs) do
     case Repo.get_by(User, apple_id: apple_id) do
       nil ->
+        # SECURITY: Apple Sign In NEVER auto-grants admin. Email from the Apple
+        # JWT is not an authentication factor for admin privilege — an attacker
+        # holding any valid Apple token could otherwise register an account
+        # bound to their apple_id with an arbitrary email claim. Admin must be
+        # granted via the operator-only `Accounts.set_admin/2` path (mix task /
+        # IEx) or through the password-registration confirmation flow.
         %User{}
         |> User.apple_registration_changeset(Map.new(attrs, fn {k, v} -> {to_string(k), v} end))
         |> Repo.insert()
-        |> maybe_grant_admin()
 
       user ->
         {:ok, user}
@@ -127,23 +132,36 @@ defmodule TraysSocial.Accounts do
     |> Repo.update()
   end
 
-  # If a freshly-inserted user's email matches one of the configured admin
-  # emails, flip is_admin=true. Idempotent — applies on every registration but
-  # only mutates the row when the email matches the allowlist.
+  # Conditionally flips is_admin=true when ALL of the following hold:
   #
-  # Apple Sign In note: when Apple returns a private relay email
-  # (`*@privaterelay.appleid.com`), it will NOT match a real-email allowlist
-  # entry. Operator must register via email/password OR manually flip is_admin
-  # in the DB after the Apple-relay registration.
-  defp maybe_grant_admin({:ok, %User{email: email} = user}) when is_binary(email) do
-    if String.downcase(email) in admin_emails() do
-      set_admin(user, true)
-    else
-      {:ok, user}
+  #   1. user has no apple_id (Apple Sign In never auto-grants admin — email
+  #      from the Apple JWT is not an authentication factor for privilege)
+  #   2. user has a hashed_password (password registration only)
+  #   3. user.confirmed_at is set (proves control of the email address)
+  #   4. email does not end with @privaterelay.appleid.com (defense-in-depth)
+  #   5. lowercased email is in the :admin_emails allowlist
+  #
+  # Idempotent — safe to call repeatedly. The gate matters: without
+  # confirmed_at, anyone could register with an admin email and self-grant.
+  # Callers: register_user/1 (no-op until confirmation lands) and
+  # confirm_user_by_token/1 (where the grant actually happens).
+  defp maybe_grant_admin({:ok, %User{} = user}) do
+    cond do
+      not is_nil(user.apple_id) -> {:ok, user}
+      is_nil(user.hashed_password) -> {:ok, user}
+      is_nil(user.confirmed_at) -> {:ok, user}
+      not is_binary(user.email) -> {:ok, user}
+      apple_relay_email?(user.email) -> {:ok, user}
+      String.downcase(user.email) in admin_emails() -> set_admin(user, true)
+      true -> {:ok, user}
     end
   end
 
   defp maybe_grant_admin(other), do: other
+
+  defp apple_relay_email?(email) when is_binary(email) do
+    email |> String.downcase() |> String.ends_with?("@privaterelay.appleid.com")
+  end
 
   defp admin_emails do
     :trays_social
@@ -287,7 +305,9 @@ defmodule TraysSocial.Accounts do
       |> Repo.delete_all()
 
       # Delete notifications (both as recipient and actor)
-      from(n in TraysSocial.Notifications.Notification, where: n.user_id == ^user_id or n.actor_id == ^user_id)
+      from(n in TraysSocial.Notifications.Notification,
+        where: n.user_id == ^user_id or n.actor_id == ^user_id
+      )
       |> Repo.delete_all()
 
       # Delete follows
@@ -300,11 +320,18 @@ defmodule TraysSocial.Accounts do
         |> Repo.all()
 
       if post_ids != [] do
-        from(i in TraysSocial.Posts.Ingredient, where: i.post_id in ^post_ids) |> Repo.delete_all()
-        from(s in TraysSocial.Posts.CookingStep, where: s.post_id in ^post_ids) |> Repo.delete_all()
+        from(i in TraysSocial.Posts.Ingredient, where: i.post_id in ^post_ids)
+        |> Repo.delete_all()
+
+        from(s in TraysSocial.Posts.CookingStep, where: s.post_id in ^post_ids)
+        |> Repo.delete_all()
+
         from(t in TraysSocial.Posts.Tool, where: t.post_id in ^post_ids) |> Repo.delete_all()
         from(t in TraysSocial.Posts.PostTag, where: t.post_id in ^post_ids) |> Repo.delete_all()
-        from(ph in TraysSocial.Posts.PostPhoto, where: ph.post_id in ^post_ids) |> Repo.delete_all()
+
+        from(ph in TraysSocial.Posts.PostPhoto, where: ph.post_id in ^post_ids)
+        |> Repo.delete_all()
+
         from(l in TraysSocial.Posts.PostLike, where: l.post_id in ^post_ids) |> Repo.delete_all()
         from(c in TraysSocial.Posts.Comment, where: c.post_id in ^post_ids) |> Repo.delete_all()
       end
@@ -481,7 +508,9 @@ defmodule TraysSocial.Accounts do
       Repo.transact(fn ->
         with {:ok, user} <- Repo.update(User.confirm_changeset(user)) do
           Repo.delete_all(UserToken.user_and_contexts_query(user.id, ["confirm"]))
-          {:ok, user}
+          # Admin grant is gated on confirmed_at — confirming the email proves
+          # control of the address before any allowlist match can take effect.
+          maybe_grant_admin({:ok, user})
         end
       end)
     else
@@ -631,8 +660,11 @@ defmodule TraysSocial.Accounts do
       |> Repo.insert(on_conflict: :nothing)
 
     # Auto-unfollow both directions
-    from(f in Follow, where: f.follower_id == ^blocker_id and f.followed_id == ^blocked_id) |> Repo.delete_all()
-    from(f in Follow, where: f.follower_id == ^blocked_id and f.followed_id == ^blocker_id) |> Repo.delete_all()
+    from(f in Follow, where: f.follower_id == ^blocker_id and f.followed_id == ^blocked_id)
+    |> Repo.delete_all()
+
+    from(f in Follow, where: f.follower_id == ^blocked_id and f.followed_id == ^blocker_id)
+    |> Repo.delete_all()
 
     result
   end

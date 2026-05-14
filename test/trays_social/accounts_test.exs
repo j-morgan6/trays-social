@@ -153,17 +153,68 @@ defmodule TraysSocial.AccountsTest do
       refute user.is_admin
     end
 
-    test "registering with an email IN :admin_emails grants is_admin=true (case-insensitive)" do
+    test "registering alone does NOT grant admin even for allowlisted email (gate: confirmed_at)" do
+      # D37 regression: email is not an authentication factor. The admin grant
+      # must wait until the user proves control of the email by confirming it.
       original = Application.get_env(:trays_social, :admin_emails)
       Application.put_env(:trays_social, :admin_emails, ["admin-test@example.com"])
 
       try do
-        {:ok, mixed_case} =
+        {:ok, user} =
+          [email: "admin-test@example.com"]
+          |> valid_user_attributes()
+          |> Accounts.register_user()
+
+        refute user.is_admin
+        assert is_nil(user.confirmed_at)
+      after
+        Application.put_env(:trays_social, :admin_emails, original)
+      end
+    end
+
+    test "confirming an allowlisted email grants is_admin=true (case-insensitive)" do
+      original = Application.get_env(:trays_social, :admin_emails)
+      Application.put_env(:trays_social, :admin_emails, ["admin-test@example.com"])
+
+      try do
+        {:ok, user} =
           [email: "Admin-Test@Example.com"]
           |> valid_user_attributes()
           |> Accounts.register_user()
 
-        assert mixed_case.is_admin
+        token =
+          extract_user_token(fn url_fun ->
+            Accounts.deliver_user_confirmation_instructions(user, url_fun)
+          end)
+
+        {:ok, confirmed} = Accounts.confirm_user_by_token(token)
+        assert confirmed.is_admin
+      after
+        Application.put_env(:trays_social, :admin_emails, original)
+      end
+    end
+
+    test "confirming an Apple-relay email never grants admin (defense-in-depth)" do
+      # Even if the relay address is mistakenly added to the allowlist, the
+      # admin grant must reject it — relay emails forward to a real address
+      # the operator may not control, and Apple can rotate them per-app.
+      original = Application.get_env(:trays_social, :admin_emails)
+      relay = "abc123@privaterelay.appleid.com"
+      Application.put_env(:trays_social, :admin_emails, [relay])
+
+      try do
+        {:ok, user} =
+          [email: relay]
+          |> valid_user_attributes()
+          |> Accounts.register_user()
+
+        token =
+          extract_user_token(fn url_fun ->
+            Accounts.deliver_user_confirmation_instructions(user, url_fun)
+          end)
+
+        {:ok, confirmed} = Accounts.confirm_user_by_token(token)
+        refute confirmed.is_admin
       after
         Application.put_env(:trays_social, :admin_emails, original)
       end

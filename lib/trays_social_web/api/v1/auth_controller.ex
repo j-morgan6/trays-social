@@ -63,7 +63,12 @@ defmodule TraysSocialWeb.API.V1.AuthController do
   def apple(conn, %{"identity_token" => identity_token} = params) do
     with {:ok, claims} <- AppleAuth.verify_token(identity_token) do
       apple_id = claims["sub"]
-      email = params["email"] || claims["email"]
+      # SECURITY: email is sourced ONLY from the verified JWT claim. Never trust
+      # params["email"] — a client could spoof any address (including an admin
+      # allowlist entry) alongside their own valid Apple token. On subsequent
+      # sign-ins Apple omits the email claim; that's fine because the existing
+      # user is looked up by apple_id and the stored email is never overwritten.
+      email = claims["email"]
       username = params["username"]
 
       attrs = %{apple_id: apple_id, email: email}
