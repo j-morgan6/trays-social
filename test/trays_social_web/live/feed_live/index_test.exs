@@ -5,7 +5,16 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
   import TraysSocial.PostsFixtures
   import TraysSocial.AccountsFixtures
 
+  # All Feed routes require an authenticated session (D60). Each describe
+  # below sets up a logged-in "viewer" so existing tests continue to exercise
+  # the rendered feed; the separate "Authentication" describe at the bottom
+  # asserts the redirect behavior for anonymous visitors.
   describe "Index" do
+    setup %{conn: conn} do
+      viewer = user_fixture()
+      %{conn: log_in_user(conn, viewer), viewer: viewer}
+    end
+
     test "displays empty state when no posts", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/")
 
@@ -62,16 +71,6 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       # load-more should be a no-op
       html = render_click(view, "load-more")
       assert html =~ "all caught up"
-    end
-
-    test "toggle-like redirects unauthenticated user to login", %{conn: conn} do
-      user = user_fixture()
-      post = post_fixture(user_id: user.id)
-
-      {:ok, view, _html} = live(conn, ~p"/")
-
-      render_click(view, "toggle-like", %{"post-id" => to_string(post.id)})
-      assert_redirect(view, ~p"/users/log-in")
     end
 
     test "authenticated user can toggle like on a post in feed", %{conn: conn} do
@@ -183,15 +182,6 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       assert html =~ "Follow people to personalize your feed"
     end
 
-    test "does not show nudge for unauthenticated users", %{conn: conn} do
-      user = user_fixture()
-      _post = post_fixture(user_id: user.id)
-
-      {:ok, _view, html} = live(conn, ~p"/")
-
-      refute html =~ "Follow people to personalize your feed"
-    end
-
     test "like_updated for a post not in feed is a no-op", %{conn: conn} do
       user = user_fixture()
       _post = post_fixture(user_id: user.id)
@@ -279,6 +269,13 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       assert html =~ followed_post.caption
       # Nudge should not appear for personalized feeds
       refute html =~ "Follow people to personalize your feed"
+    end
+  end
+
+  describe "Authentication (D60)" do
+    test "anonymous visitors are redirected to login", %{conn: conn} do
+      {:error, {:redirect, %{to: path}}} = live(conn, ~p"/")
+      assert path =~ "/users/log-in"
     end
   end
 end

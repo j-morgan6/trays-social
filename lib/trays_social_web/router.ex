@@ -80,13 +80,6 @@ defmodule TraysSocialWeb.Router do
     get "/terms", LegalController, :terms
   end
 
-  scope "/", TraysSocialWeb do
-    pipe_through :browser
-
-    live "/", FeedLive.Index, :index
-    live "/explore", ExploreLive.Index, :index
-    live "/@:username", ProfileLive.Show, :show
-  end
 
   # API v1 — unauthenticated routes
   scope "/api/v1/auth", TraysSocialWeb.API.V1, as: :api_v1_auth do
@@ -243,6 +236,14 @@ defmodule TraysSocialWeb.Router do
 
   scope "/", TraysSocialWeb do
     pipe_through [:browser, :require_authenticated_user]
+
+    # Primary content surfaces — D60: gated to logged-in users so anonymous
+    # visitors don't see other users' recipes/profiles. /users/confirm/<token>,
+    # /privacy, /terms, /.well-known/*, and /api/* remain publicly accessible
+    # (intentional — see scopes above and the api_v1_auth scope).
+    live "/", FeedLive.Index, :index
+    live "/explore", ExploreLive.Index, :index
+    live "/@:username", ProfileLive.Show, :show
 
     live "/posts/new", PostLive.New, :new
     live "/users/settings", SettingsLive.Index, :index

@@ -3,7 +3,7 @@ defmodule TraysSocialWeb.ExploreLive.Index do
 
   alias TraysSocial.Posts
 
-  on_mount {TraysSocialWeb.UserAuth, :mount_current_scope}
+  on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
   on_mount {TraysSocialWeb.NotificationsHook, :mount_notifications}
 
   @impl true

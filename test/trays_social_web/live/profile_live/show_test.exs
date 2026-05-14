@@ -6,6 +6,15 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
   import TraysSocial.AccountsFixtures
 
   describe "Profile page" do
+    # /@:username requires authentication (D60). Setup logs in a viewer so the
+    # rendering tests below continue to exercise the profile UI. Tests that
+    # need a specific logged-in user (own profile, follow flow) call
+    # log_in_user explicitly to override.
+    setup %{conn: conn} do
+      viewer = user_fixture()
+      %{conn: log_in_user(conn, viewer), viewer: viewer}
+    end
+
     test "displays user profile information", %{conn: conn} do
       user = user_fixture()
       # Update user with bio
@@ -114,15 +123,6 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
       assert html =~ "Follow"
     end
 
-    test "toggle-follow redirects unauthenticated user to login", %{conn: conn} do
-      user = user_fixture()
-
-      {:ok, view, _html} = live(conn, ~p"/@#{user.username}")
-
-      render_click(view, "toggle-follow")
-      assert_redirect(view, ~p"/users/log-in")
-    end
-
     test "authenticated user can follow and unfollow another user", %{conn: conn} do
       user = user_fixture()
       viewer = user_fixture()
@@ -190,6 +190,14 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
       {:ok, _view, html} = live(conn, ~p"/@#{user.username}")
 
       assert html =~ "No recipes yet"
+    end
+  end
+
+  describe "Authentication (D60)" do
+    test "anonymous visitors are redirected to login", %{conn: conn} do
+      user = user_fixture()
+      {:error, {:redirect, %{to: path}}} = live(conn, ~p"/@#{user.username}")
+      assert path =~ "/users/log-in"
     end
   end
 end

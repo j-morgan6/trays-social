@@ -9,12 +9,17 @@ defmodule TraysSocialWeb.NotificationsHookTest do
 
   describe "NotificationsHook" do
     test "assigns unread_notifications to 0 for unauthenticated user", %{conn: conn} do
-      # The explore page uses mount_current_scope (optional auth) + notifications hook
-      {:ok, view, _html} = live(conn, ~p"/explore")
+      # Post detail (/posts/:id) is one of the few routes still
+      # mount_current_scope (anonymous-OK) after D60, so it's the right
+      # surface to exercise the notifications hook for the unauthed case.
+      user = user_fixture()
+      post = post_fixture(user_id: user.id)
 
-      assert render(view) =~ "Explore"
+      {:ok, _view, html} = live(conn, ~p"/posts/#{post.id}")
 
-      # Unauthenticated users get unread_notifications = 0, verified by page rendering without error
+      # Unauthenticated users get unread_notifications = 0, verified by page
+      # rendering without error.
+      assert html =~ post.caption
     end
 
     test "assigns unread_notifications count for authenticated user", %{conn: conn} do
