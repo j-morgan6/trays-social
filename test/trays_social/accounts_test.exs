@@ -34,6 +34,57 @@ defmodule TraysSocial.AccountsTest do
       assert %User{id: ^id} =
                Accounts.get_user_by_email_and_password(user.email, valid_user_password())
     end
+
+    test "returns an Apple Sign In user once a password has been set" do
+      # Regression: D36 — Apple-Sign-In users (apple_id set, hashed_password nil
+      # at registration) were reportedly unable to log in via email/password
+      # even after a password was set. The current valid_password?/2 matches
+      # the canonical phx.gen.auth pattern and has no apple_id reject, so the
+      # dual-auth path works as long as the password is set via the canonical
+      # changeset (Accounts.update_user_password/2). This test locks that in.
+      {:ok, apple_user} =
+        Accounts.find_or_create_apple_user(%{
+          apple_id: "001234.abc#{System.unique_integer([:positive])}",
+          email: unique_user_email(),
+          username: unique_user_username()
+        })
+
+      assert is_nil(apple_user.hashed_password)
+      assert is_binary(apple_user.apple_id)
+
+      {:ok, {%{id: id}, _}} =
+        Accounts.update_user_password(apple_user, %{password: valid_user_password()})
+
+      assert %User{id: ^id, apple_id: apple_id} =
+               Accounts.get_user_by_email_and_password(apple_user.email, valid_user_password())
+
+      assert is_binary(apple_id)
+    end
+
+    test "does not return an Apple Sign In user with no password set" do
+      {:ok, apple_user} =
+        Accounts.find_or_create_apple_user(%{
+          apple_id: "001234.abc#{System.unique_integer([:positive])}",
+          email: unique_user_email(),
+          username: unique_user_username()
+        })
+
+      assert is_nil(apple_user.hashed_password)
+      refute Accounts.get_user_by_email_and_password(apple_user.email, valid_user_password())
+    end
+
+    test "does not return an Apple Sign In user when password is wrong" do
+      {:ok, apple_user} =
+        Accounts.find_or_create_apple_user(%{
+          apple_id: "001234.abc#{System.unique_integer([:positive])}",
+          email: unique_user_email(),
+          username: unique_user_username()
+        })
+
+      {:ok, _} = Accounts.update_user_password(apple_user, %{password: valid_user_password()})
+
+      refute Accounts.get_user_by_email_and_password(apple_user.email, "wrong password 123")
+    end
   end
 
   describe "get_user!/1" do
