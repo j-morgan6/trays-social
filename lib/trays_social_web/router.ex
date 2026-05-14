@@ -59,6 +59,15 @@ defmodule TraysSocialWeb.Router do
     plug TraysSocialWeb.API.RateLimitPlug, max_requests: 3, interval_ms: 600_000
   end
 
+  # W106: webhook ingress from third-party services (Resend, etc.). Three
+  # deliberate differences from :api:
+  #   - no CSRF (third-party origin can't carry our CSRF token)
+  #   - no rate limit (5xx retries from the sender need to be captured)
+  #   - no auth plug (authentication is per-controller via signed payload)
+  pipeline :webhook do
+    plug :accepts, ["json"]
+  end
+
   # Health check — no auth, no SSL redirect
   scope "/", TraysSocialWeb do
     pipe_through :api
@@ -198,6 +207,16 @@ defmodule TraysSocialWeb.Router do
     pipe_through [:browser, :require_authenticated_user, TraysSocialWeb.Plugs.RequireAdmin]
 
     live "/reports", ReportsLive, :index
+    live "/email-events", EmailEventsLive, :index
+  end
+
+  # W106: Resend webhook receiver. Signature is verified inside the
+  # controller using the raw body preserved by Plugs.RawBodyReader. The
+  # :webhook pipeline intentionally skips CSRF + rate limit + auth.
+  scope "/webhooks", TraysSocialWeb.Webhooks do
+    pipe_through :webhook
+
+    post "/resend", ResendController, :receive
   end
 
   # ErrorTracker dashboard — same admin gate as the /admin/reports scope.

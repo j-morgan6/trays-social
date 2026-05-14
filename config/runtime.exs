@@ -167,4 +167,19 @@ if config_env() == :prod do
     api_key: resend_api_key
 
   config :trays_social, :mailer_from_email, mailer_from_email
+
+  # W106: Resend webhook signing secret (Svix-format). Required so the
+  # /webhooks/resend endpoint can verify HMAC signatures and reject
+  # forged events. Set via: fly secrets set RESEND_WEBHOOK_SIGNING_SECRET=whsec_xxx
+  # Get the secret from resend.com/webhooks → your endpoint → Signing Secret.
+  resend_webhook_signing_secret =
+    System.get_env("RESEND_WEBHOOK_SIGNING_SECRET") ||
+      raise """
+      environment variable RESEND_WEBHOOK_SIGNING_SECRET is missing.
+      Get it from https://resend.com/webhooks (your endpoint's Signing Secret).
+      """
+
+  config :trays_social,
+         :resend_webhook_signing_secret,
+         resend_webhook_signing_secret
 end

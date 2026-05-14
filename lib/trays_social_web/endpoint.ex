@@ -50,10 +50,15 @@ defmodule TraysSocialWeb.Endpoint do
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
+  # W106: body_reader stashes the raw bytes in conn.assigns[:raw_body] so
+  # downstream signature-verification (Resend webhooks) can re-HMAC against
+  # the exact payload Resend signed. Other routes are unaffected — the
+  # raw_body assign is read-only telemetry from their perspective.
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
-    json_decoder: Phoenix.json_library()
+    json_decoder: Phoenix.json_library(),
+    body_reader: {TraysSocialWeb.Plugs.RawBodyReader, :read_body, []}
 
   plug Plug.MethodOverride
   plug Plug.Head
