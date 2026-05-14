@@ -47,6 +47,29 @@ defmodule TraysSocialWeb.Webhooks.ResendControllerTest do
       assert recipient == "test@example.com"
     end
 
+    test "rejects every event with 401 when RESEND_WEBHOOK_SIGNING_SECRET is unset", %{conn: conn} do
+      # Override the secret-setting fixture: simulate a freshly-deployed
+      # env that hasn't had fly secrets set yet. Restore via on_exit.
+      Application.delete_env(:trays_social, :resend_webhook_signing_secret)
+
+      on_exit(fn ->
+        Application.put_env(:trays_social, :resend_webhook_signing_secret, @signing_secret)
+      end)
+
+      payload = sample_payload("email.delivered")
+      body = Jason.encode!(payload)
+      {svix_id, svix_ts, signature} = sign(body)
+
+      conn =
+        conn
+        |> put_signature_headers(svix_id, svix_ts, signature)
+        |> put_req_header("content-type", "application/json")
+        |> post(~p"/webhooks/resend", body)
+
+      assert response(conn, 401) == ""
+      assert Repo.aggregate(Event, :count) == 0
+    end
+
     test "rejects an unsigned request with 401", %{conn: conn} do
       payload = sample_payload("email.delivered")
       body = Jason.encode!(payload)

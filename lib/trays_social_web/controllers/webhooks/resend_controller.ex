@@ -41,6 +41,11 @@ defmodule TraysSocialWeb.Webhooks.ResendController do
 
       send_resp(conn, 200, "")
     else
+      {:error, :missing_signing_secret} ->
+        # Logger.error already fired inside verify_signature/2; 401 to the
+        # caller so they retry once the operator sets the secret.
+        send_resp(conn, 401, "")
+
       {:error, :missing_signature_headers} ->
         Logger.warning("resend webhook rejected: missing signature headers")
         send_resp(conn, 401, "")
@@ -93,16 +98,18 @@ defmodule TraysSocialWeb.Webhooks.ResendController do
   defp read_raw_body(_conn), do: {:error, :no_raw_body}
 
   defp verify_signature(conn, raw_body) do
-    secret = signing_secret()
+    case signing_secret() do
+      nil ->
+        # No secret configured. Reject every event to prevent unsigned
+        # ingress in any environment. Tests + dev set their own secret via
+        # Application.put_env before exercising the endpoint.
+        Logger.error(
+          "resend webhook: RESEND_WEBHOOK_SIGNING_SECRET is not set on this environment — rejecting all events. Configure it via `fly secrets set` and restart."
+        )
 
-    cond do
-      is_nil(secret) ->
-        # In dev/test without a configured secret, skip validation so the
-        # admin can exercise the endpoint locally. NEVER reach this branch
-        # in prod — runtime.exs raises on missing secret in :prod.
-        :ok
+        {:error, :missing_signing_secret}
 
-      true ->
+      secret ->
         do_verify_signature(conn, raw_body, secret)
     end
   end

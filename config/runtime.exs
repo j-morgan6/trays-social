@@ -168,18 +168,16 @@ if config_env() == :prod do
 
   config :trays_social, :mailer_from_email, mailer_from_email
 
-  # W106: Resend webhook signing secret (Svix-format). Required so the
-  # /webhooks/resend endpoint can verify HMAC signatures and reject
-  # forged events. Set via: fly secrets set RESEND_WEBHOOK_SIGNING_SECRET=whsec_xxx
-  # Get the secret from resend.com/webhooks → your endpoint → Signing Secret.
-  resend_webhook_signing_secret =
-    System.get_env("RESEND_WEBHOOK_SIGNING_SECRET") ||
-      raise """
-      environment variable RESEND_WEBHOOK_SIGNING_SECRET is missing.
-      Get it from https://resend.com/webhooks (your endpoint's Signing Secret).
-      """
-
-  config :trays_social,
-         :resend_webhook_signing_secret,
-         resend_webhook_signing_secret
+  # W106: Resend webhook signing secret (Svix-format). When set, the
+  # /webhooks/resend endpoint verifies HMAC signatures and rejects forged
+  # events. When unset, the endpoint rejects EVERY event with 401 (and
+  # the controller logs a structured warning so the missing config is
+  # visible in /admin/errors). We do NOT raise on missing secret: that
+  # makes the chicken-and-egg of "configure the Resend webhook first
+  # to obtain the secret, but you need the deploy to be up to point the
+  # webhook at" impossible. Set via:
+  #   fly secrets set RESEND_WEBHOOK_SIGNING_SECRET=whsec_xxx -a <app>
+  if secret = System.get_env("RESEND_WEBHOOK_SIGNING_SECRET") do
+    config :trays_social, :resend_webhook_signing_secret, secret
+  end
 end
