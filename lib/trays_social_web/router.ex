@@ -20,6 +20,24 @@ defmodule TraysSocialWeb.Router do
     plug :fetch_current_scope_for_user
   end
 
+  # D64: same as :browser but skips :protect_from_forgery. Used for the
+  # Apple Sign In form_post callback — Apple POSTs from their own origin
+  # without a CSRF token. Replay protection comes from the signed state
+  # parameter validated inside the controller, not from CSRF.
+  pipeline :browser_no_csrf do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, html: {TraysSocialWeb.Layouts, :root}
+
+    plug :put_secure_browser_headers, %{
+      "content-security-policy" =>
+        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' wss:"
+    }
+
+    plug :fetch_current_scope_for_user
+  end
+
   pipeline :api do
     plug :accepts, ["json"]
   end
@@ -287,5 +305,16 @@ defmodule TraysSocialWeb.Router do
     delete "/users/log-out", UserSessionController, :delete
     get "/users/confirm/:token", UserConfirmationController, :confirm
     post "/users/confirmation/resend", UserConfirmationController, :resend
+
+    # D64: Sign in with Apple — start initiates Apple's authorize redirect.
+    # Callback is in the :browser_no_csrf pipeline below (Apple form_post
+    # comes from a third-party origin without our CSRF token).
+    get "/auth/apple/start", AppleSignInController, :start
+  end
+
+  scope "/", TraysSocialWeb do
+    pipe_through [:browser_no_csrf]
+
+    post "/auth/apple/callback", AppleSignInController, :callback
   end
 end

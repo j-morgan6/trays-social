@@ -146,6 +146,20 @@ Run `mix audit.deliverability` from a CI job on a schedule (daily is reasonable 
 
 ---
 
+## Authentication for Apple Sign In users (D64)
+
+Apple Sign In users (especially those who chose "Hide my email" at registration) don't know their `@privaterelay.appleid.com` address — Apple's UI doesn't surface it. Before D64, this meant they had no functional path to authenticate on the web; typing their real email into the magic-link form silently no-oped because no user row matched. They were locked out of the web entirely.
+
+D64 added a **Sign in with Apple** button to `/users/log-in`. The button initiates Apple's services-redirect flow, validates the `id_token` against the Services ID configured in `APPLE_SERVICES_ID`, and logs the user in as their existing user row (matched by `apple_id`, not by email). No duplicate account, no email guesswork.
+
+**Operator setup for D64 web Apple Sign In:**
+
+1. Apple Developer portal → Identifiers → tap **Identifiers** dropdown → Services IDs → create new (e.g. `com.trays.social.web`). Enable Sign in with Apple. Add `trays.app` as a domain and `https://trays.app/auth/apple/callback` as a return URL. Save.
+2. `fly secrets set APPLE_SERVICES_ID=com.trays.social.web -a trays-social` (and the review app).
+3. Verify the button on `/users/log-in` redirects to Apple, completes, and lands you authenticated.
+
+**This is unrelated to email deliverability** — it covers *incoming* auth from Apple users, not *outgoing* email sent to them. Apple SPF DNS registration (Layer 3 above) is still required for any email *sent to* `@privaterelay.appleid.com` recipients (magic-link, confirmation, password reset).
+
 ## Troubleshooting flowchart
 
 **Symptom: "I sent a magic link but the user never received it."**

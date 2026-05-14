@@ -20,19 +20,31 @@ defmodule TraysSocial.Accounts.AppleAuth do
 
   Returns `{:ok, claims}` with at minimum `sub` (Apple's stable user ID)
   and optionally `email`.
+
+  ## Options
+
+    * `:expected_audiences` — list of acceptable `aud` claim values. iOS uses
+      the App ID (e.g. `"com.trays.social"`); web Sign in with Apple uses a
+      separate Services ID (e.g. `"com.trays.social.web"`). Pass both to
+      accept tokens from either platform with a single call. Defaults to the
+      iOS App ID from `:apple_bundle_id` config so existing callers don't
+      have to change.
   """
-  def verify_token(identity_token) do
+  def verify_token(identity_token, opts \\ []) do
+    expected_audiences = Keyword.get(opts, :expected_audiences, [expected_bundle_id()])
     verifier = Application.get_env(:trays_social, :apple_token_verifier, __MODULE__)
-    verifier.do_verify(identity_token)
+    verifier.do_verify(identity_token, expected_audiences)
   end
 
   @doc false
-  def do_verify(identity_token) do
+  def do_verify(identity_token, expected_audiences \\ nil) do
+    expected_audiences = expected_audiences || [expected_bundle_id()]
+
     with {:ok, jwks} <- fetch_apple_public_keys(),
          {:ok, header} <- peek_header(identity_token),
          {:ok, jwk} <- find_jwk(jwks, header["kid"]),
          {:ok, claims} <- verify_signature(jwk, identity_token),
-         :ok <- validate_claims(claims) do
+         :ok <- validate_claims(claims, expected_audiences) do
       {:ok, claims}
     else
       {:error, :apple_keys_unavailable} = err ->
@@ -100,8 +112,7 @@ defmodule TraysSocial.Accounts.AppleAuth do
     end
   end
 
-  defp validate_claims(claims) do
-    bundle_id = expected_bundle_id()
+  defp validate_claims(claims, expected_audiences) do
     now = System.system_time(:second)
 
     cond do
@@ -109,9 +120,9 @@ defmodule TraysSocial.Accounts.AppleAuth do
         Logger.warning("Apple JWT issuer mismatch: got #{inspect(claims["iss"])}")
         {:error, :invalid_apple_token}
 
-      claims["aud"] != bundle_id ->
+      claims["aud"] not in expected_audiences ->
         Logger.warning(
-          "Apple JWT audience mismatch: got #{inspect(claims["aud"])}, expected #{inspect(bundle_id)}"
+          "Apple JWT audience mismatch: got #{inspect(claims["aud"])}, expected one of #{inspect(expected_audiences)}"
         )
 
         {:error, :invalid_apple_token}

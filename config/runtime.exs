@@ -180,4 +180,14 @@ if config_env() == :prod do
   if secret = System.get_env("RESEND_WEBHOOK_SIGNING_SECRET") do
     config :trays_social, :resend_webhook_signing_secret, secret
   end
+
+  # D64: Apple Sign In on web. Services ID is the OAuth-style client_id for
+  # the Sign in with Apple JS / services-redirect flow — distinct from the
+  # iOS App ID (which is the App Store bundle identifier). Created at
+  # developer.apple.com → Identifiers → Services IDs → Sign in with Apple.
+  # Optional at boot; the web Apple controller rejects requests with a
+  # structured log if missing, following the W106 hotfix pattern.
+  if services_id = System.get_env("APPLE_SERVICES_ID") do
+    config :trays_social, :apple_services_id, services_id
+  end
 end
