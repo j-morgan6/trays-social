@@ -15,8 +15,18 @@ ARG ELIXIR_VERSION=1.19.2
 ARG OTP_VERSION=28.1.1
 ARG DEBIAN_VERSION=trixie-20260316-slim
 
-ARG BUILDER_IMAGE="docker.io/hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
-ARG RUNNER_IMAGE="docker.io/debian:${DEBIAN_VERSION}"
+# D41: pin base images by @sha256 digest. Docker Hub tags are mutable —
+# anyone with publish access to the repo can repush a tag and silently
+# change what `<tag>` resolves to. Digests are content-addressable and
+# cannot be repointed. Bumps come in as reviewable PRs via Dependabot
+# (`.github/dependabot.yml`, docker ecosystem). Tags retained in the
+# nearby comments so a human reading the file knows which version this
+# digest corresponds to.
+#
+# hexpm/elixir:1.19.2-erlang-28.1.1-debian-trixie-20260316-slim
+ARG BUILDER_IMAGE="docker.io/hexpm/elixir@sha256:fb577b4f5a91322f41db47e0c78156c91c9567b3e2be22ddfb0798a37dfb0c04"
+# debian:trixie-20260316-slim
+ARG RUNNER_IMAGE="docker.io/debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c"
 
 FROM ${BUILDER_IMAGE} AS builder
 

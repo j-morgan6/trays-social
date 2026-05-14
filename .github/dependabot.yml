@@ -11,3 +11,15 @@ updates:
     labels:
       - "dependencies"
       - "ci"
+
+  # D41: watch Dockerfile base-image digests. When a publisher releases a
+  # newer image for the same tag, Dependabot opens a PR with the updated
+  # digest so a human reviews the change before prod picks it up.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
