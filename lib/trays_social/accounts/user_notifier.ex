@@ -1,6 +1,8 @@
 defmodule TraysSocial.Accounts.UserNotifier do
   import Swoosh.Email
 
+  require Logger
+
   alias TraysSocial.Accounts.User
   alias TraysSocial.Mailer
 
@@ -68,6 +70,14 @@ defmodule TraysSocial.Accounts.UserNotifier do
   end
 
   # Delivers the email using the application mailer with both plain-text and HTML bodies.
+  #
+  # D63: pattern-matches the Mailer result so delivery failures (Resend
+  # suppression, invalid API key, unverified sender domain, Apple-relay
+  # rejection, etc.) become observable. Successes are logged with the
+  # provider id so they can be correlated with the Resend dashboard later;
+  # failures are logged at error level AND reported to ErrorTracker so they
+  # surface in /admin/errors. Never logs the token URL or body — those
+  # contain credentials.
   defp deliver(recipient, subject, text, html) do
     from_email = Application.get_env(:trays_social, :mailer_from_email, "noreply@trays.social")
 
@@ -79,8 +89,30 @@ defmodule TraysSocial.Accounts.UserNotifier do
       |> text_body(text)
       |> html_body(html)
 
-    with {:ok, _metadata} <- Mailer.deliver(email) do
-      {:ok, email}
+    case Mailer.deliver(email) do
+      {:ok, metadata} ->
+        Logger.info(
+          "email sent: recipient=#{recipient} subject=#{inspect(subject)} provider_id=#{inspect(metadata[:id])}"
+        )
+
+        {:ok, email}
+
+      {:error, reason} ->
+        Logger.error(
+          "email delivery failed: recipient=#{recipient} subject=#{inspect(subject)} reason=#{inspect(reason)}"
+        )
+
+        ErrorTracker.report(
+          RuntimeError.exception("email_delivery_failed"),
+          [],
+          %{
+            recipient: recipient,
+            subject: subject,
+            reason: inspect(reason)
+          }
+        )
+
+        {:error, reason}
     end
   end
 

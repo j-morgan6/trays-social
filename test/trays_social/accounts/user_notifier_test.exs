@@ -1,9 +1,27 @@
 defmodule TraysSocial.Accounts.UserNotifierTest do
-  use TraysSocial.DataCase, async: true
+  # Not async — these tests swap the Mailer adapter via Application.put_env to
+  # exercise the error branch in deliver/4. Concurrent tests would race on the
+  # global config. Switch back to async: true if you split out the failing-
+  # adapter tests into their own module.
+  use TraysSocial.DataCase, async: false
 
+  import ExUnit.CaptureLog
   import TraysSocial.AccountsFixtures
 
   alias TraysSocial.Accounts.UserNotifier
+
+  # D63: a Swoosh adapter that always returns an error. Used to verify the
+  # error branch in UserNotifier.deliver/4 logs + reports without changing
+  # the production code path.
+  defmodule FailingAdapter do
+    @behaviour Swoosh.Adapter
+
+    @impl true
+    def deliver(_email, _config), do: {:error, :simulated_resend_suppression}
+
+    @impl true
+    def validate_config(_config), do: :ok
+  end
 
   @primary_color "#1B5E20"
 
@@ -60,6 +78,61 @@ defmodule TraysSocial.Accounts.UserNotifierTest do
     end
   end
 
+  describe "delivery observability (D63)" do
+    test "logs an info line on successful send (credentials never leak into logs)" do
+      user = user_fixture()
+      url = "https://trays.app/users/log-in/t/secret-token-must-not-appear-in-log"
+
+      # Test env has Logger at :warning. Lower it just for this test so the
+      # info-level success line is captured.
+      original_level = Logger.level()
+      Logger.configure(level: :info)
+      on_exit_log = fn -> Logger.configure(level: original_level) end
+
+      log =
+        try do
+          capture_log(fn ->
+            assert {:ok, _email} = UserNotifier.deliver_login_instructions(user, url)
+          end)
+        after
+          on_exit_log.()
+        end
+
+      # Sanity: the success info line fired and includes recipient + subject.
+      assert log =~ "email sent"
+      assert log =~ user.email
+      assert log =~ "Log in to Trays"
+
+      # Credential safety: the magic-link token and full URL MUST NOT appear
+      # anywhere in the log output. Logs ship to Fly stdout (longer retention
+      # than the DB) so leaking a credential there is worse than leaking it
+      # in the audit trail.
+      refute log =~ url
+      refute log =~ "secret-token-must-not-appear-in-log"
+    end
+
+    test "logs an error line AND returns {:error, reason} when Mailer fails" do
+      user = user_fixture()
+      url = "https://trays.app/users/log-in/t/another-secret-token"
+
+      with_failing_mailer(fn ->
+        log =
+          capture_log(fn ->
+            assert {:error, :simulated_resend_suppression} =
+                     UserNotifier.deliver_login_instructions(user, url)
+          end)
+
+        assert log =~ "email delivery failed"
+        assert log =~ user.email
+        assert log =~ "simulated_resend_suppression"
+
+        # Same credential-safety guarantee on the error path.
+        refute log =~ url
+        refute log =~ "another-secret-token"
+      end)
+    end
+  end
+
   describe "html escaping" do
     test "URLs containing & and quotes are encoded in href but unchanged in text_body" do
       user = unconfirmed_user_fixture()
@@ -107,5 +180,21 @@ defmodule TraysSocial.Accounts.UserNotifierTest do
     |> String.replace("&", "&amp;")
     |> String.replace("\"", "&quot;")
     |> String.replace("'", "&#39;")
+  end
+
+  defp with_failing_mailer(fun) do
+    original = Application.get_env(:trays_social, TraysSocial.Mailer)
+
+    Application.put_env(:trays_social, TraysSocial.Mailer, adapter: FailingAdapter)
+
+    try do
+      fun.()
+    after
+      if original == nil do
+        Application.delete_env(:trays_social, TraysSocial.Mailer)
+      else
+        Application.put_env(:trays_social, TraysSocial.Mailer, original)
+      end
+    end
   end
 end
