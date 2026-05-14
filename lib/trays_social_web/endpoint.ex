@@ -50,6 +50,15 @@ defmodule TraysSocialWeb.Endpoint do
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
+  # D45: rewrite conn.remote_ip from a trusted X-Forwarded-For chain so
+  # downstream rate-limit / auth-attempt buckets key on the real client IP
+  # rather than the proxy's egress address. The wrapper plug refuses to
+  # honor XFF unless the TCP peer is itself in the known proxy CIDR list
+  # (loopback for dev/test, fdaa::/16 for Fly's internal mesh), so an
+  # attacker who somehow bypasses the proxy cannot spoof remote_ip by
+  # adding the header themselves.
+  plug TraysSocialWeb.Plugs.TrustedRemoteIp
+
   # W106: body_reader stashes the raw bytes in conn.assigns[:raw_body] so
   # downstream signature-verification (Resend webhooks) can re-HMAC against
   # the exact payload Resend signed. Other routes are unaffected — the

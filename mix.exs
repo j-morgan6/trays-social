@@ -77,6 +77,10 @@ defmodule TraysSocial.MixProject do
       {:hackney, "~> 1.24", override: true},
       {:mogrify, "~> 0.9"},
       {:hammer, "~> 6.2"},
+      # D45: parses X-Forwarded-For from trusted proxies and rewrites
+      # conn.remote_ip so RateLimitPlug buckets the real client IP rather
+      # than the Fly/Cloudflare/ALB egress address.
+      {:remote_ip, "~> 1.2"},
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
       {:sweet_xml, "~> 0.7"},
