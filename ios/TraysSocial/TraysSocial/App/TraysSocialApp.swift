@@ -1,4 +1,7 @@
+import os
 import SwiftUI
+
+private let appLog = Logger(subsystem: "com.trays.social", category: "deeplinks")
 
 @main
 struct TraysSocialApp: App {
@@ -39,7 +42,11 @@ struct TraysSocialApp: App {
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { userActivity in
                 // Universal Link tap. Currently we only intercept
                 // /users/confirm/<token>; AppState filters non-matching URLs.
-                guard let url = userActivity.webpageURL else { return }
+                guard let url = userActivity.webpageURL else {
+                    appLog.error("onContinueUserActivity fired but webpageURL was nil")
+                    return
+                }
+                appLog.info("onContinueUserActivity received URL: host=\(url.host ?? "nil", privacy: .public) path=\(url.path, privacy: .public)")
                 Task { await appState.handleConfirmationDeepLink(url: url) }
             }
         }

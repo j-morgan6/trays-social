@@ -1,4 +1,7 @@
+import os
 import SwiftUI
+
+private let deeplinkLog = Logger(subsystem: "com.trays.social", category: "deeplinks")
 
 @MainActor
 @Observable
@@ -91,20 +94,47 @@ final class AppState {
     /// and refresh the current user so `isEmailConfirmed` flips and the
     /// `EmailVerificationGateView` dismisses automatically.
     ///
-    /// Failure is silent: the user can still tap "I verified my email" on the
-    /// gate to retry via `refreshCurrentUser()`. We don't want to surface a
-    /// generic error toast for a bad token because the gate already provides a
-    /// retry path.
+    /// D62: we now always refresh /auth/me at the end, regardless of whether
+    /// the confirm POST succeeded. This recovers the case where the token was
+    /// already consumed (e.g., the user tapped the link in Safari before
+    /// Universal Links registered post-D35, or iOS replays the activity on a
+    /// scene re-activate). If the user's email is already confirmed in the DB,
+    /// the refresh picks it up and the gate dismisses.
+    ///
+    /// Every failure branch logs to os.Logger so Console.app / sysdiagnose can
+    /// surface the failure point. Tokens are never logged.
     func handleConfirmationDeepLink(url: URL) async {
-        guard let token = confirmationToken(from: url) else { return }
+        guard let token = confirmationToken(from: url) else {
+            deeplinkLog.error(
+                "confirm deep link rejected: not a /users/confirm/<token> URL (host=\(url.host ?? "nil", privacy: .public), path=\(url.path, privacy: .public))"
+            )
+            return
+        }
+
+        deeplinkLog.info("confirm deep link received: token length=\(token.count, privacy: .public)")
 
         do {
             let confirmed = try await AuthService.confirmEmail(token: token)
             if confirmed {
-                await refreshCurrentUser()
+                deeplinkLog.info("confirm API returned confirmed=true; refreshing /auth/me")
+            } else {
+                deeplinkLog.error("confirm API returned confirmed=false; refreshing /auth/me anyway")
             }
         } catch {
-            // Silent — gate retry path remains available.
+            deeplinkLog.error(
+                "confirm API call threw: \(String(describing: error), privacy: .public); refreshing /auth/me anyway in case the token was already consumed"
+            )
+        }
+
+        // Always refresh — recovers the already-confirmed case and keeps the
+        // gate's dismissal driven by the source of truth (the DB's
+        // confirmed_at via GET /auth/me).
+        await refreshCurrentUser()
+
+        if currentUser?.isEmailConfirmed == true {
+            deeplinkLog.info("post-refresh: isEmailConfirmed=true, gate should dismiss")
+        } else {
+            deeplinkLog.error("post-refresh: isEmailConfirmed=false, gate remains. User can use the 'I verified my email' button or 'Resend' to retry.")
         }
     }
 
