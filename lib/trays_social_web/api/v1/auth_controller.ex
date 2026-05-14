@@ -55,8 +55,13 @@ defmodule TraysSocialWeb.API.V1.AuthController do
     json(conn, %{data: %{message: "logged out"}})
   end
 
-  def apple(conn, %{"identity_token" => identity_token} = params) do
-    with {:ok, claims} <- AppleAuth.verify_token(identity_token) do
+  def apple(conn, %{"identity_token" => identity_token, "raw_nonce" => raw_nonce} = params)
+      when is_binary(raw_nonce) and byte_size(raw_nonce) > 0 do
+    expected_nonce_hash =
+      :crypto.hash(:sha256, raw_nonce) |> Base.encode16(case: :lower)
+
+    with {:ok, claims} <-
+           AppleAuth.verify_token(identity_token, expected_nonce_hash: expected_nonce_hash) do
       apple_id = claims["sub"]
       # SECURITY: email is sourced ONLY from the verified JWT claim. Never trust
       # params["email"] — a client could spoof any address (including an admin
@@ -99,6 +104,14 @@ defmodule TraysSocialWeb.API.V1.AuthController do
         |> put_status(:service_unavailable)
         |> json(%{errors: [%{message: "Apple authentication service unavailable"}]})
     end
+  end
+
+  def apple(conn, %{"identity_token" => _}) do
+    # identity_token is present but raw_nonce is missing or empty — W104 makes
+    # the nonce binding mandatory to defeat captured-token replay.
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: [%{message: "raw_nonce is required"}]})
   end
 
   def apple(conn, _params) do

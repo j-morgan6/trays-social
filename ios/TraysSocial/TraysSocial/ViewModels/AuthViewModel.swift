@@ -1,4 +1,5 @@
 import AuthenticationServices
+import CryptoKit
 import LocalAuthentication
 import SwiftUI
 
@@ -17,6 +18,13 @@ final class AuthViewModel {
     var needsUsername = false
     var pendingToken: String?
     var pendingUser: User?
+    // W104: the per-sign-in raw nonce. Generated when the
+    // SignInWithAppleButton begins its request and consumed by
+    // handleAppleSignIn after Apple returns. The sha256 of this string is
+    // what we set as ASAuthorizationAppleIDRequest.nonce, so the JWT Apple
+    // mints will carry that same hash as its nonce claim and the server can
+    // bind the token to this exact sign-in attempt.
+    private var currentRawNonce: String?
 
     var isEmailValid: Bool {
         email.contains("@") && !email.contains(" ")
@@ -41,6 +49,49 @@ final class AuthViewModel {
 
     func checkBiometricAvailability() {
         hasSavedCredential = KeychainService.hasBiometricCredential()
+    }
+
+    /// Prepares Apple's sign-in request by generating a fresh per-attempt
+    /// nonce and setting `request.nonce` to its SHA-256 hex digest. Stash the
+    /// raw nonce on the view model so `handleAppleSignIn` can forward it to
+    /// the backend (the server hashes it again and verifies it matches the
+    /// JWT's nonce claim).
+    func prepareAppleSignInRequest(_ request: ASAuthorizationAppleIDRequest) {
+        request.requestedScopes = [.email, .fullName]
+        let rawNonce = Self.makeRawNonce()
+        currentRawNonce = rawNonce
+        request.nonce = Self.sha256Hex(rawNonce)
+    }
+
+    private static func makeRawNonce(length: Int = 32) -> String {
+        // Apple's sample uses an alphanumeric character set for the raw
+        // nonce so the value is safe to log/inspect. The SHA-256 of the raw
+        // nonce is what gets bound to the JWT; the raw value never leaves
+        // device → Apple → backend.
+        let charset: [Character] =
+            Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remaining = length
+
+        while remaining > 0 {
+            var randoms = [UInt8](repeating: 0, count: 16)
+            let status = SecRandomCopyBytes(kSecRandomDefault, randoms.count, &randoms)
+            precondition(status == errSecSuccess, "SecRandomCopyBytes failed: \(status)")
+
+            for random in randoms where remaining > 0 {
+                if random < charset.count {
+                    result.append(charset[Int(random)])
+                    remaining -= 1
+                }
+            }
+        }
+
+        return result
+    }
+
+    private static func sha256Hex(_ input: String) -> String {
+        let digest = SHA256.hash(data: Data(input.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 
     func register(appState: AppState) async {
@@ -126,6 +177,21 @@ final class AuthViewModel {
                 return
             }
 
+            // W104: the raw nonce stashed by prepareAppleSignInRequest is
+            // what the server hashes again to verify the JWT's nonce claim.
+            // If it's nil here, somebody hit the success path without
+            // first calling prepareAppleSignInRequest — treat that as a
+            // hard error rather than sending an empty string and earning a
+            // confusing 422 from the backend.
+            guard let rawNonce = currentRawNonce else {
+                errorMessage = "Apple Sign In failed (missing nonce). Please try again."
+                isLoading = false
+                return
+            }
+            // Single-use — clear so a subsequent attempt forces a fresh
+            // request preparation.
+            currentRawNonce = nil
+
             let email = credential.email
             let fullName = credential.fullName
             let username = fullName?.givenName?.lowercased()
@@ -133,6 +199,7 @@ final class AuthViewModel {
             do {
                 let response = try await AuthService.appleAuth(
                     identityToken: identityToken,
+                    rawNonce: rawNonce,
                     email: email,
                     username: username
                 )

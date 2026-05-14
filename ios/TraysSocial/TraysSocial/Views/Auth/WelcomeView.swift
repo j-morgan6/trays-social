@@ -31,7 +31,13 @@ struct WelcomeView: View {
                 VStack(spacing: 16) {
                     // Sign in with Apple
                     SignInWithAppleButton(.signIn) { request in
-                        request.requestedScopes = [.email, .fullName]
+                        // W104: generate the per-attempt nonce and set
+                        // request.nonce to its sha256 hex. The raw value is
+                        // stashed on the view model and forwarded to the
+                        // backend after Apple returns, so the server can
+                        // verify the JWT's nonce claim binds to this
+                        // sign-in attempt.
+                        viewModel.prepareAppleSignInRequest(request)
                     } onCompletion: { result in
                         Task {
                             await viewModel.handleAppleSignIn(result: result, appState: appState)

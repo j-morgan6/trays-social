@@ -3,6 +3,12 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
   # which is process-wide and would race with other async test modules.
   use TraysSocialWeb.ConnCase, async: false
 
+  # The matching raw nonce for the mock's fixed nonce claim. The mock returns
+  # `claims["nonce"]` = SHA-256 hex of this string for every "valid_*" token
+  # so the W104 nonce-validation branch in AppleAuth.verify_token/2 succeeds
+  # without each test having to compute the hash.
+  @raw_nonce TraysSocial.Accounts.AppleAuthMock.test_nonce_raw()
+
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
@@ -12,6 +18,7 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
       conn =
         post(conn, ~p"/api/v1/auth/apple", %{
           identity_token: "valid_apple_token",
+          raw_nonce: @raw_nonce,
           email: "apple@privaterelay.appleid.com"
         })
 
@@ -31,6 +38,7 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
       conn =
         post(conn, ~p"/api/v1/auth/apple", %{
           identity_token: "valid_apple_token",
+          raw_nonce: @raw_nonce,
           email: "apple@privaterelay.appleid.com",
           username: "appleuser"
         })
@@ -47,7 +55,8 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
       # Second sign-in finds existing user
       conn =
         post(conn, ~p"/api/v1/auth/apple", %{
-          identity_token: "existing_apple_token"
+          identity_token: "existing_apple_token",
+          raw_nonce: @raw_nonce
         })
 
       assert %{"data" => data} = json_response(conn, 200)
@@ -57,7 +66,8 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
     test "returns 401 for invalid token", %{conn: conn} do
       conn =
         post(conn, ~p"/api/v1/auth/apple", %{
-          identity_token: "invalid_token"
+          identity_token: "invalid_token",
+          raw_nonce: @raw_nonce
         })
 
       assert %{"errors" => [%{"message" => "unauthorized"}]} = json_response(conn, 401)
@@ -73,7 +83,8 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
     test "uses email from claims when not provided in params", %{conn: conn} do
       conn =
         post(conn, ~p"/api/v1/auth/apple", %{
-          identity_token: "valid_apple_token"
+          identity_token: "valid_apple_token",
+          raw_nonce: @raw_nonce
         })
 
       assert %{"data" => data} = json_response(conn, 201)
@@ -87,6 +98,7 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
       conn =
         post(conn, ~p"/api/v1/auth/apple", %{
           identity_token: "valid_apple_token",
+          raw_nonce: @raw_nonce,
           email: "victim@example.com"
         })
 
@@ -107,6 +119,7 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
         conn =
           post(conn, ~p"/api/v1/auth/apple", %{
             identity_token: "valid_apple_token",
+            raw_nonce: @raw_nonce,
             email: "admin-target@example.com"
           })
 
@@ -129,6 +142,7 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
       conn =
         post(conn, ~p"/api/v1/auth/apple", %{
           identity_token: "valid_apple_token_no_email",
+          raw_nonce: @raw_nonce,
           email: "attacker@example.com"
         })
 
@@ -149,7 +163,8 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
       try do
         conn =
           post(conn, ~p"/api/v1/auth/apple", %{
-            identity_token: "valid_apple_token"
+            identity_token: "valid_apple_token",
+            raw_nonce: @raw_nonce
           })
 
         assert %{"data" => data} = json_response(conn, 201)
@@ -157,6 +172,53 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
       after
         Application.put_env(:trays_social, :admin_emails, original)
       end
+    end
+
+    test "rejects request with missing raw_nonce (W104)", %{conn: conn} do
+      conn =
+        post(conn, ~p"/api/v1/auth/apple", %{
+          identity_token: "valid_apple_token"
+        })
+
+      assert %{"errors" => [%{"message" => "raw_nonce is required"}]} =
+               json_response(conn, 422)
+    end
+
+    test "rejects request with empty raw_nonce (W104)", %{conn: conn} do
+      conn =
+        post(conn, ~p"/api/v1/auth/apple", %{
+          identity_token: "valid_apple_token",
+          raw_nonce: ""
+        })
+
+      assert %{"errors" => [%{"message" => "raw_nonce is required"}]} =
+               json_response(conn, 422)
+    end
+
+    test "rejects token whose nonce claim doesn't match sha256(raw_nonce) (W104)", %{conn: conn} do
+      # The mock returns nonce = sha256("test_nonce_raw"). Sending a different
+      # raw_nonce simulates an attacker replaying a captured Apple token with
+      # their own raw_nonce — the hashes won't match.
+      conn =
+        post(conn, ~p"/api/v1/auth/apple", %{
+          identity_token: "valid_apple_token",
+          raw_nonce: "attacker_nonce"
+        })
+
+      assert %{"errors" => [%{"message" => "unauthorized"}]} = json_response(conn, 401)
+    end
+
+    test "rejects token with no nonce claim at all (W104)", %{conn: conn} do
+      # The mock token "valid_apple_token_no_nonce" returns claims without a
+      # nonce key. The server must reject — a token issued without a nonce
+      # binding cannot be safely accepted regardless of raw_nonce.
+      conn =
+        post(conn, ~p"/api/v1/auth/apple", %{
+          identity_token: "valid_apple_token_no_nonce",
+          raw_nonce: @raw_nonce
+        })
+
+      assert %{"errors" => [%{"message" => "unauthorized"}]} = json_response(conn, 401)
     end
   end
 

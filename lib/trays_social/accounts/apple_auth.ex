@@ -29,11 +29,47 @@ defmodule TraysSocial.Accounts.AppleAuth do
       accept tokens from either platform with a single call. Defaults to the
       iOS App ID from `:apple_bundle_id` config so existing callers don't
       have to change.
+
+    * `:expected_nonce_hash` — the SHA-256 hex digest of the raw per-sign-in
+      nonce the client sent to Apple. When provided, the JWT's `nonce` claim
+      MUST equal this value (constant-time compare). Required for the iOS
+      flow (W104). The web flow does not pass this — it uses a signed-state
+      cookie for replay protection instead — so the option defaults to `nil`
+      and nonce validation is skipped when absent.
   """
   def verify_token(identity_token, opts \\ []) do
     expected_audiences = Keyword.get(opts, :expected_audiences, [expected_bundle_id()])
+    expected_nonce_hash = Keyword.get(opts, :expected_nonce_hash)
     verifier = Application.get_env(:trays_social, :apple_token_verifier, __MODULE__)
-    verifier.do_verify(identity_token, expected_audiences)
+
+    with {:ok, claims} <- verifier.do_verify(identity_token, expected_audiences),
+         :ok <- validate_nonce(claims, expected_nonce_hash) do
+      {:ok, claims}
+    end
+  end
+
+  # When the caller does not pass `:expected_nonce_hash`, nonce validation is
+  # skipped entirely. Web flow uses this branch.
+  defp validate_nonce(_claims, nil), do: :ok
+
+  defp validate_nonce(claims, expected_hash) when is_binary(expected_hash) do
+    case claims["nonce"] do
+      nil ->
+        Logger.warning("Apple JWT missing required nonce claim")
+        {:error, :invalid_apple_token}
+
+      actual when is_binary(actual) ->
+        if Plug.Crypto.secure_compare(actual, expected_hash) do
+          :ok
+        else
+          Logger.warning("Apple JWT nonce mismatch (possible replay)")
+          {:error, :invalid_apple_token}
+        end
+
+      _ ->
+        Logger.warning("Apple JWT nonce claim is not a string")
+        {:error, :invalid_apple_token}
+    end
   end
 
   @doc false

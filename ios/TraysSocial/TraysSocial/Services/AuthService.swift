@@ -14,6 +14,11 @@ enum AuthService {
 
     struct AppleAuthRequest: Encodable {
         let identityToken: String
+        // W104: the per-sign-in raw nonce. The iOS client passes
+        // sha256(rawNonce) to Apple via ASAuthorizationAppleIDRequest.nonce.
+        // The server hashes rawNonce again and asserts it matches the JWT's
+        // nonce claim, binding the token to this exact sign-in attempt.
+        let rawNonce: String
         let email: String?
         let username: String?
     }
@@ -48,8 +53,8 @@ enum AuthService {
         return response.data
     }
 
-    static func appleAuth(identityToken: String, email: String?, username: String?) async throws -> AuthResponse {
-        let body = AppleAuthRequest(identityToken: identityToken, email: email, username: username)
+    static func appleAuth(identityToken: String, rawNonce: String, email: String?, username: String?) async throws -> AuthResponse {
+        let body = AppleAuthRequest(identityToken: identityToken, rawNonce: rawNonce, email: email, username: username)
         let response: DataResponse<AuthResponse> = try await APIClient.shared.post(path: "/auth/apple", body: body)
         return response.data
     }
