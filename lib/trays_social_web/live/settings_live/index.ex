@@ -26,6 +26,7 @@ defmodule TraysSocialWeb.SettingsLive.Index do
       |> assign(:password_changeset, password_changeset)
       |> assign(:email_form_error, nil)
       |> assign(:password_form_error, nil)
+      |> assign(:delete_form_error, nil)
       |> allow_upload(:profile_photo,
         accept: ~w(.jpg .jpeg .png .heic),
         max_entries: 1,
@@ -121,21 +122,36 @@ defmodule TraysSocialWeb.SettingsLive.Index do
   end
 
   @impl true
-  def handle_event("delete_account", _params, socket) do
+  # D47: destructive — require current-password re-authentication regardless
+  # of session validity. Matches the step-up pattern already in place for
+  # change_email / change_password. Single generic error for both missing
+  # and incorrect password (don't distinguish failure modes).
+  def handle_event("delete_account", %{"user" => %{"current_password" => current_password}}, socket)
+      when is_binary(current_password) do
     user = socket.assigns.user
 
-    case Accounts.delete_account(user) do
-      {:ok, _user} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Account deleted successfully")
-         |> push_navigate(to: ~p"/")}
+    if User.valid_password?(user, current_password) do
+      case Accounts.delete_account(user) do
+        {:ok, _user} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Account deleted successfully")
+           |> push_navigate(to: ~p"/")}
 
-      {:error, _reason} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Failed to delete account")}
+        {:error, _reason} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, "Failed to delete account")}
+      end
+    else
+      {:noreply, assign(socket, :delete_form_error, "Current password is incorrect.")}
     end
+  end
+
+  def handle_event("delete_account", _params, socket) do
+    # Missing or malformed payload — fail closed with the SAME flash as a
+    # wrong-password attempt so the response is identical from outside.
+    {:noreply, assign(socket, :delete_form_error, "Current password is incorrect.")}
   end
 
   defp upload_profile_photo(socket) do

@@ -204,13 +204,37 @@
         Once you delete your account, there is no going back. This will permanently delete your account and all your posts.
       </p>
 
-      <.button
-        phx-click="delete_account"
-        data-confirm="Are you sure you want to delete your account? This action cannot be undone."
-        variant="danger"
-      >
-        Delete My Account
-      </.button>
+      <%!--
+        D47: destructive operations require step-up auth even when the session
+        is valid. Same current-password gate as change_email / change_password.
+      --%>
+      <.form for={%{}} as={:user} phx-submit="delete_account">
+        <div class="mb-3">
+          <label class="block text-sm font-medium mb-1" for="delete-account-current-password">
+            Confirm with your current password
+          </label>
+          <input
+            type="password"
+            id="delete-account-current-password"
+            name="user[current_password]"
+            autocomplete="current-password"
+            class="input input-bordered w-full"
+            required
+          />
+        </div>
+
+        <%= if @delete_form_error do %>
+          <p class="text-sm text-error mb-3">{@delete_form_error}</p>
+        <% end %>
+
+        <.button
+          type="submit"
+          data-confirm="Are you sure you want to delete your account? This action cannot be undone."
+          variant="danger"
+        >
+          Delete My Account
+        </.button>
+      </.form>
     </div>
   </div>
 </div>

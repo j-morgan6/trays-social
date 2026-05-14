@@ -171,17 +171,56 @@ defmodule TraysSocialWeb.SettingsLive.IndexTest do
       assert html =~ "Current password is incorrect"
     end
 
-    test "deletes account successfully", %{conn: conn} do
-      user = user_fixture()
+    test "deletes account when current password is correct", %{conn: conn} do
+      user = user_fixture() |> set_password()
 
       {:ok, view, _html} =
         conn
         |> log_in_user(user)
         |> live(~p"/users/settings")
 
-      render_click(view, "delete_account")
+      view
+      |> form("form[phx-submit=\"delete_account\"]", %{
+        "user" => %{"current_password" => valid_user_password()}
+      })
+      |> render_submit()
 
       assert_redirect(view, ~p"/")
+    end
+
+    test "delete_account rejects wrong password (D47)", %{conn: conn} do
+      user = user_fixture() |> set_password()
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/users/settings")
+
+      html =
+        view
+        |> form("form[phx-submit=\"delete_account\"]", %{
+          "user" => %{"current_password" => "definitely_wrong"}
+        })
+        |> render_submit()
+
+      assert html =~ "Current password is incorrect"
+
+      # User row still exists.
+      assert TraysSocial.Repo.get(TraysSocial.Accounts.User, user.id)
+    end
+
+    test "delete_account rejects missing password param (D47)", %{conn: conn} do
+      user = user_fixture() |> set_password()
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/users/settings")
+
+      html = render_hook(view, "delete_account", %{})
+
+      assert html =~ "Current password is incorrect"
+      assert TraysSocial.Repo.get(TraysSocial.Accounts.User, user.id)
     end
   end
 
