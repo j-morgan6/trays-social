@@ -87,11 +87,10 @@ defmodule TraysSocialWeb.ConnCase do
   def register_and_api_authenticate_user(%{conn: conn}) do
     user = TraysSocial.AccountsFixtures.user_fixture()
     token = TraysSocial.Accounts.generate_user_api_token(user)
-    encoded_token = Base.encode64(token)
 
     conn =
       conn
-      |> Plug.Conn.put_req_header("authorization", "Bearer #{encoded_token}")
+      |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
       |> Plug.Conn.put_req_header("accept", "application/json")
 
     %{conn: conn, user: user, api_token: token}

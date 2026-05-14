@@ -27,10 +27,8 @@ defmodule TraysSocialWeb.API.AuthPlug do
 
   defp get_bearer_token(conn) do
     case get_req_header(conn, "authorization") do
-      ["Bearer " <> token] -> {:ok, Base.decode64!(token)}
+      ["Bearer " <> token] when byte_size(token) > 0 -> {:ok, token}
       _ -> :error
     end
-  rescue
-    ArgumentError -> :error
   end
 end

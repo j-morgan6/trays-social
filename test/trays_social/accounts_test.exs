@@ -832,10 +832,28 @@ defmodule TraysSocial.AccountsTest do
       %{user: user_fixture()}
     end
 
-    test "generates a token", %{user: user} do
+    test "stores SHA-256 hash, not the raw token (D38)", %{user: user} do
       token = Accounts.generate_user_api_token(user)
-      assert user_token = Repo.get_by(UserToken, token: token)
+      raw = Base.url_decode64!(token, padding: false)
+      hashed = :crypto.hash(:sha256, raw)
+
+      # No DB row stores the raw bytes — only the hash.
+      refute Repo.get_by(UserToken, token: raw)
+      assert user_token = Repo.get_by(UserToken, token: hashed)
       assert user_token.context == "api"
+    end
+
+    test "a DB-stored token cannot be replayed directly (D38)", %{user: user} do
+      # Threat model: an attacker reads the users_tokens table (backup leak,
+      # replica, SQL injection elsewhere). The stored bytes are the SHA-256
+      # hash. Passing those raw stored bytes — base64-encoded as a bearer —
+      # must not authenticate, because verify hashes the bearer before
+      # lookup.
+      _ = Accounts.generate_user_api_token(user)
+      stored = Repo.one(from t in UserToken, where: t.context == "api", select: t.token)
+      replay = Base.url_encode64(stored, padding: false)
+
+      refute Accounts.get_user_by_api_token(replay)
     end
   end
 
@@ -854,6 +872,19 @@ defmodule TraysSocial.AccountsTest do
     test "does not return user for invalid token" do
       refute Accounts.get_user_by_api_token("oops")
     end
+
+    test "rejects tokens older than the validity window (D38)", %{user: user, token: token} do
+      # Backdate the row past the 60-day validity window. The token bytes are
+      # still valid by hash, but the time filter excludes it.
+      sixty_one_days_ago = DateTime.utc_now() |> DateTime.add(-61, :day) |> DateTime.truncate(:second)
+
+      Repo.update_all(
+        from(t in UserToken, where: t.user_id == ^user.id and t.context == "api"),
+        set: [inserted_at: sixty_one_days_ago]
+      )
+
+      refute Accounts.get_user_by_api_token(token)
+    end
   end
 
   describe "delete_user_api_token/1" do
@@ -863,6 +894,10 @@ defmodule TraysSocial.AccountsTest do
       assert Accounts.get_user_by_api_token(token)
       assert Accounts.delete_user_api_token(token) == :ok
       refute Accounts.get_user_by_api_token(token)
+    end
+
+    test "is a no-op (no crash) for malformed tokens" do
+      assert Accounts.delete_user_api_token("not-base64-!!!") == :ok
     end
   end
 

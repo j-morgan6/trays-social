@@ -13,8 +13,7 @@ defmodule TraysSocialWeb.API.V1.AuthController do
           TraysSocialWeb.Endpoint.url() <> "/users/confirm/" <> token
         end)
 
-        token = Accounts.generate_user_api_token(user)
-        encoded_token = Base.encode64(token)
+        encoded_token = Accounts.generate_user_api_token(user)
 
         conn
         |> put_status(:created)
@@ -37,8 +36,7 @@ defmodule TraysSocialWeb.API.V1.AuthController do
         {:error, :unauthorized}
 
       user ->
-        token = Accounts.generate_user_api_token(user)
-        encoded_token = Base.encode64(token)
+        encoded_token = Accounts.generate_user_api_token(user)
 
         json(conn, %{data: %{token: encoded_token, user: user_json(user)}})
     end
@@ -51,11 +49,8 @@ defmodule TraysSocialWeb.API.V1.AuthController do
   end
 
   def logout(conn, _params) do
-    # The raw token is already decoded by AuthPlug, but we need it to delete
-    # Extract it from the header again
     ["Bearer " <> encoded_token] = get_req_header(conn, "authorization")
-    token = Base.decode64!(encoded_token)
-    Accounts.delete_user_api_token(token)
+    Accounts.delete_user_api_token(encoded_token)
 
     json(conn, %{data: %{message: "logged out"}})
   end

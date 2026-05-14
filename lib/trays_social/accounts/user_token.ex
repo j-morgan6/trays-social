@@ -12,6 +12,11 @@ defmodule TraysSocial.Accounts.UserToken do
   @confirm_validity_in_days 7
   @change_email_validity_in_days 7
   @session_validity_in_days 14
+  # API tokens back mobile sessions; 60 days matches typical mobile-app
+  # re-auth cadence. There is no refresh-on-use — verifying a token does NOT
+  # extend its lifetime; clients re-authenticate (password or Sign in with
+  # Apple) once a token ages out. See W105 for the planned refresh-token flow.
+  @api_token_validity_in_days 60
 
   schema "users_tokens" do
     field :token, :binary
@@ -51,30 +56,64 @@ defmodule TraysSocial.Accounts.UserToken do
   @doc """
   Generates a token for API authentication (mobile apps).
 
-  Similar to session tokens, API tokens are stored as raw bytes (not hashed)
-  since they are transmitted over HTTPS and stored securely by the mobile app.
-  API tokens do not expire automatically — they persist until the user logs out
-  or changes their password.
+  Returns `{encoded_token, %UserToken{}}`. The encoded token is URL-safe base64
+  (no padding) and is what gets sent to the client — store it server-side only
+  as a SHA-256 hash so a DB read (backup leak, replica, SQL injection elsewhere)
+  cannot directly yield usable bearer tokens. This mirrors the email-token
+  pattern further down in this module.
   """
   def build_api_token(user) do
     token = :crypto.strong_rand_bytes(@rand_size)
-    {token, %UserToken{token: token, context: "api", user_id: user.id}}
+    hashed_token = :crypto.hash(@hash_algorithm, token)
+
+    {Base.url_encode64(token, padding: false),
+     %UserToken{token: hashed_token, context: "api", user_id: user.id}}
   end
 
   @doc """
   Checks if the API token is valid and returns its underlying lookup query.
 
-  The query returns the user found by the token, if any.
-  API tokens do not expire (no time-based validity check).
+  Accepts the URL-safe base64 encoded token (what the client sends in the
+  Authorization header). Decodes, hashes, and looks up the stored hash with an
+  `ago(@api_token_validity_in_days, "day")` window. Returns `:error` on
+  malformed input.
   """
-  def verify_api_token_query(token) do
-    query =
-      from token in by_token_and_context_query(token, "api"),
-        join: user in assoc(token, :user),
-        select: user
+  def verify_api_token_query(token) when is_binary(token) do
+    case Base.url_decode64(token, padding: false) do
+      {:ok, decoded_token} ->
+        hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 
-    {:ok, query}
+        query =
+          from token in by_token_and_context_query(hashed_token, "api"),
+            join: user in assoc(token, :user),
+            where: token.inserted_at > ago(@api_token_validity_in_days, "day"),
+            select: user
+
+        {:ok, query}
+
+      :error ->
+        :error
+    end
   end
+
+  def verify_api_token_query(_), do: :error
+
+  @doc """
+  Returns the query that deletes an API token row given its encoded form.
+  Decodes + hashes the input; returns `:error` on malformed input.
+  """
+  def delete_api_token_query(token) when is_binary(token) do
+    case Base.url_decode64(token, padding: false) do
+      {:ok, decoded_token} ->
+        hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
+        {:ok, from(t in UserToken, where: t.token == ^hashed_token and t.context == "api")}
+
+      :error ->
+        :error
+    end
+  end
+
+  def delete_api_token_query(_), do: :error
 
   @doc """
   Checks if the token is valid and returns its underlying lookup query.

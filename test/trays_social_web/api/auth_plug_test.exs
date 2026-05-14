@@ -14,11 +14,10 @@ defmodule TraysSocialWeb.API.AuthPlugTest do
     test "authenticates user with valid bearer token", %{conn: conn} do
       user = user_fixture()
       token = TraysSocial.Accounts.generate_user_api_token(user)
-      encoded_token = Base.encode64(token)
 
       conn =
         conn
-        |> put_req_header("authorization", "Bearer #{encoded_token}")
+        |> put_req_header("authorization", "Bearer #{token}")
         |> AuthPlug.call([])
 
       assert conn.assigns.current_user.id == user.id
@@ -44,9 +43,12 @@ defmodule TraysSocialWeb.API.AuthPlugTest do
     end
 
     test "returns 401 for invalid token", %{conn: conn} do
+      # Valid URL-safe base64 of 32 random bytes that doesn't match any stored hash.
+      bogus = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+
       conn =
         conn
-        |> put_req_header("authorization", "Bearer #{Base.encode64("invalid_token")}")
+        |> put_req_header("authorization", "Bearer #{bogus}")
         |> AuthPlug.call([])
 
       assert conn.halted
@@ -57,6 +59,16 @@ defmodule TraysSocialWeb.API.AuthPlugTest do
       conn =
         conn
         |> put_req_header("authorization", "Bearer not-valid-base64!!!")
+        |> AuthPlug.call([])
+
+      assert conn.halted
+      assert conn.status == 401
+    end
+
+    test "returns 401 for empty bearer token", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer ")
         |> AuthPlug.call([])
 
       assert conn.halted

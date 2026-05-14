@@ -464,6 +464,10 @@ defmodule TraysSocial.Accounts do
 
   @doc """
   Generates an API token for mobile app authentication.
+
+  Returns the URL-safe base64 encoded token — give this to the client as-is.
+  The stored row holds only the SHA-256 hash, so a DB read cannot replay the
+  token directly.
   """
   def generate_user_api_token(user) do
     {token, user_token} = UserToken.build_api_token(user)
@@ -472,18 +476,26 @@ defmodule TraysSocial.Accounts do
   end
 
   @doc """
-  Gets the user with the given API token.
+  Gets the user with the given API token. Accepts the encoded form (what the
+  client sends in the Authorization header). Returns nil if the token is
+  malformed, unknown, or older than the validity window.
   """
   def get_user_by_api_token(token) do
-    {:ok, query} = UserToken.verify_api_token_query(token)
-    Repo.one(query)
+    case UserToken.verify_api_token_query(token) do
+      {:ok, query} -> Repo.one(query)
+      :error -> nil
+    end
   end
 
   @doc """
-  Deletes the given API token.
+  Deletes the given API token. Accepts the encoded form.
   """
   def delete_user_api_token(token) do
-    from(UserToken, where: [token: ^token, context: "api"]) |> Repo.delete_all()
+    case UserToken.delete_api_token_query(token) do
+      {:ok, query} -> Repo.delete_all(query)
+      :error -> :ok
+    end
+
     :ok
   end
 
