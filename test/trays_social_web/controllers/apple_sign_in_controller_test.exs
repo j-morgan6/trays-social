@@ -36,17 +36,16 @@ defmodule TraysSocialWeb.AppleSignInControllerTest do
   end
 
   describe "GET /auth/apple/start" do
-    test "redirects to Apple authorize URL with state stored in session", %{conn: conn} do
+    test "redirects to Apple authorize URL with a signed state token", %{conn: conn} do
       conn = get(conn, ~p"/auth/apple/start")
 
-      assert redirected_to(conn, 302) =~ "https://appleid.apple.com/auth/authorize"
-      assert redirected_to(conn, 302) =~ "client_id=" <> @services_id
-      assert redirected_to(conn, 302) =~ "response_mode=form_post"
-      assert redirected_to(conn, 302) =~ "scope=name+email"
-      assert redirected_to(conn, 302) =~ "state="
-
-      assert is_binary(get_session(conn, :apple_oauth_state))
-      assert String.length(get_session(conn, :apple_oauth_state)) > 16
+      target = redirected_to(conn, 302)
+      assert target =~ "https://appleid.apple.com/auth/authorize"
+      assert target =~ "client_id=" <> @services_id
+      assert target =~ "response_mode=form_post"
+      assert target =~ "scope=name+email"
+      assert state = extract_state(target)
+      assert String.length(state) > 16
     end
 
     test "redirects back to login with a flash error when APPLE_SERVICES_ID is unset",
@@ -61,16 +60,12 @@ defmodule TraysSocialWeb.AppleSignInControllerTest do
   end
 
   describe "POST /auth/apple/callback" do
-    test "logs the user in on a valid id_token + matching state (new user)", %{conn: conn} do
-      # First, go through /start to seed the session state.
-      conn = get(conn, ~p"/auth/apple/start")
-      state = get_session(conn, :apple_oauth_state)
-
-      # Recycle the conn so the callback inherits the session cookie.
-      conn = recycle(conn)
+    test "logs the user in on a valid id_token + signed state (new user)", %{conn: conn} do
+      state = state_from_start(conn)
 
       conn =
-        post(conn, ~p"/auth/apple/callback", %{
+        build_conn()
+        |> post(~p"/auth/apple/callback", %{
           "id_token" => "valid_apple_token",
           "state" => state,
           "code" => "ignored_we_dont_exchange"
@@ -82,9 +77,6 @@ defmodule TraysSocialWeb.AppleSignInControllerTest do
       # find_or_create_apple_user inserted a row with the mock's apple_id.
       assert %User{apple_id: "apple_user_001"} =
                Repo.get_by(User, apple_id: "apple_user_001")
-
-      # State is cleared after use.
-      assert get_session(conn, :apple_oauth_state) == nil
     end
 
     test "logs in the existing user when apple_id is already known (no duplicate row)",
@@ -99,12 +91,11 @@ defmodule TraysSocialWeb.AppleSignInControllerTest do
 
       assert Repo.aggregate(User, :count) == 1
 
-      conn = get(conn, ~p"/auth/apple/start")
-      state = get_session(conn, :apple_oauth_state)
-      conn = recycle(conn)
+      state = state_from_start(conn)
 
       conn =
-        post(conn, ~p"/auth/apple/callback", %{
+        build_conn()
+        |> post(~p"/auth/apple/callback", %{
           "id_token" => "existing_apple_token",
           "state" => state
         })
@@ -116,30 +107,24 @@ defmodule TraysSocialWeb.AppleSignInControllerTest do
       assert Repo.aggregate(User, :count) == 1
     end
 
-    test "rejects callback when state doesn't match session (replay protection)",
+    test "rejects callback when state signature is invalid (replay/forgery protection)",
          %{conn: conn} do
-      conn = get(conn, ~p"/auth/apple/start")
-      conn = recycle(conn)
-
       conn =
         post(conn, ~p"/auth/apple/callback", %{
           "id_token" => "valid_apple_token",
-          "state" => "completely_unrelated_state"
+          "state" => "completely_fabricated_state_with_no_signature"
         })
 
       assert redirected_to(conn, 302) == ~p"/users/log-in"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "expired"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "could not be verified"
       refute get_session(conn, :user_token)
       assert Repo.aggregate(User, :count) == 0
     end
 
-    test "rejects callback when no state is in session", %{conn: conn} do
-      # Skip /start entirely — simulate a callback without an originating
-      # authorize request (a direct attempt to forge a callback).
+    test "rejects callback when state is missing entirely", %{conn: conn} do
       conn =
         post(conn, ~p"/auth/apple/callback", %{
-          "id_token" => "valid_apple_token",
-          "state" => "fabricated"
+          "id_token" => "valid_apple_token"
         })
 
       assert redirected_to(conn, 302) == ~p"/users/log-in"
@@ -148,12 +133,11 @@ defmodule TraysSocialWeb.AppleSignInControllerTest do
     end
 
     test "rejects callback when id_token is invalid", %{conn: conn} do
-      conn = get(conn, ~p"/auth/apple/start")
-      state = get_session(conn, :apple_oauth_state)
-      conn = recycle(conn)
+      state = state_from_start(conn)
 
       conn =
-        post(conn, ~p"/auth/apple/callback", %{
+        build_conn()
+        |> post(~p"/auth/apple/callback", %{
           "id_token" => "this_is_not_a_valid_token",
           "state" => state
         })
@@ -165,14 +149,13 @@ defmodule TraysSocialWeb.AppleSignInControllerTest do
     end
 
     test "rejects callback when APPLE_SERVICES_ID is missing at request time", %{conn: conn} do
-      conn = get(conn, ~p"/auth/apple/start")
-      state = get_session(conn, :apple_oauth_state)
-      conn = recycle(conn)
+      state = state_from_start(conn)
 
       Application.delete_env(:trays_social, :apple_services_id)
 
       conn =
-        post(conn, ~p"/auth/apple/callback", %{
+        build_conn()
+        |> post(~p"/auth/apple/callback", %{
           "id_token" => "valid_apple_token",
           "state" => state
         })
@@ -183,14 +166,29 @@ defmodule TraysSocialWeb.AppleSignInControllerTest do
     end
 
     test "rejects callback missing the id_token form field", %{conn: conn} do
-      conn = get(conn, ~p"/auth/apple/start")
-      state = get_session(conn, :apple_oauth_state)
-      conn = recycle(conn)
+      state = state_from_start(conn)
 
-      conn = post(conn, ~p"/auth/apple/callback", %{"state" => state})
+      conn =
+        build_conn()
+        |> post(~p"/auth/apple/callback", %{"state" => state})
 
       assert redirected_to(conn, 302) == ~p"/users/log-in"
       refute get_session(conn, :user_token)
     end
+  end
+
+  ## ---------- helpers ----------
+
+  # Runs the /start action and returns the signed state token extracted
+  # from the resulting Apple authorize redirect URL. Mirrors what a real
+  # browser would carry across the redirect → form_post round trip.
+  defp state_from_start(conn) do
+    conn = get(conn, ~p"/auth/apple/start")
+    extract_state(redirected_to(conn, 302))
+  end
+
+  defp extract_state(authorize_url) do
+    %URI{query: query} = URI.parse(authorize_url)
+    URI.decode_query(query)["state"]
   end
 end

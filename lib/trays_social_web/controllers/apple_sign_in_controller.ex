@@ -32,14 +32,27 @@ defmodule TraysSocialWeb.AppleSignInController do
 
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.AppleAuth
+  alias TraysSocialWeb.Endpoint
   alias TraysSocialWeb.UserAuth
 
   @apple_authorize_url "https://appleid.apple.com/auth/authorize"
+  @state_salt "apple sign in state"
+  # State token is valid for 10 minutes — Apple's authorize round-trip is
+  # typically under a minute; 10 gives slow users headroom without
+  # accepting indefinite replay.
+  @state_max_age_seconds 10 * 60
 
   @doc """
   Begins the web Apple Sign In flow by redirecting to Apple's authorize
-  endpoint. Generates a state token bound to the session for CSRF/replay
-  protection on the form_post callback.
+  endpoint with a Phoenix.Token-signed state parameter.
+
+  The state is a self-contained signed token (containing a random nonce
+  and an embedded timestamp). It does NOT rely on the session cookie.
+  This matters because Apple's form_post callback is a cross-site POST
+  from appleid.apple.com to trays.app, and the browser will NOT send our
+  `SameSite=Lax` session cookie on that request. A session-stored state
+  would always look "missing" on the callback. Signing the state itself
+  makes the flow stateless and immune to SameSite restrictions.
   """
   def start(conn, _params) do
     case services_id() do
@@ -53,22 +66,23 @@ defmodule TraysSocialWeb.AppleSignInController do
         |> redirect(to: ~p"/users/log-in")
 
       services_id ->
-        state = random_state()
+        state = sign_state()
 
-        conn
-        |> put_session(:apple_oauth_state, state)
-        |> redirect(external: authorize_url(services_id, state))
+        redirect(conn, external: authorize_url(services_id, state))
     end
   end
 
   @doc """
-  Handles Apple's form_post callback. Verifies state + id_token, then logs
-  the user in (creating an account if this is their first sign-in).
+  Handles Apple's form_post callback. Verifies the signed state, the
+  id_token, and either logs in an existing user (matched by apple_id) or
+  registers a new one.
+
+  Note: this action runs in the `:browser_no_csrf` router pipeline — Apple
+  POSTs from a third-party origin without our CSRF token. The signed state
+  token is the replay-protection layer that compensates.
   """
   def callback(conn, %{"id_token" => id_token, "state" => state} = _params) do
-    expected_state = get_session(conn, :apple_oauth_state)
-
-    with :ok <- validate_state(state, expected_state),
+    with :ok <- verify_state(state),
          {:ok, services_id} <- fetch_services_id(),
          {:ok, claims} <-
            AppleAuth.verify_token(id_token, expected_audiences: [services_id]),
@@ -79,13 +93,19 @@ defmodule TraysSocialWeb.AppleSignInController do
              email: claims["email"]
            }) do
       conn
-      |> delete_session(:apple_oauth_state)
       |> put_flash(:info, "Welcome back!")
       |> UserAuth.log_in_user(user)
     else
-      {:error, :state_mismatch} ->
-        Logger.warning("Apple Sign In callback rejected: state mismatch (possible replay)")
+      {:error, :state_expired} ->
+        Logger.warning("Apple Sign In callback rejected: state token expired")
         reject(conn, "Sign-in attempt expired. Please try again.")
+
+      {:error, :state_invalid} ->
+        Logger.warning(
+          "Apple Sign In callback rejected: state signature mismatch (possible replay or tampering)"
+        )
+
+        reject(conn, "Sign-in attempt could not be verified. Please try again.")
 
       {:error, :missing_services_id} ->
         Logger.error(
@@ -103,7 +123,10 @@ defmodule TraysSocialWeb.AppleSignInController do
         reject(conn, "Sign in with Apple is temporarily unavailable.")
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        Logger.error("Apple Sign In callback failed at find_or_create_apple_user: #{inspect(changeset.errors)}")
+        Logger.error(
+          "Apple Sign In callback failed at find_or_create_apple_user: #{inspect(changeset.errors)}"
+        )
+
         reject(conn, "We could not complete your sign-in. Please try again.")
 
       nil ->
@@ -135,13 +158,20 @@ defmodule TraysSocialWeb.AppleSignInController do
     @apple_authorize_url <> "?" <> query
   end
 
-  defp random_state, do: :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
-
-  defp validate_state(state, expected) when is_binary(state) and is_binary(expected) do
-    if Plug.Crypto.secure_compare(state, expected), do: :ok, else: {:error, :state_mismatch}
+  defp sign_state do
+    nonce = :crypto.strong_rand_bytes(16) |> Base.url_encode64(padding: false)
+    Phoenix.Token.sign(Endpoint, @state_salt, nonce)
   end
 
-  defp validate_state(_state, _expected), do: {:error, :state_mismatch}
+  defp verify_state(state) when is_binary(state) do
+    case Phoenix.Token.verify(Endpoint, @state_salt, state, max_age: @state_max_age_seconds) do
+      {:ok, _nonce} -> :ok
+      {:error, :expired} -> {:error, :state_expired}
+      {:error, _} -> {:error, :state_invalid}
+    end
+  end
+
+  defp verify_state(_), do: {:error, :state_invalid}
 
   defp fetch_services_id do
     case services_id() do
@@ -154,7 +184,6 @@ defmodule TraysSocialWeb.AppleSignInController do
 
   defp reject(conn, flash_message) do
     conn
-    |> delete_session(:apple_oauth_state)
     |> put_flash(:error, flash_message)
     |> redirect(to: ~p"/users/log-in")
   end
