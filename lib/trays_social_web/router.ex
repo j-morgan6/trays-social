@@ -5,6 +5,27 @@ defmodule TraysSocialWeb.Router do
   import ErrorTracker.Web.Router
   import Phoenix.LiveDashboard.Router
 
+  # D57: hardened CSP. Compared to the previous version:
+  #   - `'unsafe-inline'` removed from style-src. Tailwind generates static
+  #     CSS at build time, so no inline <style> blocks should be needed.
+  #     If a future feature genuinely requires inline styles, switch to a
+  #     per-request nonce rather than re-allowing unsafe-inline globally.
+  #   - `base-uri 'self'` — without this, an injected <base href="…"> can
+  #     rewrite every relative URL on the page. Doesn't fall back to
+  #     default-src.
+  #   - `form-action 'self'` — without this, an injected <form> can post
+  #     credentials cross-origin. Doesn't fall back to default-src.
+  #   - `frame-ancestors 'self'` — defends against clickjacking. XFO already
+  #     covers this for older browsers; the CSP directive is the modern path.
+  @csp_header "default-src 'self'; " <>
+                "script-src 'self' 'wasm-unsafe-eval'; " <>
+                "style-src 'self'; " <>
+                "img-src 'self' data: blob: https:; " <>
+                "connect-src 'self' wss:; " <>
+                "base-uri 'self'; " <>
+                "form-action 'self'; " <>
+                "frame-ancestors 'self'"
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -12,10 +33,7 @@ defmodule TraysSocialWeb.Router do
     plug :put_root_layout, html: {TraysSocialWeb.Layouts, :root}
     plug :protect_from_forgery
 
-    plug :put_secure_browser_headers, %{
-      "content-security-policy" =>
-        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' wss:"
-    }
+    plug :put_secure_browser_headers, %{"content-security-policy" => @csp_header}
 
     plug :fetch_current_scope_for_user
   end
@@ -30,10 +48,7 @@ defmodule TraysSocialWeb.Router do
     plug :fetch_live_flash
     plug :put_root_layout, html: {TraysSocialWeb.Layouts, :root}
 
-    plug :put_secure_browser_headers, %{
-      "content-security-policy" =>
-        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' wss:"
-    }
+    plug :put_secure_browser_headers, %{"content-security-policy" => @csp_header}
 
     plug :fetch_current_scope_for_user
   end
