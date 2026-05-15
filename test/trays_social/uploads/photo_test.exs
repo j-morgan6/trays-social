@@ -50,9 +50,10 @@ defmodule TraysSocial.Uploads.PhotoTest do
 
   describe "store/1" do
     setup do
-      # Create a test file
+      # D53: must lead with real JPEG magic bytes (FF D8 FF) so the
+      # validate_magic_bytes gate doesn't reject the test fixture.
       test_file_path = Path.join(System.tmp_dir!(), "test_upload.jpg")
-      File.write!(test_file_path, "fake image data")
+      File.write!(test_file_path, <<0xFF, 0xD8, 0xFF, 0xE0>> <> "rest of fake image data")
 
       upload = %Plug.Upload{
         path: test_file_path,
@@ -84,6 +85,54 @@ defmodule TraysSocial.Uploads.PhotoTest do
       }
 
       assert {:error, :invalid_extension} = Photo.store(bad_upload)
+    end
+
+    test "rejects HTML masquerading as a .jpg (D53)" do
+      # The exact attack the magic-byte gate exists to defeat. Filename
+      # passes validate_extension, but the bytes are not a JPEG and must
+      # never reach Mogrify/ImageMagick.
+      path = Path.join(System.tmp_dir!(), "evil_upload.jpg")
+      File.write!(path, "<html><script>alert(1)</script></html>")
+      on_exit(fn -> File.rm(path) end)
+
+      upload = %Plug.Upload{path: path, filename: "evil.jpg", content_type: "image/jpeg"}
+
+      assert {:error, :unsupported_image} = Photo.store(upload)
+    end
+
+    test "rejects valid PNG bytes uploaded with a .jpg extension (D53)" do
+      # Magic bytes and extension must agree — a PNG renamed .jpg is a
+      # signal of confusion or evasion.
+      path = Path.join(System.tmp_dir!(), "renamed.jpg")
+      File.write!(path, <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A>> <> "png body")
+      on_exit(fn -> File.rm(path) end)
+
+      upload = %Plug.Upload{path: path, filename: "x.jpg", content_type: "image/jpeg"}
+
+      assert {:error, :magic_mismatch} = Photo.store(upload)
+    end
+
+    test "accepts a valid PNG header (D53)" do
+      path = Path.join(System.tmp_dir!(), "good.png")
+      File.write!(path, <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A>> <> "png body")
+      on_exit(fn -> File.rm(path) end)
+
+      upload = %Plug.Upload{path: path, filename: "x.png", content_type: "image/png"}
+
+      assert {:ok, public_url} = Photo.store(upload)
+      Photo.delete(public_url)
+    end
+
+    test "accepts a valid HEIC header (D53)" do
+      path = Path.join(System.tmp_dir!(), "good.heic")
+      # ISO base media: bytes 0..3 = box size, 4..7 = "ftyp", 8..11 = brand.
+      File.write!(path, <<0, 0, 0, 32>> <> "ftyp" <> "heic" <> "rest")
+      on_exit(fn -> File.rm(path) end)
+
+      upload = %Plug.Upload{path: path, filename: "x.heic", content_type: "image/heic"}
+
+      assert {:ok, public_url} = Photo.store(upload)
+      Photo.delete(public_url)
     end
   end
 

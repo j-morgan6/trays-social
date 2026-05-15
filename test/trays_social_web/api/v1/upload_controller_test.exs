@@ -58,8 +58,9 @@ defmodule TraysSocialWeb.API.V1.UploadControllerTest do
 
   defp create_test_image do
     path = Path.join(System.tmp_dir!(), "test_#{System.unique_integer([:positive])}.jpg")
-    # Create a minimal valid file (just needs to exist and be under size limit)
-    File.write!(path, :crypto.strong_rand_bytes(100))
+    # D53: must lead with JPEG magic bytes (FF D8 FF) so validate_magic_bytes
+    # accepts it. Body is otherwise random padding to stay under size limits.
+    File.write!(path, <<0xFF, 0xD8, 0xFF, 0xE0>> <> :crypto.strong_rand_bytes(100))
     path
   end
 
