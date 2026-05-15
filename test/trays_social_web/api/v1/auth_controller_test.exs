@@ -211,6 +211,39 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
 
       assert json_response(conn, 401)
     end
+
+    # D54: defense-in-depth — the route is gated by AuthPlug, so the
+    # controller should never see a malformed Authorization header in
+    # practice. These tests call the action directly to lock in that
+    # logout is idempotent and never crashes on bad input.
+    test "logout tolerates a missing Authorization header (D54)" do
+      conn =
+        Phoenix.ConnTest.build_conn()
+        |> Plug.Conn.put_req_header("accept", "application/json")
+
+      conn = TraysSocialWeb.API.V1.AuthController.logout(conn, %{})
+      assert %{"data" => %{"message" => "logged out"}} = json_response(conn, 200)
+    end
+
+    test "logout tolerates a non-Bearer Authorization scheme (D54)" do
+      conn =
+        Phoenix.ConnTest.build_conn()
+        |> Plug.Conn.put_req_header("accept", "application/json")
+        |> Plug.Conn.put_req_header("authorization", "Basic dXNlcjpwYXNz")
+
+      conn = TraysSocialWeb.API.V1.AuthController.logout(conn, %{})
+      assert %{"data" => %{"message" => "logged out"}} = json_response(conn, 200)
+    end
+
+    test "logout tolerates a non-base64 Bearer token (D54)" do
+      conn =
+        Phoenix.ConnTest.build_conn()
+        |> Plug.Conn.put_req_header("accept", "application/json")
+        |> Plug.Conn.put_req_header("authorization", "Bearer not-valid-base64-!!!")
+
+      conn = TraysSocialWeb.API.V1.AuthController.logout(conn, %{})
+      assert %{"data" => %{"message" => "logged out"}} = json_response(conn, 200)
+    end
   end
 
   describe "GET /api/v1/auth/me" do

@@ -49,8 +49,18 @@ defmodule TraysSocialWeb.API.V1.AuthController do
   end
 
   def logout(conn, _params) do
-    ["Bearer " <> encoded_token] = get_req_header(conn, "authorization")
-    Accounts.delete_user_api_token(encoded_token)
+    # D54: tolerate a missing / malformed Authorization header rather than
+    # crashing on a hard pattern-match. AuthPlug already gates this route
+    # so the header is normally valid, but logout should be idempotent —
+    # a client retrying after a half-success or with a stale bearer should
+    # not see a 500.
+    case get_req_header(conn, "authorization") do
+      ["Bearer " <> encoded_token] ->
+        Accounts.delete_user_api_token(encoded_token)
+
+      _ ->
+        :noop
+    end
 
     json(conn, %{data: %{message: "logged out"}})
   end
