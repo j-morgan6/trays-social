@@ -3,6 +3,39 @@ alias TraysSocial.Repo
 alias TraysSocial.Accounts.User
 alias TraysSocial.Posts.{Post, Ingredient, CookingStep, Tool, PostTag}
 
+# D59: refuse to run outside :dev. The destructive prelude (delete_all
+# on users + posts + everything) is a single mistaken DATABASE_URL away
+# from wiping production. The check is cheap to add and immediately
+# obvious to operators who hit it.
+case Mix.env() do
+  :dev ->
+    :ok
+
+  env ->
+    raise """
+    priv/repo/seeds.exs refuses to run in #{inspect(env)}.
+
+    This script does Repo.delete_all on every user and post and is intended
+    for local dev only. If you really need to seed a non-dev environment,
+    do it explicitly through a one-shot release task that you can review.
+    """
+end
+
+# D59: seed password is sourced from SEED_USER_PASSWORD with a per-run
+# random fallback that gets printed at the end. The previous hardcoded
+# 'password123456' across four accounts made every fresh dev database
+# trivially guessable from the seed file itself.
+seed_password =
+  case System.get_env("SEED_USER_PASSWORD") do
+    pw when is_binary(pw) and byte_size(pw) >= 12 ->
+      pw
+
+    _ ->
+      generated = :crypto.strong_rand_bytes(12) |> Base.url_encode64(padding: false)
+      IO.puts("[seeds] No SEED_USER_PASSWORD set; using generated password.")
+      generated
+  end
+
 Repo.delete_all(PostTag)
 Repo.delete_all(CookingStep)
 Repo.delete_all(Tool)
@@ -16,28 +49,28 @@ users = [
     username: "chef_maria",
     bio: "Professional chef sharing family recipes",
     profile_photo_url: "https://images.unsplash.com/photo-1595273670150-bd0c3c392e46?w=400",
-    password: "password123456"
+    password: seed_password
   },
   %{
     email: "john.baker@example.com",
     username: "john_baker",
     bio: "Home baker passionate about bread and pastries",
     profile_photo_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
-    password: "password123456"
+    password: seed_password
   },
   %{
     email: "healthy.eats@example.com",
     username: "healthy_eats",
     bio: "Nutritious meals for busy people",
     profile_photo_url: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400",
-    password: "password123456"
+    password: seed_password
   },
   %{
     email: "spice.master@example.com",
     username: "spice_master",
     bio: "Exploring flavors from around the world",
     profile_photo_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400",
-    password: "password123456"
+    password: seed_password
   }
 ]
 
@@ -272,10 +305,11 @@ posts_data = [
 ]
 
 Enum.each(posts_data, fn post_data ->
+  # D44: Post.changeset no longer casts :user_id from attrs; seed it via
+  # the struct instead.
   {:ok, post} =
-    %Post{}
+    %Post{user_id: post_data.user.id}
     |> Post.changeset(%{
-      user_id: post_data.user.id,
       photo_url: post_data.photo_url,
       caption: post_data.caption,
       cooking_time_minutes: post_data.cooking_time_minutes
@@ -310,3 +344,5 @@ end)
 IO.puts(
   "Seeded #{length(created_users)} users and #{length(posts_data)} posts with ingredients, steps, tools, and tags!"
 )
+
+IO.puts("[seeds] Seeded accounts all use password: #{seed_password}")
