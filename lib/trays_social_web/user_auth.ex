@@ -13,10 +13,17 @@ defmodule TraysSocialWeb.UserAuth do
   # the session validity setting in UserToken.
   @max_cookie_age_in_days 14
   @remember_me_cookie "_trays_social_web_user_remember_me"
+  # D56: explicit secure + http_only on the remember-me cookie. force_ssl
+  # in prod.exs already promotes cookies via Plug.SSL, but the implicit
+  # chain breaks if a future deploy ever runs without force_ssl in the
+  # pipeline. Setting both flags here makes the cookie hardening intent
+  # local to the option list and not dependent on the pipeline order.
   @remember_me_options [
     sign: true,
     max_age: @max_cookie_age_in_days * 24 * 60 * 60,
-    same_site: "Lax"
+    same_site: "Lax",
+    secure: true,
+    http_only: true
   ]
 
   # How old the session token should be before a new one is issued. When a request is made

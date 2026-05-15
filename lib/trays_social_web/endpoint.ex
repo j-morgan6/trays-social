@@ -4,11 +4,17 @@ defmodule TraysSocialWeb.Endpoint do
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
+  # D56: secure + http_only explicit on the session cookie. force_ssl in
+  # prod.exs already promotes cookies via Plug.SSL, but setting both flags
+  # here makes the intent local to the option list and removes the
+  # implicit-via-pipeline dependency.
   @session_options [
     store: :cookie,
     key: "_trays_social_key",
     signing_salt: "IRm1OK8E",
-    same_site: "Lax"
+    same_site: "Lax",
+    secure: true,
+    http_only: true
   ]
 
   socket "/live", Phoenix.LiveView.Socket,
