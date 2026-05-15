@@ -378,6 +378,35 @@ defmodule TraysSocial.PostsTest do
       end
     end
 
+    test "PostPhoto.changeset rejects javascript:/data:/vbscript:/file: URLs (D50)" do
+      for scheme <- [
+            "javascript:alert(1)",
+            "data:text/html,<script>",
+            "vbscript:msgbox()",
+            "file:///etc/passwd"
+          ] do
+        cs =
+          TraysSocial.Posts.PostPhoto.changeset(
+            %TraysSocial.Posts.PostPhoto{},
+            %{url: scheme, position: 0}
+          )
+
+        assert "must be an http(s) URL or app-relative path" in errors_on(cs).url
+      end
+    end
+
+    test "PostPhoto.changeset accepts http(s) and app-relative URLs (D50)" do
+      for url <- ["https://cdn.example.com/x.jpg", "http://example.com/y.png", "/uploads/local.jpg"] do
+        cs =
+          TraysSocial.Posts.PostPhoto.changeset(
+            %TraysSocial.Posts.PostPhoto{},
+            %{url: url, position: 0}
+          )
+
+        refute errors_on(cs)[:url]
+      end
+    end
+
     test "update_post/2 with valid data updates the post" do
       %{post: post} = create_user_and_post()
       update_attrs = %{caption: "Updated caption"}
