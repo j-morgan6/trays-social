@@ -1,8 +1,16 @@
 defmodule TraysSocialWeb.Admin.ReportsLive do
   use TraysSocialWeb, :live_view
 
-  alias TraysSocial.Reports
   alias TraysSocial.Posts
+  alias TraysSocial.Reports
+
+  # D55: defense-in-depth admin gate. The router pipeline already enforces
+  # admin (RequireAdmin), but pinning it at the LiveView module keeps the
+  # check from drifting if a future live_session refactor moves things
+  # around. Reuses the existing :ensure_admin hook on RequireAdmin so
+  # there's only one definition of "what counts as admin".
+  on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
+  on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -27,7 +35,7 @@ defmodule TraysSocialWeb.Admin.ReportsLive do
   @impl true
   def handle_event("resolve", %{"id" => id, "status" => status}, socket) do
     report = Reports.get_report!(id)
-    current_user = socket.assigns.current_user
+    current_user = socket.assigns.current_scope.user
 
     {:ok, _} = Reports.resolve_report(report, %{status: status, resolved_by_id: current_user.id})
 
@@ -42,7 +50,7 @@ defmodule TraysSocialWeb.Admin.ReportsLive do
   @impl true
   def handle_event("remove_post", %{"id" => id}, socket) do
     report = Reports.get_report!(id)
-    current_user = socket.assigns.current_user
+    current_user = socket.assigns.current_scope.user
 
     if report.target_type == "post" do
       post = Posts.get_post!(report.target_id)
