@@ -8,15 +8,18 @@ defmodule TraysSocialWeb.API.V1.ReportController do
   def create(conn, params) do
     current_user = conn.assigns.current_user
 
+    # D52: reporter is passed positionally; reporter_id is never derived
+    # from attrs. Even a client request body that sets {"reporter_id": x}
+    # is silently dropped because Report.changeset has it stripped from
+    # the cast list.
     attrs = %{
-      reporter_id: current_user.id,
       target_type: params["target_type"],
       target_id: params["target_id"],
       reason: params["reason"],
       details: params["details"]
     }
 
-    case Reports.create_report(attrs) do
+    case Reports.create_report(current_user, attrs) do
       {:ok, _report} ->
         json(conn, %{data: %{message: "Report submitted successfully"}})
 

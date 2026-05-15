@@ -18,9 +18,15 @@ defmodule TraysSocial.Reports.Report do
     timestamps(type: :utc_datetime)
   end
 
+  # D52: :reporter_id is intentionally NOT in the cast list. Ownership FKs
+  # are set server-side in `Reports.create_report(reporter, attrs)` so an
+  # attacker who can drive create_report cannot forge a different
+  # reporter_id (which, given the unique constraint on
+  # [reporter_id, target_type, target_id], would let them pre-claim a
+  # victim's slot and silence that user's legitimate reports).
   def changeset(report, attrs) do
     report
-    |> cast(attrs, [:reporter_id, :target_type, :target_id, :reason, :details])
+    |> cast(attrs, [:target_type, :target_id, :reason, :details])
     |> validate_required([:reporter_id, :target_type, :target_id, :reason])
     |> validate_inclusion(:target_type, @valid_target_types)
     |> validate_inclusion(:reason, @valid_reasons)

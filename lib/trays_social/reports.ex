@@ -1,10 +1,17 @@
 defmodule TraysSocial.Reports do
   import Ecto.Query
+  alias TraysSocial.Accounts.User
   alias TraysSocial.Repo
   alias TraysSocial.Reports.Report
 
-  def create_report(attrs) do
-    %Report{}
+  # D52: reporter is passed positionally and seeded into the struct before
+  # the changeset runs, so a client-supplied `reporter_id` in attrs is
+  # silently dropped (Report.changeset has it stripped from cast). Closes
+  # the pre-claim IDOR — an attacker can't forge reporter_id and trip the
+  # unique [reporter_id, target_type, target_id] constraint to silence a
+  # legitimate user's report.
+  def create_report(%User{} = reporter, attrs) do
+    %Report{reporter_id: reporter.id}
     |> Report.changeset(attrs)
     |> Repo.insert()
   end
