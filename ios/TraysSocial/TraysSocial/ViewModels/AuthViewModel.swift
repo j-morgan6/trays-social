@@ -118,7 +118,16 @@ final class AuthViewModel {
             let response = try await AuthService.login(email: email, password: password)
             appState.login(token: response.token, user: response.user)
             if rememberMe {
-                KeychainService.saveBiometricCredential(email: email, password: password)
+                // W105: exchange the just-issued API bearer for a refresh
+                // token and store THAT in biometric-gated Keychain. The
+                // plaintext password never gets written to Keychain anymore.
+                // A network hiccup on the refresh request is non-fatal —
+                // the user is logged in; biometric just won't be available
+                // until they opt in again next time.
+                if let refresh = try? await AuthService.createRefreshToken() {
+                    KeychainService.saveBiometricRefreshToken(refresh)
+                    hasSavedCredential = true
+                }
             }
         } catch let error as APIError {
             if case .unauthorized = error {
@@ -137,7 +146,7 @@ final class AuthViewModel {
         isLoading = true
         errorMessage = nil
 
-        guard let credential = KeychainService.getBiometricCredential() else {
+        guard let refreshToken = KeychainService.getBiometricRefreshToken() else {
             errorMessage = "Could not retrieve saved credentials."
             hasSavedCredential = false
             isLoading = false
@@ -145,7 +154,7 @@ final class AuthViewModel {
         }
 
         do {
-            let response = try await AuthService.login(email: credential.email, password: credential.password)
+            let response = try await AuthService.biometricExchange(refreshToken: refreshToken)
             appState.login(token: response.token, user: response.user)
         } catch let error as APIError {
             if case .unauthorized = error {

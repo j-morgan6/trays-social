@@ -900,6 +900,82 @@ defmodule TraysSocial.AccountsTest do
     end
   end
 
+  describe "refresh tokens (W105)" do
+    test "generate_user_refresh_token stores SHA-256 hash, not the raw token" do
+      user = user_fixture()
+      token = Accounts.generate_user_refresh_token(user)
+      raw = Base.url_decode64!(token, padding: false)
+      hashed = :crypto.hash(:sha256, raw)
+
+      refute Repo.get_by(UserToken, token: raw)
+      assert ut = Repo.get_by(UserToken, token: hashed)
+      assert ut.context == "refresh"
+    end
+
+    test "exchange_refresh_token returns {user, fresh API bearer}" do
+      user = user_fixture()
+      refresh = Accounts.generate_user_refresh_token(user)
+
+      assert {:ok, {returned_user, api_bearer}} = Accounts.exchange_refresh_token(refresh)
+      assert returned_user.id == user.id
+
+      # API bearer authenticates as the same user.
+      assert auth_user = Accounts.get_user_by_api_token(api_bearer)
+      assert auth_user.id == user.id
+    end
+
+    test "exchange_refresh_token rejects malformed input" do
+      assert {:error, :invalid_refresh_token} =
+               Accounts.exchange_refresh_token("not-base64-!!!")
+
+      assert {:error, :invalid_refresh_token} =
+               Accounts.exchange_refresh_token(nil)
+    end
+
+    test "exchange_refresh_token rejects an unknown token (well-formed bytes)" do
+      bogus = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+      assert {:error, :invalid_refresh_token} = Accounts.exchange_refresh_token(bogus)
+    end
+
+    test "exchange_refresh_token rejects expired tokens" do
+      user = user_fixture()
+      refresh = Accounts.generate_user_refresh_token(user)
+
+      # Backdate past the 60-day window.
+      sixty_one_days_ago =
+        DateTime.utc_now() |> DateTime.add(-61, :day) |> DateTime.truncate(:second)
+
+      Repo.update_all(
+        from(t in UserToken, where: t.user_id == ^user.id and t.context == "refresh"),
+        set: [inserted_at: sixty_one_days_ago]
+      )
+
+      assert {:error, :invalid_refresh_token} = Accounts.exchange_refresh_token(refresh)
+    end
+
+    test "password update revokes refresh tokens" do
+      user = user_fixture() |> set_password()
+      refresh = Accounts.generate_user_refresh_token(user)
+      assert {:ok, _} = Accounts.exchange_refresh_token(refresh)
+
+      {:ok, _} = Accounts.update_user_password(user, %{password: "new_password_xyz"})
+
+      # All tokens (including refresh) were deleted by
+      # update_user_and_delete_all_tokens.
+      assert {:error, :invalid_refresh_token} = Accounts.exchange_refresh_token(refresh)
+    end
+
+    test "delete_user_refresh_token revokes only the supplied token" do
+      user = user_fixture()
+      a = Accounts.generate_user_refresh_token(user)
+      b = Accounts.generate_user_refresh_token(user)
+
+      assert Accounts.delete_user_refresh_token(a) == :ok
+      assert {:error, :invalid_refresh_token} = Accounts.exchange_refresh_token(a)
+      assert {:ok, _} = Accounts.exchange_refresh_token(b)
+    end
+  end
+
   describe "inspect/2 for the User module" do
     test "does not include password" do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""

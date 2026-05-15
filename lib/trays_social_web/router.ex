@@ -118,6 +118,11 @@ defmodule TraysSocialWeb.Router do
     pipe_through [:api, :api_rate_limit_login]
     post "/login", AuthController, :login
     post "/apple", AuthController, :apple
+    # W105: biometric unlock exchanges a stored refresh token for a fresh
+    # API bearer. Unauthenticated — the refresh token IS the credential.
+    # Pipes through the login rate-limit so the endpoint isn't a free
+    # credential-stuffing oracle on stolen refresh tokens.
+    post "/biometric-exchange", AuthController, :biometric_exchange
     # Confirm a registration token via Universal Link. iOS captures the link
     # tap, extracts the token, and POSTs it here so the user record's
     # `confirmed_at` is set. Web fallback (Safari users without the app)
@@ -140,6 +145,10 @@ defmodule TraysSocialWeb.Router do
     get "/auth/me", AuthController, :me
     put "/auth/me", AuthController, :update_me
     delete "/auth/me", AuthController, :delete_me
+    # W105: post-login opt-in to biometric. Authenticated with the current
+    # API bearer; returns a refresh token the iOS client stores in
+    # biometric-gated Keychain.
+    post "/auth/refresh-tokens", AuthController, :create_refresh_token
 
     get "/feed", FeedController, :index
     get "/posts/trending", PostController, :trending

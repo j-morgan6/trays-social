@@ -41,6 +41,18 @@ enum AuthService {
         let confirmed: Bool
     }
 
+    // W105: biometric login moves from "stored password" to a server-issued
+    // refresh token. After a successful password / Apple sign-in, an opt-in
+    // to biometric asks the server to mint a refresh token; biometric
+    // unlock later exchanges it for a fresh API bearer.
+    struct RefreshTokenResponse: Decodable, Sendable {
+        let refreshToken: String
+    }
+
+    struct BiometricExchangeRequest: Encodable {
+        let refreshToken: String
+    }
+
     static func register(email: String, username: String, password: String) async throws -> AuthResponse {
         let body = RegisterRequest(email: email, username: username, password: password)
         let response: DataResponse<AuthResponse> = try await APIClient.shared.post(path: "/auth/register", body: body)
@@ -91,5 +103,25 @@ enum AuthService {
             body: body
         )
         return response.data.confirmed
+    }
+
+    // W105: mint a refresh token for the currently authenticated user.
+    // Called after a successful login when the user opts into biometric.
+    static func createRefreshToken() async throws -> String {
+        let response: DataResponse<RefreshTokenResponse> = try await APIClient.shared.post(
+            path: "/auth/refresh-tokens"
+        )
+        return response.data.refreshToken
+    }
+
+    // W105: exchange a stored refresh token for a fresh API bearer.
+    // Unauthenticated — the refresh token IS the credential.
+    static func biometricExchange(refreshToken: String) async throws -> AuthResponse {
+        let body = BiometricExchangeRequest(refreshToken: refreshToken)
+        let response: DataResponse<AuthResponse> = try await APIClient.shared.post(
+            path: "/auth/biometric-exchange",
+            body: body
+        )
+        return response.data
     }
 }

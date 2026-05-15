@@ -22,6 +22,15 @@ struct TraysSocialApp: App {
             memoryCapacity: 50 * 1024 * 1024,
             diskCapacity: 200 * 1024 * 1024
         )
+
+        // W105: one-shot purge of the legacy email/password biometric
+        // credential. Existing users had their password stored under a
+        // biometric ACL; the new flow stores a refresh token instead.
+        // Purging on every launch is cheap (it's a Keychain delete) and
+        // self-healing — once gone, subsequent calls are no-ops. Users
+        // log in once with their password to re-opt into biometric, at
+        // which point the refresh-token path takes over.
+        KeychainService.purgeLegacyBiometricCredential()
     }
 
     var body: some Scene {

@@ -500,6 +500,52 @@ defmodule TraysSocial.Accounts do
   end
 
   @doc """
+  Generates a refresh token for biometric login (W105). Returns the
+  URL-safe base64 encoded token; only the SHA-256 hash is stored. Mobile
+  client stores this in biometric-gated Keychain and later exchanges it
+  for a fresh API bearer through `POST /api/v1/auth/biometric-exchange`.
+  """
+  def generate_user_refresh_token(user) do
+    {token, user_token} = UserToken.build_refresh_token(user)
+    Repo.insert!(user_token)
+    token
+  end
+
+  @doc """
+  Exchanges a refresh token for `{user, api_bearer}` where api_bearer is the
+  URL-safe base64 form of a freshly minted API token. Returns nil for
+  malformed, unknown, or expired refresh tokens.
+
+  The refresh token itself is NOT rotated on use — the decision was to
+  pair simplicity with the existing 60-day fixed window and rely on
+  `update_user_and_delete_all_tokens` (called from password update) to
+  revoke compromised tokens after a password reset.
+  """
+  def exchange_refresh_token(token) when is_binary(token) do
+    with {:ok, query} <- UserToken.verify_refresh_token_query(token),
+         %User{} = user <- Repo.one(query) do
+      api_bearer = generate_user_api_token(user)
+      {:ok, {user, api_bearer}}
+    else
+      _ -> {:error, :invalid_refresh_token}
+    end
+  end
+
+  def exchange_refresh_token(_), do: {:error, :invalid_refresh_token}
+
+  @doc """
+  Deletes a specific refresh token (e.g. on logout from the biometric flow).
+  """
+  def delete_user_refresh_token(token) do
+    case UserToken.delete_refresh_token_query(token) do
+      {:ok, query} -> Repo.delete_all(query)
+      :error -> :ok
+    end
+
+    :ok
+  end
+
+  @doc """
   Delivers confirmation instructions to the given user.
   """
   def deliver_user_confirmation_instructions(%User{} = user, confirmation_url_fun)

@@ -66,13 +66,27 @@ enum KeychainService {
         SecItemDelete(query as CFDictionary)
     }
 
-    // MARK: - Biometric Credentials
+    // MARK: - Biometric Credentials (W105: refresh-token based)
+
+    //
+    // The legacy implementation stored the user's plaintext password under a
+    // biometric-gated Keychain ACL. The ACL was correctly scoped, but the
+    // long-lived secret was the reusable password itself — a future biometric
+    // bypass or Keychain regression would yield a credential reusable across
+    // services. We now store a server-issued refresh token instead.
+    //
+    // The refresh token is hashed at rest server-side (see W105) and
+    // exchanged at /api/v1/auth/biometric-exchange for a fresh API bearer.
+    // Password change invalidates all refresh tokens (D38 update path).
 
     private static let credentialService = "com.trays.social.biometric-credential"
-    private static let credentialEmailAccount = "biometric-email"
-    private static let credentialPasswordAccount = "biometric-password"
+    private static let refreshTokenAccount = "biometric-refresh-token"
 
-    static func saveBiometricCredential(email: String, password: String) {
+    // Legacy accounts retained as constants so the upgrade path can purge them.
+    private static let legacyEmailAccount = "biometric-email"
+    private static let legacyPasswordAccount = "biometric-password"
+
+    static func saveBiometricRefreshToken(_ refreshToken: String) {
         deleteBiometricCredential()
 
         guard let access = SecAccessControlCreateWithFlags(
@@ -82,44 +96,33 @@ enum KeychainService {
             nil
         ) else { return }
 
-        for (account, value) in [(credentialEmailAccount, email), (credentialPasswordAccount, password)] {
-            guard let data = value.data(using: .utf8) else { continue }
-            let query: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrService as String: credentialService,
-                kSecAttrAccount as String: account,
-                kSecValueData as String: data,
-                kSecAttrAccessControl as String: access,
-            ]
-            SecItemAdd(query as CFDictionary, nil)
-        }
+        guard let data = refreshToken.data(using: .utf8) else { return }
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: credentialService,
+            kSecAttrAccount as String: refreshTokenAccount,
+            kSecValueData as String: data,
+            kSecAttrAccessControl as String: access,
+        ]
+        SecItemAdd(query as CFDictionary, nil)
     }
 
-    static func getBiometricCredential() -> (email: String, password: String)? {
-        func retrieve(account: String) -> String? {
-            let query: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrService as String: credentialService,
-                kSecAttrAccount as String: account,
-                kSecReturnData as String: true,
-                kSecMatchLimit as String: kSecMatchLimitOne,
-            ]
-            var result: AnyObject?
-            guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-                  let data = result as? Data,
-                  let str = String(data: data, encoding: .utf8)
-            else {
-                return nil
-            }
-            return str
-        }
-
-        guard let email = retrieve(account: credentialEmailAccount),
-              let password = retrieve(account: credentialPasswordAccount)
+    static func getBiometricRefreshToken() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: credentialService,
+            kSecAttrAccount as String: refreshTokenAccount,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var result: AnyObject?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data,
+              let str = String(data: data, encoding: .utf8)
         else {
             return nil
         }
-        return (email, password)
+        return str
     }
 
     static func hasBiometricCredential() -> Bool {
@@ -129,7 +132,7 @@ enum KeychainService {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: credentialService,
-            kSecAttrAccount as String: credentialEmailAccount,
+            kSecAttrAccount as String: refreshTokenAccount,
             kSecUseAuthenticationContext as String: context,
         ]
         var result: AnyObject?
@@ -143,5 +146,22 @@ enum KeychainService {
             kSecAttrService as String: credentialService,
         ]
         SecItemDelete(query as CFDictionary)
+    }
+
+    /// W105 migration: existing biometric users had their email + password
+    /// stored under the legacy accounts. Wipe those once on app start so the
+    /// password never sits in Keychain again; users will be prompted to log
+    /// in once and re-opt into biometric, at which point the refresh-token
+    /// flow takes over. Safe to call repeatedly — no-op once the legacy
+    /// items are gone.
+    static func purgeLegacyBiometricCredential() {
+        for legacy in [legacyEmailAccount, legacyPasswordAccount] {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: credentialService,
+                kSecAttrAccount as String: legacy,
+            ]
+            SecItemDelete(query as CFDictionary)
+        }
     }
 }

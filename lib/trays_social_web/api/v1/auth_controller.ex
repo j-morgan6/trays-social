@@ -55,6 +55,40 @@ defmodule TraysSocialWeb.API.V1.AuthController do
     json(conn, %{data: %{message: "logged out"}})
   end
 
+  @doc """
+  Issues a refresh token bound to the currently authenticated user (W105).
+  Used by the iOS biometric-login flow: after a successful password / Apple
+  sign-in, an opt-in to biometric prompts the client to call this endpoint
+  and store the returned `refresh_token` in biometric-gated Keychain.
+  """
+  def create_refresh_token(conn, _params) do
+    user = conn.assigns.current_user
+    refresh_token = Accounts.generate_user_refresh_token(user)
+    json(conn, %{data: %{refresh_token: refresh_token}})
+  end
+
+  @doc """
+  Exchanges a refresh token for a fresh API bearer (W105). Unauthenticated —
+  the refresh token IS the credential. Mirrors the response shape of
+  `login/2` so the iOS client can reuse its auth-response decoder.
+  """
+  def biometric_exchange(conn, %{"refresh_token" => refresh_token})
+      when is_binary(refresh_token) and byte_size(refresh_token) > 0 do
+    case Accounts.exchange_refresh_token(refresh_token) do
+      {:ok, {user, api_bearer}} ->
+        json(conn, %{data: %{token: api_bearer, user: user_json(user)}})
+
+      {:error, :invalid_refresh_token} ->
+        {:error, :unauthorized}
+    end
+  end
+
+  def biometric_exchange(conn, _params) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: [%{message: "refresh_token is required"}]})
+  end
+
   def apple(conn, %{"identity_token" => identity_token, "raw_nonce" => raw_nonce} = params)
       when is_binary(raw_nonce) and byte_size(raw_nonce) > 0 do
     expected_nonce_hash =

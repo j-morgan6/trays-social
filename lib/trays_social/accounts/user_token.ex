@@ -15,8 +15,13 @@ defmodule TraysSocial.Accounts.UserToken do
   # API tokens back mobile sessions; 60 days matches typical mobile-app
   # re-auth cadence. There is no refresh-on-use — verifying a token does NOT
   # extend its lifetime; clients re-authenticate (password or Sign in with
-  # Apple) once a token ages out. See W105 for the planned refresh-token flow.
+  # Apple) once a token ages out.
   @api_token_validity_in_days 60
+  # Refresh tokens (W105) back biometric login. Same 60-day window as API
+  # tokens, no rotation-on-use. Biometric login exchanges the refresh for
+  # a fresh API bearer; password change deletes all refresh tokens via
+  # update_user_and_delete_all_tokens.
+  @refresh_token_validity_in_days 60
 
   schema "users_tokens" do
     field :token, :binary
@@ -114,6 +119,64 @@ defmodule TraysSocial.Accounts.UserToken do
   end
 
   def delete_api_token_query(_), do: :error
+
+  @doc """
+  Generates a refresh token for biometric login (W105).
+
+  Same hash-at-rest + URL-safe base64 pattern as API tokens. Stored in the
+  `refresh` context with a 60-day validity window. Biometric unlock
+  exchanges this token for a fresh API bearer via
+  `POST /api/v1/auth/biometric-exchange`. Password change deletes all
+  refresh tokens through `update_user_and_delete_all_tokens`.
+  """
+  def build_refresh_token(user) do
+    token = :crypto.strong_rand_bytes(@rand_size)
+    hashed_token = :crypto.hash(@hash_algorithm, token)
+
+    {Base.url_encode64(token, padding: false),
+     %UserToken{token: hashed_token, context: "refresh", user_id: user.id}}
+  end
+
+  @doc """
+  Verifies a refresh token. Accepts the encoded form; decodes, hashes, looks
+  up the row, and enforces the 60-day validity window. Returns the user
+  query or `:error` on malformed input.
+  """
+  def verify_refresh_token_query(token) when is_binary(token) do
+    case Base.url_decode64(token, padding: false) do
+      {:ok, decoded_token} ->
+        hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
+
+        query =
+          from token in by_token_and_context_query(hashed_token, "refresh"),
+            join: user in assoc(token, :user),
+            where: token.inserted_at > ago(@refresh_token_validity_in_days, "day"),
+            select: user
+
+        {:ok, query}
+
+      :error ->
+        :error
+    end
+  end
+
+  def verify_refresh_token_query(_), do: :error
+
+  @doc """
+  Returns the query that deletes a refresh token row given its encoded form.
+  """
+  def delete_refresh_token_query(token) when is_binary(token) do
+    case Base.url_decode64(token, padding: false) do
+      {:ok, decoded_token} ->
+        hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
+        {:ok, from(t in UserToken, where: t.token == ^hashed_token and t.context == "refresh")}
+
+      :error ->
+        :error
+    end
+  end
+
+  def delete_refresh_token_query(_), do: :error
 
   @doc """
   Checks if the token is valid and returns its underlying lookup query.

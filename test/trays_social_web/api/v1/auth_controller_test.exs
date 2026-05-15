@@ -114,6 +114,80 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
     end
   end
 
+  describe "POST /api/v1/auth/refresh-tokens (W105)" do
+    setup :register_and_api_authenticate_user
+
+    test "returns a refresh token bound to the authenticated user", %{conn: conn, user: user} do
+      conn = post(conn, ~p"/api/v1/auth/refresh-tokens", %{})
+      assert %{"data" => %{"refresh_token" => refresh}} = json_response(conn, 200)
+      assert is_binary(refresh)
+
+      # Exchange round-trips back to the same user.
+      assert {:ok, {returned_user, _api_bearer}} =
+               TraysSocial.Accounts.exchange_refresh_token(refresh)
+
+      assert returned_user.id == user.id
+    end
+
+    test "requires authentication" do
+      conn =
+        build_conn()
+        |> put_req_header("accept", "application/json")
+        |> post(~p"/api/v1/auth/refresh-tokens", %{})
+
+      assert json_response(conn, 401)
+    end
+  end
+
+  describe "POST /api/v1/auth/biometric-exchange (W105)" do
+    test "exchanges a valid refresh token for an API bearer", %{conn: conn} do
+      user = TraysSocial.AccountsFixtures.user_fixture()
+      refresh = TraysSocial.Accounts.generate_user_refresh_token(user)
+
+      conn =
+        conn
+        |> put_req_header("accept", "application/json")
+        |> post(~p"/api/v1/auth/biometric-exchange", %{refresh_token: refresh})
+
+      assert %{"data" => %{"token" => api_bearer, "user" => user_json}} = json_response(conn, 200)
+      assert user_json["id"] == user.id
+
+      assert auth_user = TraysSocial.Accounts.get_user_by_api_token(api_bearer)
+      assert auth_user.id == user.id
+    end
+
+    test "returns 401 for an unknown refresh token", %{conn: conn} do
+      bogus = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+
+      conn =
+        conn
+        |> put_req_header("accept", "application/json")
+        |> post(~p"/api/v1/auth/biometric-exchange", %{refresh_token: bogus})
+
+      assert json_response(conn, 401)
+    end
+
+    test "returns 422 when refresh_token param is missing", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("accept", "application/json")
+        |> post(~p"/api/v1/auth/biometric-exchange", %{})
+
+      assert %{"errors" => [%{"message" => "refresh_token is required"}]} =
+               json_response(conn, 422)
+    end
+
+    test "returns 422 for empty refresh_token", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("accept", "application/json")
+        |> post(~p"/api/v1/auth/biometric-exchange", %{refresh_token: ""})
+
+      assert %{"errors" => [%{"message" => "refresh_token is required"}]} =
+               json_response(conn, 422)
+    end
+  end
+
   describe "DELETE /api/v1/auth/logout" do
     setup :register_and_api_authenticate_user
 
