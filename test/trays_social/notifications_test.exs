@@ -349,4 +349,31 @@ defmodule TraysSocial.NotificationsTest do
       assert {:error, :not_found} = Notifications.unregister_device(user.id, "never_seen")
     end
   end
+
+  describe "DeviceToken.changeset (D51)" do
+    alias TraysSocial.Notifications.DeviceToken
+
+    test "rejects an unknown platform" do
+      cs = DeviceToken.changeset(%DeviceToken{}, %{token: "t", user_id: 1, platform: "windows"})
+      assert errors_on(cs)[:platform]
+    end
+
+    test "accepts ios and android" do
+      for platform <- ["ios", "android"] do
+        cs = DeviceToken.changeset(%DeviceToken{}, %{token: "t", user_id: 1, platform: platform})
+        refute errors_on(cs)[:platform]
+      end
+    end
+
+    test "rejects a token longer than 512 chars" do
+      cs =
+        DeviceToken.changeset(%DeviceToken{}, %{
+          token: String.duplicate("x", 513),
+          user_id: 1,
+          platform: "ios"
+        })
+
+      assert errors_on(cs).token == ["should be at most 512 character(s)"]
+    end
+  end
 end
