@@ -120,8 +120,16 @@ defmodule TraysSocialWeb.API.V1.AuthController do
 
       case Accounts.find_or_create_apple_user(attrs) do
         {:ok, user} ->
-          token = Accounts.generate_user_api_token(user)
-          encoded_token = Base.encode64(token)
+          # generate_user_api_token already returns the URL-safe base64 form
+          # that AuthPlug's verify_api_token_query/1 expects. Wrapping it in a
+          # second Base.encode64/1 here (the pre-D38 pattern) produces a token
+          # whose Base.url_decode64 either fails outright (on standard-base64
+          # `+`/`/`) or yields bytes whose SHA-256 doesn't match the stored
+          # hash — either way, every subsequent bearer call returns 401, which
+          # iOS surfaces as "Session expired. Please log in again." Mirror the
+          # login/2 + register/2 pattern: hand the client the encoded token
+          # straight from Accounts.
+          encoded_token = Accounts.generate_user_api_token(user)
           needs_username = is_nil(user.username) or user.username == ""
 
           status = if needs_username, do: :created, else: :ok

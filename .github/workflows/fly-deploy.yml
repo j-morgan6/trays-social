@@ -25,9 +25,53 @@ permissions:
   contents: read
 
 jobs:
+  test:
+    name: mix test
+    # Gate every deploy on the full ExUnit suite. Added after the build-15
+    # incident where the apple/2 auth controller double-encoded the bearer
+    # (D38 follow-up miss) and shipped to prod, locking Apple Sign In users
+    # out of the feed and uploads. The Apple round-trip regression test in
+    # test/trays_social_web/api/v1/apple_auth_test.exs would have blocked
+    # that push at this step instead of surfacing in TestFlight.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: trays_social_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "28.1.1"
+          elixir-version: "1.19.2-otp-28"
+      - name: Restore deps + _build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-
+      - run: mix deps.get
+      - run: mix test
+
   deploy_review:
     name: Deploy review env
     runs-on: ubuntu-latest
+    needs: test
     concurrency: deploy-review
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1

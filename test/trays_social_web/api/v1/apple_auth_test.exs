@@ -34,6 +34,35 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
       refute is_nil(data["user"]["username"])
     end
 
+    test "returned token is a valid bearer for authenticated endpoints", %{conn: conn} do
+      # Regression for the build-15 "session expired" incident: the apple/2
+      # action used to wrap `generate_user_api_token/1`'s already-URL-safe
+      # base64 string in a second `Base.encode64/1`, so every bearer issued
+      # via Sign in with Apple failed `Base.url_decode64` on the next request.
+      # This round-trip — issue a token via the Apple endpoint, then replay it
+      # against an authenticated route — is the smallest test that catches
+      # double-encoding without mocking the AuthPlug.
+      conn =
+        post(conn, ~p"/api/v1/auth/apple", %{
+          identity_token: "valid_apple_token",
+          raw_nonce: @raw_nonce
+        })
+
+      assert %{"data" => %{"token" => token, "user" => %{"id" => user_id}}} =
+               json_response(conn, 201)
+
+      assert auth_user = TraysSocial.Accounts.get_user_by_api_token(token)
+      assert auth_user.id == user_id
+
+      me_conn =
+        build_conn()
+        |> put_req_header("accept", "application/json")
+        |> put_req_header("authorization", "Bearer " <> token)
+        |> get(~p"/api/v1/auth/me")
+
+      assert %{"data" => %{"id" => ^user_id}} = json_response(me_conn, 200)
+    end
+
     test "creates user with username when provided", %{conn: conn} do
       conn =
         post(conn, ~p"/api/v1/auth/apple", %{
