@@ -1,9 +1,24 @@
-<Layouts.app flash={@flash} current_scope={@current_scope}>
-  <div class="mx-auto max-w-sm">
-    <div class="text-center">
-      <.header>Welcome {@user.email}</.header>
-    </div>
+<%!-- Magic-link confirm. Same editorial shell as the rest of the auth
+     flow — quiet centered form, serif heading. The root layout supplies
+     the page chrome. --%>
 
+<main class="max-w-[440px] mx-auto px-6 pt-12 md:pt-16 pb-16">
+  <div class="mb-8">
+    <div class="font-mono text-[11px] text-primary uppercase tracking-[0.18em] mb-3">
+      Confirm sign-in
+    </div>
+    <h1 class="font-serif-editorial text-[44px] md:text-[52px] leading-none tracking-[-0.015em] text-base-content mb-3">
+      Welcome, {@user.email}
+    </h1>
+    <p :if={!@user.confirmed_at} class="text-[15px] text-base-content/70 leading-[1.55]">
+      Confirm to finish setting up your tray.
+    </p>
+    <p :if={@user.confirmed_at} class="text-[15px] text-base-content/70 leading-[1.55]">
+      Pick how long you want to stay signed in.
+    </p>
+  </div>
+
+  <div class="bg-base-100 border border-base-300 rounded-md p-7 md:p-8">
     <.form
       :if={!@user.confirmed_at}
       for={@form}
@@ -15,13 +30,13 @@
       <.button
         name={@form[:remember_me].name}
         value="true"
-        phx-disable-with="Confirming..."
+        phx-disable-with="Confirming…"
         class="btn btn-primary w-full"
       >
-        Confirm and stay logged in
+        Confirm and stay signed in
       </.button>
-      <.button phx-disable-with="Confirming..." class="btn btn-primary btn-soft w-full mt-2">
-        Confirm and log in only this time
+      <.button phx-disable-with="Confirming…" class="btn btn-ghost border border-base-300 w-full mt-2">
+        Confirm just this once
       </.button>
     </.form>
 
@@ -34,26 +49,29 @@
     >
       <input type="hidden" name={@form[:token].name} value={@form[:token].value} />
       <%= if @current_scope do %>
-        <.button variant="primary" phx-disable-with="Logging in..." class="btn btn-primary w-full">
-          Log in
+        <.button phx-disable-with="Signing in…" class="btn btn-primary w-full">
+          Sign in
         </.button>
       <% else %>
         <.button
           name={@form[:remember_me].name}
           value="true"
-          phx-disable-with="Logging in..."
+          phx-disable-with="Signing in…"
           class="btn btn-primary w-full"
         >
-          Keep me logged in on this device
+          Keep me signed in on this device
         </.button>
-        <.button phx-disable-with="Logging in..." class="btn btn-primary btn-soft w-full mt-2">
-          Log me in only this time
+        <.button phx-disable-with="Signing in…" class="btn btn-ghost border border-base-300 w-full mt-2">
+          Sign in just this once
         </.button>
       <% end %>
     </.form>
 
-    <p :if={!@user.confirmed_at} class="alert alert-outline mt-8">
-      Tip: If you prefer passwords, you can enable them in the user settings.
+    <p
+      :if={!@user.confirmed_at}
+      class="mt-6 pt-4 border-t border-base-300 text-[12px] text-base-content/60"
+    >
+      Tip: if you prefer passwords, you can enable them in user settings.
     </p>
   </div>
-</Layouts.app>
+</main>

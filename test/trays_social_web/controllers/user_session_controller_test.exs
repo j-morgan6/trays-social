@@ -12,9 +12,10 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
     test "renders login page", %{conn: conn} do
       conn = get(conn, ~p"/users/log-in")
       response = html_response(conn, 200)
-      assert response =~ "Log in"
+      # Editorial sign-in: serif heading + primary CTA + link to register.
+      assert response =~ "Back to your tray"
       assert response =~ ~p"/users/register"
-      assert response =~ "Log in with email"
+      assert response =~ "Sign in"
     end
 
     test "renders login page with email filled in (sudo mode)", %{conn: conn, user: user} do
@@ -24,10 +25,13 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
         |> get(~p"/users/log-in")
         |> html_response(200)
 
-      assert html =~ "You need to reauthenticate"
+      # Editorial reauthenticate copy.
+      assert html =~ "Reauthenticate"
+      assert html =~ "Confirm your password"
       refute html =~ "Register"
-      assert html =~ "Log in with email"
 
+      # The magic-link form is now nested inside a <details>; the email
+      # field is still pre-filled when in sudo mode.
       assert html =~
                ~s(<input type="email" name="user[email]" id="login_form_magic_email" value="#{user.email}")
     end
@@ -35,9 +39,9 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
     test "renders login page (email + password)", %{conn: conn} do
       conn = get(conn, ~p"/users/log-in?mode=password")
       response = html_response(conn, 200)
-      assert response =~ "Log in"
+      assert response =~ "Back to your tray"
       assert response =~ ~p"/users/register"
-      assert response =~ "Log in with email"
+      assert response =~ "Sign in"
     end
   end
 
@@ -49,7 +53,8 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
         end)
 
       conn = get(conn, ~p"/users/log-in/#{token}")
-      assert html_response(conn, 200) =~ "Confirm and stay logged in"
+      # Editorial confirm copy.
+      assert html_response(conn, 200) =~ "Confirm and stay signed in"
     end
 
     test "renders login page for confirmed user", %{conn: conn, user: user} do
@@ -61,7 +66,10 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
       conn = get(conn, ~p"/users/log-in/#{token}")
       html = html_response(conn, 200)
       refute html =~ "Confirm my account"
-      assert html =~ "Log in"
+      # Confirmed user lands on the editorial confirm page, which shows
+      # the user's email and a "Keep me signed in" CTA.
+      assert html =~ user.email
+      assert html =~ "Keep me signed in"
     end
 
     test "raises error for invalid token", %{conn: conn} do
@@ -133,7 +141,8 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
         })
 
       response = html_response(conn, 200)
-      assert response =~ "Log in"
+      # Failed credential POST re-renders the editorial sign-in landing.
+      assert response =~ "Back to your tray"
       assert response =~ "Invalid email or password"
     end
   end

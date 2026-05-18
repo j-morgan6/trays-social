@@ -16,7 +16,10 @@ defmodule TraysSocialWeb.ExploreLive.IndexTest do
     test "renders the explore page with loading state on initial mount", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/explore")
 
-      assert html =~ "Explore"
+      # Editorial /explore is the Find screen — the page-title (window tab)
+      # still resolves to "Find" via the layout, and the search field is
+      # always rendered.
+      assert html =~ "Search recipes"
     end
 
     test "shows empty state when no posts exist", %{conn: conn} do
@@ -24,14 +27,15 @@ defmodule TraysSocialWeb.ExploreLive.IndexTest do
 
       # After connected mount, loading is false and empty state should show
       html = render(view)
-      assert html =~ "Nothing to explore yet"
+      assert html =~ "Nothing to find yet"
     end
 
-    test "shows 'Create a post' button in empty state", %{conn: conn} do
+    test "shows 'Share the first recipe' button in empty state", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/explore")
 
       html = render(view)
-      assert html =~ "Create a post"
+      # CTA reframed to match the editorial system — see explore_live/index.html.heex.
+      assert html =~ "Share the first recipe"
     end
 
     test "displays trending posts when they exist", %{conn: conn} do
@@ -46,7 +50,8 @@ defmodule TraysSocialWeb.ExploreLive.IndexTest do
       {:ok, view, _html} = live(conn, ~p"/explore")
 
       html = render(view)
-      assert html =~ "Trending"
+      # Discovery rail eyebrow on the editorial Find screen.
+      assert html =~ "Popular this week"
       assert html =~ user.username
     end
 
@@ -57,7 +62,8 @@ defmodule TraysSocialWeb.ExploreLive.IndexTest do
       {:ok, view, _html} = live(conn, ~p"/explore")
 
       html = render(view)
-      assert html =~ "New"
+      # "New" rail is now phrased as "New on Trays".
+      assert html =~ "New on Trays"
       assert html =~ user.username
     end
   end

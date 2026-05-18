@@ -14,7 +14,9 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
 
       assert html =~ post.user.username
       assert html =~ post.caption
-      assert html =~ "#{post.cooking_time_minutes} minutes"
+      # Editorial recipe page renders cook time via format_cook_time/1
+      # which produces compact forms like "42 min" / "2 hr 45 min".
+      assert html =~ "#{post.cooking_time_minutes} min"
       assert html =~ post.photo_url
     end
 
@@ -27,7 +29,8 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
         |> log_in_user(user)
         |> live(~p"/posts/#{post.id}")
 
-      assert html =~ "Delete Post"
+      # Owner delete affordance is now a quiet inline button next to the title.
+      assert html =~ ~s|phx-click="delete"|
     end
 
     test "does not show delete button for non-owner", %{conn: conn} do
@@ -40,7 +43,7 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
         |> log_in_user(other_user)
         |> live(~p"/posts/#{post.id}")
 
-      refute html =~ "Delete Post"
+      refute html =~ ~s|phx-click="delete"|
     end
 
     test "deletes post when owner clicks delete button", %{conn: conn} do
@@ -53,7 +56,7 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
         |> live(~p"/posts/#{post.id}")
 
       assert view
-             |> element("button", "Delete Post")
+             |> element(~s|button[phx-click="delete"]|)
              |> render_click()
 
       assert_redirect(view, ~p"/")
@@ -118,8 +121,9 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
         |> log_in_user(commenter)
         |> live(~p"/posts/#{post.id}")
 
-      # Comment form is visible for authenticated users
-      assert html =~ "Add a comment..."
+      # Comment form is visible for authenticated users. The editorial
+      # design renames "comments" to "notes" — see show.html.heex.
+      assert html =~ "Leave a note for the cook"
 
       # Submit a comment
       html =
@@ -137,9 +141,9 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
 
       {:ok, _view, html} = live(conn, ~p"/posts/#{post.id}")
 
-      refute html =~ "Add a comment..."
+      refute html =~ "Leave a note for the cook"
       assert html =~ "Log in"
-      assert html =~ "to leave a comment"
+      assert html =~ "to leave a note"
     end
 
     test "comment author can delete their own comment", %{conn: conn} do
@@ -286,7 +290,9 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
       # Reload post to get updated comment_count
       {:ok, _view, html} = live(conn, ~p"/posts/#{post.id}")
 
-      assert html =~ "Comments (1)"
+      # Comment count is surfaced in the collapsed "cooks left notes"
+      # summary and in the engagement row ("1 notes" / "N notes").
+      assert html =~ "1 cook left a note"
       assert html =~ "A comment"
     end
   end

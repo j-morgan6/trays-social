@@ -1,47 +1,31 @@
-<%!-- Single-column centered feed --%>
-<div class="mx-auto max-w-[650px] px-4 py-6">
-  <%!-- Header row --%>
-  <div class="flex justify-between items-center mb-6">
-    <h1 class="text-xl font-bold text-base-content">Feed</h1>
-    <%= if assigns[:current_scope] && @current_scope.user do %>
-      <.button href={~p"/posts/new"} variant="primary">
-        Share something
-      </.button>
-    <% end %>
+<%!-- Editorial feed — single column of recipe cards. Card structure matches
+     the WebHeader/RecipeCard from the design handoff: landscape photo on
+     the left (desktop), serif recipe title, structured metadata row,
+     short ingredients teaser, quiet engagement row pinned below a hairline. --%>
+<div class="mx-auto max-w-[760px] px-4 py-8 md:py-10">
+  <%!-- Editorial page heading. Heading is serif, primary green; the
+       "share something" CTA in the top bar already lives in the header. --%>
+  <div class="flex justify-between items-baseline mb-6">
+    <h1 class="font-serif-editorial text-primary text-[36px] leading-none">Feed</h1>
+    <span class="text-xs uppercase tracking-[0.12em] text-base-content/40">
+      What your cooks are making
+    </span>
   </div>
 
   <%= if @loading do %>
-    <%!-- Single-column skeleton --%>
+    <%!-- Editorial skeleton — mirrors the real two-column card shape --%>
     <div class="space-y-6">
       <%= for _ <- 1..3 do %>
-        <div class="bg-base-100 rounded-2xl overflow-hidden shadow-sm border border-base-200">
-          <%!-- Author row --%>
-          <div class="px-4 pt-4 pb-3 flex items-center gap-3">
-            <.loading_skeleton type="avatar" />
-            <div class="flex-1 flex flex-col gap-2">
+        <div class="bg-base-100 rounded-sm overflow-hidden border border-base-300 md:grid md:grid-cols-[380px_1fr]">
+          <div class="aspect-[4/3] md:aspect-auto md:h-[280px] bg-base-300 animate-pulse"></div>
+          <div class="p-5 md:p-6 space-y-3">
+            <div class="flex items-center gap-3">
+              <.loading_skeleton type="avatar" />
               <.loading_skeleton type="text" class="w-28 h-3" />
-              <.loading_skeleton type="text" class="w-20 h-2" />
             </div>
-          </div>
-          <%!-- Photo (aspect-square matches real card) --%>
-          <div class="aspect-square w-full">
-            <div class="skeleton bg-base-300 animate-pulse w-full h-full" />
-          </div>
-          <%!-- Caption --%>
-          <div class="p-4 flex flex-col gap-2">
+            <.loading_skeleton type="text" class="w-3/4 h-7" />
+            <.loading_skeleton type="text" class="w-1/2 h-3" />
             <.loading_skeleton type="text" />
-            <.loading_skeleton type="text" class="w-3/4" />
-            <%!-- Engagement row --%>
-            <div class="flex items-center justify-between mt-2">
-              <div class="flex gap-4">
-                <.loading_skeleton type="text" class="w-12 h-4" />
-                <.loading_skeleton type="text" class="w-12 h-4" />
-              </div>
-              <div class="flex gap-3">
-                <.loading_skeleton type="text" class="w-5 h-5 rounded" />
-                <.loading_skeleton type="text" class="w-5 h-5 rounded" />
-              </div>
-            </div>
           </div>
         </div>
       <% end %>
@@ -60,44 +44,45 @@
       <%!-- Stream of post cards --%>
       <div id="posts" phx-update="stream" class="space-y-6">
         <div :for={{dom_id, post} <- @streams.posts} id={dom_id}>
-          <div class="bg-base-100 rounded-2xl overflow-hidden shadow-sm border border-base-200">
-            <%!-- Author row --%>
-            <div class="px-4 pt-4 pb-3 flex items-center gap-3">
-              <.link navigate={~p"/@#{post.user.username}"}>
-                <.user_avatar
-                  username={post.user.username}
-                  photo_url={post.user.profile_photo_url}
-                  size="md"
-                />
-              </.link>
-              <div class="flex-1 min-w-0">
-                <.link
-                  navigate={~p"/@#{post.user.username}"}
-                  class="font-semibold text-base-content hover:underline truncate block"
-                >
-                  {post.user.username}
-                </.link>
-                <p class="text-xs text-base-content/50">
-                  {Calendar.strftime(post.inserted_at, "%B %d, %Y")}
-                </p>
-              </div>
-              <.link
-                navigate={~p"/posts/#{post.id}"}
-                class="btn btn-ghost btn-sm btn-square text-base-content/40"
-              >
-                <.icon name="hero-ellipsis-horizontal" class="size-5" />
-              </.link>
-            </div>
+          <% photos =
+            if Ecto.assoc_loaded?(post.post_photos) && !Enum.empty?(post.post_photos),
+              do: Enum.sort_by(post.post_photos, & &1.position),
+              else: [%{url: post.photo_url}] %>
+          <% photo_count = length(photos) %>
+          <% current_idx = Map.get(@photo_indices, post.id, 0) %>
+          <% current_photo = Enum.at(photos, current_idx) %>
 
-            <%!-- Photo carousel --%>
-            <% photos =
-              if Ecto.assoc_loaded?(post.post_photos) && !Enum.empty?(post.post_photos),
-                do: Enum.sort_by(post.post_photos, & &1.position),
-                else: [%{url: post.photo_url}] %>
-            <% photo_count = length(photos) %>
-            <% current_idx = Map.get(@photo_indices, post.id, 0) %>
-            <% current_photo = Enum.at(photos, current_idx) %>
-            <div class="relative w-full aspect-square bg-base-200">
+          <%!-- Editorial title — Instagram-style caption isn't a recipe title,
+                so derive a serif title from the first line/short prefix and
+                keep the rest as the cook's note body. --%>
+          <% raw_caption = post.caption || "" %>
+          <% {title_text, body_text} =
+            case String.split(raw_caption, ~r/[\n.!?]/, parts: 2, trim: true) do
+              [t] -> {String.trim(t), ""}
+              [t, rest] -> {String.trim(t), String.trim(rest)}
+              _ -> {"Untitled recipe", ""}
+            end %>
+          <% title_text = if title_text == "", do: "Untitled recipe", else: title_text %>
+
+          <% ingredients_loaded =
+            Ecto.assoc_loaded?(post.ingredients) and not Enum.empty?(post.ingredients) %>
+          <% tools_loaded =
+            Ecto.assoc_loaded?(post.tools) and not Enum.empty?(post.tools) %>
+
+          <% ingredient_teaser =
+            if ingredients_loaded do
+              post.ingredients
+              |> Enum.sort_by(& &1.order)
+              |> Enum.take(5)
+              |> Enum.map_join(" · ", & &1.name)
+            else
+              ""
+            end %>
+
+          <article class="bg-base-100 border border-base-300 rounded-sm overflow-hidden md:grid md:grid-cols-[380px_1fr]">
+            <%!-- Photo carousel — preserved from the previous layout, just
+                 relocated into the left column on desktop. --%>
+            <div class="relative w-full aspect-[4/3] md:aspect-auto md:h-[280px] bg-base-200">
               <.lazy_image
                 id={"feed-post-#{post.id}-#{current_idx}"}
                 src={current_photo.url}
@@ -105,7 +90,6 @@
                 class="w-full h-full object-cover"
               />
 
-              <%!-- Carousel arrows (only when multiple photos) --%>
               <%= if photo_count > 1 do %>
                 <button
                   type="button"
@@ -123,8 +107,6 @@
                 >
                   <.icon name="hero-chevron-right" class="size-4" />
                 </button>
-
-                <%!-- Dot indicators --%>
                 <div class="absolute top-2 inset-x-0 flex justify-center gap-1">
                   <%= for idx <- 0..(photo_count - 1) do %>
                     <div class={[
@@ -134,109 +116,126 @@
                   <% end %>
                 </div>
               <% end %>
-
-              <%!-- Gradient + chips overlaid on bottom of photo --%>
-              <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pt-8 pb-3 px-3 flex items-end gap-2">
-                <%= if post.type == "recipe" do %>
-                  <%= if post.cooking_time_minutes do %>
-                    <span class="inline-flex items-center gap-1 bg-black/50 text-white text-xs font-medium px-2 py-1 rounded-full backdrop-blur-sm">
-                      <.icon name="hero-clock" class="size-3" />
-                      {post.cooking_time_minutes} min
-                    </span>
-                  <% end %>
-                  <%= if post.servings do %>
-                    <span class="inline-flex items-center gap-1 bg-black/50 text-white text-xs font-medium px-2 py-1 rounded-full backdrop-blur-sm">
-                      <.icon name="hero-user-group" class="size-3" />
-                      {post.servings}
-                    </span>
-                  <% end %>
-                <% end %>
-              </div>
             </div>
 
-            <%!-- Card body --%>
-            <div class="p-4">
-              <%!-- Caption --%>
-              <p class="text-sm text-base-content line-clamp-2 mb-3">
-                {post.caption}
-              </p>
-
-              <%!-- Recipe preview snippet --%>
-              <%= if post.type == "recipe" && Ecto.assoc_loaded?(post.ingredients) && !Enum.empty?(post.ingredients) do %>
-                <% preview_ingredients =
-                  post.ingredients
-                  |> Enum.sort_by(& &1.order)
-                  |> Enum.take(4)
-                  |> Enum.map_join(", ", & &1.name) %>
-                <% more_count = max(0, length(post.ingredients) - 4) %>
-
-                <button
-                  type="button"
-                  class="w-full text-left bg-base-200/70 hover:bg-base-200 rounded-xl px-4 py-3 mb-3 transition-colors"
-                  phx-click="open-drawer"
-                  phx-value-id={post.id}
+            <%!-- Content column --%>
+            <div class="px-5 py-5 md:px-6 md:py-5 flex flex-col">
+              <%!-- Cook + relative date --%>
+              <div class="flex items-center gap-2.5 mb-2.5">
+                <.link navigate={~p"/@#{post.user.username}"}>
+                  <.user_avatar
+                    username={post.user.username}
+                    photo_url={post.user.profile_photo_url}
+                    size="sm"
+                  />
+                </.link>
+                <.link
+                  navigate={~p"/@#{post.user.username}"}
+                  class="text-sm font-semibold text-base-content hover:underline truncate"
                 >
-                  <p class="text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-1">
-                    Recipe
-                  </p>
-                  <p class="text-sm text-base-content line-clamp-2">
-                    {preview_ingredients}{if more_count > 0, do: " +#{more_count} more"}
-                  </p>
-                  <p class="text-xs text-primary font-medium mt-1.5">
-                    View full recipe
-                  </p>
-                </button>
-              <% end %>
+                  {post.user.username}
+                </.link>
+                <span class="text-xs text-base-content/50">
+                  · {Calendar.strftime(post.inserted_at, "%b %-d")}
+                </span>
+              </div>
 
-              <%!-- Engagement row --%>
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                  <% liked = MapSet.member?(@liked_post_ids, post.id) %>
+              <%!-- Recipe title — serif, primary visual anchor --%>
+              <.link navigate={~p"/posts/#{post.id}"}>
+                <h3 class="font-serif-editorial text-[28px] leading-[1.05] text-base-content mb-2.5 hover:underline decoration-base-300 underline-offset-4">
+                  {title_text}
+                </h3>
+              </.link>
+
+              <%!-- Metadata row — cook time, ingredient count, tool count --%>
+              <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-base-content/60 mb-3">
+                <%= if post.cooking_time_minutes do %>
+                  <span class="inline-flex items-center gap-1">
+                    <.icon name="hero-clock" class="size-3" />
+                    {post.cooking_time_minutes} min
+                  </span>
+                <% end %>
+                <%= if ingredients_loaded do %>
+                  <span>· {length(post.ingredients)} ingredients</span>
+                <% end %>
+                <%= if tools_loaded do %>
+                  <span>· {length(post.tools)} tools</span>
+                <% end %>
+                <%= if post.servings do %>
+                  <span>· serves {post.servings}</span>
+                <% end %>
+              </div>
+
+              <%!-- Ingredient teaser / cook's note. Prefers a short list of
+                   key ingredients; falls back to whatever's left of the
+                   caption after the title is extracted. --%>
+              <%= cond do %>
+                <% ingredient_teaser != "" -> %>
                   <button
                     type="button"
-                    class={[
-                      "flex items-center gap-1.5 text-sm transition-colors",
-                      if(liked,
-                        do: "text-primary",
-                        else: "text-base-content/60 hover:text-primary"
-                      )
-                    ]}
-                    phx-click="toggle-like"
-                    phx-value-post-id={post.id}
-                  >
-                    <.icon
-                      name={if liked, do: "hero-heart-solid", else: "hero-heart"}
-                      class="size-5"
-                    />
-                    <span>{post.like_count}</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="flex items-center gap-1.5 text-sm text-base-content/60 hover:text-primary transition-colors"
+                    class="text-left text-sm text-base-content/90 leading-snug line-clamp-2 mb-3 hover:text-base-content transition-colors"
                     phx-click="open-drawer"
                     phx-value-id={post.id}
                   >
-                    <.icon name="hero-chat-bubble-left-ellipsis" class="size-5" />
-                    <span>{post.comment_count}</span>
+                    {ingredient_teaser}
                   </button>
-                </div>
-                <div class="flex items-center gap-3">
-                  <button
-                    type="button"
-                    class="text-base-content/60 hover:text-primary transition-colors"
-                  >
-                    <.icon name="hero-bookmark" class="size-5" />
-                  </button>
-                  <button
-                    type="button"
-                    class="text-base-content/60 hover:text-primary transition-colors"
-                  >
-                    <.icon name="hero-arrow-up-tray" class="size-5" />
-                  </button>
-                </div>
+                <% body_text != "" -> %>
+                  <p class="text-sm text-base-content/90 leading-snug line-clamp-2 mb-3">
+                    {body_text}
+                  </p>
+                <% true -> %>
+                  <div class="mb-3"></div>
+              <% end %>
+
+              <div class="flex-1"></div>
+
+              <%!-- Quiet engagement row — pinned under a hairline --%>
+              <div class="flex items-center gap-5 pt-3.5 border-t border-base-300 text-xs text-base-content/60">
+                <% liked = MapSet.member?(@liked_post_ids, post.id) %>
+                <button
+                  type="button"
+                  class={[
+                    "inline-flex items-center gap-1.5 transition-colors",
+                    if(liked, do: "text-primary", else: "hover:text-base-content")
+                  ]}
+                  phx-click="toggle-like"
+                  phx-value-post-id={post.id}
+                  aria-label="Like"
+                >
+                  <.icon
+                    name={if liked, do: "hero-heart-solid", else: "hero-heart"}
+                    class="size-3.5"
+                  />
+                  <span>{post.like_count}</span>
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 hover:text-base-content transition-colors"
+                  phx-click="open-drawer"
+                  phx-value-id={post.id}
+                  aria-label="Comments"
+                >
+                  <.icon name="hero-chat-bubble-left-ellipsis" class="size-3.5" />
+                  <span>{post.comment_count}</span>
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 hover:text-base-content transition-colors"
+                  aria-label="Save"
+                >
+                  <.icon name="hero-bookmark" class="size-3.5" />
+                </button>
+                <div class="flex-1"></div>
+                <button
+                  type="button"
+                  class="hover:text-base-content transition-colors"
+                  aria-label="Share"
+                >
+                  <.icon name="hero-arrow-up-tray" class="size-3.5" />
+                </button>
               </div>
             </div>
-          </div>
+          </article>
         </div>
       </div>
 

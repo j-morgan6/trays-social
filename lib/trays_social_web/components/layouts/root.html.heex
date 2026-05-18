@@ -34,126 +34,127 @@
     </script>
   </head>
   <body class="bg-base-200">
-    <%!-- Professional App Header --%>
-    <header class="sticky top-0 z-50 bg-base-100 border-b border-base-300 shadow-sm">
-      <div class="navbar max-w-7xl mx-auto px-4">
-        <%!-- Logo/Brand --%>
-        <div class="navbar-start">
-          <.link href={~p"/"} class="btn btn-ghost normal-case text-xl font-bold text-primary gap-2 px-2">
-            <svg viewBox="0 0 56 56" class="w-9 h-9" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="3" y="6" width="50" height="44" rx="10" stroke="#2E7D32" stroke-width="2.5" fill="none"/>
-              <rect x="7.5" y="10.5" width="18.5" height="13.5" rx="5" fill="#A5D6A7"/>
-              <circle cx="17" cy="36" r="8" fill="#FFB300"/>
-              <rect x="29" y="10.5" width="19.5" height="34" rx="5" fill="#1B5E20"/>
-            </svg>
-            <span style="font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; letter-spacing: -0.01em;">trays</span>
+    <%!-- Editorial header — matches the WebHeader from the design handoff:
+         serif Trays wordmark in primary green, three-tab nav (Feed / Find /
+         My Tray) with a primary under-border on the active tab, search,
+         amber New recipe pill, notification bell with amber unread dot,
+         avatar dropdown. --%>
+    <% nav_tab = assigns[:current_tab] %>
+    <header class="sticky top-0 z-50 bg-base-100 border-b border-base-300">
+      <div class="max-w-7xl mx-auto h-16 flex items-center px-6 md:px-8 gap-7">
+        <.link href={~p"/"} class="font-serif-editorial text-primary text-[26px] leading-none">
+          Trays
+        </.link>
+
+        <%!-- Primary nav: Feed / Find / My Tray --%>
+        <nav class="hidden md:flex gap-6 ml-2">
+          <.link
+            href={~p"/"}
+            class={[
+              "text-sm py-[22px] border-b-2 transition-colors",
+              if(nav_tab == :feed,
+                do: "text-base-content font-semibold border-primary",
+                else: "text-base-content/60 font-medium border-transparent hover:text-base-content"
+              )
+            ]}
+          >
+            Feed
           </.link>
-        </div>
-
-        <%!-- Primary Navigation --%>
-        <div class="navbar-center hidden md:flex">
-          <ul class="menu menu-horizontal px-1 gap-1">
-            <li>
-              <.link href={~p"/"} class="font-medium transition-colors duration-150">
-                Feed
-              </.link>
-            </li>
-            <li>
-              <.link href={~p"/explore"} class="font-medium transition-colors duration-150">
-                Explore
-              </.link>
-            </li>
-            <%= if @current_scope do %>
-              <li>
-                <.link
-                  href={~p"/@#{@current_scope.user.username}"}
-                  class="font-medium transition-colors duration-150"
-                >
-                  Profile
-                </.link>
-              </li>
-            <% end %>
-          </ul>
-        </div>
-
-        <%!-- User Menu --%>
-        <div class="navbar-end gap-2">
+          <.link
+            href={~p"/explore"}
+            class={[
+              "text-sm py-[22px] border-b-2 transition-colors",
+              if(nav_tab == :explore,
+                do: "text-base-content font-semibold border-primary",
+                else: "text-base-content/60 font-medium border-transparent hover:text-base-content"
+              )
+            ]}
+          >
+            Find
+          </.link>
           <%= if @current_scope do %>
-            <%!-- Notifications Bell --%>
-            <.link navigate={~p"/notifications"} class="btn btn-ghost btn-sm btn-circle relative">
-              <span class="hero-bell w-5 h-5"></span>
-              <%= if assigns[:unread_notifications] && assigns[:unread_notifications] > 0 do %>
-                <span class="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] rounded-full bg-primary text-primary-content text-[0.6rem] font-bold flex items-center justify-center px-0.5">
-                  {if assigns[:unread_notifications] > 9,
-                    do: "9+",
-                    else: assigns[:unread_notifications]}
-                </span>
-              <% end %>
-            </.link>
-
-            <%!-- Create Post Button --%>
-            <.link href={~p"/posts/new"} class="btn btn-primary btn-sm gap-1">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              <span class="hidden sm:inline">Post</span>
-            </.link>
-
-            <%!-- User Dropdown --%>
-            <div class="dropdown dropdown-end">
-              <label tabindex="0" class="cursor-pointer">
-                <.user_avatar
-                  username={@current_scope.user.username}
-                  photo_url={@current_scope.user.profile_photo_url}
-                  size="md"
-                />
-              </label>
-              <ul
-                tabindex="0"
-                class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-base-100 rounded-box w-52 border border-base-300"
-              >
-                <li class="menu-title">
-                  <span class="text-base-content font-semibold">
-                    @{@current_scope.user.username}
-                  </span>
-                </li>
-                <li>
-                  <.link href={~p"/@#{@current_scope.user.username}"}>
-                    Your Profile
-                  </.link>
-                </li>
-                <li>
-                  <.link href={~p"/users/settings"}>
-                    Settings
-                  </.link>
-                </li>
-                <div class="divider my-0"></div>
-                <li>
-                  <.link href={~p"/users/log-out"} method="delete" class="text-error">
-                    Log out
-                  </.link>
-                </li>
-              </ul>
-            </div>
-          <% else %>
-            <%!-- Not logged in --%>
-            <.link href={~p"/users/log-in"} class="btn btn-ghost btn-sm">
-              Log in
-            </.link>
-            <.link href={~p"/users/register"} class="btn btn-primary btn-sm">
-              Sign up
+            <.link
+              href={~p"/my-tray"}
+              class={[
+                "text-sm py-[22px] border-b-2 transition-colors",
+                if(nav_tab == :my_tray,
+                  do: "text-base-content font-semibold border-primary",
+                  else: "text-base-content/60 font-medium border-transparent hover:text-base-content"
+                )
+              ]}
+            >
+              My Tray
             </.link>
           <% end %>
-        </div>
+        </nav>
+
+        <div class="flex-1"></div>
+
+        <%!-- Quiet search field — links to Find. Mirrors the design's
+             always-visible search pill in the WebHeader. --%>
+        <.link
+          href={~p"/explore"}
+          class="hidden md:inline-flex items-center gap-2 h-9 w-[320px] px-3.5 rounded-full bg-base-200 border border-base-300 text-base-content/60 text-xs hover:text-base-content transition-colors"
+        >
+          <.icon name="hero-magnifying-glass" class="size-4" />
+          <span>Search recipes, cooks, ingredients…</span>
+        </.link>
+
+        <%= if @current_scope do %>
+          <%!-- Notifications bell with amber unread dot --%>
+          <.link navigate={~p"/notifications"} class="relative p-1.5 text-base-content/70 hover:text-base-content transition-colors">
+            <.icon name="hero-bell" class="size-5" />
+            <%= if assigns[:unread_notifications] && assigns[:unread_notifications] > 0 do %>
+              <span class="absolute top-0 right-0 w-2 h-2 rounded-full bg-accent"></span>
+            <% end %>
+          </.link>
+
+          <%!-- Amber New recipe pill — Golden Amber is reserved for the
+               create action; this is its primary use site on web. --%>
+          <.link
+            href={~p"/posts/new"}
+            class="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-accent text-accent-content text-xs font-semibold hover:brightness-95 transition"
+          >
+            <.icon name="hero-plus" class="size-4" />
+            <span class="hidden sm:inline">New recipe</span>
+          </.link>
+
+          <%!-- Avatar dropdown — preserves existing menu --%>
+          <div class="dropdown dropdown-end">
+            <label tabindex="0" class="cursor-pointer">
+              <.user_avatar
+                username={@current_scope.user.username}
+                photo_url={@current_scope.user.profile_photo_url}
+                size="md"
+              />
+            </label>
+            <ul
+              tabindex="0"
+              class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-base-100 rounded-box w-52 border border-base-300"
+            >
+              <li class="menu-title">
+                <span class="text-base-content font-semibold">
+                  @{@current_scope.user.username}
+                </span>
+              </li>
+              <li>
+                <.link href={~p"/@#{@current_scope.user.username}"}>Your Profile</.link>
+              </li>
+              <li>
+                <.link href={~p"/users/settings"}>Settings</.link>
+              </li>
+              <div class="divider my-0"></div>
+              <li>
+                <.link href={~p"/users/log-out"} method="delete" class="text-error">
+                  Log out
+                </.link>
+              </li>
+            </ul>
+          </div>
+        <% else %>
+          <.link href={~p"/users/log-in"} class="btn btn-ghost btn-sm">Log in</.link>
+          <.link href={~p"/users/register"} class="btn btn-primary btn-sm">Sign up</.link>
+        <% end %>
       </div>
     </header>
 
@@ -171,6 +172,11 @@
         </div>
       </div>
     <% end %>
+
+    <%!-- Flash messages, rendered globally so controller flows (login,
+         signup, settings, etc.) and LiveView flashes both surface
+         without needing each page to wrap in a layout component. --%>
+    <Layouts.flash_group flash={@flash} />
 
     <%!-- Main Content --%>
     <main class="min-h-screen py-8 pb-24 md:pb-8">

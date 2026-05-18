@@ -7,7 +7,9 @@ defmodule TraysSocialWeb.UserRegistrationControllerTest do
     test "renders registration page", %{conn: conn} do
       conn = get(conn, ~p"/users/register")
       response = html_response(conn, 200)
-      assert response =~ "Register"
+      # Editorial sign-up: serif "Start your tray" + amber-adjacent primary
+      # CTA + link back to sign-in.
+      assert response =~ "Start your tray"
       assert response =~ ~p"/users/log-in"
       assert response =~ ~p"/users/register"
     end
@@ -40,7 +42,8 @@ defmodule TraysSocialWeb.UserRegistrationControllerTest do
         })
 
       response = html_response(conn, 200)
-      assert response =~ "Register"
+      # Failed POST re-renders the editorial sign-up landing.
+      assert response =~ "Start your tray"
       assert response =~ "must have the @ sign and no spaces"
     end
   end

@@ -64,14 +64,15 @@ defmodule TraysSocialWeb.PostLive.NewTest do
       {_user, _view, html} = authenticated_live(conn, ~p"/posts/new")
 
       assert html =~ "What are you sharing?"
-      assert html =~ "Recipe"
-      assert html =~ "Share how you made it"
-      assert html =~ "Post"
-      assert html =~ "Share what you&#39;re eating"
+      # Editorial picker copy.
+      assert html =~ "Write a recipe"
+      assert html =~ "Share a post"
     end
 
     test "page title is set to Create Post", %{conn: conn} do
       {_user, _view, html} = authenticated_live(conn, ~p"/posts/new")
+      # Page title is still "Create Post" via assign; appears in the
+      # window title tag.
       assert html =~ "Create Post"
     end
 
@@ -79,23 +80,23 @@ defmodule TraysSocialWeb.PostLive.NewTest do
       {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
       {_view, html} = select_type(view, "recipe")
 
-      assert html =~ "Create Recipe"
-      assert html =~ "Caption"
+      # Editorial recipe form headings.
+      assert html =~ "Writing a recipe page"
       assert html =~ "Ingredients"
-      assert html =~ "Cooking Steps"
-      assert html =~ "Publish"
+      assert html =~ "Method"
+      assert html =~ "Publish recipe"
     end
 
     test "selecting Post shows minimal post form", %{conn: conn} do
       {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
       {_view, html} = select_type(view, "post")
 
-      assert html =~ "Create Post"
+      # Editorial post form headings.
+      assert html =~ "Writing a post"
       assert html =~ "Caption"
       assert html =~ "Tags"
       refute html =~ "Ingredients"
-      refute html =~ "Cooking Steps"
-      refute html =~ "Cooking Time"
+      refute html =~ "Method"
     end
 
     test "back button returns to type picker", %{conn: conn} do
@@ -114,9 +115,10 @@ defmodule TraysSocialWeb.PostLive.NewTest do
       {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
       {_view, html} = select_type(view, "recipe")
 
-      assert html =~ "Photos"
-      assert html =~ "Drop photos here"
-      assert html =~ "up to 5 photos"
+      # Editorial photo section.
+      assert html =~ "Photograph"
+      assert html =~ "Drop the hero shot"
+      assert html =~ "Up to 5 photos"
     end
 
     test "shows tags input field", %{conn: conn} do
@@ -125,7 +127,8 @@ defmodule TraysSocialWeb.PostLive.NewTest do
 
       assert html =~ "Tags"
       assert html =~ "post[tags_input]"
-      assert html =~ "Separate multiple tags with commas"
+      # Editorial copy describing the tags input.
+      assert html =~ "comma separated"
     end
 
     test "initial state has one ingredient row, one step row, no tool rows", %{conn: conn} do
@@ -134,8 +137,9 @@ defmodule TraysSocialWeb.PostLive.NewTest do
 
       assert html =~ "post[ingredients][0][name]"
       assert html =~ "post[cooking_steps][0][description]"
-      assert html =~ "No tools added"
-      assert html =~ "Drop photos here"
+      # Editorial empty-state copy for the optional tools section.
+      assert html =~ "No tools listed"
+      assert html =~ "Drop the hero shot"
     end
 
     test "does not show difficulty select", %{conn: conn} do
@@ -156,7 +160,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
         |> form("#post-form", post: %{caption: "", cooking_time_minutes: ""})
         |> render_change()
 
-      assert html =~ "Create Recipe"
+      assert html =~ "Writing a recipe page"
     end
 
     test "validates with valid caption and cooking time", %{conn: conn} do
@@ -170,7 +174,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
         )
         |> render_change()
 
-      assert html =~ "Create Recipe"
+      assert html =~ "Writing a recipe page"
       refute html =~ "can&#39;t be blank"
     end
 
@@ -300,10 +304,10 @@ defmodule TraysSocialWeb.PostLive.NewTest do
     test "add and remove tool rows", %{conn: conn} do
       {_user, view, html} = authenticated_live_with_type(conn, ~p"/posts/new", "recipe")
 
-      assert html =~ "No tools added"
+      assert html =~ "No tools listed"
 
       html = render_click(view, "add-tool")
-      refute html =~ "No tools added"
+      refute html =~ "No tools listed"
       assert html =~ "post[tools][0][name]"
 
       html = render_click(view, "add-tool")
@@ -333,7 +337,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
       render_click(view, "add-tool")
       html = render_click(view, "remove-tool", %{"id" => "0"})
 
-      assert html =~ "No tools added"
+      assert html =~ "No tools listed"
     end
   end
 
@@ -346,7 +350,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
       |> render_submit()
 
       html = render(view)
-      assert html =~ "Create Recipe"
+      assert html =~ "Writing a recipe page"
       assert html =~ "Publish"
     end
 
@@ -361,7 +365,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
 
       # User should stay on the form (not redirected)
       html = render(view)
-      assert html =~ "Create Recipe"
+      assert html =~ "Writing a recipe page"
     end
   end
 

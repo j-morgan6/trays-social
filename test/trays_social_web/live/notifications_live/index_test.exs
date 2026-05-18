@@ -20,7 +20,9 @@ defmodule TraysSocialWeb.NotificationsLive.IndexTest do
         |> log_in_user(user)
         |> live(~p"/notifications")
 
-      assert html =~ "Notifications"
+      # Editorial heading on the page is "Notes for you"; the page title
+      # (window/tab) still says "Notifications".
+      assert html =~ "Notes for you"
     end
 
     test "displays like notification", %{conn: conn} do
@@ -42,7 +44,9 @@ defmodule TraysSocialWeb.NotificationsLive.IndexTest do
         |> live(~p"/notifications")
 
       assert html =~ actor.username
-      assert html =~ "liked your post"
+      # Editorial phrasing: "<actor> found your <title> helpful"
+      assert html =~ "found your"
+      assert html =~ "helpful"
     end
 
     test "displays comment notification", %{conn: conn} do
@@ -64,7 +68,8 @@ defmodule TraysSocialWeb.NotificationsLive.IndexTest do
         |> live(~p"/notifications")
 
       assert html =~ actor.username
-      assert html =~ "commented on your post"
+      # Editorial phrasing: "<actor> left a note on <title>"
+      assert html =~ "left a note on"
     end
 
     test "displays follow notification", %{conn: conn} do
@@ -84,7 +89,8 @@ defmodule TraysSocialWeb.NotificationsLive.IndexTest do
         |> live(~p"/notifications")
 
       assert html =~ actor.username
-      assert html =~ "started following you"
+      # Editorial phrasing: "<actor> followed you"
+      assert html =~ "followed you"
     end
 
     test "shows empty notifications list when none exist", %{conn: conn} do
@@ -95,9 +101,9 @@ defmodule TraysSocialWeb.NotificationsLive.IndexTest do
         |> log_in_user(user)
         |> live(~p"/notifications")
 
-      assert html =~ "Notifications"
+      assert html =~ "Notes for you"
       # The notifications stream container should be present but empty
-      assert html =~ "notifications"
+      assert html =~ ~s|id="notifications"|
     end
 
     test "handles new notification message via PubSub without crashing", %{conn: conn} do
@@ -124,7 +130,7 @@ defmodule TraysSocialWeb.NotificationsLive.IndexTest do
       send(view.pid, {:new_notification, notification})
 
       # Verify the view still renders without error after receiving the message
-      assert render(view) =~ "Notifications"
+      assert render(view) =~ "Notes for you"
     end
 
     test "new follow notification via handle_info does not crash", %{conn: conn} do
@@ -146,7 +152,7 @@ defmodule TraysSocialWeb.NotificationsLive.IndexTest do
       send(view.pid, {:new_notification, notification})
 
       # Verify the view still renders without error
-      assert render(view) =~ "Notifications"
+      assert render(view) =~ "Notes for you"
     end
 
     test "handle_info with unknown message does not crash", %{conn: conn} do
@@ -161,7 +167,7 @@ defmodule TraysSocialWeb.NotificationsLive.IndexTest do
       send(view.pid, {:unknown_message, "some data"})
 
       # The view should still be alive and render properly
-      assert render(view) =~ "Notifications"
+      assert render(view) =~ "Notes for you"
     end
 
     test "marks all notifications as read on mount", %{conn: conn} do
@@ -205,7 +211,7 @@ defmodule TraysSocialWeb.NotificationsLive.IndexTest do
 
       # The view should still be alive and render properly
       html = render(view)
-      assert html =~ "Notifications"
+      assert html =~ "Notes for you"
     end
   end
 end

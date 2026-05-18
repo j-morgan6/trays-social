@@ -1,0 +1,4 @@
+# Intermediate archive artifacts from the Claude Design handoff fetch.
+# The extracted source under trays-social/ is checked in; these are not.
+bundle.gz
+bundle.tar

@@ -1,55 +1,138 @@
-<Layouts.app flash={@flash} current_scope={@current_scope}>
-  <div class="mx-auto max-w-sm">
-    <div class="text-center">
-      <.header>
-        Register for an account
-        <:subtitle>
-          Already registered?
-          <.link navigate={~p"/users/log-in"} class="font-semibold text-brand hover:underline">
-            Log in
-          </.link>
-          to your account now.
-        </:subtitle>
-      </.header>
+<%!-- Editorial sign-up — matches WebSignin in the design handoff
+     (design/handoff/trays-social/project/web-screens.jsx). Two-column
+     landing: hero pitch on the left, quiet sign-up form on the right.
+     The root layout's editorial header already supplies the wordmark
+     and "Log in" CTA. --%>
+
+<main class="max-w-[1180px] mx-auto px-6 md:px-12 pt-8 md:pt-10 pb-16">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-start">
+    <%!-- Hero pitch --%>
+    <div class="pt-2 lg:pt-10">
+      <div class="font-mono text-[11px] text-primary uppercase tracking-[0.18em] mb-7">
+        For home cooks · Est. 2026
+      </div>
+      <h1 class="font-serif-editorial text-[56px] md:text-[72px] lg:text-[84px] leading-[0.95] tracking-[-0.015em] text-base-content mb-6">
+        What did<br />you cook<br /><em class="text-primary">tonight?</em>
+      </h1>
+      <p class="text-[16px] md:text-[18px] text-base-content/70 leading-[1.55] max-w-[440px]">
+        Trays is for home cooks documenting what they actually make — ingredients,
+        tools, timing, method. Written down well, by people you'd want to eat with.
+      </p>
+
+      <%!-- Three trays preview — names only, since we don't have hero
+           photography yet. Each chip uses a neutral surface so the page
+           reads as cookbook contents rather than marketing-site chrome. --%>
+      <div class="mt-9 grid grid-cols-3 gap-3 md:gap-4 max-w-[420px]">
+        <%= for {label, blurb} <- [
+          {"Feed", "What your cooks are making"},
+          {"Find", "Search by ingredient or chip"},
+          {"My Tray", "Recipes you've saved to make"}
+        ] do %>
+          <div class="bg-base-100 border border-base-300 rounded-sm p-3.5">
+            <div class="font-serif-editorial text-[18px] text-base-content">{label}</div>
+            <div class="text-[11px] text-base-content/60 leading-[1.35] mt-1">
+              {blurb}
+            </div>
+          </div>
+        <% end %>
+      </div>
     </div>
 
-    <.form :let={f} for={@changeset} action={~p"/users/register"}>
-      <.input
-        field={f[:email]}
-        type="email"
-        label="Email"
-        autocomplete="email"
-        required
-        phx-mounted={JS.focus()}
-      />
+    <%!-- Sign-up form --%>
+    <div class="lg:max-w-[480px] lg:ml-auto w-full">
+      <div class="bg-base-100 border border-base-300 rounded-md p-7 md:p-8 shadow-sm">
+        <h2 class="font-serif-editorial text-[28px] md:text-[32px] leading-[1.1] text-base-content mb-1.5">
+          Start your tray
+        </h2>
+        <p class="text-[13px] text-base-content/60 leading-[1.5] mb-6">
+          Takes thirty seconds. Email, a username people can find you by, a password.
+        </p>
 
-      <.input
-        field={f[:username]}
-        type="text"
-        label="Username"
-        autocomplete="username"
-        required
-      />
+        <.form :let={f} for={@changeset} action={~p"/users/register"}>
+          <.input
+            field={f[:email]}
+            type="email"
+            label="Email"
+            autocomplete="email"
+            required
+            phx-mounted={JS.focus()}
+          />
 
-      <.input
-        field={f[:password]}
-        type="password"
-        label="Password"
-        autocomplete="new-password"
-        required
-      />
+          <.input
+            field={f[:username]}
+            type="text"
+            label="Username"
+            autocomplete="username"
+            required
+          />
 
-      <.input
-        field={f[:password_confirmation]}
-        type="password"
-        label="Confirm password"
-        autocomplete="new-password"
-        required
-      />
+          <.input
+            field={f[:password]}
+            type="password"
+            label="Password"
+            autocomplete="new-password"
+            required
+          />
 
-      <.button phx-disable-with="Creating account..." class="btn btn-primary w-full">
-        Create an account
-      </.button>
-    </.form>
+          <.input
+            field={f[:password_confirmation]}
+            type="password"
+            label="Confirm password"
+            autocomplete="new-password"
+            required
+          />
+
+          <p class="text-[12px] text-base-content/60 leading-[1.5] my-4">
+            By signing up you agree to the
+            <.link href={~p"/terms"} class="text-primary font-semibold hover:underline">
+              house rules
+            </.link>
+            — be useful, be a person, be kind to cooks.
+          </p>
+
+          <.button
+            phx-disable-with="Making your tray…"
+            class="btn btn-primary w-full h-12 text-[15px]"
+          >
+            Make me a tray
+          </.button>
+        </.form>
+
+        <%!-- Alternative path: Apple Sign In. Tucked under a hairline so
+             it reads as "or" rather than social-button clutter. --%>
+        <div class="relative my-5 flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-base-content/40">
+          <div class="flex-1 h-px bg-base-300"></div>
+          <span>or</span>
+          <div class="flex-1 h-px bg-base-300"></div>
+        </div>
+
+        <.link
+          navigate={~p"/auth/apple/start"}
+          class="inline-flex items-center justify-center w-full h-11 rounded-md bg-black text-white text-sm font-medium hover:bg-neutral-800 transition-colors gap-2"
+          aria-label="Continue with Apple"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 17 17"
+            class="size-5 fill-current"
+            aria-hidden="true"
+          >
+            <path d="M12.152 0c-.943.061-2.05.654-2.7 1.43-.59.71-1.083 1.764-.892 2.787 1.026.031 2.087-.575 2.713-1.366.582-.736 1.026-1.789.879-2.851zM15.97 12.18a4.49 4.49 0 0 1-.62 1.14c-.39.55-.71.93-.95 1.14-.39.36-.81.55-1.26.56-.32 0-.71-.09-1.16-.28-.46-.19-.88-.28-1.27-.28-.41 0-.84.09-1.3.28-.47.19-.85.29-1.13.3-.43.02-.86-.17-1.28-.58-.27-.23-.6-.62-.99-1.17-.42-.59-.77-1.28-1.04-2.06C5.66 10.5 5.5 9.43 5.5 8.4c0-1.18.26-2.2.78-3.05.41-.69.95-1.23 1.63-1.63.68-.4 1.41-.6 2.21-.62.34 0 .79.1 1.34.31.55.21.91.31 1.07.31.12 0 .51-.12 1.18-.36.63-.22 1.16-.32 1.6-.28 1.18.09 2.07.55 2.66 1.36-1.06.64-1.59 1.54-1.58 2.7 0 .9.33 1.65.98 2.24.29.28.62.5.98.65-.08.22-.16.43-.25.63z" />
+          </svg>
+          Continue with Apple
+        </.link>
+
+        <p class="mt-6 pt-4 border-t border-base-300 text-[12px] text-base-content/60 text-center">
+          No email confirmation. You'll be cooking in under a minute.
+        </p>
+      </div>
+
+      <p class="text-[13px] text-base-content/60 text-center mt-4">
+        Already cooking on Trays?
+        <.link navigate={~p"/users/log-in"} class="text-primary font-semibold hover:underline">
+          Sign in
+        </.link>
+      </p>
+    </div>
   </div>
-</Layouts.app>
+</main>

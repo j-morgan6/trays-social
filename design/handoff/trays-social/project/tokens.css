@@ -1,0 +1,143 @@
+/* Trays — design tokens */
+:root {
+  --primary: #1B5E20;
+  --primary-dk: #2E7D32;
+  --secondary: #A5D6A7;
+  --accent: #FFB300;
+
+  --surface: #FFFFFF;
+  --bg: #FAFAFA;
+  --text: #212121;
+  --muted: #757575;
+  --hair: #ECECEC;
+  --border: #E5E5E5;
+
+  --d-surface: #1E1E1E;
+  --d-bg: #121212;
+  --d-text: #E0E0E0;
+  --d-muted: #8E8E8E;
+  --d-hair: #2A2A2A;
+  --d-border: #303030;
+
+  --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+/* Warm gradient photo placeholders */
+.photo {
+  position: relative;
+  background:
+    repeating-linear-gradient(135deg, rgba(0,0,0,0.04) 0 1px, transparent 1px 14px),
+    linear-gradient(160deg, #d8b178 0%, #c08a4f 38%, #8a5a32 100%);
+  color: rgba(255,255,255,0.85);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  isolation: isolate;
+}
+.photo::after {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 30% 30%, rgba(255,235,200,0.35), transparent 70%),
+    radial-gradient(ellipse 50% 50% at 75% 70%, rgba(60,30,10,0.3), transparent 70%);
+  pointer-events: none;
+}
+.photo > .caption {
+  position: absolute;
+  left: 10px; bottom: 10px;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 3px;
+  z-index: 2;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.photo.greens {
+  background:
+    repeating-linear-gradient(135deg, rgba(0,0,0,0.04) 0 1px, transparent 1px 14px),
+    linear-gradient(165deg, #c8d8a0 0%, #7ca352 45%, #3d5a2a 100%);
+}
+.photo.tomato {
+  background:
+    repeating-linear-gradient(135deg, rgba(0,0,0,0.04) 0 1px, transparent 1px 14px),
+    linear-gradient(165deg, #f0c4a0 0%, #d96a3e 45%, #8a2f1e 100%);
+}
+.photo.cream {
+  background:
+    repeating-linear-gradient(135deg, rgba(0,0,0,0.04) 0 1px, transparent 1px 14px),
+    linear-gradient(165deg, #f4e8d0 0%, #d8b178 45%, #8e6932 100%);
+}
+.photo.dark {
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 14px),
+    linear-gradient(165deg, #4a3a2a 0%, #2a1f15 45%, #0e0a07 100%);
+}
+.photo.blueb {
+  background:
+    repeating-linear-gradient(135deg, rgba(0,0,0,0.04) 0 1px, transparent 1px 14px),
+    linear-gradient(165deg, #b8a8d8 0%, #6a5a8a 45%, #2a1f3e 100%);
+}
+.photo.lemon {
+  background:
+    repeating-linear-gradient(135deg, rgba(0,0,0,0.04) 0 1px, transparent 1px 14px),
+    linear-gradient(165deg, #f7e9a3 0%, #d4a83a 45%, #7a5e1a 100%);
+}
+
+.screen, .screen * { box-sizing: border-box; }
+.screen { font-family: var(--ui); color: var(--text); -webkit-font-smoothing: antialiased; }
+.screen.dark { color: var(--d-text); }
+.screen *::-webkit-scrollbar { display: none; }
+.screen * { scrollbar-width: none; }
+
+.serif { font-family: var(--serif); letter-spacing: -0.01em; }
+.mono  { font-family: var(--mono); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.chip.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.chip.dark {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+  color: var(--d-text);
+}
+.chip.dark.active {
+  background: var(--secondary);
+  color: #0f2611;
+  border-color: var(--secondary);
+}
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 44px; padding: 0 20px;
+  border-radius: 8px;
+  background: var(--primary); color: #fff;
+  font-family: var(--ui); font-weight: 600; font-size: 15px;
+  border: 0; cursor: pointer;
+}
+.btn.ghost {
+  background: transparent; color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn.amber {
+  background: var(--accent); color: #2a1c00;
+}
+
+@keyframes blink { 0%, 49% { opacity: 1 } 50%, 100% { opacity: 0 } }

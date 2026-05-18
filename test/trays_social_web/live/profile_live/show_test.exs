@@ -54,7 +54,7 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
         |> log_in_user(user)
         |> live(~p"/@#{user.username}")
 
-      assert html =~ "Edit Profile"
+      assert html =~ "Edit profile"
     end
 
     test "does not show edit profile button for other users", %{conn: conn} do
@@ -66,7 +66,7 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
         |> log_in_user(other_user)
         |> live(~p"/@#{user.username}")
 
-      refute html =~ "Edit Profile"
+      refute html =~ "Edit profile"
     end
 
     test "displays placeholder avatar when no profile photo", %{conn: conn} do
@@ -132,13 +132,15 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
         |> log_in_user(viewer)
         |> live(~p"/@#{user.username}")
 
-      # Follow the user
+      # Follow the user. The editorial profile renders two buttons
+      # (desktop + mobile) — both flip together. Match on the button
+      # text without relying on exact whitespace.
       html = render_click(view, "toggle-follow")
-      assert html =~ "toggle-follow\">\n              Following"
+      assert html =~ ~r/phx-click="toggle-follow"[^>]*>\s*Following/
 
-      # Unfollow the user
+      # Unfollow the user.
       html = render_click(view, "toggle-follow")
-      assert html =~ "toggle-follow\">\n              Follow\n"
+      assert html =~ ~r/phx-click="toggle-follow"[^>]*>\s*Follow/
     end
 
     test "displays follower and following counts", %{conn: conn} do

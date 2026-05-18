@@ -305,8 +305,11 @@ defmodule TraysSocialWeb.Router do
     live "/", FeedLive.Index, :index
     live "/explore", ExploreLive.Index, :index
     live "/@:username", ProfileLive.Show, :show
+    live "/@:username/followers", FollowersLive.Show, :followers
+    live "/@:username/following", FollowersLive.Show, :following
 
     live "/posts/new", PostLive.New, :new
+    live "/my-tray", MyTrayLive.Index, :index
     live "/users/settings", SettingsLive.Index, :index
     live "/notifications", NotificationsLive.Index, :index
 

@@ -41,7 +41,10 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
         |> log_in_user(user)
         |> live(~p"/")
 
-      assert html =~ "Share something"
+      # Editorial header now exposes the create flow via an amber
+      # "New recipe" pill that links to /posts/new.
+      assert html =~ "New recipe"
+      assert html =~ ~s|href="/posts/new"|
     end
 
     test "receives real-time updates for new posts", %{conn: conn} do

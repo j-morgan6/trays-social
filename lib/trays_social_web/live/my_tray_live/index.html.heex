@@ -1,0 +1,130 @@
+<%!-- Editorial My Tray — matches WebMyTray in the design handoff
+     (design/handoff/trays-social/project/web-screens.jsx). Serif
+     heading, mono saved/collections counter, collections row (single
+     "All saved" + "+ New collection" placeholder for now), 2-up grid of
+     saved recipes in horizontal recipe-card layout. --%>
+
+<main class="max-w-[1280px] mx-auto px-6 md:px-12 pt-10 pb-12">
+  <%!-- Header row: serif "My Tray" + mono summary --%>
+  <div class="flex items-baseline gap-4 mb-6 flex-wrap">
+    <h1 class="font-serif-editorial text-[36px] md:text-[40px] leading-none tracking-[-0.015em] text-base-content">
+      My Tray
+    </h1>
+    <%= if @saved_count > 0 do %>
+      <div class="font-mono text-[11px] text-base-content/60 uppercase tracking-[0.14em]">
+        {@saved_count} {if @saved_count == 1, do: "saved", else: "saved"} · 1 collection
+      </div>
+    <% end %>
+  </div>
+
+  <%!-- Collections row. Today only "All saved" is wired; user-created
+       collections are part of the editorial design but need a schema.
+       The "+ New collection" placeholder makes the structural intent
+       visible. --%>
+  <div class="flex gap-3.5 overflow-x-auto pb-2 mb-8 -mx-6 md:-mx-12 px-6 md:px-12 snap-x snap-mandatory scrollbar-hide">
+    <div class="shrink-0 w-[200px] snap-start bg-base-100 border-2 border-primary rounded-sm overflow-hidden cursor-default">
+      <div class="h-[88px] bg-gradient-to-br from-[#d8b178] via-[#c08a4f] to-[#8a5a32]"></div>
+      <div class="p-3">
+        <div class="font-serif-editorial text-[17px] text-base-content leading-tight">
+          All saved
+        </div>
+        <div class="font-mono text-[10px] uppercase tracking-[0.12em] text-base-content/60 mt-1">
+          {@saved_count} {if @saved_count == 1, do: "recipe", else: "recipes"}
+        </div>
+      </div>
+    </div>
+
+    <%!-- New collection placeholder — disabled today; collections
+         require a schema before this can be wired. --%>
+    <div
+      title="Custom collections coming soon"
+      class="shrink-0 w-[200px] h-[162px] snap-start border border-dashed border-base-300 rounded-sm flex flex-col items-center justify-center gap-2 text-base-content/50 cursor-not-allowed"
+    >
+      <.icon name="hero-plus" class="size-5" />
+      <span class="font-serif-editorial italic text-[13px]">New collection</span>
+      <span class="text-[10px] text-base-content/40">Soon</span>
+    </div>
+  </div>
+
+  <%!-- Saved recipes — 2-up on desktop, 1-up on mobile. Each tile uses
+       the horizontal photo-left card style from the design. --%>
+  <%= cond do %>
+    <% @loading -> %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <%= for _ <- 1..4 do %>
+          <div class="bg-base-100 border border-base-300 rounded-sm overflow-hidden grid grid-cols-[180px_1fr]">
+            <div class="h-[160px] bg-base-300 animate-pulse"></div>
+            <div class="p-4 space-y-2">
+              <.loading_skeleton type="text" class="w-24 h-3" />
+              <.loading_skeleton type="text" class="w-3/4 h-6" />
+              <.loading_skeleton type="text" class="w-1/2 h-3" />
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+    <% Enum.empty?(@bookmarks) -> %>
+      <div class="bg-base-100 border border-base-300 rounded-sm p-10 text-center">
+        <p class="font-serif-editorial italic text-[18px] text-base-content/70 mb-2">
+          Nothing saved yet.
+        </p>
+        <p class="text-sm text-base-content/60 mb-5">
+          Tap the bookmark on any recipe to save it here.
+        </p>
+        <.link
+          navigate={~p"/explore"}
+          class="inline-flex items-center gap-1.5 h-10 px-5 rounded-md bg-primary text-primary-content text-sm font-semibold hover:brightness-110 transition"
+        >
+          <.icon name="hero-magnifying-glass" class="size-4" />
+          Find recipes to save
+        </.link>
+      </div>
+
+    <% true -> %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <%= for bookmark <- @bookmarks do %>
+          <% post = bookmark.post %>
+          <% title = post_title(post) %>
+          <.link
+            navigate={~p"/posts/#{post.id}"}
+            class="bg-base-100 border border-base-300 rounded-sm overflow-hidden grid grid-cols-[160px_1fr] md:grid-cols-[180px_1fr] hover:border-base-content/20 transition-colors group"
+          >
+            <div class="bg-base-200 overflow-hidden">
+              <img
+                src={TraysSocial.Uploads.ImageProcessor.thumb_url(post.photo_url)}
+                alt={title}
+                class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+              />
+            </div>
+            <div class="p-4 flex flex-col min-w-0">
+              <div class="flex items-center gap-2 mb-1.5">
+                <.user_avatar
+                  username={post.user.username}
+                  photo_url={post.user.profile_photo_url}
+                  size="sm"
+                />
+                <span class="text-[12px] text-base-content/80 truncate">
+                  {post.user.username}
+                </span>
+              </div>
+              <h4 class="font-serif-editorial text-[19px] leading-[1.1] text-base-content mb-1.5 line-clamp-2">
+                {title}
+              </h4>
+              <div class="text-[12px] text-base-content/60 mb-2">
+                <%= if post.cooking_time_minutes do %>
+                  {post.cooking_time_minutes} min
+                <% end %>
+                <%= if Ecto.assoc_loaded?(post.ingredients) and length(post.ingredients) > 0 do %>
+                  · {length(post.ingredients)} ingredients
+                <% end %>
+              </div>
+              <div class="flex-1"></div>
+              <div class="inline-flex self-start font-mono text-[9px] uppercase tracking-[0.12em] text-primary px-2 py-0.5 rounded-full bg-secondary/25">
+                Saved {Calendar.strftime(bookmark.inserted_at, "%b %-d")}
+              </div>
+            </div>
+          </.link>
+        <% end %>
+      </div>
+  <% end %>
+</main>

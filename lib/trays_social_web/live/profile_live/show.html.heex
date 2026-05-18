@@ -1,169 +1,259 @@
-<div class="mx-auto max-w-[820px] px-4 py-8">
-  <%!-- Profile Header --%>
-  <div class="flex items-start gap-5 md:gap-7 pb-6 border-b border-base-300">
-    <%!-- Profile Photo --%>
-    <div class="flex-shrink-0 w-[72px] h-[72px] md:w-24 md:h-24 overflow-hidden rounded-full [&_div]:!w-full [&_div]:!h-full [&_span]:!text-2xl md:[&_span]:!text-3xl">
-      <.user_avatar username={@user.username} photo_url={@user.profile_photo_url} size="2xl" />
+<%!-- Editorial profile — matches the WebProfile screen from the design
+     handoff bundle (design/handoff/trays-social/project/web-screens.jsx).
+     Large serif display name, quiet bio, serif stat numbers, tabs
+     (Recipes / Saved / About) with primary-green active under-border,
+     4-up photo grid with serif title overlays. --%>
+
+<% is_own_profile =
+  assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @user.id %>
+
+<main class="max-w-[1180px] mx-auto px-6 md:px-12 pt-10 pb-12">
+  <%!-- Hero — 3-col on desktop, stacked on mobile. --%>
+  <div class="grid grid-cols-[80px_1fr] md:grid-cols-[120px_1fr_auto] gap-5 md:gap-7 items-start md:items-center mb-2">
+    <div class="row-span-2 md:row-span-1 [&_div]:!w-full [&_div]:!h-full [&_span]:!text-3xl md:[&_span]:!text-4xl overflow-hidden rounded-full">
+      <.user_avatar
+        username={@user.username}
+        photo_url={@user.profile_photo_url}
+        size="2xl"
+      />
     </div>
 
-    <%!-- Profile Info --%>
-    <div class="flex-1 min-w-0">
-      <div class="flex items-center gap-3 mb-1">
-        <h1 class="text-lg md:text-xl font-bold truncate">@{@user.username}</h1>
-
-        <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @user.id do %>
-          <.button href={~p"/users/settings"} variant="secondary" class="btn-sm">
-            Edit Profile
-          </.button>
-        <% else %>
-          <%= if assigns[:current_scope] && @current_scope.user do %>
-            <button
-              type="button"
-              class={[
-                "btn btn-sm",
-                if(@is_following, do: "btn-ghost border border-base-300", else: "btn-primary")
-              ]}
-              phx-click="toggle-follow"
-            >
-              {if @is_following, do: "Following", else: "Follow"}
-            </button>
-          <% end %>
-        <% end %>
+    <div class="min-w-0">
+      <%!-- Display name — serif, oversized. We don't have a separate
+           display name field, so the username is the heading and the
+           @handle / joined date is the subtitle below. --%>
+      <h1 class="font-serif-editorial text-[36px] md:text-[52px] leading-none tracking-[-0.015em] text-base-content mb-1">
+        {@user.username}
+      </h1>
+      <div class="text-sm text-base-content/60 mb-3">
+        @{@user.username}
+        <span class="mx-2">·</span>
+        Joined {Calendar.strftime(@user.inserted_at, "%B %Y")}
       </div>
-
-      <%!-- Bio --%>
       <%= if @user.bio do %>
-        <p class="text-sm text-base-content/70 leading-relaxed mt-1 max-w-[480px]">{@user.bio}</p>
+        <p class="text-[15px] text-base-content max-w-[560px] leading-[1.55]">
+          {@user.bio}
+        </p>
       <% end %>
 
-      <%!-- Stats — inline on desktop --%>
-      <div class="hidden md:flex gap-6 mt-4">
+      <%!-- Stats row — serif numbers, muted labels. Counts are visually
+           subordinate per the design's "Social, quietly" rule. --%>
+      <div class="hidden md:flex gap-7 mt-4 text-[13px] text-base-content/60 items-baseline">
         <%= if @loading do %>
-          <.loading_skeleton type="text" class="w-16 h-4" />
-          <.loading_skeleton type="text" class="w-20 h-4" />
-          <.loading_skeleton type="text" class="w-20 h-4" />
+          <.loading_skeleton type="text" class="w-20 h-5" />
+          <.loading_skeleton type="text" class="w-24 h-5" />
+          <.loading_skeleton type="text" class="w-24 h-5" />
         <% else %>
-          <div>
-            <span class="font-bold">{format_count(@post_count)}</span>
-            <span class="text-base-content/60 ml-1">
-              {if @post_count == 1, do: "post", else: "posts"}
+          <span>
+            <span class="font-serif-editorial text-[18px] text-base-content mr-1">
+              {format_count(@post_count)}
             </span>
-          </div>
-          <div>
-            <span class="font-bold">{format_count(@follower_count)}</span>
-            <span class="text-base-content/60 ml-1">
-              {if @follower_count == 1, do: "follower", else: "followers"}
+            {if @post_count == 1, do: "recipe", else: "recipes"}
+          </span>
+          <%!-- Followers / following are tappable — open the editorial
+               Followers / Following list LiveView (FollowersLive.Show). --%>
+          <.link navigate={~p"/@#{@user.username}/followers"} class="hover:text-base-content transition-colors">
+            <span class="font-serif-editorial text-[18px] text-base-content mr-1">
+              {format_count(@follower_count)}
             </span>
-          </div>
-          <div>
-            <span class="font-bold">{format_count(@following_count)}</span>
-            <span class="text-base-content/60 ml-1">following</span>
-          </div>
+            {if @follower_count == 1, do: "follower", else: "followers"}
+          </.link>
+          <.link navigate={~p"/@#{@user.username}/following"} class="hover:text-base-content transition-colors">
+            <span class="font-serif-editorial text-[18px] text-base-content mr-1">
+              {format_count(@following_count)}
+            </span>
+            following
+          </.link>
         <% end %>
       </div>
+    </div>
+
+    <%!-- Right column — actions. Stacked Follow + Message on desktop;
+         on mobile this column is hidden and a button row appears below
+         the bio. --%>
+    <div class="hidden md:flex flex-col gap-2.5 self-start">
+      <%= cond do %>
+        <% is_own_profile -> %>
+          <.link
+            href={~p"/users/settings"}
+            class="inline-flex items-center justify-center h-10 px-5 rounded-md border border-base-300 text-[14px] text-base-content hover:bg-base-200 transition-colors"
+          >
+            Edit profile
+          </.link>
+        <% assigns[:current_scope] && @current_scope.user -> %>
+          <button
+            type="button"
+            class={[
+              "inline-flex items-center justify-center h-10 px-5 rounded-md text-[14px] font-semibold transition",
+              if(@is_following,
+                do: "bg-base-100 border border-base-300 text-base-content hover:bg-base-200",
+                else: "bg-primary text-primary-content hover:brightness-110"
+              )
+            ]}
+            phx-click="toggle-follow"
+          >
+            {if @is_following, do: "Following", else: "Follow #{@user.username}"}
+          </button>
+        <% true -> %>
+          <.link
+            href={~p"/users/log-in"}
+            class="inline-flex items-center justify-center h-10 px-5 rounded-md bg-primary text-primary-content text-[14px] font-semibold hover:brightness-110 transition"
+          >
+            Follow {@user.username}
+          </.link>
+      <% end %>
     </div>
   </div>
 
-  <%!-- Stats — centered columns on mobile --%>
-  <div class="flex md:hidden justify-around py-3 border-b border-base-300">
+  <%!-- Mobile stats row — centered columns under the hero, matching
+       the previous behaviour but using serif numbers for editorial feel. --%>
+  <div class="flex md:hidden justify-around py-4 mt-2 border-y border-base-300">
     <%= if @loading do %>
       <.loading_skeleton type="text" class="w-12 h-8" />
       <.loading_skeleton type="text" class="w-12 h-8" />
       <.loading_skeleton type="text" class="w-12 h-8" />
     <% else %>
       <div class="text-center">
-        <div class="font-bold text-base">{format_count(@post_count)}</div>
-        <div class="text-xs text-base-content/60 uppercase tracking-wide">Posts</div>
+        <div class="font-serif-editorial text-[22px] text-base-content leading-none">
+          {format_count(@post_count)}
+        </div>
+        <div class="text-[11px] text-base-content/60 uppercase tracking-[0.12em] mt-1">
+          Recipes
+        </div>
       </div>
       <div class="text-center">
-        <div class="font-bold text-base">{format_count(@follower_count)}</div>
-        <div class="text-xs text-base-content/60 uppercase tracking-wide">Followers</div>
+        <div class="font-serif-editorial text-[22px] text-base-content leading-none">
+          {format_count(@follower_count)}
+        </div>
+        <div class="text-[11px] text-base-content/60 uppercase tracking-[0.12em] mt-1">
+          Followers
+        </div>
       </div>
       <div class="text-center">
-        <div class="font-bold text-base">{format_count(@following_count)}</div>
-        <div class="text-xs text-base-content/60 uppercase tracking-wide">Following</div>
+        <div class="font-serif-editorial text-[22px] text-base-content leading-none">
+          {format_count(@following_count)}
+        </div>
+        <div class="text-[11px] text-base-content/60 uppercase tracking-[0.12em] mt-1">
+          Following
+        </div>
       </div>
     <% end %>
   </div>
 
-  <%!-- Recipes Section --%>
-  <div class="mt-6">
-    <div class="text-xs font-semibold uppercase tracking-[1.5px] text-base-content/50 mb-4">
-      Recipes
-    </div>
+  <%!-- Mobile action button --%>
+  <div class="md:hidden mt-4">
+    <%= cond do %>
+      <% is_own_profile -> %>
+        <.link
+          href={~p"/users/settings"}
+          class="block w-full text-center h-10 leading-10 rounded-md border border-base-300 text-[14px] text-base-content"
+        >
+          Edit profile
+        </.link>
+      <% assigns[:current_scope] && @current_scope.user -> %>
+        <button
+          type="button"
+          class={[
+            "block w-full text-center h-10 leading-10 rounded-md text-[14px] font-semibold transition",
+            if(@is_following,
+              do: "bg-base-100 border border-base-300 text-base-content",
+              else: "bg-primary text-primary-content"
+            )
+          ]}
+          phx-click="toggle-follow"
+        >
+          {if @is_following, do: "Following", else: "Follow"}
+        </button>
+      <% true -> %>
+        <.link
+          href={~p"/users/log-in"}
+          class="block w-full text-center h-10 leading-10 rounded-md bg-primary text-primary-content text-[14px] font-semibold"
+        >
+          Follow
+        </.link>
+    <% end %>
+  </div>
 
-    <%= if @loading do %>
-      <%!-- Loading: hero skeleton + grid skeletons --%>
-      <.loading_skeleton type="card" class="w-full aspect-[16/7] md:rounded-xl rounded-none" />
-      <div class="grid grid-cols-2 gap-0.5 md:gap-2 mt-0.5 md:mt-2">
-        <%= for _ <- 1..4 do %>
-          <.loading_skeleton type="card" class="aspect-square md:aspect-[4/3] md:rounded-lg rounded-none" />
-        <% end %>
+  <%!-- Tabs — Recipes / Saved (own only) / About. The active tab is
+       Recipes; Saved and About are visible placeholders. Real tab state
+       would need new LiveView assigns; for now they're inert. --%>
+  <div class="flex gap-7 mt-9 border-b border-base-300">
+    <div class="pb-3 border-b-2 border-primary text-base-content font-semibold text-sm">
+      Recipes
+      <span class="ml-1.5 text-base-content/60 font-medium">
+        {format_count(@post_count)}
+      </span>
+    </div>
+    <%= if is_own_profile do %>
+      <div class="pb-3 border-b-2 border-transparent text-base-content/60 font-medium text-sm cursor-default">
+        Saved
       </div>
-    <% else %>
-      <%= if Enum.empty?(@posts) do %>
+    <% end %>
+    <div class="pb-3 border-b-2 border-transparent text-base-content/60 font-medium text-sm cursor-default">
+      About
+    </div>
+  </div>
+
+  <%!-- Recipe grid — 4-up on desktop, 2-up on tablet, 2-up on mobile.
+       Each tile is photo + serif title overlay at the bottom with a
+       soft gradient, matching the GridCard in shared.jsx. --%>
+  <%= if @loading do %>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mt-6">
+      <%= for _ <- 1..8 do %>
+        <.loading_skeleton type="card" class="aspect-[4/5] rounded-sm" />
+      <% end %>
+    </div>
+  <% else %>
+    <%= if Enum.empty?(@posts) do %>
+      <div class="mt-12">
         <.empty_state message="No recipes yet">
-          <%= if assigns[:current_scope] && @current_scope.user && @current_scope.user.id == @user.id do %>
-            <.button href={~p"/posts/new"} variant="primary">
-              Share your first recipe
-            </.button>
+          <%= if is_own_profile do %>
+            <.link
+              href={~p"/posts/new"}
+              class="inline-flex items-center gap-1.5 h-10 px-5 rounded-md bg-accent text-accent-content text-sm font-semibold hover:brightness-95 transition"
+            >
+              <.icon name="hero-plus" class="size-4" /> Share your first recipe
+            </.link>
           <% end %>
         </.empty_state>
-      <% else %>
-        <%!-- Hero Post (most recent) --%>
-        <% [hero | grid_posts] = @posts %>
-        <.link
-          href={~p"/posts/#{hero.id}"}
-          class="block relative overflow-hidden md:rounded-xl aspect-[4/3] md:aspect-[16/7] animate-fade-in group"
-        >
-          <.lazy_image
-            id={"profile-hero-#{hero.id}"}
-            src={TraysSocial.Uploads.ImageProcessor.thumb_url(hero.photo_url)}
-            alt={hero.caption}
-            class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-          />
-          <div class="absolute inset-x-0 bottom-0 pt-16 pb-4 px-4 md:pb-5 md:px-6 bg-gradient-to-t from-black/55 to-transparent">
-            <div class="text-white font-bold text-sm md:text-lg leading-tight">{hero.caption}</div>
-            <div class="flex gap-3 mt-1 text-white/80 text-xs md:text-sm">
-              <%= if hero.type == "recipe" && hero.cooking_time_minutes do %>
-                <span>{format_cooking_time(hero.cooking_time_minutes)}</span>
-              <% end %>
-              <span>{format_count(hero.like_count)} likes</span>
-            </div>
-          </div>
-        </.link>
+      </div>
+    <% else %>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mt-6">
+        <%= for post <- @posts do %>
+          <% raw_caption = post.caption || "" %>
+          <% post_title =
+            raw_caption
+            |> String.split(~r/[\n.!?]/, parts: 2, trim: true)
+            |> List.first()
+            |> Kernel.||("Untitled recipe")
+            |> String.trim() %>
+          <% post_title = if post_title == "", do: "Untitled recipe", else: post_title %>
 
-        <%!-- Grid Posts (remaining) --%>
-        <%= if grid_posts != [] do %>
-          <div class="grid grid-cols-2 gap-0.5 md:gap-2 mt-0.5 md:mt-2">
-            <%= for post <- grid_posts do %>
-              <.link
-                href={~p"/posts/#{post.id}"}
-                class="block relative overflow-hidden aspect-square md:aspect-[4/3] md:rounded-lg animate-fade-in group"
-              >
-                <.lazy_image
-                  id={"profile-post-#{post.id}"}
-                  src={TraysSocial.Uploads.ImageProcessor.thumb_url(post.photo_url)}
-                  alt={post.caption}
-                  class="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
-                />
-                <%!-- Desktop: hover overlay --%>
-                <div class="hidden md:flex absolute inset-x-0 bottom-0 pt-10 pb-3 px-3 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-col justify-end">
-                  <div class="text-white font-semibold text-sm leading-tight truncate">{post.caption}</div>
-                  <div class="flex gap-2 mt-0.5 text-white/80 text-xs">
-                    <span>{format_cooking_time(post.cooking_time_minutes)}</span>
-                    <span>{format_count(post.like_count)} likes</span>
-                  </div>
+          <.link
+            href={~p"/posts/#{post.id}"}
+            class="block relative overflow-hidden rounded-sm aspect-[4/5] bg-base-200 group animate-fade-in"
+          >
+            <.lazy_image
+              id={"profile-post-#{post.id}"}
+              src={TraysSocial.Uploads.ImageProcessor.thumb_url(post.photo_url)}
+              alt={post_title}
+              class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+            />
+            <%!-- Title overlay — serif, white-on-gradient at the bottom edge
+                 (matches GridCard in shared.jsx). --%>
+            <div class="absolute inset-x-0 bottom-0 pt-12 pb-3 px-3.5 bg-gradient-to-t from-black/70 to-transparent">
+              <h4 class="font-serif-editorial text-white text-[18px] leading-[1.1] line-clamp-2">
+                {post_title}
+              </h4>
+              <%= if post.cooking_time_minutes do %>
+                <div class="font-mono text-[10px] uppercase tracking-[0.1em] text-white/85 mt-1">
+                  {format_cooking_time(post.cooking_time_minutes)}
                 </div>
-                <%!-- Mobile: like badge --%>
-                <div class="md:hidden absolute bottom-1.5 left-1.5 bg-black/50 text-white text-[0.6rem] font-semibold px-1.5 py-0.5 rounded">
-                  {format_count(post.like_count)} likes
-                </div>
-              </.link>
-            <% end %>
-          </div>
+              <% end %>
+            </div>
+          </.link>
         <% end %>
-      <% end %>
+      </div>
     <% end %>
-  </div>
-</div>
+  <% end %>
+</main>

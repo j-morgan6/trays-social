@@ -185,4 +185,20 @@ defmodule TraysSocialWeb.PostLive.Show do
       1
     end
   end
+
+  # Render cook time as `2 hr 45 min` / `45 min` / `2 hr` so the metadata
+  # strip on the recipe detail page can show editorial copy rather than
+  # raw integers. Used by show.html.heex.
+  def format_cook_time(minutes) when is_integer(minutes) and minutes > 0 do
+    hours = div(minutes, 60)
+    mins = rem(minutes, 60)
+
+    case {hours, mins} do
+      {0, m} -> "#{m} min"
+      {h, 0} -> "#{h} hr"
+      {h, m} -> "#{h} hr #{m} min"
+    end
+  end
+
+  def format_cook_time(_), do: "—"
 end
