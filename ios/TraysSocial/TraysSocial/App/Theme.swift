@@ -48,3 +48,41 @@ extension Color {
         )
     }
 }
+
+// MARK: - Editorial Typography
+
+//
+// Instrument Serif (Regular + Italic) is bundled under
+// Resources/Fonts/ and registered via UIAppFonts in Info.plist. These
+// helpers mirror the web app's `.font-serif-editorial` utility (see
+// assets/css/app.css) so type usage stays consistent across platforms.
+//
+// Editorial sizes (matching the web type scale):
+//   h1 40 / h2 32 / h3 28 / h4 24 / h5 20 / h6 18
+//
+// Use `.serif(size:)` for recipe titles, wordmark, section headers,
+// and quiet emphasis. UI text continues to use SwiftUI system fonts.
+
+extension Font {
+    /// Instrument Serif Regular at an arbitrary size.
+    static func serif(_ size: CGFloat) -> Font {
+        .custom("InstrumentSerif-Regular", size: size)
+    }
+
+    /// Instrument Serif Italic at an arbitrary size.
+    static func serifItalic(_ size: CGFloat) -> Font {
+        .custom("InstrumentSerif-Italic", size: size)
+    }
+
+    // MARK: Editorial Scale (matches web h1–h6)
+
+    static let serifH1 = Font.custom("InstrumentSerif-Regular", size: 40)
+    static let serifH2 = Font.custom("InstrumentSerif-Regular", size: 32)
+    static let serifH3 = Font.custom("InstrumentSerif-Regular", size: 28)
+    static let serifH4 = Font.custom("InstrumentSerif-Regular", size: 24)
+    static let serifH5 = Font.custom("InstrumentSerif-Regular", size: 20)
+    static let serifH6 = Font.custom("InstrumentSerif-Regular", size: 18)
+
+    /// Oversized hero display — recipe titles on a detail screen.
+    static let serifDisplay = Font.custom("InstrumentSerif-Regular", size: 44)
+}
