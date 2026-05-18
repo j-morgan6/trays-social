@@ -15,10 +15,25 @@ defmodule TraysSocialWeb.FeedLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    if connected?(socket) do
-      {:ok, mount_connected(socket)}
-    else
-      {:ok, mount_disconnected(socket)}
+    cond do
+      # First-run: redirect unfinished cooks to the welcome screen so the
+      # three trays get a one-time introduction. Stamped by WelcomeLive
+      # when they tap "Got it".
+      needs_welcome?(socket) ->
+        {:ok, push_navigate(socket, to: ~p"/welcome")}
+
+      connected?(socket) ->
+        {:ok, mount_connected(socket)}
+
+      true ->
+        {:ok, mount_disconnected(socket)}
+    end
+  end
+
+  defp needs_welcome?(socket) do
+    case socket.assigns[:current_scope] do
+      %{user: %{seen_welcome_at: nil}} -> true
+      _ -> false
     end
   end
 

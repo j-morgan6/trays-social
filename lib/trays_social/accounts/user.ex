@@ -14,6 +14,7 @@ defmodule TraysSocial.Accounts.User do
     field :apple_id, :string
     field :muted_keywords, {:array, :string}, default: []
     field :is_admin, :boolean, default: false
+    field :seen_welcome_at, :utc_datetime
 
     timestamps(type: :utc_datetime)
   end

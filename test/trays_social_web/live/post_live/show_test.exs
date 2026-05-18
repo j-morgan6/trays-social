@@ -361,5 +361,51 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
       assert html =~ "Visitor reply"
       assert html =~ ~r/#{author.username}[^<]*<\/span>\s*<span[^>]*>\s*Cook\s*</
     end
+
+    test "toggle-ingredient checks and unchecks an ingredient", %{conn: conn} do
+      author = user_fixture()
+      viewer = user_fixture()
+      post = post_fixture(user_id: author.id)
+      [ingredient | _] = post.ingredients
+
+      {:ok, view, html} =
+        conn
+        |> log_in_user(viewer)
+        |> live(~p"/posts/#{post.id}")
+
+      # Initial state — no line-through on the ingredient row.
+      refute html =~ ~r/line-through[^"]*"[^>]*>\s*#{ingredient.name}/
+
+      html = render_click(view, "toggle-ingredient", %{"id" => to_string(ingredient.id)})
+      # After toggling, the ingredient name is rendered inside a line-through span.
+      assert html =~ ~r/line-through[^"]*"[^>]*>\s*#{ingredient.name}/
+
+      html = render_click(view, "toggle-ingredient", %{"id" => to_string(ingredient.id)})
+      refute html =~ ~r/line-through[^"]*"[^>]*>\s*#{ingredient.name}/
+    end
+
+    test "toggle-cook-mode starts and stops the stopwatch", %{conn: conn} do
+      user = user_fixture()
+      post = post_fixture(user_id: user.id)
+
+      {:ok, view, html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/posts/#{post.id}")
+
+      # Initial state — primary "Start cooking" CTA, no floating timer.
+      assert html =~ "Start cooking"
+      refute html =~ "cook-timer-display"
+
+      html = render_click(view, "toggle-cook-mode")
+      # Stopwatch is mounted with a data-started-at attribute; CTA flips to "Stop cooking".
+      assert html =~ "Stop cooking"
+      assert html =~ "cook-timer-display"
+      assert html =~ ~s|data-started-at=|
+
+      html = render_click(view, "toggle-cook-mode")
+      assert html =~ "Start cooking"
+      refute html =~ "cook-timer-display"
+    end
   end
 end

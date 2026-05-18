@@ -36,6 +36,8 @@ defmodule TraysSocialWeb.PostLive.Show do
       |> assign(:liked, liked || false)
       |> assign(:bookmarked, bookmarked || false)
       |> assign(:is_following, is_following)
+      |> assign(:checked_ingredient_ids, MapSet.new())
+      |> assign(:cooking_started_at, nil)
       |> assign(:comment_body, "")
       |> stream(:comments, comments)
 
@@ -100,6 +102,40 @@ defmodule TraysSocialWeb.PostLive.Show do
 
         {:noreply, socket}
     end
+  end
+
+  @impl true
+  def handle_event("toggle-cook-mode", _params, socket) do
+    new_started_at =
+      if socket.assigns.cooking_started_at do
+        # Reset the timer back to "not running" — also discards the
+        # checked-ingredients state so the cook starts fresh next time.
+        nil
+      else
+        DateTime.utc_now()
+      end
+
+    socket =
+      socket
+      |> assign(:cooking_started_at, new_started_at)
+      |> assign(:checked_ingredient_ids,
+        if(new_started_at, do: MapSet.new(), else: socket.assigns.checked_ingredient_ids)
+      )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("toggle-ingredient", %{"id" => id_str}, socket) do
+    id = String.to_integer(id_str)
+    set = socket.assigns.checked_ingredient_ids
+
+    new_set =
+      if MapSet.member?(set, id),
+        do: MapSet.delete(set, id),
+        else: MapSet.put(set, id)
+
+    {:noreply, assign(socket, :checked_ingredient_ids, new_set)}
   end
 
   @impl true

@@ -33,7 +33,28 @@ defmodule TraysSocial.AccountsFixtures do
   def user_fixture(attrs \\ %{}) do
     user = unconfirmed_user_fixture(attrs)
 
-    # Confirm the user directly for password-based authentication
+    # Confirm the user directly for password-based authentication. Also
+    # stamp seen_welcome_at so the default fixture represents a typical
+    # past-onboarding cook — tests that exercise the first-run welcome
+    # use `unfinished_user_fixture/1` instead.
+    {:ok, user} =
+      user
+      |> Ecto.Changeset.change(%{
+        confirmed_at: DateTime.utc_now(:second),
+        seen_welcome_at: DateTime.utc_now(:second)
+      })
+      |> TraysSocial.Repo.update()
+
+    user
+  end
+
+  @doc """
+  A user that hasn't been through the welcome flow yet — used by tests
+  that exercise the first-run redirect from /.
+  """
+  def unfinished_user_fixture(attrs \\ %{}) do
+    user = unconfirmed_user_fixture(attrs)
+
     {:ok, user} =
       user
       |> Ecto.Changeset.change(%{confirmed_at: DateTime.utc_now(:second)})

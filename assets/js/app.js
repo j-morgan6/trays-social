@@ -79,11 +79,48 @@ const InfiniteScroll = {
   }
 }
 
+// CookTimer — reads `data-started-at` (ISO 8601 UTC) from the host element
+// and updates its textContent every second with elapsed `mm:ss` (or `h:mm:ss`
+// past an hour). Ticks client-side so the server isn't pinged every second.
+// When the attribute disappears (cook stops the timer), the interval is
+// cleared.
+const CookTimer = {
+  mounted() {
+    this.tick()
+    this.interval = setInterval(() => this.tick(), 1000)
+  },
+  updated() {
+    this.tick()
+  },
+  destroyed() {
+    if (this.interval) clearInterval(this.interval)
+  },
+  tick() {
+    const startedAt = this.el.dataset.startedAt
+    if (!startedAt) {
+      if (this.interval) clearInterval(this.interval)
+      this.interval = null
+      return
+    }
+
+    const start = new Date(startedAt).getTime()
+    if (isNaN(start)) return
+
+    const elapsed = Math.max(0, Math.floor((Date.now() - start) / 1000))
+    const h = Math.floor(elapsed / 3600)
+    const m = Math.floor((elapsed % 3600) / 60)
+    const s = elapsed % 60
+    const pad = (n) => n.toString().padStart(2, "0")
+
+    this.el.textContent = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
+  }
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, LazyLoad, InfiniteScroll},
+  hooks: {...colocatedHooks, LazyLoad, InfiniteScroll, CookTimer},
 })
 
 // Show progress bar on live navigation and form submits

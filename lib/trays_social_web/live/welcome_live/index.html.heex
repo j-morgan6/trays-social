@@ -1,0 +1,55 @@
+<%!-- First-run welcome. Three trays in three sentences, then a single
+     amber "Got it, take me to the feed" action. --%>
+
+<main class="max-w-[680px] mx-auto px-6 pt-10 md:pt-14 pb-16">
+  <div class="text-center mb-10">
+    <div class="font-mono text-[11px] text-primary uppercase tracking-[0.18em] mb-3">
+      Welcome, {@user.username}
+    </div>
+    <h1 class="font-serif-editorial text-[44px] md:text-[56px] leading-none tracking-[-0.015em] text-base-content mb-3">
+      Three trays. <em class="text-primary">That's it.</em>
+    </h1>
+    <p class="text-[15px] text-base-content/70 leading-[1.55] max-w-[480px] mx-auto">
+      Trays keeps cooking simple. Here's how the app is laid out — you'll get the hang of it in about thirty seconds.
+    </p>
+  </div>
+
+  <div class="space-y-4 mb-10">
+    <%= for {tray, blurb, icon} <- [
+      {"Feed", "What the cooks you follow are making, in the order they made it.",
+        "hero-rectangle-stack"},
+      {"Find", "Search by ingredient, time, or cuisine. Filter chips do the heavy lifting.",
+        "hero-magnifying-glass"},
+      {"My Tray", "Save anything you'd like to cook later. It's your personal cookbook.",
+        "hero-bookmark"}
+    ] do %>
+      <div class="bg-base-100 border border-base-300 rounded-md p-5 md:p-6 flex items-start gap-4">
+        <div class="w-11 h-11 rounded-full bg-secondary/35 text-primary flex items-center justify-center shrink-0">
+          <.icon name={icon} class="size-5" />
+        </div>
+        <div class="min-w-0">
+          <div class="font-serif-editorial text-[22px] text-base-content leading-tight">
+            {tray}
+          </div>
+          <p class="text-[14px] text-base-content/70 leading-[1.55] mt-1">
+            {blurb}
+          </p>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="flex flex-col items-center gap-3">
+    <button
+      type="button"
+      phx-click="continue"
+      class="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-md bg-accent text-accent-content text-[15px] font-semibold hover:brightness-95 transition"
+    >
+      Got it, take me to the feed
+      <.icon name="hero-arrow-right" class="size-4" />
+    </button>
+    <p class="font-serif-editorial italic text-[12px] text-base-content/60">
+      Email confirmation is optional. Cook first, confirm later.
+    </p>
+  </div>
+</main>

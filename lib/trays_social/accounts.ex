@@ -132,6 +132,19 @@ defmodule TraysSocial.Accounts do
     |> Repo.update()
   end
 
+  @doc """
+  Stamps `seen_welcome_at` so the user is not redirected to the
+  onboarding welcome screen again. Idempotent — calling on a user who
+  already has a stamp is a no-op.
+  """
+  def mark_welcome_seen(%User{seen_welcome_at: %DateTime{}} = user), do: {:ok, user}
+
+  def mark_welcome_seen(%User{} = user) do
+    user
+    |> Ecto.Changeset.change(seen_welcome_at: DateTime.utc_now() |> DateTime.truncate(:second))
+    |> Repo.update()
+  end
+
   # Conditionally flips is_admin=true when ALL of the following hold:
   #
   #   1. user has no apple_id (Apple Sign In never auto-grants admin — email

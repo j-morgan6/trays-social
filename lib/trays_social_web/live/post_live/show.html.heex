@@ -202,18 +202,45 @@
           <h2 class="font-serif-editorial text-[28px] text-base-content mb-4">Ingredients</h2>
           <ul class="border-t border-base-300">
             <%= for ingredient <- Enum.sort_by(@post.ingredients, & &1.order) do %>
-              <li class="grid grid-cols-[20px_minmax(80px,auto)_1fr] gap-3 items-baseline py-2.5 border-b border-base-300">
-                <%!-- Visual checkbox affordance. Not yet wired to state —
-                     interactive checking comes in a later pass. --%>
-                <span class="w-4 h-4 rounded-[3px] border-[1.5px] border-base-300 mt-0.5"></span>
-                <span class="font-mono text-[12px] text-base-content/70 tabular-nums">
-                  {[ingredient.quantity, ingredient.unit]
-                  |> Enum.reject(&(is_nil(&1) or &1 == ""))
-                  |> Enum.join(" ")}
-                </span>
-                <span class="text-sm text-base-content leading-snug">
-                  {ingredient.name}
-                </span>
+              <% checked = MapSet.member?(@checked_ingredient_ids, ingredient.id) %>
+              <%!-- Each row is a button so the entire row is the
+                   target — easier with messy hands than aiming at a 16px
+                   checkbox. State is session-local; nothing persists. --%>
+              <li class="border-b border-base-300">
+                <button
+                  type="button"
+                  phx-click="toggle-ingredient"
+                  phx-value-id={ingredient.id}
+                  aria-pressed={if checked, do: "true", else: "false"}
+                  class={[
+                    "w-full grid grid-cols-[20px_minmax(80px,auto)_1fr] gap-3 items-baseline py-2.5 text-left transition-opacity",
+                    if(checked, do: "opacity-50", else: "hover:opacity-80")
+                  ]}
+                >
+                  <span class={[
+                    "w-4 h-4 rounded-[3px] border-[1.5px] flex items-center justify-center mt-0.5 transition-colors",
+                    if(checked,
+                      do: "border-primary bg-primary text-primary-content",
+                      else: "border-base-300"
+                    )
+                  ]}>
+                    <.icon :if={checked} name="hero-check-mini" class="size-3" />
+                  </span>
+                  <span class={[
+                    "font-mono text-[12px] text-base-content/70 tabular-nums",
+                    if(checked, do: "line-through", else: "")
+                  ]}>
+                    {[ingredient.quantity, ingredient.unit]
+                    |> Enum.reject(&(is_nil(&1) or &1 == ""))
+                    |> Enum.join(" ")}
+                  </span>
+                  <span class={[
+                    "text-sm text-base-content leading-snug",
+                    if(checked, do: "line-through", else: "")
+                  ]}>
+                    {ingredient.name}
+                  </span>
+                </button>
               </li>
             <% end %>
           </ul>
@@ -292,16 +319,56 @@
       <span>{if @bookmarked, do: "Saved to My Tray", else: "Save to My Tray"}</span>
     </button>
     <%= if has_steps do %>
+      <% cooking = @cooking_started_at != nil %>
       <button
         type="button"
-        class="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-primary text-primary-content text-[13px] font-semibold hover:brightness-110 transition"
-        aria-label="Start cooking"
+        phx-click="toggle-cook-mode"
+        class={[
+          "inline-flex items-center gap-2 h-9 px-4 rounded-md text-[13px] font-semibold transition",
+          if(cooking,
+            do: "bg-base-100 border border-base-300 text-base-content hover:bg-base-200",
+            else: "bg-primary text-primary-content hover:brightness-110"
+          )
+        ]}
+        aria-pressed={if cooking, do: "true", else: "false"}
       >
-        <.icon name="hero-fire" class="size-4" />
-        <span>Start cooking</span>
+        <.icon name={if cooking, do: "hero-stop-circle", else: "hero-fire"} class="size-4" />
+        <span>{if cooking, do: "Stop cooking", else: "Start cooking"}</span>
       </button>
     <% end %>
   </div>
+
+  <%!-- Floating cook-mode stopwatch. The CookTimer JS hook reads
+       data-started-at and updates the textContent every second
+       client-side, so the server doesn't see a tick per second. --%>
+  <%= if @cooking_started_at do %>
+    <div
+      role="status"
+      aria-live="polite"
+      class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 inline-flex items-center gap-3 bg-base-100 border border-primary shadow-lg rounded-full pl-4 pr-2 h-12"
+    >
+      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-primary">
+        Cooking
+      </span>
+      <span
+        id="cook-timer-display"
+        phx-hook="CookTimer"
+        phx-update="ignore"
+        data-started-at={DateTime.to_iso8601(@cooking_started_at)}
+        class="font-mono text-[18px] text-base-content tabular-nums"
+      >
+        0:00
+      </span>
+      <button
+        type="button"
+        phx-click="toggle-cook-mode"
+        class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-base-200 text-base-content/70 hover:text-base-content hover:bg-base-300 transition-colors"
+        aria-label="Stop cooking"
+      >
+        <.icon name="hero-stop" class="size-3.5" />
+      </button>
+    </div>
+  <% end %>
 
   <%!-- Cook's notes — collapsed by default. The summary acts as the
        "calm collapsed hint" from the design; opening the <details> reveals
