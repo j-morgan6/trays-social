@@ -43,6 +43,17 @@ defmodule TraysSocialWeb.FeedLive.Index do
   end
 
   @impl true
+  def handle_event("toggle-bookmark", %{"post-id" => post_id_str}, socket) do
+    case socket.assigns[:current_scope] do
+      nil ->
+        {:noreply, push_navigate(socket, to: ~p"/users/log-in")}
+
+      %{user: user} ->
+        {:noreply, toggle_bookmark(socket, String.to_integer(post_id_str), user)}
+    end
+  end
+
+  @impl true
   def handle_event("open-drawer", %{"id" => post_id_str}, socket) do
     {:noreply, assign(socket, :selected_post_id, String.to_integer(post_id_str))}
   end
@@ -107,6 +118,7 @@ defmodule TraysSocialWeb.FeedLive.Index do
       )
 
     liked_post_ids = fetch_liked_post_ids(socket, Enum.map(posts, & &1.id))
+    bookmarked_post_ids = fetch_bookmarked_post_ids(socket, Enum.map(posts, & &1.id))
 
     socket
     |> assign_base_feed_state()
@@ -115,6 +127,7 @@ defmodule TraysSocialWeb.FeedLive.Index do
     |> assign(:no_posts, Enum.empty?(posts))
     |> assign(:cursor, last_cursor(posts))
     |> assign(:liked_post_ids, liked_post_ids)
+    |> assign(:bookmarked_post_ids, bookmarked_post_ids)
     |> assign(:posts_map, Map.new(posts, &{&1.id, &1}))
     |> assign(:is_personalized, is_following || false)
     |> stream(:posts, posts)
@@ -128,6 +141,7 @@ defmodule TraysSocialWeb.FeedLive.Index do
     |> assign(:no_posts, false)
     |> assign(:cursor, nil)
     |> assign(:liked_post_ids, MapSet.new())
+    |> assign(:bookmarked_post_ids, MapSet.new())
     |> assign(:posts_map, %{})
     |> assign(:is_personalized, false)
     |> stream(:posts, [])
@@ -156,6 +170,13 @@ defmodule TraysSocialWeb.FeedLive.Index do
     end
   end
 
+  defp fetch_bookmarked_post_ids(socket, post_ids) do
+    case socket.assigns[:current_scope] do
+      %{user: user} -> Posts.bookmarked_post_ids_for_user(user.id, post_ids)
+      _ -> MapSet.new()
+    end
+  end
+
   defp load_more_posts(socket) do
     {cursor_id, cursor_time} = socket.assigns.cursor
 
@@ -170,11 +191,15 @@ defmodule TraysSocialWeb.FeedLive.Index do
     new_liked_ids = fetch_liked_post_ids(socket, Enum.map(posts, & &1.id))
     liked_post_ids = MapSet.union(socket.assigns.liked_post_ids, new_liked_ids)
 
+    new_bookmarked_ids = fetch_bookmarked_post_ids(socket, Enum.map(posts, & &1.id))
+    bookmarked_post_ids = MapSet.union(socket.assigns.bookmarked_post_ids, new_bookmarked_ids)
+
     socket
     |> assign(:cursor, last_cursor(posts))
     |> assign(:has_more, length(posts) == @page_size)
     |> assign(:loading_more, false)
     |> assign(:liked_post_ids, liked_post_ids)
+    |> assign(:bookmarked_post_ids, bookmarked_post_ids)
     |> update(:posts_map, &Map.merge(&1, Map.new(posts, fn p -> {p.id, p} end)))
     |> stream(:posts, posts, at: -1)
   end
@@ -231,6 +256,23 @@ defmodule TraysSocialWeb.FeedLive.Index do
         |> update(:posts_map, &Map.put(&1, post_id, updated_post))
         |> stream_insert(:posts, updated_post)
     end
+  end
+
+  defp toggle_bookmark(socket, post_id, user) do
+    bookmarked = MapSet.member?(socket.assigns.bookmarked_post_ids, post_id)
+
+    new_set =
+      if bookmarked do
+        Posts.delete_bookmark(user.id, post_id)
+        MapSet.delete(socket.assigns.bookmarked_post_ids, post_id)
+      else
+        case Posts.create_bookmark(user.id, post_id) do
+          {:ok, _} -> MapSet.put(socket.assigns.bookmarked_post_ids, post_id)
+          {:error, _} -> socket.assigns.bookmarked_post_ids
+        end
+      end
+
+    assign(socket, :bookmarked_post_ids, new_set)
   end
 
   defp last_cursor([]), do: nil

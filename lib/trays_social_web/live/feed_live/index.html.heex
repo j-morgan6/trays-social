@@ -218,12 +218,22 @@
                   <.icon name="hero-chat-bubble-left-ellipsis" class="size-3.5" />
                   <span>{post.comment_count}</span>
                 </button>
+                <% saved = MapSet.member?(@bookmarked_post_ids, post.id) %>
                 <button
                   type="button"
-                  class="inline-flex items-center gap-1.5 hover:text-base-content transition-colors"
-                  aria-label="Save"
+                  class={[
+                    "inline-flex items-center gap-1.5 transition-colors",
+                    if(saved, do: "text-primary", else: "hover:text-base-content")
+                  ]}
+                  phx-click="toggle-bookmark"
+                  phx-value-post-id={post.id}
+                  aria-label={if saved, do: "Remove from My Tray", else: "Save to My Tray"}
+                  aria-pressed={if saved, do: "true", else: "false"}
                 >
-                  <.icon name="hero-bookmark" class="size-3.5" />
+                  <.icon
+                    name={if saved, do: "hero-bookmark-solid", else: "hero-bookmark"}
+                    class="size-3.5"
+                  />
                 </button>
                 <div class="flex-1"></div>
                 <button

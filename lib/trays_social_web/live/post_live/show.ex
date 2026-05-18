@@ -1,6 +1,7 @@
 defmodule TraysSocialWeb.PostLive.Show do
   use TraysSocialWeb, :live_view
 
+  alias TraysSocial.Accounts
   alias TraysSocial.Posts
 
   on_mount {TraysSocialWeb.UserAuth, :mount_current_scope}
@@ -11,10 +12,20 @@ defmodule TraysSocialWeb.PostLive.Show do
     post = Posts.get_post!(id)
     comments = Posts.list_comments(post.id)
 
-    liked =
+    viewer =
       case socket.assigns[:current_scope] do
-        %{user: user} -> Posts.liked_by?(post.id, user.id)
-        _ -> false
+        %{user: user} -> user
+        _ -> nil
+      end
+
+    liked = viewer && Posts.liked_by?(post.id, viewer.id)
+    bookmarked = viewer && Posts.bookmarked?(viewer.id, post.id)
+
+    is_following =
+      cond do
+        viewer == nil -> false
+        viewer.id == post.user_id -> false
+        true -> Accounts.following?(viewer.id, post.user_id)
       end
 
     socket =
@@ -22,7 +33,9 @@ defmodule TraysSocialWeb.PostLive.Show do
       |> assign(:page_title, "Post")
       |> assign(:post, post)
       |> assign(:photo_index, 0)
-      |> assign(:liked, liked)
+      |> assign(:liked, liked || false)
+      |> assign(:bookmarked, bookmarked || false)
+      |> assign(:is_following, is_following)
       |> assign(:comment_body, "")
       |> stream(:comments, comments)
 
@@ -86,6 +99,59 @@ defmodule TraysSocialWeb.PostLive.Show do
         end
 
         {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle-bookmark", _params, socket) do
+    case socket.assigns[:current_scope] do
+      nil ->
+        {:noreply, push_navigate(socket, to: ~p"/users/log-in")}
+
+      %{user: user} ->
+        post = socket.assigns.post
+
+        new_bookmarked =
+          if socket.assigns.bookmarked do
+            Posts.delete_bookmark(user.id, post.id)
+            false
+          else
+            case Posts.create_bookmark(user.id, post.id) do
+              {:ok, _} -> true
+              {:error, _} -> socket.assigns.bookmarked
+            end
+          end
+
+        {:noreply, assign(socket, :bookmarked, new_bookmarked)}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle-follow", _params, socket) do
+    case socket.assigns[:current_scope] do
+      nil ->
+        {:noreply, push_navigate(socket, to: ~p"/users/log-in")}
+
+      %{user: viewer} ->
+        author = socket.assigns.post.user
+
+        # Guard: don't let users follow themselves through this affordance.
+        if viewer.id == author.id do
+          {:noreply, socket}
+        else
+          new_following =
+            if socket.assigns.is_following do
+              Accounts.unfollow_user(viewer, author)
+              false
+            else
+              case Accounts.follow_user(viewer, author) do
+                {:ok, _} -> true
+                {:error, _} -> socket.assigns.is_following
+              end
+            end
+
+          {:noreply, assign(socket, :is_following, new_following)}
+        end
     end
   end
 

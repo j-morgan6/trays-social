@@ -295,5 +295,71 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
       assert html =~ "1 cook left a note"
       assert html =~ "A comment"
     end
+
+    test "toggle-bookmark saves and unsaves the post", %{conn: conn} do
+      author = user_fixture()
+      viewer = user_fixture()
+      post = post_fixture(user_id: author.id)
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(viewer)
+        |> live(~p"/posts/#{post.id}")
+
+      refute TraysSocial.Posts.bookmarked?(viewer.id, post.id)
+
+      render_click(view, "toggle-bookmark")
+      assert TraysSocial.Posts.bookmarked?(viewer.id, post.id)
+
+      html = render(view)
+      assert html =~ "Saved to My Tray"
+
+      render_click(view, "toggle-bookmark")
+      refute TraysSocial.Posts.bookmarked?(viewer.id, post.id)
+
+      html = render(view)
+      assert html =~ "Save to My Tray"
+    end
+
+    test "toggle-follow follows and unfollows the recipe author", %{conn: conn} do
+      author = user_fixture()
+      viewer = user_fixture()
+      post = post_fixture(user_id: author.id)
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(viewer)
+        |> live(~p"/posts/#{post.id}")
+
+      refute TraysSocial.Accounts.following?(viewer.id, author.id)
+
+      render_click(view, "toggle-follow")
+      assert TraysSocial.Accounts.following?(viewer.id, author.id)
+
+      html = render(view)
+      assert html =~ ~r/phx-click="toggle-follow"[^>]*>\s*Following/
+
+      render_click(view, "toggle-follow")
+      refute TraysSocial.Accounts.following?(viewer.id, author.id)
+    end
+
+    test "Cook badge renders next to recipe author's own replies", %{conn: conn} do
+      author = user_fixture()
+      other = user_fixture()
+      post = post_fixture(user_id: author.id)
+      _own_comment = comment_fixture(post, author, %{body: "Cook reply"})
+      _other_comment = comment_fixture(post, other, %{body: "Visitor reply"})
+
+      {:ok, _view, html} =
+        conn
+        |> log_in_user(other)
+        |> live(~p"/posts/#{post.id}")
+
+      # Both comments render; the author's comment is paired with the
+      # Mint Whisper "Cook" badge.
+      assert html =~ "Cook reply"
+      assert html =~ "Visitor reply"
+      assert html =~ ~r/#{author.username}[^<]*<\/span>\s*<span[^>]*>\s*Cook\s*</
+    end
   end
 end

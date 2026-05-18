@@ -62,10 +62,32 @@ defmodule TraysSocialWeb.FollowersLive.Show do
     |> assign(:user, user)
     |> assign(:tab, tab)
     |> assign(:cooks, cooks)
+    |> assign(:query, "")
     |> assign(:follower_count, follower_count)
     |> assign(:following_count, following_count)
     |> assign(:following_ids, following_ids)
     |> assign(:viewer_id, viewer && viewer.id)
+  end
+
+  # Filter the loaded cooks by username or bio (case-insensitive substring).
+  # The list is capped at ~40 in memory, so client-side filtering is fine
+  # for now; if pagination expands this, fold the query into the DB.
+  def filter_cooks(cooks, "") do
+    cooks
+  end
+
+  def filter_cooks(cooks, query) do
+    q = String.downcase(query)
+
+    Enum.filter(cooks, fn cook ->
+      String.contains?(String.downcase(cook.username), q) or
+        (cook.bio && String.contains?(String.downcase(cook.bio), q))
+    end)
+  end
+
+  @impl true
+  def handle_event("search", %{"query" => q}, socket) do
+    {:noreply, assign(socket, :query, q)}
   end
 
   @impl true

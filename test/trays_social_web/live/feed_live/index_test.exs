@@ -273,6 +273,24 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       # Nudge should not appear for personalized feeds
       refute html =~ "Follow people to personalize your feed"
     end
+
+    test "toggle-bookmark saves and unsaves a post", %{conn: conn, viewer: viewer} do
+      author = user_fixture()
+      post = post_fixture(user_id: author.id)
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      # Not saved initially
+      refute TraysSocial.Posts.bookmarked?(viewer.id, post.id)
+
+      # Save
+      render_click(view, "toggle-bookmark", %{"post-id" => to_string(post.id)})
+      assert TraysSocial.Posts.bookmarked?(viewer.id, post.id)
+
+      # Unsave
+      render_click(view, "toggle-bookmark", %{"post-id" => to_string(post.id)})
+      refute TraysSocial.Posts.bookmarked?(viewer.id, post.id)
+    end
   end
 
   describe "Authentication (D60)" do

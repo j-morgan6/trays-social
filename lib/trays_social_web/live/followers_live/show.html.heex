@@ -50,40 +50,60 @@
   </div>
 
   <%!-- Search field — shown only when the list is longer than 20, per
-       the design. Visual-only for now; wiring needs a new event. --%>
+       the design. Filters the loaded cooks in-memory; results are
+       capped at the page size today. --%>
   <% list_count =
     case @tab do
       :followers -> @follower_count
       :following -> @following_count
     end %>
   <%= if list_count > 20 do %>
-    <div class="h-10 rounded-full bg-base-100 border border-base-300 flex items-center gap-2.5 px-4 mb-5 text-sm text-base-content/60">
-      <.icon name="hero-magnifying-glass" class="size-4" />
-      <span>
-        Search {list_count} {if @tab == :followers, do: "followers", else: "people"} by name or username
-      </span>
-    </div>
+    <.form for={%{}} as={:search} phx-change="search" phx-submit="search" class="mb-5">
+      <div class="h-10 rounded-full bg-base-100 border border-base-300 flex items-center gap-2.5 px-4 focus-within:border-primary transition-colors">
+        <.icon name="hero-magnifying-glass" class="size-4 text-base-content/60" />
+        <input
+          type="text"
+          name="query"
+          value={@query}
+          placeholder={"Search #{list_count} #{if @tab == :followers, do: "followers", else: "people"} by name or username"}
+          autocomplete="off"
+          class="flex-1 bg-transparent border-0 outline-none text-sm text-base-content placeholder:text-base-content/40"
+          phx-debounce="150"
+        />
+      </div>
+    </.form>
   <% end %>
 
+  <% visible_cooks = filter_cooks(@cooks, @query) %>
+
   <%!-- List --%>
-  <%= if Enum.empty?(@cooks) do %>
-    <div class="bg-base-100 border border-base-300 rounded-sm p-10 text-center">
-      <p class="font-serif-editorial italic text-[16px] text-base-content/70">
-        <%= case @tab do %>
-          <% :followers -> %>
-            No followers yet.
-          <% :following -> %>
-            <%= if @viewer_id == @user.id do %>
-              You're not following anyone yet.
-            <% else %>
-              {@user.username} isn't following anyone yet.
-            <% end %>
-        <% end %>
-      </p>
-    </div>
-  <% else %>
+  <%= cond do %>
+    <% Enum.empty?(@cooks) -> %>
+      <div class="bg-base-100 border border-base-300 rounded-sm p-10 text-center">
+        <p class="font-serif-editorial italic text-[16px] text-base-content/70">
+          <%= case @tab do %>
+            <% :followers -> %>
+              No followers yet.
+            <% :following -> %>
+              <%= if @viewer_id == @user.id do %>
+                You're not following anyone yet.
+              <% else %>
+                {@user.username} isn't following anyone yet.
+              <% end %>
+          <% end %>
+        </p>
+      </div>
+
+    <% Enum.empty?(visible_cooks) -> %>
+      <div class="bg-base-100 border border-base-300 rounded-sm p-8 text-center">
+        <p class="font-serif-editorial italic text-[15px] text-base-content/70">
+          No one matches &ldquo;{@query}&rdquo; in this list.
+        </p>
+      </div>
+
+    <% true -> %>
     <div class="bg-base-100 border border-base-300 rounded-sm divide-y divide-base-300">
-      <%= for cook <- @cooks do %>
+      <%= for cook <- visible_cooks do %>
         <% is_viewer = @viewer_id == cook.id %>
         <% is_following = MapSet.member?(@following_ids, cook.id) %>
 
@@ -147,10 +167,16 @@
       <% end %>
     </div>
 
-    <%= if length(@cooks) < list_count do %>
-      <div class="text-center mt-4 font-serif-editorial italic text-[13px] text-base-content/60">
-        Showing {length(@cooks)} of {list_count} · scroll for more
-      </div>
+    <%= cond do %>
+      <% @query != "" -> %>
+        <div class="text-center mt-4 font-serif-editorial italic text-[13px] text-base-content/60">
+          {length(visible_cooks)} {if length(visible_cooks) == 1, do: "match", else: "matches"} for &ldquo;{@query}&rdquo;
+        </div>
+      <% length(@cooks) < list_count -> %>
+        <div class="text-center mt-4 font-serif-editorial italic text-[13px] text-base-content/60">
+          Showing {length(@cooks)} of {list_count} · scroll for more
+        </div>
+      <% true -> %>
     <% end %>
   <% end %>
 </main>

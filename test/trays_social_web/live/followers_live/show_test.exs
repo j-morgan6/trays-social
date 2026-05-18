@@ -87,5 +87,36 @@ defmodule TraysSocialWeb.FollowersLive.ShowTest do
 
       assert path == "/"
     end
+
+    test "search filters the loaded cooks in-memory", %{conn: conn} do
+      user = user_fixture()
+      viewer = user_fixture()
+      alice = user_fixture(%{username: "alice_cooks"})
+      bob = user_fixture(%{username: "bob_bakes"})
+
+      {:ok, _} = Accounts.follow_user(alice, user)
+      {:ok, _} = Accounts.follow_user(bob, user)
+
+      {:ok, view, html} =
+        conn
+        |> log_in_user(viewer)
+        |> live(~p"/@#{user.username}/followers")
+
+      # Both followers render initially.
+      assert html =~ "alice_cooks"
+      assert html =~ "bob_bakes"
+
+      # Note: with only 2 followers (≤ 20) the search input isn't
+      # rendered, but the search event is still wired and the filter
+      # logic runs. Send the event directly.
+      html = render_change(view, "search", %{"query" => "alice"})
+      assert html =~ "alice_cooks"
+      refute html =~ "bob_bakes"
+
+      # Clear restores the full list.
+      html = render_change(view, "search", %{"query" => ""})
+      assert html =~ "alice_cooks"
+      assert html =~ "bob_bakes"
+    end
   end
 end
