@@ -7,6 +7,8 @@ struct PostDetailView: View {
     @State private var showCookMode = false
     @State private var showReport = false
 
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
         ZStack(alignment: .bottom) {
             if viewModel.isLoading {
@@ -14,10 +16,19 @@ struct PostDetailView: View {
             } else if let post = viewModel.post {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        // Photo carousel
-                        photoSection(post)
+                        // Hero — photo with overlaid title/eyebrow and
+                        // floating back/share/bookmark controls.
+                        RecipeHero(
+                            post: post,
+                            bookmarked: post.bookmarkedByCurrentUser ?? false,
+                            onBack: { dismiss() },
+                            onShare: { /* TODO: share sheet */ },
+                            onBookmark: { viewModel.toggleBookmark() }
+                        )
 
-                        // Recipe info
+                        // Recipe info (byline + metadata + cook's note +
+                        // engagement). Title/eyebrow live in the hero
+                        // above, so this block starts at the byline.
                         infoSection(post)
 
                         if post.isRecipe {
@@ -71,6 +82,12 @@ struct PostDetailView: View {
         }
         .background(Theme.background)
         .navigationBarTitleDisplayMode(.inline)
+        // Hide the system nav bar — the floating back/share/bookmark
+        // controls on the hero serve that role. Edge-back swipe still
+        // works (NavigationStack handles it). iOS 17 API; iOS 18 has
+        // `.toolbarVisibility(.hidden, for:)`.
+        .toolbar(.hidden, for: .navigationBar)
+        .ignoresSafeArea(edges: .top)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -97,36 +114,7 @@ struct PostDetailView: View {
         }
     }
 
-    // MARK: - Photo
-
-    @ViewBuilder
-    private func photoSection(_ post: Post) -> some View {
-        if post.photos.count > 1 {
-            TabView {
-                ForEach(post.photos.sorted(by: { $0.position < $1.position }), id: \.position) { photo in
-                    AsyncImage(url: photo.url.asBackendURL) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        Rectangle().fill(Color(.systemGray5))
-                    }
-                    .containerRelativeFrame(.horizontal)
-                    .frame(height: 300)
-                    .clipped()
-                }
-            }
-            .tabViewStyle(.page)
-            .frame(height: 300)
-        } else if let url = post.primaryPhotoURL {
-            AsyncImage(url: url.asBackendURL) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Rectangle().fill(Color(.systemGray5))
-            }
-            .containerRelativeFrame(.horizontal)
-            .frame(height: 300)
-            .clipped()
-        }
-    }
+    // Photo carousel lives in RecipeHero (Views/Post/RecipeHero.swift).
 
     // MARK: - Info
 
@@ -138,21 +126,7 @@ struct PostDetailView: View {
 
     private func infoSection(_ post: Post) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Eyebrow — first tag in monospaced primary green
-            if let firstTag = post.tags.first {
-                Text(firstTag.uppercased())
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Theme.primary)
-                    .tracking(2.5)
-            }
-
-            // Title — serif, oversized
-            Text(titleText(for: post))
-                .font(.serif(44))
-                .foregroundStyle(Theme.text)
-                .lineSpacing(-4)
-                .fixedSize(horizontal: false, vertical: true)
-
+            // Title + eyebrow now live in RecipeHero above.
             // Byline
             Button {
                 appState.navigationPath.append(post.user.username)

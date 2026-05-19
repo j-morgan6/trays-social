@@ -1,25 +1,82 @@
 import SwiftUI
 
-/// Editorial recipe card — mirrors the web Feed card from the Claude
-/// Design handoff (lib/trays_social_web/live/feed_live/index.html.heex).
-/// Photo on top, serif recipe title as the visual anchor, structured
-/// metadata row, quiet engagement row.
+/// Editorial recipe card — matches `IOSRecipeCard` from the Claude
+/// Design handoff (design/handoff/trays-social/project/shared.jsx).
+///
+/// Layout (top → bottom):
+///   1. Header row: avatar · cook + relative time · bookmark icon
+///   2. Photo (320pt tall)
+///   3. Serif 22pt title
+///   4. Teaser caption (12pt muted)
+///   5. Hairline + engagement row (heart, comment count, save count, share)
+///
+/// `isDiscovery` adds a Mint Whisper "Suggested" eyebrow next to the
+/// cook's name — used for posts interleaved from Find into the feed.
 struct PostCardView: View {
     @Environment(AppState.self) private var appState
     let post: Post
+    var isDiscovery: Bool = false
     var onTrayTap: (() -> Void)?
     var onLikeTap: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            headerRow
             heroPhoto
             content
         }
         .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
-            Rectangle()
+            RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
         )
+    }
+
+    // MARK: - Header row
+
+    private var headerRow: some View {
+        HStack(spacing: 10) {
+            Button {
+                appState.navigationPath.append(post.user.username)
+            } label: {
+                HStack(spacing: 10) {
+                    avatar
+                    VStack(alignment: .leading, spacing: 1) {
+                        HStack(spacing: 6) {
+                            Text(post.user.username)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Theme.text)
+                            if isDiscovery {
+                                Text("· SUGGESTED")
+                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(Theme.secondary)
+                                    .tracking(1.2)
+                            }
+                        }
+                        Text("\(post.insertedAt.timeAgo()) ago")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 0)
+
+            Button {
+                onTrayTap?()
+            } label: {
+                Image(systemName: bookmarked ? "bookmark.fill" : "bookmark")
+                    .font(.system(size: 16))
+                    .foregroundStyle(bookmarked ? Theme.accent : Theme.textSecondary)
+            }
+            .buttonStyle(.borderless)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 14)
+        .padding(.bottom, 10)
     }
 
     // MARK: - Hero
@@ -34,7 +91,7 @@ struct PostCardView: View {
                             .resizable()
                             .scaledToFill()
                             .frame(maxWidth: .infinity)
-                            .frame(height: 280)
+                            .frame(height: 320)
                             .clipped()
                     case .failure:
                         photoPlaceholder
@@ -52,113 +109,36 @@ struct PostCardView: View {
     private var photoPlaceholder: some View {
         Rectangle()
             .fill(Color(.systemGray6))
-            .frame(height: 280)
+            .frame(height: 320)
     }
 
     // MARK: - Content
 
     private var content: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            byline
-            recipeTitle
-            metadataRow
-            if !bodyText.isEmpty {
-                cooksNote
+        VStack(alignment: .leading, spacing: 8) {
+            Text(titleText)
+                .font(.serif(22))
+                .foregroundStyle(Theme.text)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(2)
+
+            if !teaserText.isEmpty {
+                Text(teaserText)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(3)
             }
+
             Divider()
                 .background(Color.white.opacity(0.08))
                 .padding(.top, 6)
+
             engagementRow
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 16)
-    }
-
-    // MARK: - Subviews
-
-    private var byline: some View {
-        Button {
-            appState.navigationPath.append(post.user.username)
-        } label: {
-            HStack(spacing: 10) {
-                avatar
-                Text(post.user.username)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.text)
-                Text("·")
-                    .foregroundStyle(Theme.textSecondary)
-                Text(post.insertedAt.timeAgo())
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.textSecondary)
-                Spacer(minLength: 0)
-            }
-        }
-        .buttonStyle(.borderless)
-    }
-
-    private var avatar: some View {
-        Group {
-            if let url = post.user.profilePhotoUrl, let imageURL = url.asBackendURL {
-                AsyncImage(url: imageURL) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Circle().fill(Color(.systemGray4))
-                }
-                .frame(width: 28, height: 28)
-                .clipShape(Circle())
-            } else {
-                Circle()
-                    .fill(Theme.primary)
-                    .frame(width: 28, height: 28)
-                    .overlay(
-                        Text(String(post.user.username.prefix(1)).uppercased())
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.white)
-                    )
-            }
-        }
-    }
-
-    /// Serif recipe title — derived from the first sentence/line of the
-    /// caption, same convention the web card uses.
-    private var recipeTitle: some View {
-        Text(titleText)
-            .font(.serif(28))
-            .foregroundStyle(Theme.text)
-            .fixedSize(horizontal: false, vertical: true)
-            .lineLimit(2)
-    }
-
-    private var metadataRow: some View {
-        HStack(spacing: 6) {
-            if let time = post.cookingTimeMinutes {
-                Image(systemName: "clock")
-                    .font(.system(size: 10))
-                Text("\(time) min")
-            }
-            if !post.ingredients.isEmpty {
-                Text("·")
-                Text("\(post.ingredients.count) ingredients")
-            }
-            if !post.tools.isEmpty {
-                Text("·")
-                Text("\(post.tools.count) tools")
-            }
-            if let servings = post.servings {
-                Text("·")
-                Text("serves \(servings)")
-            }
-        }
-        .font(.system(size: 12))
-        .foregroundStyle(Theme.textSecondary)
-    }
-
-    private var cooksNote: some View {
-        Text(bodyText)
-            .font(.system(size: 14))
-            .foregroundStyle(Theme.text.opacity(0.9))
-            .lineLimit(2)
-            .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 
     private var engagementRow: some View {
@@ -180,13 +160,14 @@ struct PostCardView: View {
             }
             .foregroundStyle(Theme.textSecondary)
 
-            Button {
-                onTrayTap?()
-            } label: {
-                Image(systemName: (post.bookmarkedByCurrentUser ?? false) ? "bookmark.fill" : "bookmark")
-                    .foregroundStyle((post.bookmarkedByCurrentUser ?? false) ? Theme.primaryLight : Theme.textSecondary)
+            // Save COUNT (not a toggle — toggle lives in the header row).
+            // Today there's no saves_count on the API; we surface the
+            // current cook's own bookmark state as a hint instead.
+            HStack(spacing: 5) {
+                Image(systemName: "bookmark")
+                Text(bookmarked ? "Saved" : "Save")
             }
-            .buttonStyle(.borderless)
+            .foregroundStyle(Theme.textSecondary)
 
             Spacer()
 
@@ -194,30 +175,56 @@ struct PostCardView: View {
                 .foregroundStyle(Theme.textSecondary)
         }
         .font(.system(size: 12))
-        // Touch targets stay 44pt without ballooning the visual row.
         .frame(minHeight: 24)
     }
 
-    // MARK: - Title / body derivation
+    // MARK: - Subviews
+
+    private var avatar: some View {
+        Group {
+            if let url = post.user.profilePhotoUrl, let imageURL = url.asBackendURL {
+                AsyncImage(url: imageURL) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Circle().fill(Color(.systemGray4))
+                }
+                .frame(width: 32, height: 32)
+                .clipShape(Circle())
+            } else {
+                Circle()
+                    .fill(Theme.primary)
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Text(String(post.user.username.prefix(1)).uppercased())
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white)
+                    )
+            }
+        }
+    }
+
+    // MARK: - Derived state
+
+    private var bookmarked: Bool {
+        post.bookmarkedByCurrentUser ?? false
+    }
 
     /// First sentence (or line) of the caption — the editorial title.
     private var titleText: String {
         let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !raw.isEmpty else { return "Untitled recipe" }
-
         let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
             .first?
             .trimmingCharacters(in: .whitespaces) ?? raw
-
         return candidate.isEmpty ? "Untitled recipe" : candidate
     }
 
-    /// Everything after the title — rendered as a quiet cook's note.
-    private var bodyText: String {
+    /// Everything after the title — the muted teaser caption that sits
+    /// below the serif title in the design.
+    private var teaserText: String {
         let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let title = titleText
         guard raw.count > title.count else { return "" }
-
         return raw.dropFirst(title.count)
             .trimmingCharacters(in: CharacterSet(charactersIn: " \n\t.!?"))
     }

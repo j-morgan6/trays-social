@@ -11,35 +11,16 @@ struct MainView: View {
 
         NavigationStack(path: $state.navigationPath) {
             VStack(spacing: 0) {
-                // Top bar
-                HStack {
-                    Text("Trays")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(Theme.text)
-
-                    Spacer()
-
-                    Button {
+                // Editorial header — serif Trays wordmark, mono day eyebrow,
+                // bell with amber dot, big serif page title (changes per tray).
+                EditorialHeader(
+                    title: trayTitle(for: state.selectedTray),
+                    eyebrow: EditorialDate.eyebrowToday
+                ) {
+                    EditorialBellButton {
                         state.navigationPath.append(NotificationRoute())
-                    } label: {
-                        Image(systemName: "bell")
-                            .font(.body)
-                            .foregroundStyle(.gray)
-                            .overlay(alignment: .topTrailing) {
-                                Circle()
-                                    .fill(Theme.accent)
-                                    .frame(width: 8, height: 8)
-                                    .offset(x: 2, y: -2)
-                            }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-
-                // Tray selector
-                TraySelector(selectedTray: $state.selectedTray)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
 
                 // Swipeable tray content
                 TabView(selection: $state.selectedTray) {
@@ -54,8 +35,12 @@ struct MainView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
 
-                // Bottom bar
+                // Editorial bottom tab bar — Feed/Find/[+]/My Tray/Profile.
+                // Replaces the old top TraySelector (tray switching now
+                // lives in the bottom bar; swipe still works via the
+                // TabView above).
                 BottomBar(
+                    selectedTray: $state.selectedTray,
                     onCreateTap: { showCreatePost = true },
                     onProfileTap: {
                         state.navigationPath.append(appState.currentUser?.username ?? "")
@@ -81,5 +66,15 @@ struct MainView: View {
             }
         }
         .tint(Theme.primary)
+    }
+
+    /// Big serif title for the editorial header. Mirrors the per-screen
+    /// IOSHeaderDark title in the design — Feed / Find / My Tray.
+    private func trayTitle(for tray: AppState.TrayTab) -> String {
+        switch tray {
+        case .feed: "Feed"
+        case .find: "Find"
+        case .myTray: "My Tray"
+        }
     }
 }

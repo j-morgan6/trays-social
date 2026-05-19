@@ -5,8 +5,8 @@ struct FeedView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(viewModel.posts) { post in
+            LazyVStack(spacing: 14) {
+                ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
                     NavigationLink(value: post) {
                         PostCardView(
                             post: post,
@@ -15,9 +15,17 @@ struct FeedView: View {
                         )
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.borderless)
                     .onAppear {
                         prefetchIfNeeded(post)
+                    }
+
+                    // Discovery insert — surfaces between the first and
+                    // second post when the feed is non-trivial. Matches
+                    // the "From Find · adjacent to your saves" card the
+                    // design specifies for iOS Feed.
+                    if index == 0, viewModel.posts.count > 1 {
+                        DiscoveryInsert()
                     }
                 }
 
@@ -27,6 +35,9 @@ struct FeedView: View {
                         .padding()
                 }
             }
+            .padding(.horizontal, 14)
+            .padding(.top, 6)
+            .padding(.bottom, 110)
         }
         .refreshable {
             await viewModel.refresh()
