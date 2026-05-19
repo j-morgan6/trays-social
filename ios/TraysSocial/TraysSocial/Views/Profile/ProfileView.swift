@@ -24,124 +24,7 @@ struct ProfileView: View {
                 }
                 .skeletonGroup(label: "Loading profile")
             } else if let user = viewModel.user {
-                VStack(spacing: 20) {
-                    // Avatar + Name
-                    VStack(spacing: 8) {
-                        Circle()
-                            .fill(Color(.systemGray4))
-                            .frame(width: 80, height: 80)
-                            .overlay {
-                                if let url = user.profilePhotoUrl, let imageURL = url.asBackendURL {
-                                    AsyncImage(url: imageURL) { image in
-                                        image.resizable().scaledToFill()
-                                    } placeholder: { Color.clear }
-                                        .frame(width: 80, height: 80)
-                                        .clipShape(Circle())
-                                } else {
-                                    Image(systemName: "person.fill")
-                                        .font(.title)
-                                        .foregroundStyle(.gray)
-                                }
-                            }
-
-                        Text(user.username)
-                            .font(.title2.weight(.bold))
-                            .foregroundStyle(Theme.text)
-
-                        if let bio = user.bio, !bio.isEmpty {
-                            Text(bio)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                    }
-
-                    // Stats
-                    HStack(spacing: 16) {
-                        statBox(value: user.postCount ?? 0, label: "Recipes")
-                        NavigationLink(value: FollowListRoute(username: user.username, mode: .followers)) {
-                            statBox(value: user.followerCount ?? 0, label: "Followers")
-                        }
-                        .buttonStyle(.plain)
-                        NavigationLink(value: FollowListRoute(username: user.username, mode: .following)) {
-                            statBox(value: user.followingCount ?? 0, label: "Following")
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    // Action button
-                    if viewModel.isOwnProfile {
-                        HStack(spacing: 12) {
-                            Button("Edit Profile") { showEditProfile = true }
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(Theme.text)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                                .background(Theme.surface)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                            Button { showSettings = true } label: {
-                                Image(systemName: "gearshape")
-                                    .foregroundStyle(.gray)
-                                    .padding(10)
-                                    .background(Theme.surface)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                    } else {
-                        Button {
-                            viewModel.toggleFollow()
-                        } label: {
-                            Text(user.followedByCurrentUser == true ? "Following" : "Follow")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                                .background(user.followedByCurrentUser == true ? Theme.surface : Theme.primary)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
-                        .padding(.horizontal, 16)
-                    }
-
-                    // Content filter
-                    Picker("Filter", selection: Bindable(viewModel).filter) {
-                        Text("All").tag("all")
-                        Text("Posts").tag("posts")
-                        Text("Recipes").tag("recipes")
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 16)
-                    .onChange(of: viewModel.filter) {
-                        Task {
-                            if let user = viewModel.user {
-                                await viewModel.loadPosts(username: user.username)
-                            }
-                        }
-                    }
-
-                    // Posts grid
-                    LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 4) {
-                        ForEach(viewModel.posts) { post in
-                            NavigationLink(value: post) {
-                                if let url = post.primaryPhotoURL {
-                                    AsyncImage(url: url.asBackendURL) { image in
-                                        image.resizable().scaledToFill()
-                                    } placeholder: {
-                                        Rectangle().fill(Color(.systemGray5))
-                                    }
-                                    .frame(height: 160)
-                                    .clipped()
-                                } else {
-                                    Rectangle().fill(Color(.systemGray5))
-                                        .frame(height: 160)
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 2)
-                }
-                .padding(.top, 16)
+                editorialProfileBody(user)
             }
         }
         .background(Theme.background)
@@ -201,19 +84,205 @@ struct ProfileView: View {
         }
     }
 
-    private func statBox(value: Int, label: String) -> some View {
-        VStack(spacing: 2) {
-            Text("\(value)")
-                .font(.headline)
-                .foregroundStyle(Theme.primary)
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+    /// Editorial profile body — matches IOSProfile from the Claude
+    /// Design handoff. Avatar + serif display name + @handle, bio,
+    /// stats row with serif numerals, Follow/Edit CTA, 3-up grid with
+    /// serif title overlay.
+    private func editorialProfileBody(_ user: User) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Hero row — avatar (80pt) inline with serif name + handle
+            HStack(alignment: .center, spacing: 16) {
+                profileAvatar(user)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(user.username)
+                        .font(.serif(30))
+                        .foregroundStyle(Theme.text)
+                        .lineLimit(1)
+                    Text("@\(user.username)")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                Spacer(minLength: 0)
+            }
+
+            if let bio = user.bio, !bio.isEmpty {
+                Text(bio)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Theme.text)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            // Stats — serif numerals + muted labels
+            HStack(spacing: 24) {
+                statCell(value: user.postCount ?? 0, label: "recipes")
+                NavigationLink(value: FollowListRoute(username: user.username, mode: .followers)) {
+                    statCell(value: user.followerCount ?? 0, label: "followers")
+                }
+                .buttonStyle(.borderless)
+                NavigationLink(value: FollowListRoute(username: user.username, mode: .following)) {
+                    statCell(value: user.followingCount ?? 0, label: "following")
+                }
+                .buttonStyle(.borderless)
+                Spacer(minLength: 0)
+            }
+
+            // Action row
+            actionRow(user)
+                .padding(.top, 4)
+
+            // Tabs eyebrow — design uses Recipes/About; keep the
+            // existing filter Picker but reframe as quiet section
+            // headers so it's visibly the design's tab strip.
+            Divider().background(Color.white.opacity(0.08))
+
+            Picker("Filter", selection: Bindable(viewModel).filter) {
+                Text("All").tag("all")
+                Text("Posts").tag("posts")
+                Text("Recipes").tag("recipes")
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: viewModel.filter) {
+                Task {
+                    if let user = viewModel.user {
+                        await viewModel.loadPosts(username: user.username)
+                    }
+                }
+            }
+
+            // 3-up grid with serif title overlay (matches IOSProfile)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
+                ForEach(viewModel.posts) { post in
+                    NavigationLink(value: post) {
+                        gridTile(post)
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
-        .background(Theme.secondary.opacity(0.25))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
+        .padding(.bottom, 110)
+    }
+
+    private func profileAvatar(_ user: User) -> some View {
+        Group {
+            if let url = user.profilePhotoUrl, let imageURL = url.asBackendURL {
+                AsyncImage(url: imageURL) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Color(.systemGray4)
+                }
+                .frame(width: 80, height: 80)
+                .clipShape(Circle())
+                .id(imageURL)
+            } else {
+                Circle()
+                    .fill(Theme.primary)
+                    .frame(width: 80, height: 80)
+                    .overlay(
+                        Text(String(user.username.prefix(1)).uppercased())
+                            .font(.serif(34))
+                            .foregroundStyle(.white)
+                    )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func actionRow(_ user: User) -> some View {
+        if viewModel.isOwnProfile {
+            HStack(spacing: 10) {
+                Button("Edit profile") { showEditProfile = true }
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Theme.text)
+                    .frame(maxWidth: .infinity, minHeight: 38)
+                    .background(Theme.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                Button { showSettings = true } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 38, height: 38)
+                        .background(Theme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.borderless)
+            }
+        } else {
+            let following = user.followedByCurrentUser == true
+            Button {
+                viewModel.toggleFollow()
+            } label: {
+                Text(following ? "Following" : "Follow \(user.username)")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(following ? Theme.text : .white)
+                    .frame(maxWidth: .infinity, minHeight: 42)
+                    .background(following ? Theme.surface : Theme.primaryLight)
+                    .clipShape(RoundedRectangle(cornerRadius: 21))
+            }
+            .buttonStyle(.borderless)
+        }
+    }
+
+    private func statCell(value: Int, label: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text("\(value)")
+                .font(.serif(18))
+                .foregroundStyle(Theme.text)
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.textSecondary)
+        }
+    }
+
+    private func gridTile(_ post: Post) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            if let url = post.primaryPhotoURL {
+                AsyncImage(url: url.asBackendURL) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Rectangle().fill(Color(.systemGray5))
+                }
+                .frame(height: 116)
+                .clipped()
+            } else {
+                Rectangle().fill(Color(.systemGray5)).frame(height: 116)
+            }
+
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.8)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 116)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(gridTileTitle(post))
+                    .font(.serif(12))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                if let time = post.cookingTimeMinutes {
+                    Text("\(time) MIN")
+                        .font(.system(size: 8, weight: .medium, design: .monospaced))
+                        .tracking(1)
+                        .foregroundStyle(.white.opacity(0.85))
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.bottom, 6)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+
+    private func gridTileTitle(_ post: Post) -> String {
+        let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return "Recipe" }
+        let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
+            .first?
+            .trimmingCharacters(in: .whitespaces) ?? raw
+        return candidate.isEmpty ? "Recipe" : candidate
     }
 }
 

@@ -10,13 +10,17 @@ struct CreatePostView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 18) {
+                    editorialHeading
+
                     // Type picker — also swipe horizontally on the form to toggle
                     Picker("Type", selection: $viewModel.postType) {
                         Text("Recipe").tag(CreatePostViewModel.PostType.recipe)
                         Text("Post").tag(CreatePostViewModel.PostType.post)
                     }
                     .pickerStyle(.segmented)
+
+                    sectionLabel("PHOTOGRAPH")
 
                     // Photo display + picker
                     if let image = viewModel.photoImage {
@@ -62,7 +66,8 @@ struct CreatePostView: View {
                             Task { await viewModel.loadPhoto() }
                         }
 
-                    // Caption
+                    // Caption — also serves as the title's first line.
+                    sectionLabel(viewModel.postType == .recipe ? "TITLE & COOK'S NOTE" : "CAPTION")
                     TextField("Caption", text: $viewModel.caption, axis: .vertical)
                         .lineLimit(3 ... 6)
                         .textFieldStyle(.plain)
@@ -71,11 +76,13 @@ struct CreatePostView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     if viewModel.postType == .recipe {
+                        sectionLabel("TIMING")
                         recipeFields
                     }
 
                     // Tags
-                    TextField("Tags (comma separated)", text: $viewModel.tags)
+                    sectionLabel("TAGS")
+                    TextField("comma separated", text: $viewModel.tags)
                         .textFieldStyle(.plain)
                         .padding(12)
                         .background(Theme.surface)
@@ -87,7 +94,8 @@ struct CreatePostView: View {
                             .foregroundStyle(.red)
                     }
 
-                    // Publish button
+                    // Publish button — Golden Amber, "do something
+                    // delicious" reserved color per the editorial system.
                     Button {
                         Task {
                             if await viewModel.publish() {
@@ -97,20 +105,24 @@ struct CreatePostView: View {
                     } label: {
                         if viewModel.isPublishing {
                             ProgressView()
-                                .tint(.white)
+                                .tint(Color(hex: 0x2A1C00))
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 50)
+                                .frame(height: 52)
                         } else {
-                            Text("Serve it")
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
+                            HStack(spacing: 8) {
+                                Image(systemName: "paperplane.fill")
+                                Text(viewModel.postType == .recipe ? "Publish recipe" : "Publish post")
+                            }
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color(hex: 0x2A1C00))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
                         }
                     }
-                    .background(Theme.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(Theme.accent)
+                    .clipShape(Capsule())
                     .disabled(viewModel.isPublishing)
+                    .padding(.top, 8)
                 }
                 .padding(16)
                 .simultaneousGesture(
@@ -146,6 +158,37 @@ struct CreatePostView: View {
             }
         }
         .tint(Theme.primary)
+    }
+
+    // MARK: - Editorial heading + section labels
+
+    /// Mono eyebrow + serif page heading at the top of the form,
+    /// mirroring IOSCreate's "Step 3 of 5 → What's in it?" pattern but
+    /// without the multi-step machinery.
+    private var editorialHeading: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(viewModel.postType == .recipe ? "WRITING A RECIPE PAGE" : "WRITING A POST")
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .tracking(2)
+                .foregroundStyle(Theme.primary)
+
+            Text(viewModel.postType == .recipe ? "Tell us how you cooked it." : "Show us what you ate.")
+                .font(.serif(32))
+                .foregroundStyle(Theme.text)
+                .lineSpacing(-4)
+        }
+        .padding(.top, 4)
+        .padding(.bottom, 6)
+    }
+
+    /// Small monospace caps section label — matches the design's
+    /// per-section eyebrows.
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 10, weight: .medium, design: .monospaced))
+            .tracking(1.6)
+            .foregroundStyle(Theme.textSecondary)
+            .padding(.top, 6)
     }
 
     // MARK: - Recipe Fields
