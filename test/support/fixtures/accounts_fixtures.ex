@@ -7,7 +7,8 @@ defmodule TraysSocial.AccountsFixtures do
   import Ecto.Query
 
   alias TraysSocial.Accounts
-  alias TraysSocial.Accounts.Scope
+  alias TraysSocial.Accounts.{Scope, User}
+  alias TraysSocial.Repo
 
   def unique_user_email, do: "user#{System.unique_integer([:positive])}@example.com"
   def unique_user_username, do: "user#{System.unique_integer([:positive])}"
@@ -17,7 +18,8 @@ defmodule TraysSocial.AccountsFixtures do
     Enum.into(attrs, %{
       email: unique_user_email(),
       username: unique_user_username(),
-      password: valid_user_password()
+      password: valid_user_password(),
+      age_confirmation: true
     })
   end
 
@@ -27,7 +29,12 @@ defmodule TraysSocial.AccountsFixtures do
       |> valid_user_attributes()
       |> Accounts.register_user()
 
-    user
+    # Reload from DB so the returned struct matches what tests will see when
+    # they reload the user themselves (e.g. accounts_test.exs:494 pins ^user
+    # after a magic-link login). Without this, virtual fields like
+    # age_confirmation are set on the in-memory struct but nil on reloads,
+    # breaking the pinned match.
+    Repo.get!(User, user.id)
   end
 
   def user_fixture(attrs \\ %{}) do

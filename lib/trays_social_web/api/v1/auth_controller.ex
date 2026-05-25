@@ -6,8 +6,17 @@ defmodule TraysSocialWeb.API.V1.AuthController do
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.AppleAuth
 
-  def register(conn, %{"email" => email, "username" => username, "password" => password}) do
-    case Accounts.register_user(%{email: email, username: username, password: password}) do
+  def register(conn, %{"email" => email, "username" => username, "password" => password} = params) do
+    age_confirmation = Map.get(params, "age_confirmation", false)
+
+    attrs = %{
+      email: email,
+      username: username,
+      password: password,
+      age_confirmation: age_confirmation
+    }
+
+    case Accounts.register_user(attrs) do
       {:ok, user} ->
         Accounts.deliver_user_confirmation_instructions(user, fn token ->
           TraysSocialWeb.Endpoint.url() <> "/users/confirm/" <> token

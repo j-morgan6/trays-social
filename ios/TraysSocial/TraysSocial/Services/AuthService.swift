@@ -5,6 +5,7 @@ enum AuthService {
         let email: String
         let username: String
         let password: String
+        let ageConfirmation: Bool
     }
 
     struct LoginRequest: Encodable {
@@ -53,8 +54,8 @@ enum AuthService {
         let refreshToken: String
     }
 
-    static func register(email: String, username: String, password: String) async throws -> AuthResponse {
-        let body = RegisterRequest(email: email, username: username, password: password)
+    static func register(email: String, username: String, password: String, ageConfirmation: Bool) async throws -> AuthResponse {
+        let body = RegisterRequest(email: email, username: username, password: password, ageConfirmation: ageConfirmation)
         let response: DataResponse<AuthResponse> = try await APIClient.shared.post(path: "/auth/register", body: body)
         return response.data
     }

@@ -49,6 +49,16 @@ struct RegisterView: View {
                             .foregroundStyle(.red)
                     }
                 }
+
+                Toggle(isOn: $viewModel.ageConfirmed) {
+                    Text("I confirm I am 13 years old or older.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.text)
+                }
+                .tint(Theme.primary)
+                .padding(.horizontal, 4)
+                .accessibilityIdentifier("age-confirmation-toggle")
+                .accessibilityHint("Required to register an account")
             }
 
             if let error = viewModel.errorMessage {

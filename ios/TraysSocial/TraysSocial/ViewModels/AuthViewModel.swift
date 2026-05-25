@@ -9,6 +9,7 @@ final class AuthViewModel {
     var email = ""
     var username = ""
     var password = ""
+    var ageConfirmed = false
     var isLoading = false
     var errorMessage: String?
     var rememberMe = false
@@ -40,7 +41,7 @@ final class AuthViewModel {
     }
 
     var canRegister: Bool {
-        isEmailValid && isUsernameValid && isPasswordValid && !isLoading
+        isEmailValid && isUsernameValid && isPasswordValid && ageConfirmed && !isLoading
     }
 
     var canLogin: Bool {
@@ -99,7 +100,12 @@ final class AuthViewModel {
         errorMessage = nil
 
         do {
-            let response = try await AuthService.register(email: email, username: username, password: password)
+            let response = try await AuthService.register(
+                email: email,
+                username: username,
+                password: password,
+                ageConfirmation: ageConfirmed
+            )
             appState.login(token: response.token, user: response.user)
         } catch let error as APIError {
             errorMessage = error.errorDescription
@@ -271,6 +277,7 @@ final class AuthViewModel {
         email = ""
         username = ""
         password = ""
+        ageConfirmed = false
         errorMessage = nil
         isLoading = false
         needsUsername = false

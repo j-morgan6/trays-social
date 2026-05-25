@@ -46,5 +46,20 @@ defmodule TraysSocialWeb.UserRegistrationControllerTest do
       assert response =~ "Start your tray"
       assert response =~ "must have the @ sign and no spaces"
     end
+
+    test "rejects registration when age confirmation checkbox is unchecked", %{conn: conn} do
+      # Phoenix's checkbox component always renders a hidden `value="false"`
+      # before the visible input, so an unchecked checkbox POSTs as "false"
+      # rather than being absent. The missing-key path is covered by the API
+      # auth controller tests; here we exercise the realistic web scenario.
+      attrs = valid_user_attributes(age_confirmation: false)
+
+      conn = post(conn, ~p"/users/register", %{"user" => attrs})
+
+      response = html_response(conn, 200)
+      assert response =~ "Start your tray"
+      assert response =~ "13 or older"
+      refute get_session(conn, :user_token)
+    end
   end
 end

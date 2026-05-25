@@ -13,7 +13,8 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
         post(conn, ~p"/api/v1/auth/register", %{
           email: "new@example.com",
           username: "newuser",
-          password: "valid_password123"
+          password: "valid_password123",
+          age_confirmation: true
         })
 
       assert %{"data" => %{"token" => token, "user" => user}} = json_response(conn, 201)
@@ -30,7 +31,8 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
         post(conn, ~p"/api/v1/auth/register", %{
           email: user.email,
           username: "otheruser",
-          password: "valid_password123"
+          password: "valid_password123",
+          age_confirmation: true
         })
 
       assert %{"errors" => errors} = json_response(conn, 422)
@@ -44,7 +46,8 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
         post(conn, ~p"/api/v1/auth/register", %{
           email: "other@example.com",
           username: user.username,
-          password: "valid_password123"
+          password: "valid_password123",
+          age_confirmation: true
         })
 
       assert %{"errors" => errors} = json_response(conn, 422)
@@ -56,7 +59,8 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
         post(conn, ~p"/api/v1/auth/register", %{
           email: "new@example.com",
           username: "newuser",
-          password: "short"
+          password: "short",
+          age_confirmation: true
         })
 
       assert %{"errors" => errors} = json_response(conn, 422)
@@ -67,6 +71,37 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
       conn = post(conn, ~p"/api/v1/auth/register", %{})
 
       assert %{"errors" => _} = json_response(conn, 422)
+    end
+
+    test "returns error when age confirmation is missing", %{conn: conn} do
+      conn =
+        post(conn, ~p"/api/v1/auth/register", %{
+          email: "new@example.com",
+          username: "newuser",
+          password: "valid_password123"
+        })
+
+      assert %{"errors" => errors} = json_response(conn, 422)
+
+      assert Enum.any?(errors, fn e ->
+               e["field"] == "age_confirmation" and e["message"] =~ "13 or older"
+             end)
+    end
+
+    test "returns error when age confirmation is false", %{conn: conn} do
+      conn =
+        post(conn, ~p"/api/v1/auth/register", %{
+          email: "new@example.com",
+          username: "newuser",
+          password: "valid_password123",
+          age_confirmation: false
+        })
+
+      assert %{"errors" => errors} = json_response(conn, 422)
+
+      assert Enum.any?(errors, fn e ->
+               e["field"] == "age_confirmation" and e["message"] =~ "13 or older"
+             end)
     end
   end
 
@@ -335,7 +370,8 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
         post(conn, ~p"/api/v1/auth/register", %{
           email: "flow@example.com",
           username: "flowuser",
-          password: "valid_password123"
+          password: "valid_password123",
+          age_confirmation: true
         })
 
       assert %{"data" => %{"token" => token}} = json_response(conn1, 201)

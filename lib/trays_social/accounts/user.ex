@@ -2,12 +2,15 @@ defmodule TraysSocial.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @age_confirmation_message "You must confirm you are 13 or older to use Trays"
+
   schema "users" do
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
+    field :age_confirmation, :boolean, virtual: true
     field :username, :string
     field :bio, :string
     field :profile_photo_url, :string
@@ -39,10 +42,15 @@ defmodule TraysSocial.Accounts.User do
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:email, :username, :password])
+    |> cast(attrs, [:email, :username, :password, :age_confirmation])
     |> validate_email(opts)
     |> validate_username(opts)
     |> validate_password(opts)
+    # validate_required catches the "checkbox unchecked" web case (HTML omits
+    # the param entirely); validate_acceptance catches the API case where the
+    # client explicitly sends false. Both use the same user-facing message.
+    |> validate_required([:age_confirmation], message: @age_confirmation_message)
+    |> validate_acceptance(:age_confirmation, message: @age_confirmation_message)
   end
 
   @doc """
