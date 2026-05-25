@@ -135,6 +135,12 @@ final class AuthViewModel {
                     hasSavedCredential = true
                 }
             }
+        } catch let APIError.suspended(message, until) {
+            // Route to AppState so LoginView can surface it on appear (the
+            // user is not logged in yet, so there is no current view to clear,
+            // but stashing the message keeps the UX consistent with the
+            // mid-session suspension path).
+            appState.handleSuspended(message: message, until: until)
         } catch let error as APIError {
             if case .unauthorized = error {
                 errorMessage = "Invalid email or password."
@@ -162,6 +168,10 @@ final class AuthViewModel {
         do {
             let response = try await AuthService.biometricExchange(refreshToken: refreshToken)
             appState.login(token: response.token, user: response.user)
+        } catch let APIError.suspended(message, until) {
+            KeychainService.deleteBiometricCredential()
+            hasSavedCredential = false
+            appState.handleSuspended(message: message, until: until)
         } catch let error as APIError {
             if case .unauthorized = error {
                 errorMessage = "Saved credentials are no longer valid. Please log in manually."
@@ -236,6 +246,8 @@ final class AuthViewModel {
                 } else {
                     appState.login(token: response.token, user: response.user)
                 }
+            } catch let APIError.suspended(message, until) {
+                appState.handleSuspended(message: message, until: until)
             } catch let error as APIError {
                 errorMessage = error.errorDescription
             } catch {

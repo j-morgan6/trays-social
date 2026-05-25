@@ -57,7 +57,28 @@ struct WelcomeView: View {
             .sheet(isPresented: $viewModel.needsUsername) {
                 UsernamePickerView(viewModel: viewModel)
             }
+            // Surfaces a one-shot suspension alert after the user is logged
+            // out by AppState.handleSuspended (either from a fresh login
+            // attempt or a mid-session 403). The .alert is bound to a
+            // computed isPresented so dismissing it clears the message and
+            // prevents re-firing on every re-render.
+            .alert("Account suspended", isPresented: suspensionAlertBinding) {
+                Button("OK", role: .cancel) {
+                    appState.clearSuspensionMessage()
+                }
+            } message: {
+                Text(appState.suspensionMessage ?? "")
+            }
         }
+    }
+
+    private var suspensionAlertBinding: Binding<Bool> {
+        Binding(
+            get: { appState.suspensionMessage != nil },
+            set: { presented in
+                if !presented { appState.clearSuspensionMessage() }
+            }
+        )
     }
 
     // MARK: - Hero

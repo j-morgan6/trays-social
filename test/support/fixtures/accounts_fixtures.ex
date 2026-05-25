@@ -86,6 +86,19 @@ defmodule TraysSocial.AccountsFixtures do
     user
   end
 
+  @doc """
+  A user fixture that is currently suspended.
+
+  By default suspends indefinitely (via the @indefinite_suspension_sentinel
+  used by Accounts.suspend_user). Pass a `%DateTime{}` as the second
+  argument for a bounded suspension.
+  """
+  def suspended_user_fixture(attrs \\ %{}, suspended_until \\ nil) do
+    user = user_fixture(attrs)
+    {:ok, user} = Accounts.suspend_user(user, suspended_until)
+    user
+  end
+
   def extract_user_token(fun) do
     {:ok, captured_email} = fun.(&"[TOKEN]#{&1}[TOKEN]")
     [_, token | _] = String.split(captured_email.text_body, "[TOKEN]")

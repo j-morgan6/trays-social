@@ -981,4 +981,65 @@ defmodule TraysSocial.AccountsTest do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""
     end
   end
+
+  describe "User.is_suspended?/1" do
+    test "returns false when suspended_until is nil" do
+      refute User.is_suspended?(%User{suspended_until: nil})
+    end
+
+    test "returns false when suspended_until is in the past" do
+      past = DateTime.utc_now() |> DateTime.add(-60, :second) |> DateTime.truncate(:second)
+      refute User.is_suspended?(%User{suspended_until: past})
+    end
+
+    test "returns true when suspended_until is in the future" do
+      future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+      assert User.is_suspended?(%User{suspended_until: future})
+    end
+
+    test "returns true for the indefinite-suspension sentinel" do
+      assert User.is_suspended?(%User{suspended_until: ~U[9999-12-31 23:59:59Z]})
+    end
+  end
+
+  describe "suspend_user/2 and unsuspend_user/1" do
+    test "suspending with a datetime sets suspended_until" do
+      user = user_fixture()
+      future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+
+      {:ok, suspended} = Accounts.suspend_user(user, future)
+
+      assert suspended.suspended_until == future
+      assert User.is_suspended?(suspended)
+    end
+
+    test "suspending with nil uses the indefinite sentinel" do
+      user = user_fixture()
+
+      {:ok, suspended} = Accounts.suspend_user(user, nil)
+
+      assert suspended.suspended_until == ~U[9999-12-31 23:59:59Z]
+      assert User.is_suspended?(suspended)
+    end
+
+    test "unsuspending clears suspended_until" do
+      user = user_fixture()
+      {:ok, suspended} = Accounts.suspend_user(user, nil)
+      {:ok, lifted} = Accounts.unsuspend_user(suspended)
+
+      assert lifted.suspended_until == nil
+      refute User.is_suspended?(lifted)
+    end
+
+    test "suspension persists across reloads" do
+      user = user_fixture()
+      future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+      {:ok, _} = Accounts.suspend_user(user, future)
+
+      reloaded = Accounts.get_user!(user.id)
+
+      assert reloaded.suspended_until == future
+      assert User.is_suspended?(reloaded)
+    end
+  end
 end

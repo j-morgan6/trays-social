@@ -158,6 +158,22 @@ defmodule TraysSocialWeb.UserAuthTest do
       refute conn.assigns.current_scope
     end
 
+    test "treats a suspended user with a valid session as anonymous", %{conn: conn} do
+      user = suspended_user_fixture()
+      user_token = Accounts.generate_user_session_token(user)
+
+      conn =
+        conn
+        |> put_session(:user_token, user_token)
+        |> UserAuth.fetch_current_scope_for_user([])
+
+      # The session token is still in the session, but the scope is nil —
+      # which means any require_authenticated_user plug downstream redirects
+      # the suspended user to /users/log-in on their very next request.
+      # Mirrors the "missing data" case at line ~157 above.
+      refute conn.assigns.current_scope
+    end
+
     test "reissues a new token after a few days and refreshes cookie", %{conn: conn, user: user} do
       logged_in_conn =
         conn |> fetch_cookies() |> UserAuth.log_in_user(user, %{"remember_me" => "true"})

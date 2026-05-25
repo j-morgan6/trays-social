@@ -45,6 +45,15 @@ defmodule TraysSocial.Accounts.AppleAuthMock do
      }}
   end
 
+  def do_verify("suspended_apple_token", _expected_audiences) do
+    {:ok,
+     %{
+       "sub" => "suspended_apple_user",
+       "email" => "suspended@apple.com",
+       "nonce" => @test_nonce_hash
+     }}
+  end
+
   def do_verify("valid_apple_token_no_nonce", _expected_audiences) do
     # Used to exercise the "Apple JWT missing required nonce claim" rejection.
     {:ok, %{"sub" => "apple_user_003", "email" => "no-nonce@example.com"}}

@@ -7,7 +7,7 @@ defmodule TraysSocialWeb.UserAuth do
   alias Phoenix.Controller
   alias Phoenix.LiveView
   alias TraysSocial.Accounts
-  alias TraysSocial.Accounts.Scope
+  alias TraysSocial.Accounts.{Scope, User}
 
   # Make the remember me cookie valid for 14 days. This should match
   # the session validity setting in UserToken.
@@ -42,12 +42,32 @@ defmodule TraysSocialWeb.UserAuth do
   or falls back to the `signed_in_path/1`.
   """
   def log_in_user(conn, user, params \\ %{}) do
-    user_return_to = get_session(conn, :user_return_to)
+    if User.is_suspended?(user) do
+      # Single chokepoint: every successful auth path (password, magic link,
+      # Apple, anything future) eventually calls log_in_user. Refusing here
+      # means new login surfaces can't accidentally bypass suspension.
+      conn
+      |> renew_session(nil)
+      |> Phoenix.Controller.put_flash(:error, suspension_flash(user))
+      |> Controller.redirect(to: ~p"/users/log-in")
+    else
+      user_return_to = get_session(conn, :user_return_to)
 
-    conn
-    |> create_or_extend_session(user, params)
-    |> Controller.redirect(to: user_return_to || signed_in_path(conn))
+      conn
+      |> create_or_extend_session(user, params)
+      |> Controller.redirect(to: user_return_to || signed_in_path(conn))
+    end
   end
+
+  defp suspension_flash(%User{suspended_until: %DateTime{} = until}) do
+    if Accounts.indefinite_suspension?(until) do
+      "Your account has been suspended. Contact support@trays.app if you think this is a mistake."
+    else
+      "Your account is suspended until #{Calendar.strftime(until, "%B %-d, %Y")}. Contact support@trays.app if you think this is a mistake."
+    end
+  end
+
+  defp suspension_flash(_), do: "Your account has been suspended."
 
   @doc """
   Logs the user out.
@@ -75,12 +95,19 @@ defmodule TraysSocialWeb.UserAuth do
   """
   def fetch_current_scope_for_user(conn, _opts) do
     with {token, conn} <- ensure_user_token(conn),
-         {user, token_inserted_at} <- Accounts.get_user_by_session_token(token) do
+         {user, token_inserted_at} <- Accounts.get_user_by_session_token(token),
+         false <- User.is_suspended?(user) do
       conn
       |> assign(:current_scope, Scope.for_user(user))
       |> maybe_reissue_user_session_token(user, token_inserted_at)
     else
-      nil -> assign(conn, :current_scope, Scope.for_user(nil))
+      # nil = no token / unknown token; true = user is suspended. Both treat
+      # the request as anonymous so any require_authenticated_user plug
+      # downstream redirects to /users/log-in. The suspension is enforced on
+      # the very next request after the DB row is updated — no session
+      # invalidation step needed because the user struct is reloaded every
+      # request.
+      _ -> assign(conn, :current_scope, Scope.for_user(nil))
     end
   end
 
@@ -297,7 +324,8 @@ defmodule TraysSocialWeb.UserAuth do
 
   defp scope_from_session(session) do
     with token when not is_nil(token) <- session["user_token"],
-         {user, _token_inserted_at} <- Accounts.get_user_by_session_token(token) do
+         {user, _token_inserted_at} <- Accounts.get_user_by_session_token(token),
+         false <- User.is_suspended?(user) do
       Scope.for_user(user)
     else
       _ -> nil

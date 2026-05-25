@@ -135,6 +135,19 @@ actor APIClient {
         case 401:
             throw APIError.unauthorized
         case 403:
+            // Backend returns a structured body with code == "suspended" when
+            // an admin has suspended the user. Surface that as a distinct
+            // APIError so AppState can route to the dedicated suspension flow
+            // (logout + persistent message on LoginView) instead of the
+            // generic "permission denied" message.
+            if let errorResponse = try? decoder.decode(ErrorResponse.self, from: data),
+               let suspended = errorResponse.errors.first(where: { $0.code == "suspended" })
+            {
+                throw APIError.suspended(
+                    message: suspended.message,
+                    suspendedUntil: suspended.suspendedUntil
+                )
+            }
             throw APIError.forbidden
         case 404:
             throw APIError.notFound

@@ -18,9 +18,30 @@ defmodule TraysSocial.Accounts.User do
     field :muted_keywords, {:array, :string}, default: []
     field :is_admin, :boolean, default: false
     field :seen_welcome_at, :utc_datetime
+    field :suspended_until, :utc_datetime
 
     timestamps(type: :utc_datetime)
   end
+
+  @doc """
+  Returns true when the user is currently suspended.
+
+  `suspended_until` is nil for active accounts. A datetime in the future means
+  the user is suspended until that moment; a datetime in the past means the
+  suspension has expired. Pass `~U[9999-12-31 23:59:59Z]` (the sentinel used
+  by `TraysSocial.Accounts.suspend_user/2` when no end date is supplied) for
+  an indefinite suspension.
+  """
+  def is_suspended?(%__MODULE__{suspended_until: nil}), do: false
+
+  def is_suspended?(%__MODULE__{suspended_until: %DateTime{} = suspended_until}) do
+    DateTime.after?(suspended_until, DateTime.utc_now())
+  end
+
+  # Defensive only — `nil` reaches here from `with` chains in UserAuth when
+  # the session lookup fails. Anything else is a programming error and is
+  # intentionally allowed to raise FunctionClauseError.
+  def is_suspended?(nil), do: false
 
   @doc """
   Server-side-only changeset for granting/revoking admin status.

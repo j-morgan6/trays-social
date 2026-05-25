@@ -66,4 +66,111 @@ defmodule TraysSocialWeb.Admin.ReportsLiveTest do
     assert reloaded.status == "resolved"
     assert reloaded.resolved_by_id == admin.id
   end
+
+  defp open_user_report_fixture(reporter, target_user) do
+    {:ok, report} =
+      Reports.create_report(reporter, %{
+        target_type: "user",
+        target_id: target_user.id,
+        reason: "harassment"
+      })
+
+    report
+  end
+
+  test "admin can suspend a target user indefinitely from a user-typed report", %{conn: conn} do
+    admin = admin_fixture()
+    reporter = user_fixture()
+    target = user_fixture()
+    report = open_user_report_fixture(reporter, target)
+
+    {:ok, view, _html} =
+      conn
+      |> log_in_user(admin)
+      |> live(~p"/admin/reports")
+
+    view
+    |> form("form[phx-submit=\"suspend_user\"]", %{
+      "report_id" => report.id,
+      "suspended_until" => ""
+    })
+    |> render_submit()
+
+    reloaded_target = Accounts.get_user!(target.id)
+    assert reloaded_target.suspended_until == ~U[9999-12-31 23:59:59Z]
+
+    reloaded_report = TraysSocial.Repo.get!(Report, report.id)
+    assert reloaded_report.status == "resolved"
+    assert reloaded_report.resolved_by_id == admin.id
+  end
+
+  test "admin can suspend a target user until a specific date", %{conn: conn} do
+    admin = admin_fixture()
+    reporter = user_fixture()
+    target = user_fixture()
+    report = open_user_report_fixture(reporter, target)
+
+    {:ok, view, _html} =
+      conn
+      |> log_in_user(admin)
+      |> live(~p"/admin/reports")
+
+    view
+    |> form("form[phx-submit=\"suspend_user\"]", %{
+      "report_id" => report.id,
+      "suspended_until" => "2026-06-30"
+    })
+    |> render_submit()
+
+    reloaded_target = Accounts.get_user!(target.id)
+    # Coerced to end-of-day UTC so "until June 30" does not expire at midnight
+    # UTC mid-business-day in the user's local timezone.
+    assert reloaded_target.suspended_until == ~U[2026-06-30 23:59:59Z]
+  end
+
+  test "admin cannot suspend themselves", %{conn: conn} do
+    admin = admin_fixture()
+    report = open_user_report_fixture(admin, admin)
+
+    {:ok, view, _html} =
+      conn
+      |> log_in_user(admin)
+      |> live(~p"/admin/reports")
+
+    view
+    |> form("form[phx-submit=\"suspend_user\"]", %{
+      "report_id" => report.id,
+      "suspended_until" => ""
+    })
+    |> render_submit()
+
+    # The flash that surfaces this guard renders in the root layout, not the
+    # LiveView's own template. The behavioral assertion — admin is NOT
+    # suspended — is what actually matters.
+    reloaded_admin = Accounts.get_user!(admin.id)
+    assert reloaded_admin.suspended_until == nil
+
+    # And the report wasn't auto-resolved either.
+    reloaded_report = TraysSocial.Repo.get!(Report, report.id)
+    assert reloaded_report.status == "open"
+  end
+
+  test "admin can lift an existing suspension", %{conn: conn} do
+    admin = admin_fixture()
+    reporter = user_fixture()
+    target = suspended_user_fixture()
+    report = open_user_report_fixture(reporter, target)
+
+    {:ok, view, _html} =
+      conn
+      |> log_in_user(admin)
+      |> live(~p"/admin/reports")
+
+    view
+    |> element("button[phx-click=\"unsuspend_user\"][phx-value-id=\"#{report.id}\"]")
+    |> render_click()
+
+    reloaded_target = Accounts.get_user!(target.id)
+    assert reloaded_target.suspended_until == nil
+  end
 end

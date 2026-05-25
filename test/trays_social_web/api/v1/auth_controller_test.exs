@@ -147,6 +147,38 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
 
       assert %{"errors" => _} = json_response(conn, 422)
     end
+
+    test "returns 403 with structured suspended body for a suspended user", %{conn: conn} do
+      user = suspended_user_fixture()
+
+      conn =
+        post(conn, ~p"/api/v1/auth/login", %{
+          email: user.email,
+          password: valid_user_password()
+        })
+
+      assert %{"errors" => [error]} = json_response(conn, 403)
+      assert error["code"] == "suspended"
+      assert error["message"] =~ "suspended"
+      # Indefinite sentinel → API serializes suspended_until as nil so iOS
+      # does not render a confusing year-9999 date.
+      assert error["suspended_until"] == nil
+    end
+
+    test "returns 403 with ISO8601 suspended_until for a bounded suspension", %{conn: conn} do
+      future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+      user = suspended_user_fixture(%{}, future)
+
+      conn =
+        post(conn, ~p"/api/v1/auth/login", %{
+          email: user.email,
+          password: valid_user_password()
+        })
+
+      assert %{"errors" => [error]} = json_response(conn, 403)
+      assert error["code"] == "suspended"
+      assert error["suspended_until"] == DateTime.to_iso8601(future)
+    end
   end
 
   describe "POST /api/v1/auth/refresh-tokens (W105)" do

@@ -4,7 +4,8 @@ defmodule TraysSocialWeb.API.V1.AuthController do
   action_fallback TraysSocialWeb.API.V1.FallbackController
 
   alias TraysSocial.Accounts
-  alias TraysSocial.Accounts.AppleAuth
+  alias TraysSocial.Accounts.{AppleAuth, User}
+  alias TraysSocialWeb.API.AuthPlug
 
   def register(conn, %{"email" => email, "username" => username, "password" => password} = params) do
     age_confirmation = Map.get(params, "age_confirmation", false)
@@ -45,9 +46,12 @@ defmodule TraysSocialWeb.API.V1.AuthController do
         {:error, :unauthorized}
 
       user ->
-        encoded_token = Accounts.generate_user_api_token(user)
-
-        json(conn, %{data: %{token: encoded_token, user: user_json(user)}})
+        if User.is_suspended?(user) do
+          AuthPlug.send_suspended(conn, user)
+        else
+          encoded_token = Accounts.generate_user_api_token(user)
+          json(conn, %{data: %{token: encoded_token, user: user_json(user)}})
+        end
     end
   end
 
@@ -95,7 +99,11 @@ defmodule TraysSocialWeb.API.V1.AuthController do
       when is_binary(refresh_token) and byte_size(refresh_token) > 0 do
     case Accounts.exchange_refresh_token(refresh_token) do
       {:ok, {user, api_bearer}} ->
-        json(conn, %{data: %{token: api_bearer, user: user_json(user)}})
+        if User.is_suspended?(user) do
+          AuthPlug.send_suspended(conn, user)
+        else
+          json(conn, %{data: %{token: api_bearer, user: user_json(user)}})
+        end
 
       {:error, :invalid_refresh_token} ->
         {:error, :unauthorized}
@@ -129,29 +137,33 @@ defmodule TraysSocialWeb.API.V1.AuthController do
 
       case Accounts.find_or_create_apple_user(attrs) do
         {:ok, user} ->
-          # generate_user_api_token already returns the URL-safe base64 form
-          # that AuthPlug's verify_api_token_query/1 expects. Wrapping it in a
-          # second Base.encode64/1 here (the pre-D38 pattern) produces a token
-          # whose Base.url_decode64 either fails outright (on standard-base64
-          # `+`/`/`) or yields bytes whose SHA-256 doesn't match the stored
-          # hash — either way, every subsequent bearer call returns 401, which
-          # iOS surfaces as "Session expired. Please log in again." Mirror the
-          # login/2 + register/2 pattern: hand the client the encoded token
-          # straight from Accounts.
-          encoded_token = Accounts.generate_user_api_token(user)
-          needs_username = is_nil(user.username) or user.username == ""
+          if User.is_suspended?(user) do
+            AuthPlug.send_suspended(conn, user)
+          else
+            # generate_user_api_token already returns the URL-safe base64 form
+            # that AuthPlug's verify_api_token_query/1 expects. Wrapping it in a
+            # second Base.encode64/1 here (the pre-D38 pattern) produces a token
+            # whose Base.url_decode64 either fails outright (on standard-base64
+            # `+`/`/`) or yields bytes whose SHA-256 doesn't match the stored
+            # hash — either way, every subsequent bearer call returns 401, which
+            # iOS surfaces as "Session expired. Please log in again." Mirror the
+            # login/2 + register/2 pattern: hand the client the encoded token
+            # straight from Accounts.
+            encoded_token = Accounts.generate_user_api_token(user)
+            needs_username = is_nil(user.username) or user.username == ""
 
-          status = if needs_username, do: :created, else: :ok
+            status = if needs_username, do: :created, else: :ok
 
-          conn
-          |> put_status(status)
-          |> json(%{
-            data: %{
-              token: encoded_token,
-              user: user_json(user),
-              needs_username: needs_username
-            }
-          })
+            conn
+            |> put_status(status)
+            |> json(%{
+              data: %{
+                token: encoded_token,
+                user: user_json(user),
+                needs_username: needs_username
+              }
+            })
+          end
 
         {:error, changeset} ->
           {:error, changeset}

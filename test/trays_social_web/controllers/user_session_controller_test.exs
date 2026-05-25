@@ -145,6 +145,19 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
       assert response =~ "Back to your tray"
       assert response =~ "Invalid email or password"
     end
+
+    test "refuses suspended user and redirects to log-in with flash", %{conn: conn} do
+      user = suspended_user_fixture() |> set_password()
+
+      conn =
+        post(conn, ~p"/users/log-in", %{
+          "user" => %{"email" => user.email, "password" => valid_user_password()}
+        })
+
+      refute get_session(conn, :user_token)
+      assert redirected_to(conn) == ~p"/users/log-in"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "suspended"
+    end
   end
 
   describe "POST /users/log-in - magic link" do

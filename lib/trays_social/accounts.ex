@@ -79,6 +79,15 @@ defmodule TraysSocial.Accounts do
   """
   def get_user!(id), do: Repo.get!(User, id)
 
+  @doc """
+  Fetches a user by id, returning `nil` if not found.
+
+  Useful from admin/moderation contexts where the target row may have
+  been deleted between when the report was filed and when the admin
+  acts on it.
+  """
+  def get_user(id), do: Repo.get(User, id)
+
   ## User registration
 
   @doc """
@@ -770,6 +779,73 @@ defmodule TraysSocial.Accounts do
 
   @max_muted_keywords 100
   @max_muted_keyword_length 50
+
+  # --- Suspension ---
+
+  # Sentinel datetime used when an admin suspends a user without specifying
+  # an end date. A far-future timestamp is preferred over a separate nullable
+  # "indefinite" flag because it keeps `is_suspended?/1` a single comparison.
+  @indefinite_suspension_sentinel ~U[9999-12-31 23:59:59Z]
+
+  @doc """
+  Suspends a user until `suspended_until`.
+
+  Pass a `%DateTime{}` for a bounded suspension or `nil` for an indefinite
+  one. An indefinite suspension is stored as
+  `~U[9999-12-31 23:59:59Z]` (the `@indefinite_suspension_sentinel`) so a
+  single `DateTime.after?` check covers both cases.
+
+  Returns `{:ok, user}` or `{:error, changeset}`.
+  """
+  def suspend_user(%User{} = user, nil) do
+    suspend_user(user, @indefinite_suspension_sentinel)
+  end
+
+  def suspend_user(%User{} = user, %DateTime{} = suspended_until) do
+    # Revoke every token (session, api, refresh) so an exfiltrated bearer
+    # can't be re-armed when the suspension lifts. The request-time
+    # User.is_suspended? checks already make the tokens powerless while the
+    # row is set, but without this delete the tokens become valid again on
+    # unsuspend. Matches the pattern in update_user_and_delete_all_tokens/1.
+    result =
+      user
+      |> Ecto.Changeset.change(%{suspended_until: DateTime.truncate(suspended_until, :second)})
+      |> Repo.update()
+
+    case result do
+      {:ok, _updated} ->
+        Repo.delete_all(from t in UserToken, where: t.user_id == ^user.id)
+        result
+
+      other ->
+        other
+    end
+  end
+
+  @doc """
+  Returns the sentinel datetime used to represent an indefinite suspension.
+  Comparing with `==` is cheaper and clearer than year/month pattern matching.
+  """
+  def indefinite_suspension_sentinel, do: @indefinite_suspension_sentinel
+
+  @doc """
+  Returns true when the given datetime equals the indefinite-suspension
+  sentinel. Used by every caller that formats `suspended_until` for display.
+  """
+  def indefinite_suspension?(%DateTime{} = dt) do
+    dt == @indefinite_suspension_sentinel
+  end
+
+  def indefinite_suspension?(_), do: false
+
+  @doc """
+  Lifts a user's suspension by clearing `suspended_until`.
+  """
+  def unsuspend_user(%User{} = user) do
+    user
+    |> Ecto.Changeset.change(%{suspended_until: nil})
+    |> Repo.update()
+  end
 
   def set_muted_keywords(user, keywords) when is_list(keywords) do
     cleaned =

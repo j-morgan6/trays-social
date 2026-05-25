@@ -249,6 +249,22 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
 
       assert %{"errors" => [%{"message" => "unauthorized"}]} = json_response(conn, 401)
     end
+
+    test "returns 403 suspended when an existing Apple user is suspended", %{conn: conn} do
+      user = create_apple_user("suspended_apple_user", "suspended@apple.com")
+      {:ok, _} = TraysSocial.Accounts.suspend_user(user, nil)
+
+      conn =
+        post(conn, ~p"/api/v1/auth/apple", %{
+          identity_token: "suspended_apple_token",
+          raw_nonce: @raw_nonce
+        })
+
+      assert %{"errors" => [error]} = json_response(conn, 403)
+      assert error["code"] == "suspended"
+      # Indefinite sentinel → JSON serializes suspended_until as nil
+      assert error["suspended_until"] == nil
+    end
   end
 
   defp create_apple_user(apple_id, email) do

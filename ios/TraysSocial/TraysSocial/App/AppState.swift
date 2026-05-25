@@ -10,6 +10,11 @@ final class AppState {
     var currentUser: User?
     var selectedTray: TrayTab = .feed
     var navigationPath = NavigationPath()
+    /// Set when an API call returns a 403 with code "suspended". LoginView reads
+    /// this on appear and surfaces it as an .alert, then calls
+    /// clearSuspensionMessage(). Survives the logout state transition so the
+    /// user actually sees why they were logged out.
+    var suspensionMessage: String?
 
     enum TrayTab: Int, CaseIterable {
         case feed = 0
@@ -48,6 +53,9 @@ final class AppState {
                 let user = try await AuthService.fetchMe()
                 self.currentUser = user
                 self.isValidatingToken = false
+            } catch let APIError.suspended(message, until) {
+                self.handleSuspended(message: message, until: until)
+                self.isValidatingToken = false
             } catch {
                 self.handleUnauthorized()
                 self.isValidatingToken = false
@@ -84,6 +92,30 @@ final class AppState {
         currentUser = nil
         isAuthenticated = false
         navigationPath = NavigationPath()
+    }
+
+    /// Routes a suspended-response from any API call. Clears credentials like
+    /// handleUnauthorized, but also stashes the message so LoginView can show
+    /// it on appear (otherwise the user sees a silent logout with no
+    /// explanation).
+    func handleSuspended(message: String, until: Date?) {
+        let formatted: String = {
+            guard let until else { return message }
+            let formatter = DateFormatter()
+            formatter.dateStyle = .long
+            return "\(message) Suspended until \(formatter.string(from: until))."
+        }()
+
+        suspensionMessage = formatted
+        KeychainService.deleteToken()
+        KeychainService.deleteBiometricCredential()
+        currentUser = nil
+        isAuthenticated = false
+        navigationPath = NavigationPath()
+    }
+
+    func clearSuspensionMessage() {
+        suspensionMessage = nil
     }
 
     /// Handles a Universal Link tap on a confirmation URL.
