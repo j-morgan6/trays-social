@@ -4,9 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
-    <.live_title default="TraysSocial" suffix=" · Phoenix Framework">
+    <.live_title default="Trays" suffix=" · Trays">
       {assigns[:page_title]}
     </.live_title>
+    <link rel="icon" type="image/x-icon" href={~p"/favicon.ico"} />
+    <link rel="apple-touch-icon" href={~p"/apple-touch-icon.png"} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
