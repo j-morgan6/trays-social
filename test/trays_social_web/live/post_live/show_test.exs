@@ -281,6 +281,26 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
       assert_redirect(view, ~p"/users/log-in")
     end
 
+    test "hides comments from users the viewer has blocked", %{conn: conn} do
+      owner = user_fixture()
+      viewer = user_fixture()
+      blocked = user_fixture()
+      post = post_fixture(user_id: owner.id)
+
+      {:ok, _} = TraysSocial.Posts.create_comment(post, viewer, %{body: "From the viewer"})
+      {:ok, _} = TraysSocial.Posts.create_comment(post, blocked, %{body: "From the blocked"})
+
+      {:ok, _block} = TraysSocial.Accounts.block_user(viewer.id, blocked.id)
+
+      {:ok, _view, html} =
+        conn
+        |> log_in_user(viewer)
+        |> live(~p"/posts/#{post.id}")
+
+      assert html =~ "From the viewer"
+      refute html =~ "From the blocked"
+    end
+
     test "displays comment count", %{conn: conn} do
       owner = user_fixture()
       commenter = user_fixture()

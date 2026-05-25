@@ -844,6 +844,43 @@ defmodule TraysSocial.PostsTest do
       assert Enum.at(comments, 1).body == "Second"
     end
 
+    test "list_comments/2 excludes comments from blocked users" do
+      %{post: post} = create_user_and_post()
+      friend = user_fixture()
+      blocked = user_fixture()
+
+      {:ok, friend_comment} = Posts.create_comment(post, friend, %{body: "Hi friend"})
+      {:ok, _blocked_comment} = Posts.create_comment(post, blocked, %{body: "Hi blocked"})
+
+      comments = Posts.list_comments(post.id, blocked_user_ids: [blocked.id])
+
+      assert length(comments) == 1
+      assert hd(comments).id == friend_comment.id
+    end
+
+    test "list_comments/2 with empty blocked_user_ids returns all comments" do
+      %{post: post} = create_user_and_post()
+      commenter = user_fixture()
+      {:ok, _comment} = Posts.create_comment(post, commenter, %{body: "Hi"})
+
+      assert length(Posts.list_comments(post.id, blocked_user_ids: [])) == 1
+    end
+
+    test "list_comments_paginated/2 excludes comments from blocked users" do
+      %{post: post} = create_user_and_post()
+      friend = user_fixture()
+      blocked = user_fixture()
+
+      {:ok, _} = Posts.create_comment(post, blocked, %{body: "Hi blocked"})
+      {:ok, friend_comment} = Posts.create_comment(post, friend, %{body: "Hi friend"})
+
+      comments =
+        Posts.list_comments_paginated(post.id, blocked_user_ids: [blocked.id], limit: 20)
+
+      assert length(comments) == 1
+      assert hd(comments).id == friend_comment.id
+    end
+
     test "get_comment!/1 returns a comment by ID" do
       %{post: post} = create_user_and_post()
       commenter = user_fixture()

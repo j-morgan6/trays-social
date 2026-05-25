@@ -61,6 +61,9 @@ defmodule TraysSocial.Posts do
     |> Repo.all()
   end
 
+  # Reused by both Post and Comment queries. `[p]` is a positional binding for
+  # the first FROM table; both schemas expose a `user_id` column with the same
+  # semantics (FK to users), so the generated SQL is correct for either.
   defp exclude_blocked_users(query, []), do: query
   defp exclude_blocked_users(query, blocked_ids) do
     where(query, [p], p.user_id not in ^blocked_ids)
@@ -514,10 +517,19 @@ defmodule TraysSocial.Posts do
 
   @doc """
   Returns non-deleted comments for a post, oldest first, with user preloaded.
+
+  ## Options
+
+    * `:blocked_user_ids` — list of user ids whose comments should be excluded.
+      Pass `[]` (the default) for logged-out callers or callers who explicitly
+      do not want filtering.
   """
-  def list_comments(post_id) do
+  def list_comments(post_id, opts \\ []) do
+    blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
+
     Comment
     |> where([c], c.post_id == ^post_id and is_nil(c.deleted_at))
+    |> exclude_blocked_users(blocked_user_ids)
     |> order_by([c], asc: c.inserted_at)
     |> preload(:user)
     |> Repo.all()
@@ -525,15 +537,23 @@ defmodule TraysSocial.Posts do
 
   @doc """
   Returns cursor-paginated comments for a post, oldest first, with user preloaded.
+
+  ## Options
+
+    * `:blocked_user_ids` — list of user ids whose comments should be excluded.
+      Pass `[]` (the default) for logged-out callers or callers who explicitly
+      do not want filtering.
   """
   def list_comments_paginated(post_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
     cursor_id = Keyword.get(opts, :cursor_id)
     cursor_time = Keyword.get(opts, :cursor_time)
+    blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
 
     query =
       Comment
       |> where([c], c.post_id == ^post_id and is_nil(c.deleted_at))
+      |> exclude_blocked_users(blocked_user_ids)
       |> order_by([c], asc: c.inserted_at, asc: c.id)
       |> limit(^limit)
       |> preload(:user)

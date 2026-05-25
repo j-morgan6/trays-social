@@ -3,13 +3,15 @@ defmodule TraysSocialWeb.API.V1.CommentController do
 
   action_fallback TraysSocialWeb.API.V1.FallbackController
 
-  alias TraysSocial.Posts
+  alias TraysSocial.{Accounts, Posts}
   alias TraysSocialWeb.API.V1.JSON.CommentJSON
 
   @page_size 20
 
   def index(conn, %{"post_id" => post_id} = params) do
     {cursor_id, cursor_time} = decode_cursor(params["cursor"])
+    current_user = conn.assigns.current_user
+    blocked_user_ids = Accounts.blocked_user_ids(current_user.id)
 
     try do
       _post = Posts.get_post!(post_id)
@@ -18,7 +20,8 @@ defmodule TraysSocialWeb.API.V1.CommentController do
         Posts.list_comments_paginated(post_id,
           limit: @page_size,
           cursor_id: cursor_id,
-          cursor_time: cursor_time
+          cursor_time: cursor_time,
+          blocked_user_ids: blocked_user_ids
         )
 
       next_cursor = encode_cursor(List.last(comments))

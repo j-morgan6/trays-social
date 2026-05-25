@@ -10,13 +10,15 @@ defmodule TraysSocialWeb.PostLive.Show do
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     post = Posts.get_post!(id)
-    comments = Posts.list_comments(post.id)
 
     viewer =
       case socket.assigns[:current_scope] do
         %{user: user} -> user
         _ -> nil
       end
+
+    blocked_user_ids = if viewer, do: Accounts.blocked_user_ids(viewer.id), else: []
+    comments = Posts.list_comments(post.id, blocked_user_ids: blocked_user_ids)
 
     liked = viewer && Posts.liked_by?(post.id, viewer.id)
     bookmarked = viewer && Posts.bookmarked?(viewer.id, post.id)

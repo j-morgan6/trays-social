@@ -47,6 +47,27 @@ defmodule TraysSocialWeb.API.V1.CommentControllerTest do
 
       assert json_response(conn, 404)
     end
+
+    test "excludes comments from users the viewer has blocked", %{conn: conn, user: user} do
+      post = post_fixture(%{user_id: user.id})
+      friend = user_fixture()
+      blocked = user_fixture()
+
+      {:ok, _friend_comment} =
+        TraysSocial.Posts.create_comment(post, friend, %{body: "From a friend"})
+
+      {:ok, _blocked_comment} =
+        TraysSocial.Posts.create_comment(post, blocked, %{body: "From the blocked user"})
+
+      {:ok, _block} = TraysSocial.Accounts.block_user(user.id, blocked.id)
+
+      conn = get(conn, ~p"/api/v1/posts/#{post.id}/comments")
+
+      assert %{"data" => comments} = json_response(conn, 200)
+      assert length(comments) == 1
+      assert hd(comments)["body"] == "From a friend"
+      refute Enum.any?(comments, fn c -> c["user"]["id"] == blocked.id end)
+    end
   end
 
   describe "POST /api/v1/posts/:post_id/comments" do
