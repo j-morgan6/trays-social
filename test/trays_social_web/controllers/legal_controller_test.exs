@@ -60,4 +60,39 @@ defmodule TraysSocialWeb.LegalControllerTest do
       end
     end
   end
+
+  describe "GET /community-guidelines" do
+    test "returns 200 HTML with cache-control", %{conn: conn} do
+      conn = get(conn, ~p"/community-guidelines")
+
+      assert conn.status == 200
+      assert ["text/html" <> _] = get_resp_header(conn, "content-type")
+      assert ["public, max-age=3600"] = get_resp_header(conn, "cache-control")
+    end
+
+    test "contains the expected sections", %{conn: conn} do
+      conn = get(conn, ~p"/community-guidelines")
+      body = response(conn, 200)
+
+      required = [
+        "Community Guidelines",
+        "What we love to see",
+        # Earmark's smart-typography pass renders apostrophes as U+2019 curly quotes.
+        "What’s not allowed",
+        "Harassment, hate, or threats",
+        "Spam, scams, and manipulation",
+        "Cooking-specific judgment calls",
+        "How moderation works",
+        "Appeals",
+        "support@trays.app",
+        # Contact-section-unique phrase so dropping the Contact section breaks
+        # this test (support@trays.app alone also appears in Appeals).
+        "questions about these guidelines"
+      ]
+
+      for phrase <- required do
+        assert body =~ phrase, "expected /community-guidelines body to contain #{inspect(phrase)}"
+      end
+    end
+  end
 end

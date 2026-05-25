@@ -494,6 +494,7 @@ struct SettingsView: View {
     @State private var showDeleteConfirm = false
     @State private var showPrivacy = false
     @State private var showTerms = false
+    @State private var showCommunityGuidelines = false
     @State private var showAdminReports = false
     @State private var showAdminErrors = false
     @State private var showAdminDashboard = false
@@ -542,6 +543,19 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Text("Terms of Service")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .foregroundStyle(Theme.text)
+
+                    Button {
+                        showCommunityGuidelines = true
+                    } label: {
+                        HStack {
+                            Text("Community Guidelines")
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption)
@@ -631,6 +645,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showPrivacy) {
                 SafariView(url: URL(string: "https://trays.app/privacy")!)
+            }
+            .sheet(isPresented: $showCommunityGuidelines) {
+                SafariView(url: URL(string: "https://trays.app/community-guidelines")!)
             }
             .sheet(isPresented: $showTerms) {
                 SafariView(url: URL(string: "https://trays.app/terms")!)

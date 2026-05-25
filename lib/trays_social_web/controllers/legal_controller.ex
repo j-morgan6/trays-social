@@ -24,16 +24,25 @@ defmodule TraysSocialWeb.LegalController do
 
   @privacy_path Application.app_dir(:trays_social, "priv/legal/privacy.md")
   @terms_path Application.app_dir(:trays_social, "priv/legal/terms.md")
+  @community_guidelines_path Application.app_dir(
+                               :trays_social,
+                               "priv/legal/community-guidelines.md"
+                             )
 
   @external_resource @privacy_path
   @external_resource @terms_path
+  @external_resource @community_guidelines_path
 
   @privacy LegalDocParser.parse(@privacy_path)
   @terms LegalDocParser.parse(@terms_path)
+  @community_guidelines LegalDocParser.parse(@community_guidelines_path)
 
   def privacy(conn, _params), do: render_doc(conn, @privacy, "Privacy Policy")
 
   def terms(conn, _params), do: render_doc(conn, @terms, "Terms of Service")
+
+  def community_guidelines(conn, _params),
+    do: render_doc(conn, @community_guidelines, "Community Guidelines")
 
   defp render_doc(conn, doc, title) do
     conn

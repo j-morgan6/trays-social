@@ -1,8 +1,25 @@
 # Legal documents changelog
 
-Tracks material changes to the Privacy Policy and Terms of Service.
-Effective dates in `priv/legal/{privacy,terms}.md` frontmatter must
-match the latest entry below for the corresponding document.
+Tracks material changes to the Privacy Policy, Terms of Service, and
+Community Guidelines. Effective dates in the corresponding
+`priv/legal/*.md` frontmatter must match the latest entry below for
+each document.
+
+**Convention:** entries scoped to a single document are prefixed with
+the document name (e.g. `## Community Guidelines v1.0 — …`). Entries
+that span multiple documents are unprefixed and the body lists which
+documents changed.
+
+## Community Guidelines v1.0 — 2026-05-25
+
+Initial publication.
+
+- Standalone Community Guidelines page at `/community-guidelines`
+  (W110, sibling to /privacy and /terms)
+- Plain-language expansion of Terms of Service §5 acceptable-use rules
+  with food-specific examples (allergen disclosure, cultural attribution,
+  diet-style coexistence)
+- Linked from iOS Settings → Legal section alongside Privacy and Terms
 
 ## v1.1 — 2026-05-11
 
