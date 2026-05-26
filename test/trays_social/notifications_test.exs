@@ -155,6 +155,61 @@ defmodule TraysSocial.NotificationsTest do
     end
   end
 
+  describe "list_notifications_paginated/2 — :blocked_user_ids (D67)" do
+    test "excludes notifications whose actor_id is in blocked_user_ids",
+         %{user: user, actor: actor, post: post} do
+      blocked_actor = user_fixture()
+
+      # Two notifications: one from a normal actor, one from a blocked actor.
+      {:ok, _} =
+        Notifications.create_notification(%{
+          type: "like",
+          user_id: user.id,
+          actor_id: actor.id,
+          post_id: post.id
+        })
+
+      {:ok, _} =
+        Notifications.create_notification(%{
+          type: "comment",
+          user_id: user.id,
+          actor_id: blocked_actor.id,
+          post_id: post.id
+        })
+
+      results =
+        Notifications.list_notifications_paginated(user.id, blocked_user_ids: [blocked_actor.id])
+
+      assert length(results) == 1
+      assert hd(results).actor_id == actor.id
+    end
+
+    test "empty blocked_user_ids opt is a no-op",
+         %{user: user, actor: actor, post: post} do
+      {:ok, _} =
+        Notifications.create_notification(%{
+          type: "like",
+          user_id: user.id,
+          actor_id: actor.id,
+          post_id: post.id
+        })
+
+      with_opt = Notifications.list_notifications_paginated(user.id, blocked_user_ids: [])
+      without_opt = Notifications.list_notifications_paginated(user.id)
+
+      assert length(with_opt) == 1
+      assert length(without_opt) == 1
+      assert Enum.map(with_opt, & &1.id) == Enum.map(without_opt, & &1.id)
+    end
+
+    # Note: we don't unit-test the `is_nil(actor_id)` guard directly because
+    # the DB currently enforces NOT NULL on notifications.actor_id (matching
+    # the changeset's validate_required). The guard is forward-looking — if
+    # a future system-notification path drops that constraint, the
+    # exclude_blocked_actors filter will correctly leave NULL-actor rows
+    # visible instead of dropping them via SQL NULL semantics.
+  end
+
   describe "mark_all_read/1" do
     test "marks all unread notifications as read", %{user: user, actor: actor} do
       {:ok, _} =

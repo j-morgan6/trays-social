@@ -19,7 +19,8 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
         post(conn, ~p"/api/v1/auth/apple", %{
           identity_token: "valid_apple_token",
           raw_nonce: @raw_nonce,
-          email: "apple@privaterelay.appleid.com"
+          email: "apple@privaterelay.appleid.com",
+          age_confirmation: true
         })
 
       assert %{"data" => data} = json_response(conn, 201)
@@ -45,7 +46,8 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
       conn =
         post(conn, ~p"/api/v1/auth/apple", %{
           identity_token: "valid_apple_token",
-          raw_nonce: @raw_nonce
+          raw_nonce: @raw_nonce,
+          age_confirmation: true
         })
 
       assert %{"data" => %{"token" => token, "user" => %{"id" => user_id}}} =
@@ -69,7 +71,8 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
           identity_token: "valid_apple_token",
           raw_nonce: @raw_nonce,
           email: "apple@privaterelay.appleid.com",
-          username: "appleuser"
+          username: "appleuser",
+          age_confirmation: true
         })
 
       assert %{"data" => data} = json_response(conn, 200)
@@ -113,7 +116,8 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
       conn =
         post(conn, ~p"/api/v1/auth/apple", %{
           identity_token: "valid_apple_token",
-          raw_nonce: @raw_nonce
+          raw_nonce: @raw_nonce,
+          age_confirmation: true
         })
 
       assert %{"data" => data} = json_response(conn, 201)
@@ -128,7 +132,8 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
         post(conn, ~p"/api/v1/auth/apple", %{
           identity_token: "valid_apple_token",
           raw_nonce: @raw_nonce,
-          email: "victim@example.com"
+          email: "victim@example.com",
+          age_confirmation: true
         })
 
       assert %{"data" => data} = json_response(conn, 201)
@@ -149,7 +154,8 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
           post(conn, ~p"/api/v1/auth/apple", %{
             identity_token: "valid_apple_token",
             raw_nonce: @raw_nonce,
-            email: "admin-target@example.com"
+            email: "admin-target@example.com",
+            age_confirmation: true
           })
 
         assert %{"data" => data} = json_response(conn, 201)
@@ -193,7 +199,8 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
         conn =
           post(conn, ~p"/api/v1/auth/apple", %{
             identity_token: "valid_apple_token",
-            raw_nonce: @raw_nonce
+            raw_nonce: @raw_nonce,
+            age_confirmation: true
           })
 
         assert %{"data" => data} = json_response(conn, 201)
@@ -248,6 +255,57 @@ defmodule TraysSocialWeb.API.V1.AppleAuthTest do
         })
 
       assert %{"errors" => [%{"message" => "unauthorized"}]} = json_response(conn, 401)
+    end
+
+    test "D66: first-time Apple registration without age_confirmation returns 422", %{conn: conn} do
+      # COPPA-style 13+ attestation — first-time registrations must
+      # affirmatively assert age. Omitting the field entirely triggers
+      # validate_required on the changeset.
+      conn =
+        post(conn, ~p"/api/v1/auth/apple", %{
+          identity_token: "valid_apple_token",
+          raw_nonce: @raw_nonce,
+          email: "newapple@privaterelay.appleid.com"
+        })
+
+      assert %{"errors" => errors} = json_response(conn, 422)
+      assert Enum.any?(errors, fn err -> err["field"] == "age_confirmation" end)
+    end
+
+    test "D66: first-time Apple registration with age_confirmation=false returns 422",
+         %{conn: conn} do
+      # Sending the field but with `false` is also rejected — validate_acceptance
+      # specifically requires the value to be `true`, so a client cannot satisfy
+      # the gate by simply including the key with a falsy value.
+      conn =
+        post(conn, ~p"/api/v1/auth/apple", %{
+          identity_token: "valid_apple_token",
+          raw_nonce: @raw_nonce,
+          email: "newapple@privaterelay.appleid.com",
+          age_confirmation: false
+        })
+
+      assert %{"errors" => errors} = json_response(conn, 422)
+      assert Enum.any?(errors, fn err -> err["field"] == "age_confirmation" end)
+    end
+
+    test "D66: returning Apple user succeeds even without age_confirmation",
+         %{conn: conn} do
+      # Returning users are matched by apple_id and the registration
+      # changeset is never invoked, so the gate does not apply. This is
+      # both a UX requirement ("Do NOT re-prompt returning Apple users")
+      # and a behavior the iOS client relies on — a returning user whose
+      # local age toggle is somehow off must still sign in.
+      _user = create_apple_user("existing_apple_user", "existing@apple.com")
+
+      conn =
+        post(conn, ~p"/api/v1/auth/apple", %{
+          identity_token: "existing_apple_token",
+          raw_nonce: @raw_nonce
+        })
+
+      assert %{"data" => data} = json_response(conn, 200)
+      assert data["user"]["email"] == "existing@apple.com"
     end
 
     test "returns 403 suspended when an existing Apple user is suspended", %{conn: conn} do

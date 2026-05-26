@@ -643,14 +643,26 @@ struct SettingsView: View {
             } message: {
                 Text("This will permanently delete your account and all your data. This cannot be undone.")
             }
+            // Legal sheets — URL is built from the current build's API base
+            // so a Debug install opens the review env's pages and a Release
+            // install opens prod's, matching the admin-sheets pattern below.
+            // The point: when iterating on Privacy / Terms / Community
+            // Guidelines copy, a TestFlight reviewer on the Debug build can
+            // verify the new wording on review.trays.app before it ships to
+            // prod. Previously these three URLs were hardcoded to
+            // https://trays.app/<path> while the admin sheets routed through
+            // Configuration.apiBaseURL — the mixed strategy was the actual
+            // D68 bug. See the ios_env_routing_gotchas memory; env routing
+            // has bitten this project before (the build-15 Apple Sign In
+            // double-encode incident is the cautionary tale).
             .sheet(isPresented: $showPrivacy) {
-                SafariView(url: URL(string: "https://trays.app/privacy")!)
+                SafariView(url: URL(string: Configuration.apiBaseURL + "/privacy")!)
             }
             .sheet(isPresented: $showCommunityGuidelines) {
-                SafariView(url: URL(string: "https://trays.app/community-guidelines")!)
+                SafariView(url: URL(string: Configuration.apiBaseURL + "/community-guidelines")!)
             }
             .sheet(isPresented: $showTerms) {
-                SafariView(url: URL(string: "https://trays.app/terms")!)
+                SafariView(url: URL(string: Configuration.apiBaseURL + "/terms")!)
             }
             // Admin sheets — URL is built from the current build's API base so
             // a Debug install opens the review env's admin pages and a Release

@@ -52,15 +52,28 @@ defmodule TraysSocial.Notifications do
 
   @doc """
   Returns cursor-paginated notifications for a user, newest first, with actor and post preloaded.
+
+  ## Options
+
+    * `:limit` — page size (default 20)
+    * `:cursor_id`, `:cursor_time` — cursor pair for pagination
+    * `:blocked_user_ids` — list of user ids whose notifications should be
+      excluded. Mirrors the D65 pattern shipped on comment/feed queries.
+      Notifications with a nil `actor_id` (system notifications, future
+      automated events) pass through unfiltered — the block list only
+      hides notifications triggered by another *user* the viewer has
+      blocked.
   """
   def list_notifications_paginated(user_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
     cursor_id = Keyword.get(opts, :cursor_id)
     cursor_time = Keyword.get(opts, :cursor_time)
+    blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
 
     query =
       Notification
       |> where([n], n.user_id == ^user_id)
+      |> exclude_blocked_actors(blocked_user_ids)
       |> order_by([n], desc: n.inserted_at, desc: n.id)
       |> limit(^limit)
       |> preload([:actor, :post])
@@ -77,6 +90,15 @@ defmodule TraysSocial.Notifications do
       end
 
     Repo.all(query)
+  end
+
+  # SQL note: `actor_id not in (...)` evaluates to NULL (filtered out) when
+  # actor_id IS NULL, which would silently drop legitimate system
+  # notifications. The explicit `is_nil` guard keeps them visible.
+  defp exclude_blocked_actors(query, []), do: query
+
+  defp exclude_blocked_actors(query, blocked_ids) do
+    where(query, [n], is_nil(n.actor_id) or n.actor_id not in ^blocked_ids)
   end
 
   @doc """

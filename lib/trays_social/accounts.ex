@@ -113,8 +113,14 @@ defmodule TraysSocial.Accounts do
   Finds an existing user by apple_id or creates a new one.
 
   Returns `{:ok, user}` on success or `{:error, changeset}` on failure.
+
+  Opts are forwarded to `User.apple_registration_changeset/3`. The
+  returning-user branch never runs the changeset (lookup by apple_id is
+  the entire match), so opts only affect first-time registrations.
   """
-  def find_or_create_apple_user(%{apple_id: apple_id} = attrs) do
+  def find_or_create_apple_user(attrs, opts \\ [])
+
+  def find_or_create_apple_user(%{apple_id: apple_id} = attrs, opts) do
     case Repo.get_by(User, apple_id: apple_id) do
       nil ->
         # SECURITY: Apple Sign In NEVER auto-grants admin. Email from the Apple
@@ -124,7 +130,10 @@ defmodule TraysSocial.Accounts do
         # granted via the operator-only `Accounts.set_admin/2` path (mix task /
         # IEx) or through the password-registration confirmation flow.
         %User{}
-        |> User.apple_registration_changeset(Map.new(attrs, fn {k, v} -> {to_string(k), v} end))
+        |> User.apple_registration_changeset(
+          Map.new(attrs, fn {k, v} -> {to_string(k), v} end),
+          opts
+        )
         |> Repo.insert()
 
       user ->

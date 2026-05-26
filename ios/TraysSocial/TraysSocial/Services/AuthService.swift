@@ -22,6 +22,10 @@ enum AuthService {
         let rawNonce: String
         let email: String?
         let username: String?
+        // D66: COPPA-style 13+ attestation. Required by the server for
+        // first-time Apple registrations; ignored server-side for returning
+        // users (lookup by apple_id bypasses the changeset entirely).
+        let ageConfirmation: Bool
     }
 
     struct UpdateUsernameRequest: Encodable {
@@ -77,8 +81,20 @@ enum AuthService {
         return response.data
     }
 
-    static func appleAuth(identityToken: String, rawNonce: String, email: String?, username: String?) async throws -> AuthResponse {
-        let body = AppleAuthRequest(identityToken: identityToken, rawNonce: rawNonce, email: email, username: username)
+    static func appleAuth(
+        identityToken: String,
+        rawNonce: String,
+        email: String?,
+        username: String?,
+        ageConfirmation: Bool
+    ) async throws -> AuthResponse {
+        let body = AppleAuthRequest(
+            identityToken: identityToken,
+            rawNonce: rawNonce,
+            email: email,
+            username: username,
+            ageConfirmation: ageConfirmation
+        )
         let response: DataResponse<AuthResponse> = try await APIClient.shared.post(path: "/auth/apple", body: body)
         return response.data
     }

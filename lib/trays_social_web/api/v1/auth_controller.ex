@@ -131,8 +131,14 @@ defmodule TraysSocialWeb.API.V1.AuthController do
       # user is looked up by apple_id and the stored email is never overwritten.
       email = claims["email"]
       username = params["username"]
+      # D66: age_confirmation is required for first-time Apple registrations
+      # (COPPA — applies to every registration path, not just password). Pass
+      # the raw value through (nil when absent → validate_required catches it;
+      # false → validate_acceptance catches it). Do NOT default to true; that
+      # would defeat the affirmative-attestation requirement.
+      age_confirmation = params["age_confirmation"]
 
-      attrs = %{apple_id: apple_id, email: email}
+      attrs = %{apple_id: apple_id, email: email, age_confirmation: age_confirmation}
       attrs = if username, do: Map.put(attrs, :username, username), else: attrs
 
       case Accounts.find_or_create_apple_user(attrs) do

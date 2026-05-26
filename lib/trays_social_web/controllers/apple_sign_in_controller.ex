@@ -88,10 +88,19 @@ defmodule TraysSocialWeb.AppleSignInController do
            AppleAuth.verify_token(id_token, expected_audiences: [services_id]),
          apple_id when is_binary(apple_id) <- claims["sub"],
          {:ok, user} <-
-           Accounts.find_or_create_apple_user(%{
-             apple_id: apple_id,
-             email: claims["email"]
-           }) do
+           Accounts.find_or_create_apple_user(
+             %{apple_id: apple_id, email: claims["email"]},
+             # D66 scope note: the iOS API path enforces a 13+ age
+             # attestation (matching the password registration gate). The web
+             # services-redirect flow does not yet collect age confirmation
+             # before bouncing to Apple — adding a checkbox on /users/log-in
+             # and /users/register and round-tripping it through the signed
+             # state token is a separate follow-up. Until that ships, opt the
+             # web path out of the changeset validator explicitly rather than
+             # silently passing `age_confirmation: true`, which would defeat
+             # the affirmative-attestation requirement entirely.
+             validate_age: false
+           ) do
       conn
       |> put_flash(:info, "Welcome back!")
       |> UserAuth.log_in_user(user)

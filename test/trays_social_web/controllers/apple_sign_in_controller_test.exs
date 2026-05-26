@@ -82,12 +82,19 @@ defmodule TraysSocialWeb.AppleSignInControllerTest do
     test "logs in the existing user when apple_id is already known (no duplicate row)",
          %{conn: conn} do
       # Pre-existing Apple user matching the mock's "existing_apple_token".
+      # D66: pass validate_age: false to mirror the web AppleSignInController
+      # (the web flow does not yet collect an age toggle — that gap is
+      # tracked as a follow-up). Without this opt-out the changeset would
+      # reject the setup insert for missing age_confirmation.
       {:ok, _existing} =
-        Accounts.find_or_create_apple_user(%{
-          apple_id: "existing_apple_user",
-          email: "existing@apple.com",
-          username: "existinguser"
-        })
+        Accounts.find_or_create_apple_user(
+          %{
+            apple_id: "existing_apple_user",
+            email: "existing@apple.com",
+            username: "existinguser"
+          },
+          validate_age: false
+        )
 
       assert Repo.aggregate(User, :count) == 1
 

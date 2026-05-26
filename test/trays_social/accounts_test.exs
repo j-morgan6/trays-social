@@ -46,7 +46,8 @@ defmodule TraysSocial.AccountsTest do
         Accounts.find_or_create_apple_user(%{
           apple_id: "001234.abc#{System.unique_integer([:positive])}",
           email: unique_user_email(),
-          username: unique_user_username()
+          username: unique_user_username(),
+          age_confirmation: true
         })
 
       assert is_nil(apple_user.hashed_password)
@@ -66,7 +67,8 @@ defmodule TraysSocial.AccountsTest do
         Accounts.find_or_create_apple_user(%{
           apple_id: "001234.abc#{System.unique_integer([:positive])}",
           email: unique_user_email(),
-          username: unique_user_username()
+          username: unique_user_username(),
+          age_confirmation: true
         })
 
       assert is_nil(apple_user.hashed_password)
@@ -78,7 +80,8 @@ defmodule TraysSocial.AccountsTest do
         Accounts.find_or_create_apple_user(%{
           apple_id: "001234.abc#{System.unique_integer([:positive])}",
           email: unique_user_email(),
-          username: unique_user_username()
+          username: unique_user_username(),
+          age_confirmation: true
         })
 
       {:ok, _} = Accounts.update_user_password(apple_user, %{password: valid_user_password()})

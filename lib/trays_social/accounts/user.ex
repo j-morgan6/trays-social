@@ -96,10 +96,19 @@ defmodule TraysSocial.Accounts.User do
 
   Validates email and stores apple_id, but does not require a password.
   Username is optional at registration (set later via profile update).
+
+  ## Options
+
+    * `:validate_age` - When `true` (the default) the changeset requires
+      `:age_confirmation == true` — matching the COPPA-style attestation
+      enforced by `registration_changeset/3`. Pass `false` only from
+      registration paths that have not yet wired an affirmative age UI
+      (the web services-redirect flow is in that state pending its own
+      follow-up); the iOS API path always opts in by default.
   """
   def apple_registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:email, :username, :apple_id])
+    |> cast(attrs, [:email, :username, :apple_id, :age_confirmation])
     |> validate_required([:email, :apple_id])
     |> validate_format(:email, ~r/^[^@,;\s]+@[^@,;\s]+$/,
       message: "must have the @ sign and no spaces"
@@ -108,7 +117,18 @@ defmodule TraysSocial.Accounts.User do
     |> unique_constraint(:email)
     |> unique_constraint(:apple_id)
     |> maybe_validate_username(opts)
+    |> maybe_validate_age_confirmation(opts)
     |> put_change(:confirmed_at, DateTime.utc_now(:second))
+  end
+
+  defp maybe_validate_age_confirmation(changeset, opts) do
+    if Keyword.get(opts, :validate_age, true) do
+      changeset
+      |> validate_required([:age_confirmation], message: @age_confirmation_message)
+      |> validate_acceptance(:age_confirmation, message: @age_confirmation_message)
+    else
+      changeset
+    end
   end
 
   defp maybe_validate_username(changeset, opts) do

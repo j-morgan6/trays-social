@@ -121,7 +121,28 @@ struct WelcomeView: View {
     // MARK: - Auth actions
 
     private var authActions: some View {
-        VStack(spacing: 12) {
+        @Bindable var bindableViewModel = viewModel
+
+        return VStack(spacing: 12) {
+            // D66: 13+ affirmative attestation gating Apple Sign In. Placed
+            // ABOVE the SignInWithAppleButton so it is collected BEFORE the
+            // ASAuthorization sheet animates in — putting it AFTER the sheet
+            // would re-introduce the D30 sheet-presentation race. Returning
+            // Apple users still see this toggle (the client cannot know who is
+            // returning until the server resolves the apple_id), but the
+            // server-side gate is a no-op for them — the lookup-by-apple_id
+            // branch in find_or_create_apple_user does not run the changeset.
+            Toggle(isOn: $bindableViewModel.ageConfirmed) {
+                Text("I confirm I am 13 years old or older.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.text)
+            }
+            .toggleStyle(.switch)
+            .tint(Theme.accent)
+            .padding(.horizontal, 4)
+            .padding(.bottom, 4)
+            .accessibilityIdentifier("welcome.ageConfirmation")
+
             SignInWithAppleButton(.signIn) { request in
                 // W104: per-attempt nonce, see AuthViewModel.
                 viewModel.prepareAppleSignInRequest(request)
@@ -133,6 +154,11 @@ struct WelcomeView: View {
             .signInWithAppleButtonStyle(.white)
             .frame(height: 52)
             .cornerRadius(26)
+            .disabled(!viewModel.ageConfirmed)
+            .opacity(viewModel.ageConfirmed ? 1 : 0.45)
+            .accessibilityHint(viewModel.ageConfirmed
+                ? "Sign in with your Apple ID"
+                : "Confirm you are 13 or older to enable Sign in with Apple")
 
             Button {
                 showRegister = true
