@@ -26,6 +26,7 @@
 		5F74A391EFDA598EFE838EF4 /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD609B9C746BF48DEA058E25 /* APIError.swift */; };
 		615CFE66E305B85BD699E1E7 /* ShellViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9837B5661A66D78713F20196 /* ShellViewModel.swift */; };
 		6CD43F086BF30F8E97A20D1F /* ReportSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A88C0ADB221E4D697E86CA15 /* ReportSheetView.swift */; };
+		6E0A99D31504A31CF6B3FFFB /* FilterChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 592C28010B4AF7AD66D95DC2 /* FilterChip.swift */; };
 		6EAF2729E85D26FF8FF105D9 /* MyTrayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E5B01CCE1E4D857C7BEFF2 /* MyTrayView.swift */; };
 		6F012818914E997F28AEDFBE /* EmailVerificationGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA6604AAAB85FBBFD8714FC3 /* EmailVerificationGateView.swift */; };
 		6FE9A6006F066A65428A5164 /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3893002E61AAB0716240E1B9 /* ProfileViewModel.swift */; };
@@ -116,6 +117,7 @@
 		4CE90967D6918BD229185514 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		508FF1ACC28978541290D77F /* DiscoveryInsert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryInsert.swift; sourceTree = "<group>"; };
 		589EE70B8154A9D38E6B9D1B /* CreatePostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostView.swift; sourceTree = "<group>"; };
+		592C28010B4AF7AD66D95DC2 /* FilterChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterChip.swift; sourceTree = "<group>"; };
 		634298CD755E9547B6A89A2F /* MutedKeywordsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MutedKeywordsView.swift; sourceTree = "<group>"; };
 		648DCE235333F94EDFB4FC82 /* TraysSocial.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TraysSocial.entitlements; sourceTree = "<group>"; };
 		659A69F30CEB602F949795FC /* Skeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skeleton.swift; sourceTree = "<group>"; };
@@ -208,6 +210,7 @@
 		20B9D40D67D9A96013CC17F9 /* Find */ = {
 			isa = PBXGroup;
 			children = (
+				592C28010B4AF7AD66D95DC2 /* FilterChip.swift */,
 				25DDF4D71B30FEDDB90E828E /* FindView.swift */,
 			);
 			path = Find;
@@ -564,6 +567,7 @@
 				9355DFD37B17F97D036BFA5C /* FeedCardView.swift in Sources */,
 				C5722C1F0CCB7A506F798483 /* FeedView.swift in Sources */,
 				DCF0881BB917DD085F462F8E /* FeedViewModel.swift in Sources */,
+				6E0A99D31504A31CF6B3FFFB /* FilterChip.swift in Sources */,
 				AE1ABF8DB0A2231E95C272F3 /* FindView.swift in Sources */,
 				A9A34BEDF00A118C90677E42 /* FindViewModel.swift in Sources */,
 				2A0EE925716022E10F9F1D2F /* FollowListView.swift in Sources */,
