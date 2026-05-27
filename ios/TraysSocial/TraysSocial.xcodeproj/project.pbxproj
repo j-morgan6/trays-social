@@ -46,6 +46,7 @@
 		AB4C02FA789E916C7F685875 /* CreatePostViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3540592DA46CF395AEEAA5C0 /* CreatePostViewModel.swift */; };
 		AE1ABF8DB0A2231E95C272F3 /* FindView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25DDF4D71B30FEDDB90E828E /* FindView.swift */; };
 		BAE221C8716562D3F5253854 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C95FC39F4695EA3AF4C37A5 /* PushNotificationService.swift */; };
+		BBFCB7DCBC1EEE0D5CDE0205 /* TabSegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D5A6AC4887DBFA2579C1ADB /* TabSegment.swift */; };
 		BD00C5D666CF7BEBDA198327 /* TraysSocialApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 257BD59C9143F329A0240F72 /* TraysSocialApp.swift */; };
 		BE727916AF64F4EA2D762814 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67DCD1E3A70C9F29DFD5035C /* KeychainService.swift */; };
 		BEDEF0BA0E159AC29AA6FD25 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB88CDBE65F5F63DB2CD860 /* APIClient.swift */; };
@@ -116,6 +117,7 @@
 		799AB364DADE33F1869359DD /* PlaceholderTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTest.swift; sourceTree = "<group>"; };
 		7C95FC39F4695EA3AF4C37A5 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 		802ABCDA09713C4678248278 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		8D5A6AC4887DBFA2579C1ADB /* TabSegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabSegment.swift; sourceTree = "<group>"; };
 		90B7815F88CA31767867F48D /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		9837B5661A66D78713F20196 /* ShellViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellViewModel.swift; sourceTree = "<group>"; };
 		9AF1EA4D0A316329D1C02CB8 /* MyTrayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTrayViewModel.swift; sourceTree = "<group>"; };
@@ -362,6 +364,7 @@
 			children = (
 				18252654917F5129220567CE /* PillBar.swift */,
 				9837B5661A66D78713F20196 /* ShellViewModel.swift */,
+				8D5A6AC4887DBFA2579C1ADB /* TabSegment.swift */,
 			);
 			path = Shell;
 			sourceTree = "<group>";
@@ -557,6 +560,7 @@
 				615CFE66E305B85BD699E1E7 /* ShellViewModel.swift in Sources */,
 				F999B58E2A4463E8EEA32F18 /* Skeleton.swift in Sources */,
 				9F4B2BB2DD63E2B1B1373704 /* String+BackendURL.swift in Sources */,
+				BBFCB7DCBC1EEE0D5CDE0205 /* TabSegment.swift in Sources */,
 				F2BF3A3ADB396931C925D745 /* Theme.swift in Sources */,
 				E0633D5901A6A1D5BAEBDE1A /* TraySelector.swift in Sources */,
 				BD00C5D666CF7BEBDA198327 /* TraysSocialApp.swift in Sources */,
