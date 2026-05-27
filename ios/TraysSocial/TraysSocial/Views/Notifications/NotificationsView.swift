@@ -1,237 +1,197 @@
 import SwiftUI
 
-/// Editorial Notifications — matches `IOSNotifications` from the Claude
-/// Design handoff (design/handoff/trays-social/project/ios-screens.jsx).
+/// Notifications screen ported from the Pass 1 prototype's
+/// NotificationsScreen (prototype.jsx lines 654-695): a 30pt bold large
+/// title + subtitle inside the pushed scroll content (the back button
+/// + inline title come from the NavigationStack chrome), followed by a
+/// rounded card containing a vertical list of notification rows.
 ///
-/// Serif "Notes for you" page heading + serif phrasing on each row
-/// ("Maria saved your <recipe>") + amber unread tint + a 64pt photo
-/// thumb on the right (or Follow Back button for follow events).
+/// Each row shows: 36pt `Avi`, amber-ink `@username` inline with the
+/// action phrase, "Nm ago" / "Nd ago" subtle line, and an 8pt amber
+/// unread dot trailing when the notification is unread.
+///
+/// Unread state stays visible on appear — tapping a row marks just
+/// that notification read (not the whole list at once).
 struct NotificationsView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @State private var viewModel = NotificationsViewModel()
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                editorialHeading
+                headerSection
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 14)
 
                 if viewModel.isLoading {
-                    ProgressView().tint(Theme.accent).padding(.top, 60)
+                    ProgressView()
+                        .tint(Theme.accent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 60)
                 } else if viewModel.notifications.isEmpty {
                     emptyState
                 } else {
-                    notificationList
-                    quietFooter
+                    notificationCard
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 24)
                 }
             }
-            .padding(.bottom, 32)
         }
         .background(Theme.background)
-        .navigationTitle("Notes")
+        .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.load() }
     }
 
-    // MARK: - Heading
-
-    private var editorialHeading: some View {
+    private var headerSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Notes for you")
-                .font(.serif(28))
-                .foregroundStyle(Theme.text)
+            Text("Notifications")
+                .font(.system(size: 30, weight: .bold))
+                .tracking(-0.75)
+                .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
 
-            let total = viewModel.notifications.count
-            let unread = viewModel.notifications.count(where: { !$0.isRead })
-            if total > 0 {
-                Text("\(total) TODAY · \(unread) UNREAD")
-                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                    .tracking(1.6)
-                    .foregroundStyle(Theme.textSecondary)
+            if !viewModel.notifications.isEmpty {
+                Text(subtitle)
+                    .font(.system(size: 13.5))
+                    .foregroundStyle(Theme.muted(for: colorScheme))
             }
         }
     }
 
-    // MARK: - List (flattened — no section headers, matching design)
+    private var subtitle: String {
+        let unread = viewModel.notifications.count(where: { !$0.isRead })
+        switch unread {
+        case 0: return "You're caught up."
+        case 1: return "1 unread."
+        default: return "\(unread) unread."
+        }
+    }
 
-    private var notificationList: some View {
+    private var notificationCard: some View {
         VStack(spacing: 0) {
-            ForEach(viewModel.notifications) { notification in
-                EditorialNotificationRow(notification: notification) {
+            ForEach(Array(viewModel.notifications.enumerated()), id: \.element.id) { index, notification in
+                NotificationRow(notification: notification) {
                     viewModel.markRead([notification.id])
                 }
-                Divider().background(Color.white.opacity(0.06))
+                if index < viewModel.notifications.count - 1 {
+                    Rectangle()
+                        .fill(Theme.hairline(for: colorScheme))
+                        .frame(height: 1)
+                }
             }
         }
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Theme.hairline(for: colorScheme), lineWidth: 1)
+        )
     }
-
-    private var quietFooter: some View {
-        Text("Quiet by design.")
-            .font(.serifItalic(13))
-            .foregroundStyle(Theme.textSecondary)
-            .frame(maxWidth: .infinity)
-            .padding(.top, 20)
-    }
-
-    // MARK: - Empty state
 
     private var emptyState: some View {
         VStack(spacing: 6) {
-            Text("No notes yet.")
-                .font(.serifItalic(17))
-                .foregroundStyle(Theme.text)
-            Text("Quiet by design. We don't ping you for the algorithm's sake.")
+            Text("Nothing here yet")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
+            Text("Quiet by design. We won't ping you for the algorithm's sake.")
                 .font(.system(size: 13))
-                .foregroundStyle(Theme.textSecondary)
+                .foregroundStyle(Theme.muted(for: colorScheme))
                 .multilineTextAlignment(.center)
         }
+        .frame(maxWidth: .infinity)
         .padding(.top, 80)
         .padding(.horizontal, 30)
     }
 }
 
-// MARK: - Editorial Notification Row
-
-private struct EditorialNotificationRow: View {
+/// One row inside the notifications card. The unread dot is the only
+/// visible difference between read and unread states — the row content
+/// stays identical so the rhythm of the list isn't disrupted by reads.
+private struct NotificationRow: View {
+    @Environment(\.colorScheme) private var colorScheme
     let notification: AppNotification
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: 12) {
-                avatar
+                Avi(
+                    initial: actorInitial,
+                    size: 36,
+                    palette: aviPalette,
+                    border: true
+                )
 
                 VStack(alignment: .leading, spacing: 4) {
-                    phrasing
-                    if let body = notificationBody {
-                        Text(body)
-                            .font(.serifItalic(12))
-                            .foregroundStyle(Theme.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Text(notification.insertedAt.timeAgo())
-                        .font(.system(size: 9, weight: .medium, design: .monospaced))
-                        .tracking(1.4)
-                        .foregroundStyle(Theme.textSecondary)
-                        .padding(.top, 2)
+                    Text(phrase)
+                        .font(.system(size: 14))
+                        .lineSpacing(2)
+                        .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("\(notification.insertedAt.timeAgo()) ago")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.subtle(for: colorScheme))
                 }
 
                 Spacer(minLength: 0)
 
-                trailing
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .background(rowBackground)
-            .overlay(alignment: .leading) { unreadDot }
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var rowBackground: some View {
-        notification.isRead ? Color.clear : Theme.accent.opacity(0.05)
-    }
-
-    @ViewBuilder
-    private var unreadDot: some View {
-        if !notification.isRead {
-            Circle()
-                .fill(Theme.accent)
-                .frame(width: 6, height: 6)
-                .padding(.leading, 8)
-        }
-    }
-
-    // MARK: Pieces
-
-    private var avatar: some View {
-        Circle()
-            .fill(Theme.primary)
-            .frame(width: 40, height: 40)
-            .overlay(
-                Text(initial)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white)
-            )
-            .overlay {
-                if let urlString = notification.actor?.profilePhotoUrl,
-                   let url = urlString.asBackendURL
-                {
-                    AsyncImage(url: url) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: { Color.clear }
-                        .frame(width: 40, height: 40)
-                        .clipShape(Circle())
+                if !notification.isRead {
+                    Circle()
+                        .fill(Theme.accent)
+                        .frame(width: 8, height: 8)
+                        .padding(.top, 14)
+                        .accessibilityHidden(true)
                 }
             }
-    }
-
-    private var phrasing: some View {
-        Text(phraseAttributed)
-            .font(.serif(14))
-            .foregroundStyle(Theme.text)
-            .lineSpacing(2)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
-    @ViewBuilder
-    private var trailing: some View {
-        if let url = notification.post?.thumbnailUrl?.asBackendURL {
-            AsyncImage(url: url) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Rectangle().fill(Color(.systemGray5))
-            }
-            .frame(width: 64, height: 64)
-            .clipShape(RoundedRectangle(cornerRadius: 4))
-        } else if notification.type == "follow" {
-            Text("Follow back")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 10)
-                .frame(height: 30)
-                .background(Theme.primaryLight)
-                .clipShape(Capsule())
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
     }
 
-    // MARK: Derived
-
-    private var initial: String {
-        let name = notification.actor?.username ?? "?"
-        return String(name.prefix(1)).uppercased()
-    }
-
-    /// Editorial phrasing as an AttributedString — bolds the actor's
-    /// name. The /notifications API today doesn't surface recipe
-    /// captions or actor bios, so the recipe title becomes a generic
-    /// "your recipe" reference (matches the design's structure without
-    /// inventing copy).
-    private var phraseAttributed: AttributedString {
+    /// Pretty-print the notification with amber-ink @username highlight.
+    private var phrase: AttributedString {
         let actor = notification.actor?.username ?? "Someone"
+        let handle = "@\(actor) "
+        let body = phraseBody(for: notification.type)
 
-        var s = switch notification.type {
-        case "like":
-            AttributedString("\(actor) found your recipe helpful")
-        case "comment":
-            AttributedString("\(actor) left a note on your recipe")
-        case "follow":
-            AttributedString("\(actor) followed you")
-        default:
-            AttributedString("\(actor) interacted with you")
-        }
-
-        if let range = s.range(of: actor) {
+        var s = AttributedString(handle + body)
+        if let range = s.range(of: handle) {
             s[range].font = .system(size: 14, weight: .semibold)
+            s[range].foregroundColor = Theme.accentInk(for: colorScheme)
         }
         return s
     }
 
-    /// Body line under the phrase. Not currently surfaced by the
-    /// notifications payload — placeholder for when the API exposes
-    /// comment excerpts or actor bios.
-    private var notificationBody: String? {
-        nil
+    private func phraseBody(for type: String) -> String {
+        switch type {
+        case "like": "liked your recipe."
+        case "comment": "commented on your post."
+        case "follow": "started following you."
+        case "save": "saved your recipe."
+        case "share": "shared a recipe with you."
+        default: "interacted with you."
+        }
+    }
+
+    private var actorInitial: String {
+        String(notification.actor?.username.prefix(1) ?? "?").uppercased()
+    }
+
+    private var aviPalette: Avi.Palette {
+        let palettes = Avi.Palette.allCases
+        let key = notification.actor?.username.unicodeScalars.first.map { Int($0.value) } ?? 0
+        return palettes[abs(key) % palettes.count]
+    }
+
+    private var accessibilityLabel: String {
+        let actor = notification.actor?.username ?? "Someone"
+        let body = phraseBody(for: notification.type)
+        let unread = notification.isRead ? "" : ", unread"
+        return "@\(actor) \(body) \(notification.insertedAt.timeAgo()) ago\(unread)"
     }
 }
