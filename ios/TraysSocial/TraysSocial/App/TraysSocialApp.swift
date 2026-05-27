@@ -38,7 +38,7 @@ struct TraysSocialApp: App {
             Group {
                 if appState.isAuthenticated {
                     if appState.isEmailVerified || appState.currentUser == nil {
-                        MainView()
+                        AppShellView()
                     } else {
                         EmailVerificationGateView()
                     }
