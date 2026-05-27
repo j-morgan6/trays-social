@@ -16,7 +16,6 @@
 		2A0EE925716022E10F9F1D2F /* FollowListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081FEF95ADD3CAAC66289B38 /* FollowListView.swift */; };
 		2DD2D855653C3714EDB390FD /* DiscoveryInsert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 508FF1ACC28978541290D77F /* DiscoveryInsert.swift */; };
 		2E972D58F5CF06D31F5083E6 /* FollowListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24C1A60FF5002EDF0812FDC1 /* FollowListViewModel.swift */; };
-		39194D4A483E7B448C9892E9 /* EditorialHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07F79ECCD254F280215FDB60 /* EditorialHeader.swift */; };
 		3B8685A473157143FAFF33C1 /* SafariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6665080D2CCFA5AAD069E6F2 /* SafariView.swift */; };
 		4D83969D7A86D26D9030362E /* PostCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFA71A4938840179D5D0A373 /* PostCardView.swift */; };
 		4ED1313D6240155C2216987E /* UsernamePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B57AA927EF649956A01009A /* UsernamePickerView.swift */; };
@@ -84,7 +83,6 @@
 
 /* Begin PBXFileReference section */
 		0623E0823095B84B0BE6357F /* Post.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Post.swift; sourceTree = "<group>"; };
-		07F79ECCD254F280215FDB60 /* EditorialHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorialHeader.swift; sourceTree = "<group>"; };
 		081FEF95ADD3CAAC66289B38 /* FollowListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowListView.swift; sourceTree = "<group>"; };
 		0B57AA927EF649956A01009A /* UsernamePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsernamePickerView.swift; sourceTree = "<group>"; };
 		0F90F0E9C63303F4F5E19999 /* AppNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNotification.swift; sourceTree = "<group>"; };
@@ -321,7 +319,6 @@
 			isa = PBXGroup;
 			children = (
 				5B3AA5EA01086BDCFF78E26A /* BottomBar.swift */,
-				07F79ECCD254F280215FDB60 /* EditorialHeader.swift */,
 				A88C0ADB221E4D697E86CA15 /* ReportSheetView.swift */,
 				6665080D2CCFA5AAD069E6F2 /* SafariView.swift */,
 				659A69F30CEB602F949795FC /* Skeleton.swift */,
@@ -539,7 +536,6 @@
 				7551F7FCC857F865C275A11A /* CreatePostView.swift in Sources */,
 				AB4C02FA789E916C7F685875 /* CreatePostViewModel.swift in Sources */,
 				2DD2D855653C3714EDB390FD /* DiscoveryInsert.swift in Sources */,
-				39194D4A483E7B448C9892E9 /* EditorialHeader.swift in Sources */,
 				6F012818914E997F28AEDFBE /* EmailVerificationGateView.swift in Sources */,
 				C5722C1F0CCB7A506F798483 /* FeedView.swift in Sources */,
 				DCF0881BB917DD085F462F8E /* FeedViewModel.swift in Sources */,
