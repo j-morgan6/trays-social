@@ -8,7 +8,7 @@ private let deeplinkLog = Logger(subsystem: "com.trays.social", category: "deepl
 final class AppState {
     var isAuthenticated = false
     var currentUser: User?
-    var selectedTray: TrayTab = .feed
+    var selectedTray: TrayTab = .myTray
     var navigationPath = NavigationPath()
     /// Set when an API call returns a 403 with code "suspended". LoginView reads
     /// this on appear and surfaces it as an .alert, then calls
@@ -18,8 +18,8 @@ final class AppState {
 
     enum TrayTab: Int, CaseIterable {
         case feed = 0
-        case find = 1
-        case myTray = 2
+        case myTray = 1
+        case find = 2
     }
 
     var isValidatingToken = false
