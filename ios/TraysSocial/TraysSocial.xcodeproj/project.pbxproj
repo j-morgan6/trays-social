@@ -46,6 +46,7 @@
 		A4DC16ED6BAE818151AF8FF1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 32D2EAB385C443516BBDD921 /* Assets.xcassets */; };
 		A9A34BEDF00A118C90677E42 /* FindViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100430FDF305D5E74355F4BC /* FindViewModel.swift */; };
 		AB4C02FA789E916C7F685875 /* CreatePostViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3540592DA46CF395AEEAA5C0 /* CreatePostViewModel.swift */; };
+		ADDB184B470E10AB2D2F5984 /* Routes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1606C571A131B58CC5544E1 /* Routes.swift */; };
 		AE1ABF8DB0A2231E95C272F3 /* FindView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25DDF4D71B30FEDDB90E828E /* FindView.swift */; };
 		AE6D36D01CE30088411763D8 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E187710AB83196E03802D323 /* AppShellView.swift */; };
 		BAE221C8716562D3F5253854 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C95FC39F4695EA3AF4C37A5 /* PushNotificationService.swift */; };
@@ -143,6 +144,7 @@
 		DBD01D0EB9310C72D911EC60 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		DC60D2B53505A6374F68AFBB /* PostViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostViewModel.swift; sourceTree = "<group>"; };
 		DD609B9C746BF48DEA058E25 /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
+		E1606C571A131B58CC5544E1 /* Routes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Routes.swift; sourceTree = "<group>"; };
 		E187710AB83196E03802D323 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
 		E1F2C835D7AE2AADBA2B60A0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		E769DEF560D0E279B26B7746 /* APIResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIResponse.swift; sourceTree = "<group>"; };
@@ -371,6 +373,7 @@
 				E187710AB83196E03802D323 /* AppShellView.swift */,
 				3BD8AE7EBFB23F2853F03609 /* BottomPill.swift */,
 				18252654917F5129220567CE /* PillBar.swift */,
+				E1606C571A131B58CC5544E1 /* Routes.swift */,
 				9837B5661A66D78713F20196 /* ShellViewModel.swift */,
 				8D5A6AC4887DBFA2579C1ADB /* TabSegment.swift */,
 				96F85664E1ACC61D2A1F0B4C /* TopPill.swift */,
@@ -567,6 +570,7 @@
 				878D75D8A9FE2C9E18DF44C2 /* RecipeHero.swift in Sources */,
 				9280D37823B72E4D7F07A8F3 /* RegisterView.swift in Sources */,
 				6CD43F086BF30F8E97A20D1F /* ReportSheetView.swift in Sources */,
+				ADDB184B470E10AB2D2F5984 /* Routes.swift in Sources */,
 				3B8685A473157143FAFF33C1 /* SafariView.swift in Sources */,
 				615CFE66E305B85BD699E1E7 /* ShellViewModel.swift in Sources */,
 				F999B58E2A4463E8EEA32F18 /* Skeleton.swift in Sources */,

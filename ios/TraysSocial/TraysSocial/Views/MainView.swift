@@ -1,7 +1,5 @@
 import SwiftUI
 
-struct NotificationRoute: Hashable {}
-
 struct MainView: View {
     @Environment(AppState.self) private var appState
     @State private var showCreatePost = false
