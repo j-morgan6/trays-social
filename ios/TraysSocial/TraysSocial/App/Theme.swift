@@ -36,6 +36,7 @@ enum Theme {
     static let inputBackground = Color("Surface")
 
     // MARK: - Pass 1 Prototype Tokens
+
     //
     // Values locked to docs/superpowers/specs/2026-05-27-claude-design-pass-01-prototype.jsx
     // (lines 11-38). Theme.primary, Theme.accent, and the legacy semantic colors above stay
@@ -79,21 +80,51 @@ enum Theme {
     static let accentBorder = Color(red: 255.0 / 255.0, green: 179.0 / 255.0, blue: 0.0 / 255.0, opacity: 0.32)
     static let inkOnAccent = Color(hex: 0x1A1A1A)
 
-    // Overlays
-    //
-    // scrimGradient is a LinearGradient (NOT a Color). Apply with .overlay(Theme.scrimGradient)
-    // to darken the bottom of photo cards for title legibility — do not pass it to
-    // .foregroundStyle().
+    /// Overlays
+    ///
+    /// scrimGradient is a LinearGradient (NOT a Color). Apply with .overlay(Theme.scrimGradient)
+    /// to darken the bottom of photo cards for title legibility — do not pass it to
+    /// .foregroundStyle().
     static let scrimGradient = LinearGradient(
         stops: [
             .init(color: Color.clear, location: 0.3),
-            .init(color: Color.black.opacity(0.55), location: 1.0)
+            .init(color: Color.black.opacity(0.55), location: 1.0),
         ],
         startPoint: .top,
         endPoint: .bottom
     )
     static let modalScrimLight = Color(red: 250.0 / 255.0, green: 250.0 / 255.0, blue: 246.0 / 255.0, opacity: 0.85)
     static let modalScrimDark = Color(red: 22.0 / 255.0, green: 22.0 / 255.0, blue: 20.0 / 255.0, opacity: 0.78)
+
+    // MARK: - Adaptive Helpers
+
+    //
+    // Components read @Environment(\.colorScheme) and ask Theme for the right per-mode token,
+    // so each view doesn't re-implement the light-vs-dark switch inline.
+
+    static func pillBg(for scheme: ColorScheme) -> Color {
+        scheme == .dark ? pillBgDark : pillBgLight
+    }
+
+    static func hairline(for scheme: ColorScheme) -> Color {
+        scheme == .dark ? hairDark : hairLight
+    }
+
+    static func muted(for scheme: ColorScheme) -> Color {
+        scheme == .dark ? mutedDark : mutedLight
+    }
+
+    static func subtle(for scheme: ColorScheme) -> Color {
+        scheme == .dark ? subtleDark : subtleLight
+    }
+
+    static func accentInk(for scheme: ColorScheme) -> Color {
+        scheme == .dark ? accentInkDark : accentInkLight
+    }
+
+    static func lift(for scheme: ColorScheme) -> Color {
+        scheme == .dark ? liftDark : liftLight
+    }
 }
 
 // MARK: - Hex Color Initializer
