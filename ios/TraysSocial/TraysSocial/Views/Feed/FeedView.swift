@@ -1,17 +1,28 @@
 import SwiftUI
 
+/// Feed screen ported from the Pass 1 prototype's TabFeed
+/// (prototype.jsx lines 441-465): a 22pt semibold header section
+/// above a lazy vertical list of `FeedCardView`s, ending with a quiet
+/// "You're all caught up." footer.
 struct FeedView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @State private var viewModel = FeedViewModel()
 
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 14) {
-                ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
+            LazyVStack(spacing: 0) {
+                headerSection
+                    .padding(.top, 4)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+
+                ForEach(viewModel.posts) { post in
                     NavigationLink(value: post) {
-                        PostCardView(
+                        FeedCardView(
                             post: post,
-                            onTrayTap: { toggleBookmark(post) },
-                            onLikeTap: { toggleLike(post) }
+                            onSaveTap: { newValue in
+                                toggleBookmark(post, newValue: newValue)
+                            }
                         )
                         .contentShape(Rectangle())
                     }
@@ -19,25 +30,23 @@ struct FeedView: View {
                     .onAppear {
                         prefetchIfNeeded(post)
                     }
-
-                    // Discovery insert — surfaces between the first and
-                    // second post when the feed is non-trivial. Matches
-                    // the "From Find · adjacent to your saves" card the
-                    // design specifies for iOS Feed.
-                    if index == 0, viewModel.posts.count > 1 {
-                        DiscoveryInsert()
-                    }
                 }
 
                 if viewModel.isLoadingMore {
                     ProgressView()
                         .tint(.gray)
-                        .padding()
+                        .padding(.vertical, 12)
+                } else if !viewModel.posts.isEmpty {
+                    Text("You're all caught up.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.subtle(for: colorScheme))
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 8)
+                        .padding(.bottom, 22)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 6)
-            .padding(.bottom, 110)
+            .padding(.top, 116)
+            .padding(.bottom, 116)
         }
         .refreshable {
             await viewModel.refresh()
@@ -77,8 +86,30 @@ struct FeedView: View {
         }
     }
 
-    private func toggleBookmark(_ post: Post) {
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("From cooks you follow")
+                .font(.system(size: 22, weight: .semibold))
+                .tracking(-0.44)
+                .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(headerSubtitle)
+                .font(.system(size: 13))
+                .foregroundStyle(Theme.muted(for: colorScheme))
+        }
+    }
+
+    private var headerSubtitle: String {
+        let count = viewModel.posts.count
+        return count == 1
+            ? "One new post since yesterday."
+            : "\(count) new posts since yesterday."
+    }
+
+    private func toggleBookmark(_ post: Post, newValue: Bool) {
         let wasBookmarked = post.bookmarkedByCurrentUser ?? false
+        guard wasBookmarked != newValue else { return }
 
         // Optimistic UI update
         if let index = viewModel.posts.firstIndex(where: { $0.id == post.id }) {
@@ -88,7 +119,7 @@ struct FeedView: View {
                 cookingTimeMinutes: p.cookingTimeMinutes, servings: p.servings,
                 likeCount: p.likeCount, commentCount: p.commentCount,
                 likedByCurrentUser: p.likedByCurrentUser,
-                bookmarkedByCurrentUser: !wasBookmarked,
+                bookmarkedByCurrentUser: newValue,
                 insertedAt: p.insertedAt, user: p.user, photos: p.photos,
                 ingredients: p.ingredients, cookingSteps: p.cookingSteps,
                 tools: p.tools, tags: p.tags
@@ -96,10 +127,10 @@ struct FeedView: View {
         }
 
         Task {
-            if wasBookmarked {
-                _ = try? await APIClient.shared.delete(path: "/bookmarks/\(post.id)") as EmptyResponse
-            } else {
+            if newValue {
                 _ = try? await APIClient.shared.post(path: "/bookmarks/\(post.id)")
+            } else {
+                _ = try? await APIClient.shared.delete(path: "/bookmarks/\(post.id)") as EmptyResponse
             }
         }
     }
@@ -111,55 +142,10 @@ struct FeedView: View {
             Task { await viewModel.loadMore() }
         }
     }
-
-    private func toggleLike(_ post: Post) {
-        let wasLiked = post.likedByCurrentUser
-
-        // Optimistic UI update
-        if let index = viewModel.posts.firstIndex(where: { $0.id == post.id }) {
-            let p = viewModel.posts[index]
-            viewModel.posts[index] = Post(
-                id: p.id, type: p.type, caption: p.caption,
-                cookingTimeMinutes: p.cookingTimeMinutes, servings: p.servings,
-                likeCount: max(0, p.likeCount + (wasLiked ? -1 : 1)),
-                commentCount: p.commentCount,
-                likedByCurrentUser: !wasLiked,
-                bookmarkedByCurrentUser: p.bookmarkedByCurrentUser,
-                insertedAt: p.insertedAt, user: p.user, photos: p.photos,
-                ingredients: p.ingredients, cookingSteps: p.cookingSteps,
-                tools: p.tools, tags: p.tags
-            )
-        }
-
-        Task {
-            if wasLiked {
-                _ = try? await APIClient.shared.delete(path: "/posts/\(post.id)/like") as EmptyResponse
-            } else {
-                _ = try? await APIClient.shared.post(path: "/posts/\(post.id)/like")
-            }
-        }
-    }
 }
 
 extension String: @retroactive Identifiable {
     public var id: String {
         self
-    }
-}
-
-/// Placeholders for screens built in later tasks
-private struct PostDetailPlaceholder: View {
-    let postId: Int
-    var body: some View {
-        Text("Post Detail #\(postId) — Built in W68")
-            .foregroundStyle(.secondary)
-    }
-}
-
-private struct UserProfilePlaceholder: View {
-    let username: String
-    var body: some View {
-        Text("@\(username) Profile — Built in W71")
-            .foregroundStyle(.secondary)
     }
 }
