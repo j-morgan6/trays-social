@@ -53,6 +53,7 @@
 		A11BE16C9576033B380F3B22 /* Avi.swift in Sources */ = {isa = PBXBuildFile; fileRef = 795F8E4EC5FAF2D1FC43DD6A /* Avi.swift */; };
 		A209F869B61E0A50FB993A8F /* BottomPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BD8AE7EBFB23F2853F03609 /* BottomPill.swift */; };
 		A4DC16ED6BAE818151AF8FF1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 32D2EAB385C443516BBDD921 /* Assets.xcassets */; };
+		A5DB464511C0C9AAE06E47EE /* OptimisticRollbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CF47E480964E12797BBE597 /* OptimisticRollbackTests.swift */; };
 		A9A34BEDF00A118C90677E42 /* FindViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100430FDF305D5E74355F4BC /* FindViewModel.swift */; };
 		AB4C02FA789E916C7F685875 /* CreatePostViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3540592DA46CF395AEEAA5C0 /* CreatePostViewModel.swift */; };
 		ADDB184B470E10AB2D2F5984 /* Routes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1606C571A131B58CC5544E1 /* Routes.swift */; };
@@ -67,6 +68,7 @@
 		C2AE627280A704249C268EF4 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45AD072C42CEDFF1299909E3 /* WelcomeView.swift */; };
 		C5722C1F0CCB7A506F798483 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBD01D0EB9310C72D911EC60 /* FeedView.swift */; };
 		D7B58D50FFE71B87C36FA3FF /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15E25A27F96B53A311D1785A /* AppState.swift */; };
+		D90F0D76CEED859CAB44E7F8 /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8CD34AF05A68C62013A052 /* Toast.swift */; };
 		D9D83A18DCA43251859EFB14 /* PostViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC60D2B53505A6374F68AFBB /* PostViewModel.swift */; };
 		DC9FFDCAB43C8DE2FD2A03B9 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB5079D934DE75DD36A85EB1 /* User.swift */; };
 		DCF0881BB917DD085F462F8E /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D730369827269A7072F416A2 /* FeedViewModel.swift */; };
@@ -130,6 +132,7 @@
 		508FF1ACC28978541290D77F /* DiscoveryInsert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryInsert.swift; sourceTree = "<group>"; };
 		589EE70B8154A9D38E6B9D1B /* CreatePostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostView.swift; sourceTree = "<group>"; };
 		592C28010B4AF7AD66D95DC2 /* FilterChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterChip.swift; sourceTree = "<group>"; };
+		5CF47E480964E12797BBE597 /* OptimisticRollbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimisticRollbackTests.swift; sourceTree = "<group>"; };
 		634298CD755E9547B6A89A2F /* MutedKeywordsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MutedKeywordsView.swift; sourceTree = "<group>"; };
 		648DCE235333F94EDFB4FC82 /* TraysSocial.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TraysSocial.entitlements; sourceTree = "<group>"; };
 		659A69F30CEB602F949795FC /* Skeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skeleton.swift; sourceTree = "<group>"; };
@@ -165,6 +168,7 @@
 		D730369827269A7072F416A2 /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedViewModel.swift; sourceTree = "<group>"; };
 		D8FC750231A2A97A1B99C5DB /* BlockedUsersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockedUsersView.swift; sourceTree = "<group>"; };
 		DA6604AAAB85FBBFD8714FC3 /* EmailVerificationGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailVerificationGateView.swift; sourceTree = "<group>"; };
+		DB8CD34AF05A68C62013A052 /* Toast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toast.swift; sourceTree = "<group>"; };
 		DBD01D0EB9310C72D911EC60 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		DC60D2B53505A6374F68AFBB /* PostViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostViewModel.swift; sourceTree = "<group>"; };
 		DD609B9C746BF48DEA058E25 /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
@@ -378,6 +382,7 @@
 				A88C0ADB221E4D697E86CA15 /* ReportSheetView.swift */,
 				6665080D2CCFA5AAD069E6F2 /* SafariView.swift */,
 				659A69F30CEB602F949795FC /* Skeleton.swift */,
+				DB8CD34AF05A68C62013A052 /* Toast.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -409,6 +414,7 @@
 				799AB364DADE33F1869359DD /* PlaceholderTest.swift */,
 				2FD333E0AF5AB0C971D29A37 /* Errors */,
 				0B2A37EC40E1A5551FF80405 /* Images */,
+				F9E5D09062643D3463C844A9 /* Optimistic */,
 				C048240B04E9F0F76BEAAEAD /* Shell */,
 			);
 			path = TraysSocialTests;
@@ -460,6 +466,14 @@
 				B4191F4AE9819C57781DB5E3 /* RecipeHero.swift */,
 			);
 			path = Post;
+			sourceTree = "<group>";
+		};
+		F9E5D09062643D3463C844A9 /* Optimistic */ = {
+			isa = PBXGroup;
+			children = (
+				5CF47E480964E12797BBE597 /* OptimisticRollbackTests.swift */,
+			);
+			path = Optimistic;
 			sourceTree = "<group>";
 		};
 		FCAB5EDF7E4EF9119007CA60 /* Models */ = {
@@ -581,6 +595,7 @@
 			files = (
 				805156E9B3EEA5D812F731BC /* ErrorReporterTests.swift in Sources */,
 				E59FCAE4892645CC398A1E94 /* ImageLoaderTests.swift in Sources */,
+				A5DB464511C0C9AAE06E47EE /* OptimisticRollbackTests.swift in Sources */,
 				7911FCE388382AF25FD6D3B4 /* PlaceholderTest.swift in Sources */,
 				037EBB9D239C5B6B3CB07599 /* ShellViewModelTests.swift in Sources */,
 			);
@@ -654,6 +669,7 @@
 				9F4B2BB2DD63E2B1B1373704 /* String+BackendURL.swift in Sources */,
 				BBFCB7DCBC1EEE0D5CDE0205 /* TabSegment.swift in Sources */,
 				F2BF3A3ADB396931C925D745 /* Theme.swift in Sources */,
+				D90F0D76CEED859CAB44E7F8 /* Toast.swift in Sources */,
 				21ABF922770D16848BFDD32D /* TopPill.swift in Sources */,
 				BD00C5D666CF7BEBDA198327 /* TraysSocialApp.swift in Sources */,
 				DC9FFDCAB43C8DE2FD2A03B9 /* User.swift in Sources */,

@@ -111,7 +111,10 @@ struct FeedView: View {
         let wasBookmarked = post.bookmarkedByCurrentUser ?? false
         guard wasBookmarked != newValue else { return }
 
-        // Optimistic UI update
+        // Snapshot the pre-tap version so we can revert on rollback.
+        let original = post
+
+        // Optimistic UI update — flip the row in place.
         if let index = viewModel.posts.firstIndex(where: { $0.id == post.id }) {
             let p = viewModel.posts[index]
             viewModel.posts[index] = Post(
@@ -127,10 +130,26 @@ struct FeedView: View {
         }
 
         Task {
-            if newValue {
-                _ = try? await APIClient.shared.post(path: "/bookmarks/\(post.id)")
-            } else {
-                _ = try? await APIClient.shared.delete(path: "/bookmarks/\(post.id)") as EmptyResponse
+            do {
+                if newValue {
+                    _ = try await APIClient.shared.post(path: "/bookmarks/\(post.id)")
+                } else {
+                    _ = try await APIClient.shared.delete(path: "/bookmarks/\(post.id)") as EmptyResponse
+                }
+            } catch {
+                // W133: rollback — restore the pre-tap row and surface
+                // the locked toast copy so the user knows the save
+                // didn't actually stick.
+                await MainActor.run {
+                    if let index = viewModel.posts.firstIndex(where: { $0.id == original.id }) {
+                        viewModel.posts[index] = original
+                    }
+                }
+                if newValue {
+                    Toast.saveFailed.show()
+                } else {
+                    Toast.unsaveFailed.show()
+                }
             }
         }
     }

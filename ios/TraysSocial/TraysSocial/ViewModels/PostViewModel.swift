@@ -65,51 +65,75 @@ final class PostViewModel {
     }
 
     func toggleLike() {
-        guard let p = post else { return }
-        let wasLiked = p.likedByCurrentUser
-        // Optimistic update
-        let updated = Post(
-            id: p.id, type: p.type, caption: p.caption,
-            cookingTimeMinutes: p.cookingTimeMinutes, servings: p.servings,
-            likeCount: wasLiked ? max(0, p.likeCount - 1) : p.likeCount + 1,
-            commentCount: p.commentCount,
+        guard let original = post else { return }
+        let wasLiked = original.likedByCurrentUser
+        // Optimistic update — flip the like state + count immediately.
+        let optimistic = Post(
+            id: original.id, type: original.type, caption: original.caption,
+            cookingTimeMinutes: original.cookingTimeMinutes, servings: original.servings,
+            likeCount: wasLiked ? max(0, original.likeCount - 1) : original.likeCount + 1,
+            commentCount: original.commentCount,
             likedByCurrentUser: !wasLiked,
-            bookmarkedByCurrentUser: p.bookmarkedByCurrentUser,
-            insertedAt: p.insertedAt, user: p.user, photos: p.photos,
-            ingredients: p.ingredients, cookingSteps: p.cookingSteps,
-            tools: p.tools, tags: p.tags
+            bookmarkedByCurrentUser: original.bookmarkedByCurrentUser,
+            insertedAt: original.insertedAt, user: original.user, photos: original.photos,
+            ingredients: original.ingredients, cookingSteps: original.cookingSteps,
+            tools: original.tools, tags: original.tags
         )
-        post = updated
-        broadcastUpdate(updated)
-        Task {
-            if wasLiked {
-                try? await APIClient.shared.delete(path: "/posts/\(p.id)/like")
-            } else {
-                try? await APIClient.shared.post(path: "/posts/\(p.id)/like")
+        post = optimistic
+        broadcastUpdate(optimistic)
+        Task { [weak self] in
+            do {
+                if wasLiked {
+                    _ = try await APIClient.shared.delete(path: "/posts/\(original.id)/like") as EmptyResponse
+                } else {
+                    _ = try await APIClient.shared.post(path: "/posts/\(original.id)/like")
+                }
+            } catch {
+                // W133: optimistic UI without rollback is worse than no
+                // optimistic UI. Revert to the pre-tap state and toast
+                // the user with the locked spec copy so they know it
+                // didn't actually persist.
+                await MainActor.run {
+                    self?.post = original
+                    self?.broadcastUpdate(original)
+                }
+                Toast.likeFailed.show()
             }
         }
     }
 
     func toggleBookmark() {
-        guard let p = post else { return }
-        let wasBookmarked = p.bookmarkedByCurrentUser ?? false
-        let updated = Post(
-            id: p.id, type: p.type, caption: p.caption,
-            cookingTimeMinutes: p.cookingTimeMinutes, servings: p.servings,
-            likeCount: p.likeCount, commentCount: p.commentCount,
-            likedByCurrentUser: p.likedByCurrentUser,
+        guard let original = post else { return }
+        let wasBookmarked = original.bookmarkedByCurrentUser ?? false
+        let optimistic = Post(
+            id: original.id, type: original.type, caption: original.caption,
+            cookingTimeMinutes: original.cookingTimeMinutes, servings: original.servings,
+            likeCount: original.likeCount, commentCount: original.commentCount,
+            likedByCurrentUser: original.likedByCurrentUser,
             bookmarkedByCurrentUser: !wasBookmarked,
-            insertedAt: p.insertedAt, user: p.user, photos: p.photos,
-            ingredients: p.ingredients, cookingSteps: p.cookingSteps,
-            tools: p.tools, tags: p.tags
+            insertedAt: original.insertedAt, user: original.user, photos: original.photos,
+            ingredients: original.ingredients, cookingSteps: original.cookingSteps,
+            tools: original.tools, tags: original.tags
         )
-        post = updated
-        broadcastUpdate(updated)
-        Task {
-            if wasBookmarked {
-                try? await APIClient.shared.delete(path: "/bookmarks/\(p.id)")
-            } else {
-                try? await APIClient.shared.post(path: "/bookmarks/\(p.id)")
+        post = optimistic
+        broadcastUpdate(optimistic)
+        Task { [weak self] in
+            do {
+                if wasBookmarked {
+                    _ = try await APIClient.shared.delete(path: "/bookmarks/\(original.id)") as EmptyResponse
+                } else {
+                    _ = try await APIClient.shared.post(path: "/bookmarks/\(original.id)")
+                }
+            } catch {
+                await MainActor.run {
+                    self?.post = original
+                    self?.broadcastUpdate(original)
+                }
+                if wasBookmarked {
+                    Toast.unsaveFailed.show()
+                } else {
+                    Toast.saveFailed.show()
+                }
             }
         }
     }

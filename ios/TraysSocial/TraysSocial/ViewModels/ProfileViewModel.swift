@@ -39,26 +39,38 @@ final class ProfileViewModel {
     }
 
     func toggleFollow() {
-        guard let user else { return }
-        let wasFollowing = user.followedByCurrentUser ?? false
+        guard let original = user else { return }
+        let wasFollowing = original.followedByCurrentUser ?? false
 
-        // Optimistic update
-        self.user = User(
-            id: user.id, username: user.username, email: user.email, bio: user.bio,
-            profilePhotoUrl: user.profilePhotoUrl, insertedAt: user.insertedAt,
-            confirmedAt: user.confirmedAt,
-            postCount: user.postCount,
-            followerCount: (user.followerCount ?? 0) + (wasFollowing ? -1 : 1),
-            followingCount: user.followingCount,
+        // Optimistic update — flip follow state + bump follower count.
+        user = User(
+            id: original.id, username: original.username, email: original.email, bio: original.bio,
+            profilePhotoUrl: original.profilePhotoUrl, insertedAt: original.insertedAt,
+            confirmedAt: original.confirmedAt,
+            postCount: original.postCount,
+            followerCount: (original.followerCount ?? 0) + (wasFollowing ? -1 : 1),
+            followingCount: original.followingCount,
             followedByCurrentUser: !wasFollowing,
-            isAdmin: user.isAdmin
+            isAdmin: original.isAdmin
         )
 
-        Task {
-            if wasFollowing {
-                try? await APIClient.shared.delete(path: "/users/\(user.username)/follow")
-            } else {
-                try? await APIClient.shared.post(path: "/users/\(user.username)/follow")
+        Task { [weak self] in
+            do {
+                if wasFollowing {
+                    _ = try await APIClient.shared.delete(path: "/users/\(original.username)/follow") as EmptyResponse
+                } else {
+                    _ = try await APIClient.shared.post(path: "/users/\(original.username)/follow")
+                }
+            } catch {
+                // W133: rollback to the pre-tap user record and toast
+                // with the locked copy so the user sees their follow
+                // state actually persists or doesn't.
+                await MainActor.run { self?.user = original }
+                if wasFollowing {
+                    Toast.unfollowFailed.show()
+                } else {
+                    Toast.followFailed.show()
+                }
             }
         }
     }
