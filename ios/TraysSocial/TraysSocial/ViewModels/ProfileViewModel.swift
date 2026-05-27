@@ -16,7 +16,9 @@ final class ProfileViewModel {
             user = response.data
             isOwnProfile = response.data.id == currentUserId
             await loadPosts(username: username)
-        } catch {}
+        } catch {
+            ErrorReporter.report(error, fallback: "Couldn't load @\(username)'s profile.")
+        }
         isLoading = false
     }
 
@@ -31,7 +33,9 @@ final class ProfileViewModel {
                 queryItems: queryItems
             )
             posts = postsResponse.data
-        } catch {}
+        } catch {
+            ErrorReporter.report(error, fallback: "Couldn't load posts for @\(username).")
+        }
     }
 
     func toggleFollow() {

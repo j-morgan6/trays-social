@@ -32,7 +32,9 @@ final class NotificationsViewModel {
         do {
             let response: PaginatedResponse<[AppNotification]> = try await APIClient.shared.get(path: "/notifications")
             notifications = response.data
-        } catch {}
+        } catch {
+            ErrorReporter.report(error, fallback: "Couldn't load notifications.")
+        }
         isLoading = false
     }
 

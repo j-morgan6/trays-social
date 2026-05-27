@@ -63,7 +63,9 @@ struct BlockedUsersView: View {
         do {
             let response: DataResponse<[BlockedUser]> = try await APIClient.shared.get(path: "/blocked-users")
             blockedUsers = response.data
-        } catch {}
+        } catch {
+            ErrorReporter.report(error, fallback: "Couldn't load blocked users.")
+        }
         isLoading = false
     }
 
@@ -71,6 +73,8 @@ struct BlockedUsersView: View {
         do {
             let _: MessageResponse = try await APIClient.shared.delete(path: "/users/\(user.username)/block")
             blockedUsers.removeAll { $0.id == user.id }
-        } catch {}
+        } catch {
+            ErrorReporter.report(error, fallback: "Couldn't unblock \(user.username).")
+        }
     }
 }

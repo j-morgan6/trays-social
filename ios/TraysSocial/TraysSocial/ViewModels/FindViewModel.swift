@@ -26,7 +26,7 @@ final class FindViewModel {
             let response: DataResponse<[Post]> = try await APIClient.shared.get(path: "/posts/trending")
             trendingPosts = response.data
         } catch {
-            // Silently fail
+            ErrorReporter.report(error, fallback: "Couldn't load trending recipes.")
         }
 
         isLoadingTrending = false
@@ -73,12 +73,14 @@ final class FindViewModel {
                     users = response.data.users
                 }
             } catch is CancellationError {
-                // Task was cancelled — next search will take over
+                // ok: cancelled — the next search debounce will take over
+                // and submitting a toast would race the new query.
             } catch {
                 // API error — clear stale results
                 if !Task.isCancelled {
                     posts = []
                     users = []
+                    ErrorReporter.report(error, fallback: "Search failed. Please try again.")
                 }
             }
         }

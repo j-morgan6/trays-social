@@ -16,6 +16,22 @@ final class AppState {
     /// user actually sees why they were logged out.
     var suspensionMessage: String?
 
+    /// Current toast message. `nil` when no error is visible. The
+    /// `ErrorToast` view binds to this; rapid calls to `showError`
+    /// coalesce — the latest message wins and the auto-dismiss timer
+    /// restarts.
+    var currentError: String?
+
+    /// Cancellable handle for the auto-dismiss timer. Stored so a new
+    /// `showError` call can cancel the previous countdown and start
+    /// fresh from the most recent message.
+    private var errorDismissTask: Task<Void, Never>?
+
+    /// Observer token for the `.traysErrorOccurred` notification.
+    /// Retained on AppState so ViewModels can post errors without
+    /// holding an AppState reference.
+    private var errorObserver: NSObjectProtocol?
+
     enum TrayTab: Int, CaseIterable {
         case feed = 0
         case myTray = 1
@@ -39,11 +55,47 @@ final class AppState {
     }
 
     init() {
+        // Forward errors posted by ViewModels / Views (via
+        // ErrorReporter.report) to the toast. Subscribing here keeps
+        // callers free of any AppState dependency.
+        errorObserver = NotificationCenter.default.addObserver(
+            forName: .traysErrorOccurred,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let message = notification.userInfo?["message"] as? String else { return }
+            Task { @MainActor in
+                self?.showError(message)
+            }
+        }
+
         // Check for existing token on launch
         if KeychainService.getToken() != nil {
             isAuthenticated = true
             validateToken()
         }
+    }
+
+    /// Surface a user-facing error message via the root-level toast.
+    /// Coalesces: a second call replaces the first message and restarts
+    /// the auto-dismiss countdown.
+    func showError(_ message: String) {
+        errorDismissTask?.cancel()
+        currentError = message
+        errorDismissTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                self?.currentError = nil
+            }
+        }
+    }
+
+    /// Hide the current toast immediately. Called when the user taps
+    /// the banner or the dismiss button.
+    func dismissCurrentError() {
+        errorDismissTask?.cancel()
+        currentError = nil
     }
 
     private func validateToken() {

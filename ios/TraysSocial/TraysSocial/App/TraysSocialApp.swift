@@ -47,6 +47,14 @@ struct TraysSocialApp: App {
                 }
             }
             .environment(appState)
+            .overlay(alignment: .top) {
+                // W113: app-root toast for surfaced errors. Sits above
+                // every screen; flows that present a sheet should keep
+                // their existing inline error UI (the root overlay does
+                // not layer above modal sheets).
+                ErrorToast()
+                    .environment(appState)
+            }
             .preferredColorScheme(preferredScheme)
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { userActivity in
                 // Universal Link tap. Currently we only intercept

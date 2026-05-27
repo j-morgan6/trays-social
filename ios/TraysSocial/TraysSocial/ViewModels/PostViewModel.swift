@@ -15,22 +15,39 @@ final class PostViewModel {
     var commentText = ""
     var isSendingComment = false
 
+    /// Set when loadPost cannot fetch the post (network, 404, etc.).
+    /// PostDetailView reads this to render an inline retry surface (W114).
+    var loadError: Error?
+
+    /// Set when loadComments fails. CommentsSection reads this to render
+    /// its inline retry surface (W115).
+    var commentsError: Error?
+
     func loadPost(id: Int) async {
         isLoading = true
+        loadError = nil
         do {
             let response: DataResponse<Post> = try await APIClient.shared.get(path: "/posts/\(id)")
             post = response.data
-        } catch {}
+        } catch {
+            loadError = error
+            ErrorReporter.report(error, fallback: "Couldn't load this post.")
+        }
         isLoading = false
     }
 
     func loadComments(postId: Int) async {
+        commentsError = nil
         do {
             let response: PaginatedResponse<[Comment]> = try await APIClient.shared.get(
                 path: "/posts/\(postId)/comments"
             )
             comments = response.data
-        } catch {}
+        } catch {
+            commentsError = error
+            // Don't toast here — the inline comments-error surface owns
+            // the messaging for this scope (W115). Toast would double up.
+        }
     }
 
     func toggleLike() {
@@ -110,7 +127,9 @@ final class PostViewModel {
                 post = updated
                 broadcastUpdate(updated)
             }
-        } catch {}
+        } catch {
+            ErrorReporter.report(error, fallback: "Couldn't post your comment.")
+        }
         isSendingComment = false
     }
 

@@ -35,7 +35,7 @@ final class MyTrayViewModel {
             posts = response.data
             cursor = response.cursor
         } catch {
-            // Silently fail
+            ErrorReporter.report(error, fallback: "Couldn't load your tray.")
         }
 
         isLoading = false

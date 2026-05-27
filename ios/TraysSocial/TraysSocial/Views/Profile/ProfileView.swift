@@ -80,7 +80,9 @@ struct ProfileView: View {
             do {
                 let _: MessageResponse = try await APIClient.shared.post(path: "/users/\(username)/block")
                 // Pop back to previous screen
-            } catch {}
+            } catch {
+                ErrorReporter.report(error, fallback: "Couldn't block @\(username).")
+            }
         }
     }
 
@@ -469,7 +471,11 @@ struct EditProfileView: View {
             isSaving = false
             dismiss()
         } catch {
-            errorMessage = "Failed to save: \(error.localizedDescription)"
+            // W113: avoid showing raw error.localizedDescription per the
+            // pitfall list — route the error through the shared mapper so
+            // network blips read "Couldn't load — check your connection."
+            // instead of Cocoa's "The operation couldn't be completed..."
+            errorMessage = ErrorReporter.userMessage(for: error, fallback: "Couldn't save your profile.")
             isSaving = false
         }
     }

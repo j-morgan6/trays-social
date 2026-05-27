@@ -24,6 +24,7 @@ final class FeedViewModel {
             hasMore = response.cursor != nil
         } catch {
             errorMessage = "Failed to load feed."
+            ErrorReporter.report(error, fallback: "Couldn't load your feed.")
         }
 
         isLoading = false
@@ -42,7 +43,9 @@ final class FeedViewModel {
             self.cursor = response.cursor
             hasMore = response.cursor != nil
         } catch {
-            // Silently fail on pagination — existing content still visible
+            // ok: pagination silently fails — existing content stays
+            // visible and refresh-to-retry is one swipe away. Surfacing
+            // a toast for an infinite-scroll blip would feel noisy.
         }
 
         isLoadingMore = false
