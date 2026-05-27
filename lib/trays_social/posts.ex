@@ -40,14 +40,27 @@ defmodule TraysSocial.Posts do
     blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
     muted_keywords = Keyword.get(opts, :muted_keywords, [])
 
-    follow_count =
+    # W132: short-circuit the personalization gate. The previous
+    # implementation ran a full `SELECT COUNT(*)` against the follows
+    # table on every feed request — this only needs to know whether the
+    # user has at least 5 follows. `LIMIT 5` lets Postgres stop scanning
+    # as soon as it finds the fifth row, which on the indexed
+    # follower_id column is sub-millisecond regardless of how many
+    # thousands of follows the user has accumulated.
+    follows_at_least_5 =
       if for_user_id do
-        Follow |> where([f], f.follower_id == ^for_user_id) |> Repo.aggregate(:count)
+        Follow
+        |> where([f], f.follower_id == ^for_user_id)
+        |> limit(5)
+        |> select([f], 1)
+        |> Repo.all()
+        |> length()
+        |> Kernel.>=(5)
       else
-        0
+        false
       end
 
-    personalized = for_user_id && follow_count >= 5
+    personalized = for_user_id && follows_at_least_5
 
     Post
     |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
