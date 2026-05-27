@@ -59,7 +59,6 @@
 		D9D83A18DCA43251859EFB14 /* PostViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC60D2B53505A6374F68AFBB /* PostViewModel.swift */; };
 		DC9FFDCAB43C8DE2FD2A03B9 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB5079D934DE75DD36A85EB1 /* User.swift */; };
 		DCF0881BB917DD085F462F8E /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D730369827269A7072F416A2 /* FeedViewModel.swift */; };
-		E0633D5901A6A1D5BAEBDE1A /* TraySelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3F588384DD243E16F1473D /* TraySelector.swift */; };
 		E4090C8BFAECC75C5D6D5508 /* Comment.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9A82C055235B8D4E103AF95 /* Comment.swift */; };
 		E6F36149B52A5781300385E9 /* PostDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E77FB4C5F704EABC3090A7B5 /* PostDetailView.swift */; };
 		E8B99702B0C78EFBE2B961E8 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CE90967D6918BD229185514 /* LoginView.swift */; };
@@ -123,7 +122,6 @@
 		9837B5661A66D78713F20196 /* ShellViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellViewModel.swift; sourceTree = "<group>"; };
 		9AF1EA4D0A316329D1C02CB8 /* MyTrayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTrayViewModel.swift; sourceTree = "<group>"; };
 		A88C0ADB221E4D697E86CA15 /* ReportSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportSheetView.swift; sourceTree = "<group>"; };
-		AC3F588384DD243E16F1473D /* TraySelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraySelector.swift; sourceTree = "<group>"; };
 		ACB88CDBE65F5F63DB2CD860 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		B4191F4AE9819C57781DB5E3 /* RecipeHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeHero.swift; sourceTree = "<group>"; };
 		B4E5B01CCE1E4D857C7BEFF2 /* MyTrayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTrayView.swift; sourceTree = "<group>"; };
@@ -319,7 +317,6 @@
 				A88C0ADB221E4D697E86CA15 /* ReportSheetView.swift */,
 				6665080D2CCFA5AAD069E6F2 /* SafariView.swift */,
 				659A69F30CEB602F949795FC /* Skeleton.swift */,
-				AC3F588384DD243E16F1473D /* TraySelector.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -566,7 +563,6 @@
 				BBFCB7DCBC1EEE0D5CDE0205 /* TabSegment.swift in Sources */,
 				F2BF3A3ADB396931C925D745 /* Theme.swift in Sources */,
 				21ABF922770D16848BFDD32D /* TopPill.swift in Sources */,
-				E0633D5901A6A1D5BAEBDE1A /* TraySelector.swift in Sources */,
 				BD00C5D666CF7BEBDA198327 /* TraysSocialApp.swift in Sources */,
 				DC9FFDCAB43C8DE2FD2A03B9 /* User.swift in Sources */,
 				4ED1313D6240155C2216987E /* UsernamePickerView.swift in Sources */,
