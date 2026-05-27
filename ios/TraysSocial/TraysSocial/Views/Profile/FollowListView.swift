@@ -191,7 +191,7 @@ struct FollowListView: View {
             )
             .overlay {
                 if let urlString = user.profilePhotoUrl, let url = urlString.asBackendURL {
-                    AsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url) { image in
                         image.resizable().scaledToFill()
                     } placeholder: { Color.clear }
                         .frame(width: 40, height: 40)

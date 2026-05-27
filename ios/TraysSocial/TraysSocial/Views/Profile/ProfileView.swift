@@ -164,7 +164,7 @@ private struct ProfileBody: View {
     private var avatar: some View {
         Group {
             if let urlString = user.profilePhotoUrl, let imageURL = urlString.asBackendURL {
-                AsyncImage(url: imageURL) { image in
+                CachedAsyncImage(url: imageURL) { image in
                     image.resizable().scaledToFill()
                 } placeholder: {
                     Circle().fill(Color(.systemGray4))
@@ -387,7 +387,7 @@ struct EditProfileView: View {
                 } else if let urlString = appState.currentUser?.profilePhotoUrl,
                           let imageURL = urlString.asBackendURL
                 {
-                    AsyncImage(url: imageURL) { image in
+                    CachedAsyncImage(url: imageURL) { image in
                         image.resizable().scaledToFill()
                     } placeholder: {
                         Image(systemName: "person.fill")

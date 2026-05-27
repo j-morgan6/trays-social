@@ -46,7 +46,7 @@ struct BottomPill: View {
     @ViewBuilder
     private var avatar: some View {
         if let urlString = profilePhotoURL, let url = urlString.asBackendURL {
-            AsyncImage(url: url) { image in
+            CachedAsyncImage(url: url) { image in
                 image.resizable().scaledToFill()
             } placeholder: {
                 Circle().fill(Color(.systemGray4))

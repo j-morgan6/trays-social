@@ -49,7 +49,7 @@ struct BlockedUsersView: View {
                 .frame(width: 36, height: 36)
                 .overlay {
                     if let url = user.profilePhotoUrl, let imageURL = url.asBackendURL {
-                        AsyncImage(url: imageURL) { image in
+                        CachedAsyncImage(url: imageURL) { image in
                             image.resizable().scaledToFill()
                         } placeholder: { Color.clear }
                             .frame(width: 36, height: 36)

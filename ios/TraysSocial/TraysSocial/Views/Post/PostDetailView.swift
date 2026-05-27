@@ -234,7 +234,7 @@ struct PostDetailView: View {
     private func avatarView(for user: PostUser) -> some View {
         Group {
             if let urlString = user.profilePhotoUrl, let url = urlString.asBackendURL {
-                AsyncImage(url: url) { image in
+                CachedAsyncImage(url: url) { image in
                     image.resizable().scaledToFill()
                 } placeholder: { Color(.systemGray4) }
                     .frame(width: 36, height: 36)
@@ -511,7 +511,7 @@ private struct CommentRow: View {
     private var commentAvatar: some View {
         Group {
             if let url = comment.user.profilePhotoUrl, let imageURL = url.asBackendURL {
-                AsyncImage(url: imageURL) { image in
+                CachedAsyncImage(url: imageURL) { image in
                     image.resizable().scaledToFill()
                 } placeholder: {
                     Circle().fill(Color(.systemGray4))

@@ -24,6 +24,21 @@ struct RecipeHero: View {
         }
         .frame(height: 360)
         .clipped()
+        .onAppear(perform: prefetchCarouselPhotos)
+    }
+
+    /// W130: warm the shared image cache for the rest of the carousel
+    /// the moment the hero appears. The first photo is already loading
+    /// via CachedAsyncImage; this pulls the next few so a left-swipe
+    /// gets an instant render.
+    private func prefetchCarouselPhotos() {
+        guard post.photos.count > 1 else { return }
+        let urls = post.photos
+            .sorted(by: { $0.position < $1.position })
+            .dropFirst()
+            .prefix(4)
+            .compactMap(\.url.asBackendURL)
+        ImageLoader.shared.prefetch(urls: Array(urls))
     }
 
     private var photo: some View {
@@ -31,7 +46,7 @@ struct RecipeHero: View {
             if post.photos.count > 1 {
                 TabView {
                     ForEach(post.photos.sorted(by: { $0.position < $1.position }), id: \.position) { photo in
-                        AsyncImage(url: photo.url.asBackendURL) { image in
+                        CachedAsyncImage(url: photo.url.asBackendURL) { image in
                             image.resizable().scaledToFill()
                         } placeholder: {
                             Rectangle().fill(Color(.systemGray5))
@@ -43,7 +58,7 @@ struct RecipeHero: View {
                 }
                 .tabViewStyle(.page)
             } else if let url = post.primaryPhotoURL {
-                AsyncImage(url: url.asBackendURL) { image in
+                CachedAsyncImage(url: url.asBackendURL) { image in
                     image.resizable().scaledToFill()
                 } placeholder: {
                     Rectangle().fill(Color(.systemGray5))
