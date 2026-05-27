@@ -17,28 +17,38 @@ struct TraysSocialApp: App {
     }
 
     init() {
-        // 50MB memory / 200MB disk cache for images
+        // 50MB memory / 200MB disk cache for images. Stays synchronous:
+        // URLCache.shared is read by the first network call (validateToken
+        // dispatched from AppState.init), so deferring this would race the
+        // configured cache with the live request.
         URLCache.shared = URLCache(
             memoryCapacity: 50 * 1024 * 1024,
             diskCapacity: 200 * 1024 * 1024
         )
 
-        // W105: one-shot purge of the legacy email/password biometric
-        // credential. Existing users had their password stored under a
-        // biometric ACL; the new flow stores a refresh token instead.
-        // Purging on every launch is cheap (it's a Keychain delete) and
-        // self-healing — once gone, subsequent calls are no-ops. Users
-        // log in once with their password to re-opt into biometric, at
-        // which point the refresh-token path takes over.
-        KeychainService.purgeLegacyBiometricCredential()
+        // W131: everything below this line is cold-launch cleanup that
+        // does not need to complete before the first interactive frame.
+        // Hopping to a background Task moves the work off the main
+        // thread so AppState.init + the WindowGroup body can render
+        // without waiting on Keychain or MetricKit subscriber setup.
+        Task.detached(priority: .background) {
+            // W105: one-shot purge of the legacy email/password biometric
+            // credential. Existing users had their password stored under
+            // a biometric ACL; the new flow stores a refresh token
+            // instead. Self-healing — once the legacy items are gone,
+            // subsequent calls are no-ops.
+            KeychainService.purgeLegacyBiometricCredential()
 
-        // W119: subscribe to Apple's MetricKit so crash + performance
-        // payloads flow into /admin/ios-crashes. Register exactly once
-        // at launch — never inside a SwiftUI .onAppear, where a view
-        // re-render would re-subscribe and double-post every payload.
-        // Simulator builds register but never receive callbacks; only
-        // physical devices deliver payloads.
-        MetricKitReporter.shared.register()
+            // W119: subscribe to Apple's MetricKit so crash + performance
+            // payloads flow into /admin/ios-crashes. Register exactly once
+            // at launch — never inside a SwiftUI .onAppear, where a view
+            // re-render would re-subscribe and double-post every payload.
+            // Simulator builds register but never receive callbacks; only
+            // physical devices deliver payloads. The internal `registered`
+            // flag on MetricKitReporter still guards against double-
+            // registration if this Task ever runs more than once.
+            MetricKitReporter.shared.register()
+        }
     }
 
     var body: some Scene {
