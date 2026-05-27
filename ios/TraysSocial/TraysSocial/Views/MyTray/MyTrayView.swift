@@ -1,31 +1,54 @@
 import SwiftUI
 
-/// Editorial My Tray — matches `IOSMyTray` from the Claude Design
-/// handoff (design/handoff/trays-social/project/ios-screens.jsx).
+/// My Tray screen ported from the Pass 1 prototype's TabMyTray +
+/// TrayEmpty (prototype.jsx lines 467-555).
 ///
-/// Horizontal collections row (only "All saved" wired today — custom
-/// collections need a schema) + a list of saved recipes as horizontal
-/// cards with a 110pt thumbnail.
+/// Two states:
+/// - **populated** — 28pt bold "Your tray" + a muted count line, plus
+///   up to two `SectionHeader`-led 2-column `GridCard` grids ("Recipes"
+///   and "Saved posts"). A section with zero items hides entirely so
+///   the screen never shows a "Recipes · 0" header.
+/// - **empty** — a dashed amber-bordered container with an arrow icon,
+///   title + body copy locked to the spec, and three amber chevrons
+///   that animate twice then settle static (or stay static under
+///   Reduce Motion).
 struct MyTrayView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @State private var viewModel = MyTrayViewModel()
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                collectionsRow
-                    .padding(.bottom, 14)
-
-                if viewModel.posts.isEmpty, !viewModel.isLoading {
-                    emptyState
+                if viewModel.isEmpty, !viewModel.isLoading {
+                    TrayEmptyView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 80)
                 } else {
-                    savedList
+                    populatedHeader
+                        .padding(.horizontal, 20)
+                        .padding(.top, 4)
+                        .padding(.bottom, 18)
+
+                    if !viewModel.savedRecipes.isEmpty {
+                        SectionHeader(label: "Recipes", count: viewModel.savedRecipes.count)
+                        gridSection(viewModel.savedRecipes)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 24)
+                    }
+
+                    if !viewModel.savedPosts.isEmpty {
+                        SectionHeader(label: "Saved posts", count: viewModel.savedPosts.count)
+                        gridSection(viewModel.savedPosts)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 24)
+                    }
                 }
             }
-            .padding(.top, 8)
-            .padding(.bottom, 110)
+            .padding(.top, 116)
+            .padding(.bottom, 116)
         }
         .overlay {
-            if viewModel.isLoading, viewModel.posts.isEmpty {
+            if viewModel.isLoading, viewModel.isEmpty {
                 VStack(spacing: 10) {
                     ForEach(0 ..< 4, id: \.self) { _ in
                         SkeletonListRow()
@@ -46,192 +69,181 @@ struct MyTrayView: View {
         }
     }
 
-    // MARK: - Collections row
+    private var populatedHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Your tray")
+                .font(.system(size: 28, weight: .bold))
+                .tracking(-0.7)
+                .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
 
-    /// Horizontal scroll strip — "All saved" is the only wired
-    /// collection today. The dashed "+ New collection" tile is a
-    /// placeholder; collections need a schema before they can be wired.
-    private var collectionsRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                collectionTile(name: "All saved", count: viewModel.posts.count, isActive: true)
-                newCollectionTile
-            }
-            .padding(.horizontal, 20)
+            Text(headerSubtitle)
+                .font(.system(size: 13))
+                .foregroundStyle(Theme.muted(for: colorScheme))
         }
     }
 
-    private func collectionTile(name: String, count: Int, isActive: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Photo placeholder — eventually a representative recipe
-            // from the collection.
-            ZStack {
-                LinearGradient(
-                    colors: [Color(hex: 0xD8B178), Color(hex: 0x8A5A32)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
-            .frame(height: 72)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(name)
-                    .font(.serif(13))
-                    .foregroundStyle(Theme.text)
-                    .lineLimit(1)
-                Text("\(count) RECIPES")
-                    .font(.system(size: 8, weight: .medium, design: .monospaced))
-                    .tracking(1.5)
-                    .foregroundStyle(Theme.textSecondary)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-        }
-        .frame(width: 124)
-        .background(Theme.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(isActive ? Theme.secondary : Color.white.opacity(0.08), lineWidth: isActive ? 1.5 : 1)
-        )
+    private var headerSubtitle: String {
+        let recipes = viewModel.savedRecipes.count
+        let posts = viewModel.savedPosts.count
+        let recipesLabel = "\(recipes) \(recipes == 1 ? "recipe" : "recipes")"
+        let postsLabel = "\(posts) \(posts == 1 ? "post" : "posts")"
+        return "\(recipesLabel) and \(postsLabel) you've kept."
     }
 
-    private var newCollectionTile: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "plus")
-                .font(.system(size: 16))
-                .foregroundStyle(Theme.textSecondary)
-            Text("New collection")
-                .font(.serifItalic(11))
-                .foregroundStyle(Theme.textSecondary)
-            Text("SOON")
-                .font(.system(size: 8, weight: .medium, design: .monospaced))
-                .tracking(1)
-                .foregroundStyle(Theme.textSecondary.opacity(0.6))
-        }
-        .frame(width: 124, height: 122)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                .foregroundStyle(Color.white.opacity(0.15))
-        )
-    }
-
-    // MARK: - Saved list
-
-    private var savedList: some View {
-        VStack(spacing: 12) {
-            ForEach(Array(viewModel.posts.enumerated()), id: \.element.id) { index, post in
+    private func gridSection(_ items: [Post]) -> some View {
+        LazyVGrid(
+            columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
+            spacing: 10
+        ) {
+            ForEach(items) { post in
                 NavigationLink(value: post) {
-                    savedCard(post)
-                        .contentShape(Rectangle())
+                    GridCard(photoKey: photoKey(for: post), title: gridTitle(for: post))
                 }
                 .buttonStyle(.borderless)
-                .swipeActions(edge: .trailing) {
-                    Button(role: .destructive) {
-                        viewModel.removeBookmark(at: index)
-                    } label: {
-                        Label("Remove", systemImage: "trash")
-                    }
-                }
             }
         }
-        .padding(.horizontal, 20)
     }
 
-    /// Horizontal saved-recipe card — 110pt thumb left + content right
-    /// with byline, serif title, meta line, and a Mint Whisper
-    /// collection chip. Matches IOSMyTray's row.
-    private func savedCard(_ post: Post) -> some View {
-        HStack(alignment: .top, spacing: 0) {
-            if let url = post.thumbURL ?? post.primaryPhotoURL {
-                AsyncImage(url: url.asBackendURL) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Rectangle().fill(Color(.systemGray5))
-                }
-                .frame(width: 110, height: 110)
-                .clipped()
-            } else {
-                Rectangle().fill(Color(.systemGray5)).frame(width: 110, height: 110)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(post.user.username)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.textSecondary)
-
-                Text(savedTitle(post))
-                    .font(.serif(17))
-                    .foregroundStyle(Theme.text)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(savedMeta(post))
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.textSecondary)
-                    .padding(.bottom, 2)
-
-                Text("ALL SAVED")
-                    .font(.system(size: 8, weight: .medium, design: .monospaced))
-                    .tracking(1.4)
-                    .foregroundStyle(Theme.secondary)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Theme.secondary.opacity(0.16))
-                    .clipShape(Capsule())
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-
-            Spacer(minLength: 0)
-        }
-        .background(Theme.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
-        )
+    /// Maps a post's id onto a stable `FoodPalette.Key`. Real photos
+    /// land in a later Goal; until then the prototype's gradient
+    /// placeholder is what users see, and we want the same post to
+    /// always render the same color rather than flickering on reload.
+    private func photoKey(for post: Post) -> FoodPalette.Key {
+        let keys = FoodPalette.Key.allCases
+        return keys[abs(post.id) % keys.count]
     }
 
-    private func savedTitle(_ post: Post) -> String {
+    /// Extracts a short title from the post caption — first sentence
+    /// up to a terminator, trimmed. Mirrors the existing legacy
+    /// savedTitle helper's logic so card titles stay consistent.
+    private func gridTitle(for post: Post) -> String {
         let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return "Recipe" }
+        guard !raw.isEmpty else { return "Untitled" }
         let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
             .first?
             .trimmingCharacters(in: .whitespaces) ?? raw
-        return candidate.isEmpty ? "Recipe" : candidate
+        return candidate.isEmpty ? "Untitled" : candidate
+    }
+}
+
+/// Empty state — dashed amber container with arrow icon, title + body,
+/// and three animated chevrons. Lifted into its own struct to keep
+/// MyTrayView body under the 200-line ceiling.
+private struct TrayEmptyView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var animationToken = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            arrowBadge
+                .padding(.bottom, 16)
+            Text("Your tray is empty")
+                .font(.system(size: 20, weight: .bold))
+                .tracking(-0.4)
+                .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
+                .padding(.bottom, 8)
+            bodyCopy
+                .padding(.bottom, 18)
+            chevronRow
+        }
+        .padding(.horizontal, 22)
+        .padding(.top, 34)
+        .padding(.bottom, 28)
+        .frame(maxWidth: 320)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Theme.accent.opacity(0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(
+                    dashedBorderColor,
+                    style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
+                )
+        )
+        .padding(.horizontal, 32)
+        .onAppear {
+            guard !reduceMotion else { return }
+            animationToken += 1
+        }
     }
 
-    private func savedMeta(_ post: Post) -> String {
-        var parts: [String] = []
-        if let time = post.cookingTimeMinutes {
-            let hours = time / 60
-            let mins = time % 60
-            if hours == 0 { parts.append("\(mins) min") }
-            else if mins == 0 { parts.append("\(hours)h") }
-            else { parts.append("\(hours)h \(mins)m") }
-        }
-        if !post.ingredients.isEmpty {
-            parts.append("\(post.ingredients.count) ingredients")
-        }
-        return parts.joined(separator: " · ")
+    private var dashedBorderColor: Color {
+        colorScheme == .dark
+            ? Color(red: 255 / 255, green: 179 / 255, blue: 0 / 255, opacity: 0.42)
+            : Color(red: 255 / 255, green: 143 / 255, blue: 0 / 255, opacity: 0.55)
     }
 
-    // MARK: - Empty state
-
-    private var emptyState: some View {
-        VStack(spacing: 8) {
-            Text("Nothing saved yet.")
-                .font(.serifItalic(18))
-                .foregroundStyle(Theme.text)
-            Text("Tap the bookmark on any recipe to save it here.")
-                .font(.system(size: 13))
-                .foregroundStyle(Theme.textSecondary)
-                .multilineTextAlignment(.center)
+    private var arrowBadge: some View {
+        ZStack {
+            Circle()
+                .fill(Theme.accent.opacity(colorScheme == .dark ? 0.18 : 0.16))
+                .frame(width: 52, height: 52)
+            Image(systemName: "arrow.up")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(Theme.accentInk(for: colorScheme))
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 30)
-        .padding(.top, 40)
+    }
+
+    private var bodyCopy: some View {
+        let plus = Text("+")
+            .font(.system(size: 13.5, weight: .semibold))
+            .foregroundColor(Theme.accentInk(for: colorScheme))
+        let prefix = Text("Swipe right to find recipes, or tap ")
+        let suffix = Text(" to create your first.")
+        return (prefix + plus + suffix)
+            .font(.system(size: 13.5))
+            .foregroundStyle(Theme.muted(for: colorScheme))
+            .multilineTextAlignment(.center)
+            .lineSpacing(2)
+    }
+
+    private var chevronRow: some View {
+        HStack(spacing: 4) {
+            ForEach(0 ..< 3, id: \.self) { i in
+                ChevronHintGlyph(
+                    index: i,
+                    reduceMotion: reduceMotion,
+                    token: animationToken,
+                    tint: Theme.accentInk(for: colorScheme)
+                )
+            }
+        }
+    }
+}
+
+/// One amber chevron-right that fades-and-slides through two cycles
+/// when `token` changes, then settles at the static rest opacity. The
+/// `index`-based delay (180ms per slot) gives the row its swipe-hint
+/// rhythm. Reduce Motion bypasses the animation entirely.
+private struct ChevronHintGlyph: View {
+    let index: Int
+    let reduceMotion: Bool
+    let token: Int
+    let tint: Color
+
+    @State private var animatedOpacity: Double = 0.55
+    @State private var animatedOffset: CGFloat = 0
+
+    var body: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 20, weight: .semibold))
+            .foregroundStyle(tint)
+            .opacity(reduceMotion ? 0.65 : animatedOpacity)
+            .offset(x: reduceMotion ? 0 : animatedOffset)
+            .onChange(of: token) { _, _ in
+                guard !reduceMotion else { return }
+                animatedOpacity = 0.2
+                animatedOffset = -3
+                withAnimation(
+                    .easeInOut(duration: 1.1)
+                        .delay(Double(index) * 0.18)
+                        .repeatCount(4, autoreverses: true)
+                ) {
+                    animatedOpacity = 0.85
+                    animatedOffset = 3
+                }
+            }
     }
 }
