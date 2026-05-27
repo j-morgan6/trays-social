@@ -39,6 +39,7 @@
 		919AE1F9F4CA872FBEEFE0BE /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39068B4368423677CA387168 /* Configuration.swift */; };
 		9280D37823B72E4D7F07A8F3 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CF540F6F0306A9E936193E /* RegisterView.swift */; };
 		9943152E1E4E6B2049563EAA /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B7815F88CA31767867F48D /* AuthViewModel.swift */; };
+		9B77AD5F34E163B43C0D4CDC /* PillBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18252654917F5129220567CE /* PillBar.swift */; };
 		9F4B2BB2DD63E2B1B1373704 /* String+BackendURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35EDA5485F0DD3EE87C9FF0F /* String+BackendURL.swift */; };
 		A4DC16ED6BAE818151AF8FF1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 32D2EAB385C443516BBDD921 /* Assets.xcassets */; };
 		A9A34BEDF00A118C90677E42 /* FindViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100430FDF305D5E74355F4BC /* FindViewModel.swift */; };
@@ -85,6 +86,7 @@
 		0F90F0E9C63303F4F5E19999 /* AppNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNotification.swift; sourceTree = "<group>"; };
 		100430FDF305D5E74355F4BC /* FindViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindViewModel.swift; sourceTree = "<group>"; };
 		15E25A27F96B53A311D1785A /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		18252654917F5129220567CE /* PillBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillBar.swift; sourceTree = "<group>"; };
 		1A06A596F5AA8F5A05BA8A34 /* NotificationsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsViewModel.swift; sourceTree = "<group>"; };
 		1DAC1D9DE802313BFE884B01 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		20087CB4CACF60BFAAB2212E /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -358,6 +360,7 @@
 		E0C8A43FAAFCF91517B52F45 /* Shell */ = {
 			isa = PBXGroup;
 			children = (
+				18252654917F5129220567CE /* PillBar.swift */,
 				9837B5661A66D78713F20196 /* ShellViewModel.swift */,
 			);
 			path = Shell;
@@ -539,6 +542,7 @@
 				EC345A008BE401F2EDD5421D /* MyTrayViewModel.swift in Sources */,
 				F72C0EFB417B4AF95EEB0B6F /* NotificationsView.swift in Sources */,
 				25B4DF17C0FF96F0E628CBCF /* NotificationsViewModel.swift in Sources */,
+				9B77AD5F34E163B43C0D4CDC /* PillBar.swift in Sources */,
 				7EB4D3772E068CBBDE1D244E /* Post.swift in Sources */,
 				4D83969D7A86D26D9030362E /* PostCardView.swift in Sources */,
 				E6F36149B52A5781300385E9 /* PostDetailView.swift in Sources */,
