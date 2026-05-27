@@ -31,6 +31,19 @@ targets:
           API_BASE_URL: "https://trays-social-review.fly.dev"
         release:
           API_BASE_URL: "https://trays.app"
+  TraysSocialTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - TraysSocialTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.trays.social.tests
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/TraysSocial.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TraysSocial
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: TraysSocial
 
 schemes:
   TraysSocial:
@@ -43,6 +56,8 @@ schemes:
       config: Release
     test:
       config: Debug
+      targets:
+        - TraysSocialTests
     profile:
       config: Release
     analyze:
