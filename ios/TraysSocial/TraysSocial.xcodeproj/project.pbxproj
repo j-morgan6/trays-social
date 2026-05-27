@@ -44,6 +44,7 @@
 		919AE1F9F4CA872FBEEFE0BE /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39068B4368423677CA387168 /* Configuration.swift */; };
 		9280D37823B72E4D7F07A8F3 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CF540F6F0306A9E936193E /* RegisterView.swift */; };
 		9355DFD37B17F97D036BFA5C /* FeedCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1085B4995015DA8289680920 /* FeedCardView.swift */; };
+		9386F8D54E75D69A50F8C1F9 /* EditorialEmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 043903A67A7F850D2B633753 /* EditorialEmptyState.swift */; };
 		9943152E1E4E6B2049563EAA /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B7815F88CA31767867F48D /* AuthViewModel.swift */; };
 		9B77AD5F34E163B43C0D4CDC /* PillBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18252654917F5129220567CE /* PillBar.swift */; };
 		9F4B2BB2DD63E2B1B1373704 /* String+BackendURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35EDA5485F0DD3EE87C9FF0F /* String+BackendURL.swift */; };
@@ -92,6 +93,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		043903A67A7F850D2B633753 /* EditorialEmptyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorialEmptyState.swift; sourceTree = "<group>"; };
 		04E854B7BC0A95B48F1586AC /* FoodPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodPalette.swift; sourceTree = "<group>"; };
 		0623E0823095B84B0BE6357F /* Post.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Post.swift; sourceTree = "<group>"; };
 		081FEF95ADD3CAAC66289B38 /* FollowListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowListView.swift; sourceTree = "<group>"; };
@@ -351,6 +353,7 @@
 		84E90902F6F81BFED3F5139C /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				043903A67A7F850D2B633753 /* EditorialEmptyState.swift */,
 				EF881083B0DBC6A7F20C3922 /* ErrorToast.swift */,
 				C02798B80F4F1F1C63150BF3 /* ProfileActionRow.swift */,
 				A88C0ADB221E4D697E86CA15 /* ReportSheetView.swift */,
@@ -584,6 +587,7 @@
 				AB4C02FA789E916C7F685875 /* CreatePostViewModel.swift in Sources */,
 				DE294AB6F5A2C4AA827E6A66 /* Date+TimeAgo.swift in Sources */,
 				2DD2D855653C3714EDB390FD /* DiscoveryInsert.swift in Sources */,
+				9386F8D54E75D69A50F8C1F9 /* EditorialEmptyState.swift in Sources */,
 				6F012818914E997F28AEDFBE /* EmailVerificationGateView.swift in Sources */,
 				E5AE4AE59F2E7CDB7B90B2D4 /* ErrorReporter.swift in Sources */,
 				B6EE5EE0619EC94CB96CF20B /* ErrorToast.swift in Sources */,

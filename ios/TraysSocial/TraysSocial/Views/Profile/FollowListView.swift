@@ -33,10 +33,12 @@ struct FollowListView: View {
                     .padding(.top, 10)
                     .padding(.bottom, 14)
 
-                if viewModel.isLoading {
-                    ProgressView().tint(Theme.accent).padding(.top, 40)
+                if viewModel.isLoading, viewModel.users.isEmpty {
+                    loadingSkeleton
+                } else if viewModel.loadError != nil, viewModel.users.isEmpty {
+                    errorSurface
                 } else if visibleUsers.isEmpty {
-                    emptyState
+                    EditorialEmptyState(title: emptyTitle, subtitle: emptySubtitle)
                 } else {
                     list
                 }
@@ -220,13 +222,36 @@ struct FollowListView: View {
         .buttonStyle(.borderless)
     }
 
-    // MARK: - Empty state
+    // MARK: - Loading / error / empty
 
-    private var emptyState: some View {
-        VStack(spacing: 8) {
-            Text(emptyTitle)
-                .font(.serifItalic(16))
+    private var loadingSkeleton: some View {
+        VStack(spacing: 6) {
+            ForEach(0 ..< 4, id: \.self) { _ in
+                SkeletonListRow()
+            }
+        }
+        .padding(.top, 6)
+        .skeletonGroup(label: route.mode == .followers ? "Loading followers" : "Loading following")
+    }
+
+    private var errorSurface: some View {
+        VStack(spacing: 10) {
+            Text("Couldn't load \(route.mode == .followers ? "followers" : "following").")
+                .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Theme.text)
+            Button {
+                Task { await viewModel.load() }
+            } label: {
+                Label("Retry", systemImage: "arrow.clockwise")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0x2A1C00))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Theme.accent)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Retry loading this list")
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
@@ -239,6 +264,14 @@ struct FollowListView: View {
         switch route.mode {
         case .followers: return "No followers yet."
         case .following: return "Not following anyone yet."
+        }
+    }
+
+    private var emptySubtitle: String? {
+        if !query.isEmpty { return "Try a different name." }
+        switch route.mode {
+        case .followers: return "Share recipes you're proud of and they'll find you."
+        case .following: return "Tap a cook's handle to follow them."
         }
     }
 

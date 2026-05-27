@@ -11,52 +11,67 @@ struct BlockedUsersView: View {
     }
 
     var body: some View {
-        List {
-            ForEach(blockedUsers) { user in
-                HStack {
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 36, height: 36)
-                        .overlay {
-                            if let url = user.profilePhotoUrl, let imageURL = url.asBackendURL {
-                                AsyncImage(url: imageURL) { image in
-                                    image.resizable().scaledToFill()
-                                } placeholder: { Color.clear }
-                                    .frame(width: 36, height: 36)
-                                    .clipShape(Circle())
-                            } else {
-                                Image(systemName: "person.fill")
-                                    .foregroundStyle(.gray)
-                            }
+        Group {
+            if isLoading, blockedUsers.isEmpty {
+                ScrollView {
+                    VStack(spacing: 6) {
+                        ForEach(0 ..< 4, id: \.self) { _ in
+                            SkeletonListRow()
                         }
-
-                    Text(user.username)
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.text)
-
-                    Spacer()
-
-                    Button("Unblock") {
-                        Task { await unblock(user) }
                     }
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.red)
+                    .padding(.top, 12)
                 }
+                .skeletonGroup(label: "Loading blocked users")
+            } else if blockedUsers.isEmpty {
+                EditorialEmptyState(
+                    title: "No one blocked.",
+                    subtitle: "Block someone from their profile and they'll show up here."
+                )
+            } else {
+                List {
+                    ForEach(blockedUsers) { user in
+                        blockedRow(user)
+                    }
+                }
+                .listStyle(.plain)
             }
         }
-        .listStyle(.plain)
         .background(Theme.background)
         .navigationTitle("Blocked Users")
         .navigationBarTitleDisplayMode(.inline)
-        .overlay {
-            if isLoading {
-                ProgressView().tint(Theme.accent)
-            } else if blockedUsers.isEmpty {
-                Text("No blocked users")
-                    .foregroundStyle(.secondary)
-            }
-        }
         .task { await loadBlocked() }
+    }
+
+    private func blockedRow(_ user: BlockedUser) -> some View {
+        HStack {
+            Circle()
+                .fill(Color(.systemGray4))
+                .frame(width: 36, height: 36)
+                .overlay {
+                    if let url = user.profilePhotoUrl, let imageURL = url.asBackendURL {
+                        AsyncImage(url: imageURL) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: { Color.clear }
+                            .frame(width: 36, height: 36)
+                            .clipShape(Circle())
+                    } else {
+                        Image(systemName: "person.fill")
+                            .foregroundStyle(.gray)
+                    }
+                }
+
+            Text(user.username)
+                .font(.subheadline)
+                .foregroundStyle(Theme.text)
+
+            Spacer()
+
+            Button("Unblock") {
+                Task { await unblock(user) }
+            }
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.red)
+        }
     }
 
     private func loadBlocked() async {
