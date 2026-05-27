@@ -10,6 +10,7 @@
 		037EBB9D239C5B6B3CB07599 /* ShellViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3485959BA73D55541343A210 /* ShellViewModelTests.swift */; };
 		132898736F0D7584573D28B5 /* BlockedUsersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8FC750231A2A97A1B99C5DB /* BlockedUsersView.swift */; };
 		1B93DBB088FF6AB50B3D8689 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DAC1D9DE802313BFE884B01 /* ProfileView.swift */; };
+		21ABF922770D16848BFDD32D /* TopPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96F85664E1ACC61D2A1F0B4C /* TopPill.swift */; };
 		25B4DF17C0FF96F0E628CBCF /* NotificationsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A06A596F5AA8F5A05BA8A34 /* NotificationsViewModel.swift */; };
 		269FB0034584F9A10915A5B8 /* APIResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = E769DEF560D0E279B26B7746 /* APIResponse.swift */; };
 		2A0EE925716022E10F9F1D2F /* FollowListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081FEF95ADD3CAAC66289B38 /* FollowListView.swift */; };
@@ -119,6 +120,7 @@
 		802ABCDA09713C4678248278 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		8D5A6AC4887DBFA2579C1ADB /* TabSegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabSegment.swift; sourceTree = "<group>"; };
 		90B7815F88CA31767867F48D /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		96F85664E1ACC61D2A1F0B4C /* TopPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopPill.swift; sourceTree = "<group>"; };
 		9837B5661A66D78713F20196 /* ShellViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellViewModel.swift; sourceTree = "<group>"; };
 		9AF1EA4D0A316329D1C02CB8 /* MyTrayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTrayViewModel.swift; sourceTree = "<group>"; };
 		A88C0ADB221E4D697E86CA15 /* ReportSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportSheetView.swift; sourceTree = "<group>"; };
@@ -365,6 +367,7 @@
 				18252654917F5129220567CE /* PillBar.swift */,
 				9837B5661A66D78713F20196 /* ShellViewModel.swift */,
 				8D5A6AC4887DBFA2579C1ADB /* TabSegment.swift */,
+				96F85664E1ACC61D2A1F0B4C /* TopPill.swift */,
 			);
 			path = Shell;
 			sourceTree = "<group>";
@@ -562,6 +565,7 @@
 				9F4B2BB2DD63E2B1B1373704 /* String+BackendURL.swift in Sources */,
 				BBFCB7DCBC1EEE0D5CDE0205 /* TabSegment.swift in Sources */,
 				F2BF3A3ADB396931C925D745 /* Theme.swift in Sources */,
+				21ABF922770D16848BFDD32D /* TopPill.swift in Sources */,
 				E0633D5901A6A1D5BAEBDE1A /* TraySelector.swift in Sources */,
 				BD00C5D666CF7BEBDA198327 /* TraysSocialApp.swift in Sources */,
 				DC9FFDCAB43C8DE2FD2A03B9 /* User.swift in Sources */,
