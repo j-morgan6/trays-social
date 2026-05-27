@@ -51,6 +51,8 @@ defmodule TraysSocial.Diagnostics do
     * `:limit` — page size (default 50).
     * `:payload_type` — filter to `"diagnostic"` or `"metric"`.
     * `:user_id` — filter to one user (nil-safe).
+    * `:app_version` — exact match.
+    * `:device_model` — exact match.
   """
   def list_recent(opts \\ []) do
     limit = Keyword.get(opts, :limit, 50)
@@ -58,8 +60,27 @@ defmodule TraysSocial.Diagnostics do
     IosDiagnosticPayload
     |> maybe_filter_payload_type(opts[:payload_type])
     |> maybe_filter_user_id(opts[:user_id])
+    |> maybe_filter_string(:app_version, opts[:app_version])
+    |> maybe_filter_string(:device_model, opts[:device_model])
     |> order_by([p], desc: p.received_at)
     |> limit(^limit)
+    |> Repo.all()
+  end
+
+  @doc """
+  Returns distinct, non-nil values for a column across all stored
+  payloads. Used by the admin viewer to populate filter dropdowns.
+  Only `:app_version`, `:device_model`, and `:os_version` are supported
+  — these are the small-cardinality string columns the viewer filters
+  on. The function refuses any other column to avoid accidental
+  unbounded SELECTs.
+  """
+  def distinct_values(column) when column in [:app_version, :device_model, :os_version] do
+    IosDiagnosticPayload
+    |> where([p], not is_nil(field(p, ^column)))
+    |> distinct(true)
+    |> select([p], field(p, ^column))
+    |> order_by([p], asc: field(p, ^column))
     |> Repo.all()
   end
 
@@ -75,4 +96,10 @@ defmodule TraysSocial.Diagnostics do
 
   defp maybe_filter_user_id(query, user_id),
     do: where(query, [p], p.user_id == ^user_id)
+
+  defp maybe_filter_string(query, _column, nil), do: query
+  defp maybe_filter_string(query, _column, ""), do: query
+
+  defp maybe_filter_string(query, column, value) when is_binary(value),
+    do: where(query, [p], field(p, ^column) == ^value)
 end
