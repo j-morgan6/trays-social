@@ -31,6 +31,14 @@ struct TraysSocialApp: App {
         // log in once with their password to re-opt into biometric, at
         // which point the refresh-token path takes over.
         KeychainService.purgeLegacyBiometricCredential()
+
+        // W119: subscribe to Apple's MetricKit so crash + performance
+        // payloads flow into /admin/ios-crashes. Register exactly once
+        // at launch — never inside a SwiftUI .onAppear, where a view
+        // re-render would re-subscribe and double-post every payload.
+        // Simulator builds register but never receive callbacks; only
+        // physical devices deliver payloads.
+        MetricKitReporter.shared.register()
     }
 
     var body: some Scene {

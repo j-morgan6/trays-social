@@ -43,6 +43,21 @@ actor APIClient {
         return try await execute(request)
     }
 
+    /// POST a pre-serialized JSON body. Used when the caller already has
+    /// raw JSON `Data` and doesn't want to round-trip through an
+    /// `Encodable` shim — currently the MetricKit reporter (W119), which
+    /// forwards Apple's `MXMetricPayload.jsonRepresentation()` payload
+    /// nested inside a small envelope. Returns nothing (the diagnostics
+    /// endpoint replies with `{id, received_at}` we don't need on the
+    /// device).
+    @discardableResult
+    func postRaw(path: String, jsonData: Data) async throws -> EmptyResponse {
+        var request = try buildRequest(method: "POST", path: path)
+        request.httpBody = jsonData
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        return try await execute(request)
+    }
+
     func put<T: Decodable>(path: String, body: Encodable? = nil) async throws -> T {
         var request = try buildRequest(method: "PUT", path: path)
         if let body {
