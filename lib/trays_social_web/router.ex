@@ -92,6 +92,14 @@ defmodule TraysSocialWeb.Router do
     plug TraysSocialWeb.API.RateLimitPlug, max_requests: 3, interval_ms: 600_000
   end
 
+  # W117: MetricKit ingest. Apple delivers at most one diagnostic
+  # payload per device per day, so 1/min/user is generous — the limit
+  # is here to absorb retry storms from a misbehaving client, not to
+  # gate normal traffic.
+  pipeline :api_rate_limit_diagnostics do
+    plug TraysSocialWeb.API.RateLimitPlug, max_requests: 1, interval_ms: 60_000
+  end
+
   # W106: webhook ingress from third-party services (Resend, etc.). Three
   # deliberate differences from :api:
   #   - no CSRF (third-party origin can't carry our CSRF token)
@@ -221,6 +229,15 @@ defmodule TraysSocialWeb.Router do
     pipe_through [:api, :api_auth, :api_require_confirmed, :api_rate_limit_reports]
 
     post "/reports", ReportController, :create
+  end
+
+  # W117: MetricKit ingest from iOS clients. Auth required so we can
+  # correlate crashes to users; not confirmation-gated because a user
+  # may need to send a diagnostic before confirming their email.
+  scope "/api/v1", TraysSocialWeb.API.V1, as: :api_v1 do
+    pipe_through [:api, :api_auth, :api_rate_limit_diagnostics]
+
+    post "/ios_diagnostics", IosDiagnosticController, :create
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
