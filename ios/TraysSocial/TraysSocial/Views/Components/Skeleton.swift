@@ -144,6 +144,52 @@ struct SkeletonListRow: View {
     }
 }
 
+/// Loading placeholder for `PostDetailView` — composes existing
+/// `SkeletonShape` / `SkeletonCircle` primitives to approximate the
+/// recipe-hero photo, byline strip, meta row, body text block, and
+/// ingredient list. Approximate proportions, not pixel-identical, so
+/// PostDetailView visual edits don't have to drag this with them.
+struct SkeletonPostDetail: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SkeletonShape(height: 320, cornerRadius: 0)
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    SkeletonCircle(size: 32)
+                    SkeletonShape(width: 120, height: 12, cornerRadius: 4)
+                    Spacer()
+                }
+
+                HStack(spacing: 14) {
+                    SkeletonShape(width: 64, height: 12, cornerRadius: 4)
+                    SkeletonShape(width: 64, height: 12, cornerRadius: 4)
+                    Spacer()
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    SkeletonShape(height: 13, cornerRadius: 4)
+                    SkeletonShape(height: 13, cornerRadius: 4)
+                    SkeletonShape(width: 220, height: 13, cornerRadius: 4)
+                }
+                .padding(.top, 6)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    SkeletonShape(width: 80, height: 11, cornerRadius: 3)
+                    ForEach(0 ..< 4, id: \.self) { _ in
+                        SkeletonShape(height: 14, cornerRadius: 4)
+                    }
+                }
+                .padding(.top, 10)
+            }
+            .padding(.horizontal, 20)
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 // MARK: - Group helpers
 
 extension View {

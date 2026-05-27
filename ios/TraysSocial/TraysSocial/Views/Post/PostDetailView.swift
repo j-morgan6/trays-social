@@ -11,8 +11,25 @@ struct PostDetailView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            if viewModel.isLoading {
-                ProgressView().tint(Theme.accent)
+            if viewModel.isLoading, viewModel.post == nil {
+                ScrollView {
+                    SkeletonPostDetail()
+                        .padding(.bottom, 80)
+                }
+                .skeletonGroup(label: "Loading recipe")
+                .allowsHitTesting(false)
+                .transition(.opacity)
+            } else if viewModel.post == nil, let error = viewModel.loadError {
+                PostUnavailableSurface(
+                    error: error,
+                    onRetry: {
+                        Task {
+                            await viewModel.loadPost(id: postId)
+                            await viewModel.loadComments(postId: postId)
+                        }
+                    },
+                    onBack: { dismiss() }
+                )
             } else if let post = viewModel.post {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
@@ -104,6 +121,7 @@ struct PostDetailView: View {
             await viewModel.loadPost(id: postId)
             await viewModel.loadComments(postId: postId)
         }
+        .animation(.easeInOut(duration: 0.18), value: viewModel.isLoading)
         .fullScreenCover(isPresented: $showCookMode) {
             if let post = viewModel.post {
                 CookModeView(steps: post.cookingSteps, title: post.caption ?? "Recipe")
@@ -379,6 +397,76 @@ struct PostDetailView: View {
             .padding(.vertical, 8)
             .background(.ultraThinMaterial)
         }
+    }
+}
+
+// MARK: - Post unavailable surface
+
+/// Inline failure surface shown when the initial post load throws.
+/// Distinguishes between 404 ("post not available") and everything
+/// else ("couldn't load — retry"). Pulled out of PostDetailView to
+/// keep the struct body under the lint ceiling.
+private struct PostUnavailableSurface: View {
+    let error: Error
+    let onRetry: () -> Void
+    let onBack: () -> Void
+
+    private var isNotFound: Bool {
+        if case .notFound = error as? APIError { return true }
+        return false
+    }
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: isNotFound ? "doc.questionmark" : "exclamationmark.triangle")
+                .font(.system(size: 28, weight: .regular))
+                .foregroundStyle(Theme.textSecondary)
+
+            VStack(spacing: 6) {
+                Text(isNotFound ? "Post not available" : "Couldn't load this post")
+                    .font(.serif(20))
+                    .foregroundStyle(Theme.text)
+
+                Text(isNotFound
+                    ? "It may have been removed or the link is wrong."
+                    : "Check your connection and try again.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+
+            HStack(spacing: 12) {
+                if !isNotFound {
+                    Button(action: onRetry) {
+                        Label("Retry", systemImage: "arrow.clockwise")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color(hex: 0x2A1C00))
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 10)
+                            .background(Theme.accent)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Retry loading this post")
+                }
+
+                Button(action: onBack) {
+                    Text("Back")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Theme.text)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .background(Theme.surface)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Back to previous screen")
+            }
+            .padding(.top, 6)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 30)
     }
 }
 
