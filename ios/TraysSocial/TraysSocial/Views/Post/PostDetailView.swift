@@ -316,58 +316,16 @@ struct PostDetailView: View {
     // MARK: - Comments
 
     private func commentsSection(_ post: Post) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("Notes")
-                    .font(.serif(24))
-                    .foregroundStyle(Theme.text)
-                Text("\(viewModel.comments.count)")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Theme.textSecondary)
+        CommentsSection(
+            post: post,
+            comments: viewModel.comments,
+            isLoading: viewModel.isLoadingComments,
+            loadAttempted: viewModel.commentsLoadAttempted,
+            error: viewModel.commentsError,
+            onRetry: {
+                Task { await viewModel.loadComments(postId: post.id) }
             }
-            .padding(.horizontal, 20)
-
-            ForEach(viewModel.comments) { comment in
-                HStack(alignment: .top, spacing: 10) {
-                    avatarView(for: comment.user)
-                        .scaleEffect(0.8)
-                        .frame(width: 28, height: 28)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Text(comment.user.username)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(Theme.text)
-                            // Cook badge — recipe author's own replies
-                            // get a Mint Whisper chip so readers know
-                            // it's the cook answering.
-                            if comment.user.id == post.user.id {
-                                Text("COOK")
-                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(Color(hex: 0x2A5430))
-                                    .tracking(1.2)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Theme.secondary.opacity(0.4))
-                                    .clipShape(Capsule())
-                            }
-                            Spacer(minLength: 0)
-                            Text(comment.insertedAt.timeAgo())
-                                .font(.system(size: 11))
-                                .foregroundStyle(Theme.textSecondary)
-                        }
-                        Text(comment.body)
-                            .font(.system(size: 14))
-                            .foregroundStyle(Theme.text.opacity(0.9))
-                            .lineSpacing(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-        }
-        .padding(.vertical, 16)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        )
     }
 
     // MARK: - Comment Input
@@ -396,6 +354,181 @@ struct PostDetailView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .background(.ultraThinMaterial)
+        }
+    }
+}
+
+// MARK: - Comments section
+
+/// Comments slot ported out of PostDetailView so its loading / error /
+/// empty branches don't push the parent struct past SwiftLint's
+/// type-body ceiling. Renders an editorial header + one of four
+/// branches: skeleton (loading), inline retry (error), italic empty
+/// copy (loaded and zero comments), or the existing per-comment list.
+///
+/// The skeleton uses a short delay before appearing so a fast-cached
+/// fetch (50ms or less) doesn't flash skeleton rows — per W115's
+/// pitfall on transition feel.
+private struct CommentsSection: View {
+    let post: Post
+    let comments: [Comment]
+    let isLoading: Bool
+    let loadAttempted: Bool
+    let error: Error?
+    let onRetry: () -> Void
+
+    @State private var skeletonVisible = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            header
+                .padding(.horizontal, 20)
+
+            content
+        }
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text("Notes")
+                .font(.serif(24))
+                .foregroundStyle(Theme.text)
+            Text("\(comments.count)")
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.textSecondary)
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if let error, comments.isEmpty {
+            errorSurface(error: error)
+        } else if isLoading, comments.isEmpty {
+            loadingSurface
+        } else if loadAttempted, comments.isEmpty {
+            emptySurface
+        } else {
+            ForEach(comments) { comment in
+                CommentRow(comment: comment, post: post)
+            }
+        }
+    }
+
+    private var loadingSurface: some View {
+        VStack(spacing: 6) {
+            ForEach(0 ..< 3, id: \.self) { _ in
+                SkeletonListRow()
+            }
+        }
+        .opacity(skeletonVisible ? 1 : 0)
+        .skeletonGroup(label: "Loading notes")
+        .task {
+            // Wait 220ms before showing skeletons — a fast-cached
+            // /posts/:id/comments returns in well under 200ms and the
+            // brief flash of skeleton would feel worse than no
+            // indicator at all.
+            try? await Task.sleep(for: .milliseconds(220))
+            skeletonVisible = true
+        }
+    }
+
+    private var emptySurface: some View {
+        VStack(spacing: 6) {
+            Text("No notes yet.")
+                .font(.serifItalic(17))
+                .foregroundStyle(Theme.text)
+            Text("Be the first to leave one.")
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 22)
+    }
+
+    private func errorSurface(error _: Error) -> some View {
+        VStack(spacing: 10) {
+            Text("Couldn't load notes.")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Theme.text)
+            Button(action: onRetry) {
+                Label("Retry", systemImage: "arrow.clockwise")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0x2A1C00))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Theme.accent)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Retry loading notes")
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 18)
+    }
+}
+
+private struct CommentRow: View {
+    let comment: Comment
+    let post: Post
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            commentAvatar
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(comment.user.username)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Theme.text)
+                    if comment.user.id == post.user.id {
+                        // Recipe author replies get a Mint Whisper chip so
+                        // readers know it's the cook answering.
+                        Text("COOK")
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Color(hex: 0x2A5430))
+                            .tracking(1.2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Theme.secondary.opacity(0.4))
+                            .clipShape(Capsule())
+                    }
+                    Spacer(minLength: 0)
+                    Text(comment.insertedAt.timeAgo())
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                Text(comment.body)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Theme.text.opacity(0.9))
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private var commentAvatar: some View {
+        Group {
+            if let url = comment.user.profilePhotoUrl, let imageURL = url.asBackendURL {
+                AsyncImage(url: imageURL) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Circle().fill(Color(.systemGray4))
+                }
+                .frame(width: 28, height: 28)
+                .clipShape(Circle())
+                .id(imageURL)
+            } else {
+                Circle()
+                    .fill(Theme.primary)
+                    .frame(width: 28, height: 28)
+                    .overlay(
+                        Text(String(comment.user.username.prefix(1)).uppercased())
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white)
+                    )
+            }
         }
     }
 }

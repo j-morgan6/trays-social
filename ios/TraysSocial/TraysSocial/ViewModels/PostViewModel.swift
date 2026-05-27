@@ -23,6 +23,17 @@ final class PostViewModel {
     /// its inline retry surface (W115).
     var commentsError: Error?
 
+    /// True while comments are being fetched. CommentsSection shows
+    /// skeleton rows when this is true and `comments.isEmpty` (the
+    /// branching in W115).
+    var isLoadingComments = false
+
+    /// Flips true once `loadComments` has run at least once. The empty
+    /// state only renders after the first attempt — pre-load we show a
+    /// neutral placeholder so the section doesn't flash "No comments
+    /// yet" before the request even fires.
+    var commentsLoadAttempted = false
+
     func loadPost(id: Int) async {
         isLoading = true
         loadError = nil
@@ -38,6 +49,7 @@ final class PostViewModel {
 
     func loadComments(postId: Int) async {
         commentsError = nil
+        isLoadingComments = true
         do {
             let response: PaginatedResponse<[Comment]> = try await APIClient.shared.get(
                 path: "/posts/\(postId)/comments"
@@ -48,6 +60,8 @@ final class PostViewModel {
             // Don't toast here — the inline comments-error surface owns
             // the messaging for this scope (W115). Toast would double up.
         }
+        isLoadingComments = false
+        commentsLoadAttempted = true
     }
 
     func toggleLike() {
