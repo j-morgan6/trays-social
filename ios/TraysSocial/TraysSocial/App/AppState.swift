@@ -65,7 +65,7 @@ final class AppState {
 
     func login(token: String, user: User) {
         KeychainService.save(token: token)
-        // Reset before flipping isAuthenticated so MainView mounts with a
+        // Reset before flipping isAuthenticated so AppShellView mounts with a
         // fresh stack and never reads a stale destination from a prior
         // session. (D32.)
         navigationPath = NavigationPath()
