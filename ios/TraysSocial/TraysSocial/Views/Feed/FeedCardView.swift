@@ -70,7 +70,7 @@ struct FeedCardView: View {
 
     private var photoBlock: some View {
         ZStack(alignment: .topLeading) {
-            Photo(key: photoKey(for: post))
+            Photo(key: photoKey(for: post), url: post.primaryPhotoURL?.asBackendURL)
                 .aspectRatio(1, contentMode: .fit)
                 .clipped()
 

@@ -8,10 +8,11 @@ import SwiftUI
 struct GridCard: View {
     let photoKey: FoodPalette.Key
     let title: String
+    var url: URL?
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            Photo(key: photoKey)
+            Photo(key: photoKey, url: url)
 
             // Bottom scrim — clear at the top 30%, 55% black at the
             // bottom. Same stops as Theme.scrimGradient (W127) but kept

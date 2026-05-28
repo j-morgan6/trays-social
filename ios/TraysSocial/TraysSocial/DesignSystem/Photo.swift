@@ -1,20 +1,37 @@
 import SwiftUI
 
-/// Gradient-based food placeholder. Mirrors the prototype's `Photo`
-/// component (prototype.jsx lines 67-93) — a three-stop radial
-/// gradient from a `FoodPalette` key, layered with a faint diagonal
-/// stripe texture and a dark blob in the bottom-right for depth.
-///
-/// Pure visual: no AsyncImage and no networking. Real-photo loading
-/// is a separate concern (tracked under the iOS performance Goal).
+/// Food image block. Renders a real photo via `CachedAsyncImage` when
+/// `url` is supplied, with a gradient placeholder (mirroring the
+/// prototype's `Photo` component, prototype.jsx lines 67-93) shown
+/// during load and as the no-photo fallback. The gradient uses a
+/// three-stop radial gradient from a `FoodPalette` key, layered with a
+/// faint diagonal stripe texture and a dark blob in the bottom-right
+/// for depth — so posts without photos still get a deliberate, branded
+/// surface rather than a blank rectangle.
 struct Photo: View {
     let key: FoodPalette.Key
     var label: String?
+    var url: URL?
 
     var body: some View {
+        if let url {
+            CachedAsyncImage(url: url) { image in
+                image
+                    .resizable()
+                    .scaledToFill()
+            } placeholder: {
+                gradientPlaceholder
+            }
+            .id(url)
+        } else {
+            gradientPlaceholder
+        }
+    }
+
+    private var gradientPlaceholder: some View {
         let colors = FoodPalette.colors(for: key)
 
-        ZStack(alignment: .bottomLeading) {
+        return ZStack(alignment: .bottomLeading) {
             RadialGradient(
                 stops: [
                     .init(color: colors[0], location: 0.0),

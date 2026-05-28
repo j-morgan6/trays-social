@@ -97,7 +97,11 @@ struct MyTrayView: View {
         ) {
             ForEach(items) { post in
                 NavigationLink(value: post) {
-                    GridCard(photoKey: photoKey(for: post), title: gridTitle(for: post))
+                    GridCard(
+                        photoKey: photoKey(for: post),
+                        title: gridTitle(for: post),
+                        url: post.primaryPhotoURL?.asBackendURL
+                    )
                 }
                 .buttonStyle(.borderless)
             }
