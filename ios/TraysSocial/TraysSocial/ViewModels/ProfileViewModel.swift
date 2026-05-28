@@ -1,3 +1,4 @@
+import OSLog
 import SwiftUI
 
 @MainActor
@@ -9,6 +10,8 @@ final class ProfileViewModel {
     var isLoading = false
     var isOwnProfile = false
 
+    private static let log = Logger(subsystem: "com.trays.social", category: "profile")
+
     func loadProfile(username: String, currentUserId: Int?) async {
         isLoading = true
         do {
@@ -17,7 +20,9 @@ final class ProfileViewModel {
             isOwnProfile = response.data.id == currentUserId
             await loadPosts(username: username)
         } catch {
-            ErrorReporter.report(error, fallback: "Couldn't load @\(username)'s profile.")
+            // D95: read-path failure — log; ProfileView's skeleton +
+            // empty-state branch surfaces the no-data case.
+            Self.log.error("loadProfile failed: \(String(describing: error), privacy: .public)")
         }
         isLoading = false
     }
@@ -34,7 +39,8 @@ final class ProfileViewModel {
             )
             posts = postsResponse.data
         } catch {
-            ErrorReporter.report(error, fallback: "Couldn't load posts for @\(username).")
+            // D95: read-path failure — log; the grid simply stays empty.
+            Self.log.error("loadPosts failed: \(String(describing: error), privacy: .public)")
         }
     }
 

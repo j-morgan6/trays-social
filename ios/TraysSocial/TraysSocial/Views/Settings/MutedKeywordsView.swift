@@ -1,4 +1,7 @@
+import OSLog
 import SwiftUI
+
+private let mutedLog = Logger(subsystem: "com.trays.social", category: "muted")
 
 struct MutedKeywordsView: View {
     @State private var keywords: [String] = []
@@ -60,7 +63,8 @@ struct MutedKeywordsView: View {
             let response: DataResponse<MutedKeywordsResponse> = try await APIClient.shared.get(path: "/muted-keywords")
             keywords = response.data.mutedKeywords
         } catch {
-            ErrorReporter.report(error, fallback: "Couldn't load muted keywords.")
+            // D95: read-path failure — log only; empty state covers it.
+            mutedLog.error("loadKeywords failed: \(String(describing: error), privacy: .public)")
         }
         isLoading = false
     }
@@ -75,6 +79,8 @@ struct MutedKeywordsView: View {
                 body: KeywordsRequest(keywords: keywords)
             )
         } catch {
+            // D95: write-path failure — log + toast. User-initiated save.
+            mutedLog.error("saveKeywords failed: \(String(describing: error), privacy: .public)")
             ErrorReporter.report(error, fallback: "Couldn't save muted keywords.")
         }
     }

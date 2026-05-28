@@ -1,3 +1,4 @@
+import OSLog
 import SwiftUI
 
 @MainActor
@@ -5,6 +6,8 @@ import SwiftUI
 final class NotificationsViewModel {
     var notifications: [AppNotification] = []
     var isLoading = false
+
+    private static let log = Logger(subsystem: "com.trays.social", category: "notifications")
 
     var todayNotifications: [AppNotification] {
         notifications.filter { Calendar.current.isDateInToday($0.insertedAt) }
@@ -33,7 +36,9 @@ final class NotificationsViewModel {
             let response: PaginatedResponse<[AppNotification]> = try await APIClient.shared.get(path: "/notifications")
             notifications = response.data
         } catch {
-            ErrorReporter.report(error, fallback: "Couldn't load notifications.")
+            // D95: read-path failure — log; the existing empty / skeleton
+            // UI handles the no-content case.
+            Self.log.error("load failed: \(String(describing: error), privacy: .public)")
         }
         isLoading = false
     }

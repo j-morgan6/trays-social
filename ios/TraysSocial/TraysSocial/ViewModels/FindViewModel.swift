@@ -1,4 +1,5 @@
 import Combine
+import OSLog
 import SwiftUI
 
 @MainActor
@@ -14,6 +15,7 @@ final class FindViewModel {
     var activeFilter: String?
 
     private var searchTask: Task<Void, Never>?
+    private static let log = Logger(subsystem: "com.trays.social", category: "find")
 
     var showSearchResults: Bool {
         !searchText.isEmpty || activeFilter != nil
@@ -26,7 +28,8 @@ final class FindViewModel {
             let response: DataResponse<[Post]> = try await APIClient.shared.get(path: "/posts/trending")
             trendingPosts = response.data
         } catch {
-            ErrorReporter.report(error, fallback: "Couldn't load trending recipes.")
+            // D95: read-path failures stay silent — log only.
+            Self.log.error("loadTrending failed: \(String(describing: error), privacy: .public)")
         }
 
         isLoadingTrending = false
@@ -76,11 +79,12 @@ final class FindViewModel {
                 // ok: cancelled — the next search debounce will take over
                 // and submitting a toast would race the new query.
             } catch {
-                // API error — clear stale results
+                // D95: read-path failure — clear stale results and log;
+                // the empty results UI is the user-visible affordance.
                 if !Task.isCancelled {
                     posts = []
                     users = []
-                    ErrorReporter.report(error, fallback: "Search failed. Please try again.")
+                    Self.log.error("search failed: \(String(describing: error), privacy: .public)")
                 }
             }
         }

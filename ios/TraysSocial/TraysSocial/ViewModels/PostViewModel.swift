@@ -1,3 +1,4 @@
+import OSLog
 import SwiftUI
 
 extension Notification.Name {
@@ -14,6 +15,8 @@ final class PostViewModel {
     var isLoading = false
     var commentText = ""
     var isSendingComment = false
+
+    private static let log = Logger(subsystem: "com.trays.social", category: "post")
 
     /// Set when loadPost cannot fetch the post (network, 404, etc.).
     /// PostDetailView reads this to render an inline retry surface (W114).
@@ -46,10 +49,11 @@ final class PostViewModel {
             let response: DataResponse<Post> = try await APIClient.shared.get(path: "/posts/\(id)")
             post = response.data
         } catch {
-            // Only surface the error when we have nothing to show.
+            // D95: read-path failure — log; PostDetailView reads
+            // `loadError` to render its inline retry surface (W114).
+            Self.log.error("loadPost failed: \(String(describing: error), privacy: .public)")
             if !hadPost {
                 loadError = error
-                ErrorReporter.report(error, fallback: "Couldn't load this post.")
             }
         }
         if !hadPost { isLoading = false }
@@ -73,8 +77,9 @@ final class PostViewModel {
             comments = response.data
         } catch {
             commentsError = error
-            // Don't toast here — the inline comments-error surface owns
-            // the messaging for this scope (W115). Toast would double up.
+            // D95: read-path failure — log; the inline comments-error
+            // surface (W115) owns the user-visible messaging.
+            Self.log.error("loadComments failed: \(String(describing: error), privacy: .public)")
         }
         isLoadingComments = false
         commentsLoadAttempted = true
@@ -182,6 +187,9 @@ final class PostViewModel {
                 broadcastUpdate(updated)
             }
         } catch {
+            // D95: write-path failure — log + toast. sendComment is a
+            // user-initiated mutation; silence would read as success.
+            Self.log.error("sendComment failed: \(String(describing: error), privacy: .public)")
             ErrorReporter.report(error, fallback: "Couldn't post your comment.")
         }
         isSendingComment = false

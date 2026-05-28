@@ -13,16 +13,14 @@ final class FeedViewModel {
 
     private static let log = Logger(subsystem: "com.trays.social", category: "feed")
 
-    /// Loads the first page. `userInitiated` distinguishes the on-appear
-    /// auto-load from a pull-to-refresh: when the auto-load fails but
-    /// the user already has posts on screen, the failure is logged but
-    /// no toast is surfaced — the existing feed remains usable and a
-    /// transient network blip would otherwise toast on every cold
-    /// launch. User-initiated refreshes and empty-state failures still
-    /// surface a toast so the user gets feedback.
-    func loadFeed(userInitiated: Bool = false) async {
+    /// Loads the first page. D95: read-path failures stay silent — they
+    /// log via os.Logger and the screen falls back to its existing
+    /// empty / skeleton state. The pull-to-refresh spinner stopping is
+    /// the user-visible feedback; a toast on top reads as alarmist.
+    /// Toasts are reserved for write-path mutations (see
+    /// `ErrorReporter` doc comment).
+    func loadFeed() async {
         guard !isLoading else { return }
-        let hadPosts = !posts.isEmpty
         isLoading = true
         errorMessage = nil
 
@@ -36,9 +34,6 @@ final class FeedViewModel {
         } catch {
             Self.log.error("loadFeed failed: \(String(describing: error), privacy: .public)")
             errorMessage = "Failed to load feed."
-            if userInitiated || !hadPosts {
-                ErrorReporter.report(error, fallback: "Couldn't load your feed.")
-            }
         }
 
         isLoading = false
@@ -68,7 +63,7 @@ final class FeedViewModel {
     func refresh() async {
         cursor = nil
         hasMore = true
-        await loadFeed(userInitiated: true)
+        await loadFeed()
     }
 
     /// Replace a post in the feed with an updated version (e.g. after the user mutates it in PostDetailView).

@@ -9,6 +9,29 @@ import Foundation
 /// Using NotificationCenter (rather than a singleton AppState) keeps
 /// ViewModels free of any AppState dependency — they don't have to be
 /// constructed with an environment reference.
+///
+/// ## D95: load-vs-write policy (when to call `report`)
+///
+/// **Read-path failures (load, refresh, search, list-fetch) must NOT
+/// call `ErrorReporter.report`.** Log the failure via
+/// `os.Logger(subsystem: "com.trays.social", category: "<screen>")` and
+/// let the screen's inline empty / skeleton state cover the no-content
+/// case. The pull-to-refresh spinner stopping is the user-visible
+/// feedback; a toast on top reads as alarmist on transient network
+/// blips and obscured the policy users actually wanted ("if I can swipe
+/// past it, don't tell me it failed").
+///
+/// **Write-path failures (mutations the user initiated) MUST call
+/// `ErrorReporter.report`** so silence does not read as success.
+/// Examples: `sendComment`, `unblock`, `blockUser`, `saveMutedKeywords`,
+/// `toggleBookmark`, `toggleFollow`, `toggleLike`. Always pair the
+/// toast with an `os.Logger.error` line so the failure is observable
+/// without needing the toast on screen.
+///
+/// New ViewModels should copy from the canonical shapes in
+/// `FeedViewModel.loadFeed` (read path) and `PostViewModel.sendComment`
+/// (write path) — do NOT copy from an older ViewModel that may predate
+/// this policy.
 enum ErrorReporter {
     /// Map a thrown error to a plain-language sentence and post it to
     /// the toast bus. Apple's `error.localizedDescription` is never

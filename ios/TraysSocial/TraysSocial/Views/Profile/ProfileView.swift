@@ -1,5 +1,8 @@
+import OSLog
 import PhotosUI
 import SwiftUI
+
+private let profileLog = Logger(subsystem: "com.trays.social", category: "profile")
 
 struct ProfileView: View {
     let username: String
@@ -92,6 +95,8 @@ struct ProfileView: View {
                 let _: MessageResponse = try await APIClient.shared.post(path: "/users/\(username)/block")
                 // Pop back to previous screen
             } catch {
+                // D95: write-path failure — log + toast. User-initiated.
+                profileLog.error("blockUser failed: \(String(describing: error), privacy: .public)")
                 ErrorReporter.report(error, fallback: "Couldn't block @\(username).")
             }
         }

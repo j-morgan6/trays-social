@@ -29,16 +29,13 @@ final class MyTrayViewModel {
         savedRecipes.isEmpty && savedPosts.isEmpty
     }
 
-    /// Loads bookmarks. `userInitiated` distinguishes the on-appear
-    /// auto-load from a pull-to-refresh: when the auto-load fails but
-    /// the user already has bookmarks on screen, the failure is logged
-    /// but no toast is surfaced — the existing tray remains usable and
-    /// a transient network blip would otherwise toast on every cold
-    /// launch. User-initiated refreshes and empty-state failures still
-    /// surface a toast so the user gets feedback.
-    func load(userInitiated: Bool = false) async {
+    /// Loads bookmarks. D95: read-path failures stay silent — log via
+    /// os.Logger and let the existing skeleton / empty-state surface
+    /// handle the no-content case. The pull-to-refresh spinner stopping
+    /// is the user-visible feedback. Toasts are reserved for write-path
+    /// mutations (see `ErrorReporter` doc comment).
+    func load() async {
         guard !isLoading else { return }
-        let hadPosts = !posts.isEmpty
         isLoading = true
 
         do {
@@ -47,9 +44,6 @@ final class MyTrayViewModel {
             cursor = response.cursor
         } catch {
             Self.log.error("load failed: \(String(describing: error), privacy: .public)")
-            if userInitiated || !hadPosts {
-                ErrorReporter.report(error, fallback: "Couldn't load your tray.")
-            }
         }
 
         isLoading = false
@@ -65,6 +59,24 @@ final class MyTrayViewModel {
 
     func refresh() async {
         cursor = nil
-        await load(userInitiated: true)
+        await load()
+    }
+
+    /// D94: reconcile a bookmark toggle from elsewhere (Feed, PostDetail)
+    /// in place so the just-saved post appears immediately without a
+    /// manual refresh. Mirrors `FeedViewModel.applyPostUpdate` in spirit
+    /// but routes by bookmark state — toggling on inserts at the top of
+    /// the appropriate section, toggling off removes by id. Idempotent
+    /// by post id so rapid taps + optimistic-UI lag don't duplicate.
+    func applyPostUpdate(_ post: Post) {
+        if post.bookmarkedByCurrentUser == true {
+            if !posts.contains(where: { $0.id == post.id }) {
+                posts.insert(post, at: 0)
+            } else if let index = posts.firstIndex(where: { $0.id == post.id }) {
+                posts[index] = post
+            }
+        } else {
+            posts.removeAll(where: { $0.id == post.id })
+        }
     }
 }

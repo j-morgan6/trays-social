@@ -1,4 +1,7 @@
+import OSLog
 import SwiftUI
+
+private let blockedLog = Logger(subsystem: "com.trays.social", category: "blocked")
 
 struct BlockedUsersView: View {
     @State private var blockedUsers: [BlockedUser] = []
@@ -81,7 +84,9 @@ struct BlockedUsersView: View {
             let response: DataResponse<[BlockedUser]> = try await APIClient.shared.get(path: "/blocked-users")
             blockedUsers = response.data
         } catch {
-            ErrorReporter.report(error, fallback: "Couldn't load blocked users.")
+            // D95: read-path failure — log; the existing empty surface
+            // covers the no-content case.
+            blockedLog.error("loadBlocked failed: \(String(describing: error), privacy: .public)")
         }
         isLoading = false
     }
@@ -91,6 +96,9 @@ struct BlockedUsersView: View {
             let _: MessageResponse = try await APIClient.shared.delete(path: "/users/\(user.username)/block")
             blockedUsers.removeAll { $0.id == user.id }
         } catch {
+            // D95: write-path failure — log + toast. Unblock is a
+            // user-initiated mutation; silence would read as success.
+            blockedLog.error("unblock failed: \(String(describing: error), privacy: .public)")
             ErrorReporter.report(error, fallback: "Couldn't unblock \(user.username).")
         }
     }
