@@ -5,13 +5,33 @@ import SwiftUI
 /// 295-320): 11pt semibold uppercase label with 0.12em letter-spacing,
 /// optional subtle count suffix, and an optional "See all" affordance
 /// in amber-ink (mode-adaptive) with a chevron-right.
+///
+/// W144: opt-in `style: .editorial` renders the label at 22pt
+/// semibold (matching FeedView's headline) and centers it. Used by
+/// MyTrayView for the "Recipes" / "Saved posts" rows so they read at
+/// the same scale as the top heading. The `onSeeAll` affordance is
+/// suppressed in `.editorial` since it would look orphaned next to a
+/// centered label.
 struct SectionHeader: View {
     @Environment(\.colorScheme) private var colorScheme
     let label: String
     var count: Int?
     var onSeeAll: (() -> Void)?
+    var style: Style = .compact
+
+    enum Style {
+        case compact
+        case editorial
+    }
 
     var body: some View {
+        switch style {
+        case .compact: compactBody
+        case .editorial: editorialBody
+        }
+    }
+
+    private var compactBody: some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(label.uppercased())
@@ -43,6 +63,23 @@ struct SectionHeader: View {
                 .accessibilityLabel("See all \(label.lowercased())")
             }
         }
+        .padding(.horizontal, 20)
+    }
+
+    private var editorialBody: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(label)
+                .font(.system(size: 22, weight: .semibold))
+                .tracking(-0.44)
+                .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
+            if let count {
+                Text("\(count)")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Theme.subtle(for: colorScheme))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .multilineTextAlignment(.center)
         .padding(.horizontal, 20)
     }
 }

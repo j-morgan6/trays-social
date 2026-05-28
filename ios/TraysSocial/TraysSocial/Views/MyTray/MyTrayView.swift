@@ -14,6 +14,7 @@ import SwiftUI
 ///   Reduce Motion).
 struct MyTrayView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(AppState.self) private var appState
     @State private var viewModel = MyTrayViewModel()
 
     var body: some View {
@@ -30,14 +31,24 @@ struct MyTrayView: View {
                         .padding(.bottom, 18)
 
                     if !viewModel.savedRecipes.isEmpty {
-                        SectionHeader(label: "Recipes", count: viewModel.savedRecipes.count)
+                        SectionHeader(
+                            label: "Recipes",
+                            count: viewModel.savedRecipes.count,
+                            style: .editorial
+                        )
+                        .padding(.bottom, 8)
                         gridSection(viewModel.savedRecipes)
                             .padding(.horizontal, 16)
                             .padding(.bottom, 24)
                     }
 
                     if !viewModel.savedPosts.isEmpty {
-                        SectionHeader(label: "Saved posts", count: viewModel.savedPosts.count)
+                        SectionHeader(
+                            label: "Saved posts",
+                            count: viewModel.savedPosts.count,
+                            style: .editorial
+                        )
+                        .padding(.bottom, 8)
                         gridSection(viewModel.savedPosts)
                             .padding(.horizontal, 16)
                             .padding(.bottom, 24)
@@ -85,42 +96,39 @@ struct MyTrayView: View {
                 .skeletonGroup(label: "Loading saved recipes")
             }
         }
-        .refreshable { await viewModel.refresh() }
+        .refreshable { await viewModel.refresh(currentUsername: appState.currentUser?.username) }
         .task {
             // D94: previously gated on viewModel.posts.isEmpty so the
             // first cold visit loaded. With the .onReceive bookmark
             // sync below we still need a periodic refresh on tab re-
             // entry to pick up saves that happened before the app
             // launched (no in-flight notification) — load() guards on
-            // isLoading so a double-fire is a no-op.
-            await viewModel.load()
+            // isLoading so a double-fire is a no-op. D98: pass the
+            // current username so the user's own posts are merged in.
+            await viewModel.load(currentUsername: appState.currentUser?.username)
         }
         .onReceive(NotificationCenter.default.publisher(for: .postUpdated)) { notification in
             if let updated = notification.userInfo?["post"] as? Post {
+                #if DEBUG
+                    // D99: timestamp the landing-time so the broadcast -> apply
+                    // delta can be measured in Console.app.
+                    MyTrayViewModel.debugLog.debug(
+                        "applyPostUpdate id=\(updated.id) bookmarked=\(updated.bookmarkedByCurrentUser == true) at=\(Date().timeIntervalSince1970)"
+                    )
+                #endif
                 viewModel.applyPostUpdate(updated)
             }
         }
     }
 
     private var populatedHeader: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Your tray")
-                .font(.system(size: 28, weight: .bold))
-                .tracking(-0.7)
-                .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
-
-            Text(headerSubtitle)
-                .font(.system(size: 13))
-                .foregroundStyle(Theme.muted(for: colorScheme))
-        }
-    }
-
-    private var headerSubtitle: String {
-        let recipes = viewModel.savedRecipes.count
-        let posts = viewModel.savedPosts.count
-        let recipesLabel = "\(recipes) \(recipes == 1 ? "recipe" : "recipes")"
-        let postsLabel = "\(posts) \(posts == 1 ? "post" : "posts")"
-        return "\(recipesLabel) and \(postsLabel) you've kept."
+        // W144: subhead dropped, title centered.
+        Text("Your tray")
+            .font(.system(size: 28, weight: .bold))
+            .tracking(-0.7)
+            .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .multilineTextAlignment(.center)
     }
 
     private func gridSection(_ items: [Post]) -> some View {

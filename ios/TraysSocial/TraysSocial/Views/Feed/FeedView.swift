@@ -87,24 +87,14 @@ struct FeedView: View {
     }
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("From cooks you follow")
-                .font(.system(size: 22, weight: .semibold))
-                .tracking(-0.44)
-                .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Text(headerSubtitle)
-                .font(.system(size: 13))
-                .foregroundStyle(Theme.muted(for: colorScheme))
-        }
-    }
-
-    private var headerSubtitle: String {
-        let count = viewModel.posts.count
-        return count == 1
-            ? "One new post since yesterday."
-            : "\(count) new posts since yesterday."
+        // W144: dropped the subhead and centered the title per user
+        // direction. "Your Following" replaces "From cooks you follow".
+        Text("Your Following")
+            .font(.system(size: 22, weight: .semibold))
+            .tracking(-0.44)
+            .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .multilineTextAlignment(.center)
     }
 
     private func toggleBookmark(_ post: Post, newValue: Bool) {
