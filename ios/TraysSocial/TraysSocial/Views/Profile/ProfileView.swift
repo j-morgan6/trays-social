@@ -495,6 +495,7 @@ struct SettingsView: View {
     @State private var showAdminDashboard = false
     @State private var showAdminIosCrashes = false
     @State private var showAdminFeedback = false
+    @State private var showSendFeedback = false
     @AppStorage("colorScheme") private var colorSchemePreference = "system"
 
     var body: some View {
@@ -553,6 +554,21 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Text("Community Guidelines")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .foregroundStyle(Theme.text)
+                }
+
+                Section("Feedback") {
+                    Button {
+                        showSendFeedback = true
+                    } label: {
+                        HStack {
+                            Text("Send Feedback")
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption)
@@ -707,6 +723,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showAdminFeedback) {
                 SafariView(url: URL(string: Configuration.apiBaseURL + "/admin/feedback")!)
+            }
+            .sheet(isPresented: $showSendFeedback) {
+                FeedbackView()
             }
         }
     }

@@ -43,6 +43,48 @@ actor APIClient {
         return try await execute(request)
     }
 
+    /// W125: POST a user-typed feedback submission to /api/v1/feedback.
+    /// Auto-injects the device metadata (app version, OS version,
+    /// device model) so the operator viewing /admin/feedback can
+    /// triage by app build without the form having to capture it.
+    @discardableResult
+    func submitFeedback(subject: String?, body: String) async throws -> EmptyResponse {
+        struct FeedbackRequest: Encodable {
+            let subject: String?
+            let body: String
+            let appVersion: String?
+            let osVersion: String
+            let deviceModel: String
+        }
+
+        let request = FeedbackRequest(
+            subject: subject,
+            body: body,
+            appVersion: Self.deviceAppVersion,
+            osVersion: Self.deviceOSVersion,
+            deviceModel: Self.deviceModelIdentifier
+        )
+        return try await post(path: "/feedback", body: request)
+    }
+
+    private static let deviceAppVersion: String? = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+
+    private static let deviceOSVersion: String = {
+        let v = ProcessInfo.processInfo.operatingSystemVersion
+        return "\(v.majorVersion).\(v.minorVersion).\(v.patchVersion)"
+    }()
+
+    private static let deviceModelIdentifier: String = {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let mirror = Mirror(reflecting: systemInfo.machine)
+        let identifier = mirror.children.reduce("") { partial, element in
+            guard let value = element.value as? Int8, value != 0 else { return partial }
+            return partial + String(UnicodeScalar(UInt8(value)))
+        }
+        return identifier.isEmpty ? "unknown" : identifier
+    }()
+
     /// POST a pre-serialized JSON body. Used when the caller already has
     /// raw JSON `Data` and doesn't want to round-trip through an
     /// `Encodable` shim — currently the MetricKit reporter (W119), which
