@@ -7,6 +7,8 @@ defmodule TraysSocialWeb.Plugs.UploadServing do
   """
   import Plug.Conn
 
+  require Logger
+
   @behaviour Plug
 
   def init(opts), do: opts
@@ -20,9 +22,11 @@ defmodule TraysSocialWeb.Plugs.UploadServing do
   defp serve_file(conn, filename) do
     # Prevent path traversal
     if String.contains?(filename, "..") or String.contains?(filename, "/") do
+      Logger.warning("upload_serving rejected suspicious filename: #{inspect(filename)}")
       conn
     else
-      file_path = Path.join(TraysSocial.Uploads.Photo.upload_dir(), filename)
+      dir = TraysSocial.Uploads.Photo.upload_dir()
+      file_path = Path.join(dir, filename)
 
       if File.regular?(file_path) do
         content_type = MIME.from_path(file_path)
@@ -33,8 +37,25 @@ defmodule TraysSocialWeb.Plugs.UploadServing do
         |> send_file(200, file_path)
         |> halt()
       else
+        # D71: log misses with the resolved upload dir so we can
+        # disambiguate 'volume not mounted' from 'file genuinely
+        # deleted' on prod. Filename is not logged at info level
+        # (could be a guessable user-derived value); only the dir +
+        # whether it exists.
+        Logger.info(
+          "upload_serving miss: dir=#{inspect(dir)} dir_exists=#{File.dir?(dir)} " <>
+            "files_in_dir=#{count_files(dir)}"
+        )
+
         conn
       end
+    end
+  end
+
+  defp count_files(dir) do
+    case File.ls(dir) do
+      {:ok, entries} -> length(entries)
+      _ -> "(error listing)"
     end
   end
 end
