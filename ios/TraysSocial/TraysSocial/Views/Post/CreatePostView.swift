@@ -152,8 +152,8 @@ struct CreatePostView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Theme.primary)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Theme.text)
                 }
             }
         }
@@ -196,10 +196,11 @@ struct CreatePostView: View {
     @ViewBuilder
     private var recipeFields: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading) {
-                Text("Cook time (min)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("COOK TIME (MIN)")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .tracking(1.6)
+                    .foregroundStyle(Theme.textSecondary)
                 TextField("30", text: $viewModel.cookingTimeMinutes)
                     .keyboardType(.numberPad)
                     .padding(10)
@@ -207,10 +208,11 @@ struct CreatePostView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
 
-            VStack(alignment: .leading) {
-                Text("Servings")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("SERVINGS")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .tracking(1.6)
+                    .foregroundStyle(Theme.textSecondary)
                 TextField("4", text: $viewModel.servings)
                     .keyboardType(.numberPad)
                     .padding(10)
@@ -222,7 +224,8 @@ struct CreatePostView: View {
         // Ingredients
         VStack(alignment: .leading, spacing: 8) {
             Text("Ingredients")
-                .font(.subheadline.weight(.semibold))
+                .font(.serif(22))
+                .foregroundStyle(Theme.text)
 
             ForEach(Array(viewModel.ingredients.enumerated()), id: \.element.id) { index, ing in
                 HStack {
@@ -267,7 +270,8 @@ struct CreatePostView: View {
         // Steps
         VStack(alignment: .leading, spacing: 8) {
             Text("Steps")
-                .font(.subheadline.weight(.semibold))
+                .font(.serif(22))
+                .foregroundStyle(Theme.text)
 
             ForEach(Array(viewModel.steps.enumerated()), id: \.element.id) { index, step in
                 HStack(alignment: .top) {
@@ -307,7 +311,8 @@ struct CreatePostView: View {
         // Tools
         VStack(alignment: .leading, spacing: 8) {
             Text("Tools")
-                .font(.subheadline.weight(.semibold))
+                .font(.serif(22))
+                .foregroundStyle(Theme.text)
 
             FlowLayout(spacing: 6) {
                 ForEach(Array(viewModel.tools.enumerated()), id: \.offset) { index, tool in
