@@ -81,6 +81,7 @@ struct CookModeView: View {
                         .foregroundStyle(Theme.text)
                         .multilineTextAlignment(.center)
                         .lineSpacing(6)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 24)
                 }
             }
