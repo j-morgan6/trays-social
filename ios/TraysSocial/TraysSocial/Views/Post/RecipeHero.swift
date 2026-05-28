@@ -11,7 +11,7 @@ struct RecipeHero: View {
     let post: Post
     let bookmarked: Bool
     let onBack: () -> Void
-    let onShare: () -> Void
+    let shareURL: URL?
     let onBookmark: () -> Void
 
     var body: some View {
@@ -90,7 +90,21 @@ struct RecipeHero: View {
             CircleButton(icon: "chevron.left", action: onBack)
             Spacer()
             HStack(spacing: 8) {
-                CircleButton(icon: "square.and.arrow.up", action: onShare)
+                if let shareURL {
+                    // D78: SwiftUI ShareLink presents the native iOS
+                    // share sheet with the post URL — Universal Links
+                    // on the receiver side land back in the app via
+                    // AppState.handlePostDeepLink (see TraysSocialApp).
+                    ShareLink(item: shareURL, subject: Text(shareTitle), message: Text("From Trays")) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(.white)
+                            .frame(width: 38, height: 38)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                    }
+                    .accessibilityLabel("Share recipe")
+                }
                 CircleButton(
                     icon: bookmarked ? "bookmark.fill" : "bookmark",
                     tint: bookmarked ? Theme.accent : .white,
@@ -100,6 +114,14 @@ struct RecipeHero: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 56)
+    }
+
+    private var shareTitle: String {
+        let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
+            .first?
+            .trimmingCharacters(in: .whitespaces) ?? raw
+        return candidate.isEmpty ? "A recipe on Trays" : candidate
     }
 
     private var titleBlock: some View {

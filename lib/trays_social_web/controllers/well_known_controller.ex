@@ -27,7 +27,7 @@ defmodule TraysSocialWeb.WellKnownController do
       details: [
         %{
           appID: "6TN2AZM26U.com.trays.social",
-          paths: ["/users/confirm/*"]
+          paths: ["/users/confirm/*", "/p/*"]
         }
       ]
     }

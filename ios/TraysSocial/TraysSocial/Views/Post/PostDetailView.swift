@@ -39,7 +39,7 @@ struct PostDetailView: View {
                             post: post,
                             bookmarked: post.bookmarkedByCurrentUser ?? false,
                             onBack: { dismiss() },
-                            onShare: { /* TODO: share sheet */ },
+                            shareURL: URL(string: Configuration.apiBaseURL + "/p/\(post.id)"),
                             onBookmark: { viewModel.toggleBookmark() }
                         )
 

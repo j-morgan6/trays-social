@@ -75,13 +75,17 @@ struct TraysSocialApp: App {
             }
             .preferredColorScheme(preferredScheme)
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { userActivity in
-                // Universal Link tap. Currently we only intercept
-                // /users/confirm/<token>; AppState filters non-matching URLs.
+                // Universal Link tap. Routes by path prefix:
+                //   /users/confirm/<token>  — email confirmation
+                //   /p/<id>                 — shared post (D78)
+                // Non-matching URLs are no-ops (Safari handles them).
                 guard let url = userActivity.webpageURL else {
                     appLog.error("onContinueUserActivity fired but webpageURL was nil")
                     return
                 }
                 appLog.info("onContinueUserActivity received URL: host=\(url.host ?? "nil", privacy: .public) path=\(url.path, privacy: .public)")
+
+                if appState.handlePostDeepLink(url: url) { return }
                 Task { await appState.handleConfirmationDeepLink(url: url) }
             }
         }

@@ -195,6 +195,42 @@ final class AppState {
         suspensionMessage = nil
     }
 
+    /// D78: handle a Universal Link tap on a shared post URL
+    /// (`https://trays.app/p/<id>`). Pushes a Post-shaped destination
+    /// onto the navigation path so AppShellView's
+    /// `.navigationDestination(for: Post.self)` lands on
+    /// PostDetailView. The Post struct only needs `id` matched for
+    /// equality + hashing; the rest is loaded by PostViewModel.loadPost
+    /// in the destination view, so passing a stub is safe.
+    func handlePostDeepLink(url: URL) -> Bool {
+        let components = url.pathComponents
+        guard components.count == 3,
+              components[1] == "p",
+              let postId = Int(components[2])
+        else {
+            return false
+        }
+        deeplinkLog.info("post deep link received: id=\(postId, privacy: .public)")
+        navigationPath.append(postStub(id: postId))
+        return true
+    }
+
+    /// Minimal `Post` carrying only the id — PostDetailView re-fetches
+    /// the full record via PostViewModel.loadPost. Other Post fields
+    /// are placeholder values; the View never reads them before the
+    /// load completes.
+    private func postStub(id: Int) -> Post {
+        Post(
+            id: id, type: "recipe", caption: nil,
+            cookingTimeMinutes: nil, servings: nil,
+            likeCount: 0, commentCount: 0,
+            likedByCurrentUser: false, bookmarkedByCurrentUser: nil,
+            insertedAt: Date(),
+            user: PostUser(id: 0, username: "", profilePhotoUrl: nil),
+            photos: [], ingredients: [], cookingSteps: [], tools: [], tags: []
+        )
+    }
+
     /// Handles a Universal Link tap on a confirmation URL.
     ///
     /// Apple's WebKit hands us the `webpageURL` from a `NSUserActivity` when the
