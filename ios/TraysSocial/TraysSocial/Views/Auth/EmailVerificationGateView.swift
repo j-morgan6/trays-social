@@ -17,27 +17,32 @@ struct EmailVerificationGateView: View {
                 Spacer()
 
                 Image(systemName: "envelope.badge.shield.half.filled")
-                    .font(.system(size: 64))
+                    .font(.system(size: 56))
                     .foregroundStyle(Theme.accent)
 
                 Text("Verify your email")
-                    .font(.title.weight(.bold))
+                    .font(.serif(32))
                     .foregroundStyle(Theme.text)
+                    .tracking(-0.5)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 VStack(spacing: 6) {
                     Text("We sent a verification link to")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
 
                     Text(appState.currentUser?.email ?? "your email")
-                        .font(.subheadline.weight(.medium))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.text)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
 
                     Text("Tap the link in that email, then return here.")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.top, 4)
                 }
-                .font(.subheadline)
+                .font(.system(size: 13))
                 .padding(.horizontal, 32)
 
                 if let message = statusMessage {
@@ -55,37 +60,41 @@ struct EmailVerificationGateView: View {
                         Task { await refresh() }
                     } label: {
                         HStack {
-                            if isRefreshing { ProgressView().tint(.white) }
+                            if isRefreshing { ProgressView().tint(Color(hex: 0x2A1C00)) }
                             Text(isRefreshing ? "Checking..." : "I verified my email")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white)
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color(hex: 0x2A1C00))
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Theme.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .frame(height: 52)
+                        .background(Theme.accent)
+                        .clipShape(Capsule())
                     }
+                    .buttonStyle(.plain)
                     .disabled(isRefreshing)
 
                     Button {
                         Task { await resend() }
                     } label: {
                         Text(resendLabel)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Theme.primary)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Theme.text)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
+                    .buttonStyle(.plain)
                     .disabled(isResending || isInCooldown)
 
                     Button(role: .destructive) {
                         appState.logout()
                     } label: {
                         Text("Sign out")
-                            .font(.subheadline.weight(.medium))
+                            .font(.system(size: 13))
+                            .foregroundStyle(Theme.textSecondary)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
+                            .padding(.vertical, 8)
                     }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 32)
