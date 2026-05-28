@@ -16,7 +16,7 @@ defmodule TraysSocialWeb.API.AuthPlug do
 
   def call(conn, _opts) do
     with {:ok, token} <- get_bearer_token(conn),
-         user when not is_nil(user) <- Accounts.get_user_by_api_token(token) do
+         user when not is_nil(user) <- lookup_user_with_retry(token) do
       if User.is_suspended?(user) do
         send_suspended(conn, user)
       else
@@ -29,6 +29,20 @@ defmodule TraysSocialWeb.API.AuthPlug do
         |> Phoenix.Controller.json(%{errors: [%{message: "unauthorized"}]})
         |> halt()
     end
+  end
+
+  # D70: one-shot retry on DBConnection.ConnectionError. On a Fly
+  # Postgres machine swap the connection pool empties for ~30s; the
+  # retry-with-200ms-backoff turns the user-facing failure from "the
+  # whole app 500s for half a minute" into "first request blips, then
+  # everything works." We only retry the specific connection
+  # exception — auth failures and other errors still bubble.
+  defp lookup_user_with_retry(token) do
+    Accounts.get_user_by_api_token(token)
+  rescue
+    DBConnection.ConnectionError ->
+      Process.sleep(200)
+      Accounts.get_user_by_api_token(token)
   end
 
   # Structured 403 body shape — iOS APIClient pattern-matches on

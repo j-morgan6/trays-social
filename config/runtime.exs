@@ -47,7 +47,17 @@ if config_env() == :prod do
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     # For machines with several cores, consider starting multiple pools of `pool_size`
     # pool_count: 4,
-    socket_options: maybe_ipv6
+    socket_options: maybe_ipv6,
+    # D70: bridge Fly machine-swap blips. The 2026-05-28 prod incident
+    # was 30s of 500s because every Postgrex connection dropped during
+    # a Postgres restart and DBConnection's defaults (queue_target=50ms,
+    # queue_interval=1000ms) gave up before the pool reconnected. The
+    # bumped values mean "try to hold waits under 500ms; if they
+    # exceed that for 5s straight, drop requests rather than queue
+    # indefinitely." On a real outage we still 500 — we're only
+    # bridging the seconds-long machine-swap case.
+    queue_target: 500,
+    queue_interval: 5_000
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
