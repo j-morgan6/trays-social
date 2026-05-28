@@ -222,6 +222,11 @@ defmodule TraysSocialWeb.Router do
 
     post "/users/:username/block", UserController, :block
     delete "/users/:username/block", UserController, :unblock
+
+    # W123: in-app feedback ingest. Authenticated; uses the write
+    # bucket because human-typed feedback is low-frequency relative
+    # to like/comment writes.
+    post "/feedback", FeedbackController, :create
   end
 
   # API v1 — reports (rate limited separately)
