@@ -93,10 +93,19 @@ defmodule TraysSocial.Posts do
   defp filter_followed_feed(query, _user_id, nil), do: query
   defp filter_followed_feed(query, _user_id, false), do: query
 
+  # D97: include the user's own posts alongside followed users so the
+  # cook sees their own recipes in their own feed. Pre-fetch
+  # followed_ids and use an OR clause on p.user_id — switching from
+  # the previous inner join avoids the duplicate-row hazard that an OR
+  # across joined columns would create.
   defp filter_followed_feed(query, user_id, true) do
-    join(query, :inner, [p], f in Follow,
-      on: f.follower_id == ^user_id and f.followed_id == p.user_id
-    )
+    followed_ids =
+      Follow
+      |> where([f], f.follower_id == ^user_id)
+      |> select([f], f.followed_id)
+      |> Repo.all()
+
+    where(query, [p], p.user_id == ^user_id or p.user_id in ^followed_ids)
   end
 
   defp cursor_where(query, nil, _), do: query

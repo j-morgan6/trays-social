@@ -97,24 +97,33 @@ defmodule TraysSocial.PostsTest do
       assert length(posts) == 2
     end
 
-    test "list_posts/1 with for_user_id shows only followed posts when user follows 5+ people" do
+    test "list_posts/1 with for_user_id shows followed users' posts plus the user's own posts when user follows 5+ people" do
       follower = user_fixture()
 
       # Create 5 followed users with posts
-      followed_posts =
+      _followed_posts =
         for _ <- 1..5 do
           poster = user_fixture()
           TraysSocial.Accounts.follow_user(follower, poster)
           post_fixture(%{user_id: poster.id, caption: "Followed post"})
         end
 
-      # Create an unfollowed user with a post
+      # D97: the follower's own post should be included in their feed
+      own_post = post_fixture(%{user_id: follower.id, caption: "Own post"})
+
+      # Create an unfollowed user with a post — should be excluded
       unfollowed = user_fixture()
       post_fixture(%{user_id: unfollowed.id, caption: "Not followed post"})
 
       posts = Posts.list_posts(for_user_id: follower.id)
-      assert length(posts) == length(followed_posts)
-      assert Enum.all?(posts, &(&1.caption == "Followed post"))
+      captions = Enum.map(posts, & &1.caption)
+
+      assert own_post.id in Enum.map(posts, & &1.id)
+      assert "Own post" in captions
+      assert "Followed post" in captions
+      refute "Not followed post" in captions
+      # 5 followed posts + 1 own post = 6
+      assert length(posts) == 6
     end
 
     test "list_posts/1 with for_user_id shows all posts when user follows nobody" do
