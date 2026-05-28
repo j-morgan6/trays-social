@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// W139: restyled to match the editorial system used in WelcomeView /
-/// ProfileView. Serif heading, Theme tokens for colors, and the amber
-/// `Theme.accent` capsule button matching `BottomPill`'s Create FAB.
 struct LoginView: View {
     @Environment(AppState.self) private var appState
     @Bindable var viewModel: AuthViewModel
@@ -11,13 +8,12 @@ struct LoginView: View {
         VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Welcome back")
-                    .font(.serif(22))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Theme.secondary)
 
                 Text("Log in")
-                    .font(.serif(38))
+                    .font(.system(size: 34, weight: .bold))
                     .foregroundStyle(Theme.text)
-                    .tracking(-0.5)
             }
             .padding(.top, 12)
 

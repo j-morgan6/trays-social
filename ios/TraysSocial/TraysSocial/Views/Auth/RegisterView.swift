@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// W139: restyled to match the editorial system. Serif heading, Theme
-/// tokens for colors, and amber `Theme.accent` capsule button matching
-/// `BottomPill`'s Create FAB.
 struct RegisterView: View {
     @Environment(AppState.self) private var appState
     @Bindable var viewModel: AuthViewModel
@@ -12,13 +9,12 @@ struct RegisterView: View {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("New here")
-                        .font(.serif(22))
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Theme.secondary)
 
                     Text("Create an account")
-                        .font(.serif(38))
+                        .font(.system(size: 34, weight: .bold))
                         .foregroundStyle(Theme.text)
-                        .tracking(-0.5)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.top, 8)

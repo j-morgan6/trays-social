@@ -21,9 +21,8 @@ struct EmailVerificationGateView: View {
                     .foregroundStyle(Theme.accent)
 
                 Text("Verify your email")
-                    .font(.serif(32))
+                    .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(Theme.text)
-                    .tracking(-0.5)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
 
