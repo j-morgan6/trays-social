@@ -50,6 +50,11 @@ struct FindView: View {
         .task {
             await viewModel.loadTrending()
         }
+        .refreshable {
+            // D73: pull-to-refresh gives users a recovery action when
+            // a transient backend blip leaves trendingPosts empty.
+            await viewModel.loadTrending()
+        }
         .onDisappear {
             viewModel.cancelInFlight()
         }
@@ -129,6 +134,14 @@ struct FindView: View {
             SectionHeader(label: "Trending this week", count: viewModel.trendingPosts.count)
             trendingGrid
                 .padding(.horizontal, 16)
+        } else {
+            // D73: post-load with no trending posts. Could be a brand-
+            // new install (nothing has trended yet) or a transient
+            // backend blip that pull-to-refresh will recover from.
+            EditorialEmptyState(
+                title: "Nothing trending yet.",
+                subtitle: "Pull to refresh, or check back later when posts pick up."
+            )
         }
     }
 
