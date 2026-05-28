@@ -5,7 +5,7 @@ import SwiftUI
 /// handoff (design/handoff/trays-social/project/ios-screens.jsx).
 ///
 /// Top of the photo: floating back / share / bookmark buttons.
-/// Bottom of the photo: mono category eyebrow + serif 32pt title, on a
+/// Bottom of the photo: mono category eyebrow + SF 30pt title, on a
 /// dark gradient that fades into the photo.
 struct RecipeHero: View {
     let post: Post
@@ -134,9 +134,8 @@ struct RecipeHero: View {
             }
 
             Text(titleText)
-                .font(.serif(32))
+                .font(.system(size: 30, weight: .bold))
                 .foregroundStyle(.white)
-                .tracking(-0.5)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 20)

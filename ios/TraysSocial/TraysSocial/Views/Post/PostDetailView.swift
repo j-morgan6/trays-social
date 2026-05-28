@@ -142,7 +142,7 @@ struct PostDetailView: View {
 
     //
     // Editorial layout: optional category eyebrow (from tags), oversized
-    // serif recipe title (derived from caption first sentence), byline
+    // SF recipe title (derived from caption first sentence), byline
     // with avatar + relative date, italic cook's note, metadata strip
     // between hairlines, quiet engagement row.
 
@@ -193,11 +193,11 @@ struct PostDetailView: View {
                 Divider().background(Color.white.opacity(0.08))
             }
 
-            // Cook's note — italic serif pull quote
+            // Cook's note — italic pull quote
             let body = bodyText(for: post)
             if !body.isEmpty {
                 Text("\u{201C}\(body)\u{201D}")
-                    .font(.serifItalic(17))
+                    .font(.system(size: 17).italic())
                     .foregroundStyle(Theme.text)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 4)
@@ -266,7 +266,7 @@ struct PostDetailView: View {
                 .foregroundStyle(Theme.textSecondary)
                 .tracking(1.5)
             Text(value)
-                .font(.serif(18))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(Theme.text)
         }
     }
@@ -400,7 +400,7 @@ private struct CommentsSection: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text("Notes")
-                .font(.serif(24))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(Theme.text)
             Text("\(comments.count)")
                 .font(.system(size: 14))
@@ -444,7 +444,7 @@ private struct CommentsSection: View {
     private var emptySurface: some View {
         VStack(spacing: 6) {
             Text("No notes yet.")
-                .font(.serifItalic(17))
+                .font(.system(size: 17).italic())
                 .foregroundStyle(Theme.text)
             Text("Be the first to leave one.")
                 .font(.system(size: 12))
@@ -566,7 +566,7 @@ private struct PostUnavailableSurface: View {
 
             VStack(spacing: 6) {
                 Text(isNotFound ? "Post not available" : "Couldn't load this post")
-                    .font(.serif(20))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Theme.text)
 
                 Text(isNotFound
@@ -678,7 +678,7 @@ struct FlowLayout: Layout {
 
 //
 // Ingredients as a checkable list with mono quantities; method as
-// numbered steps with italic serif primary-green numerals. Extracted
+// numbered steps with italic primary-green numerals. Extracted
 // from PostDetailView so the parent struct stays within SwiftLint's
 // type_body_length budget.
 
@@ -705,7 +705,7 @@ struct RecipeBodySection: View {
     private var ingredientsList: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Ingredients")
-                .font(.serif(28))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(Theme.text)
                 .padding(.bottom, 4)
 
@@ -740,14 +740,14 @@ struct RecipeBodySection: View {
     private var methodList: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Method")
-                .font(.serif(28))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(Theme.text)
                 .padding(.bottom, 4)
 
             ForEach(post.cookingSteps) { step in
                 HStack(alignment: .top, spacing: 14) {
                     Text("\(step.position)")
-                        .font(.serifItalic(28))
+                        .font(.system(size: 26, weight: .semibold, design: .rounded).italic())
                         .foregroundStyle(Theme.primary)
                         .frame(width: 32, alignment: .leading)
 
@@ -767,7 +767,7 @@ struct RecipeBodySection: View {
     private var toolsList: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Tools")
-                .font(.serif(24))
+                .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(Theme.text)
 
             FlowLayout(spacing: 8) {
