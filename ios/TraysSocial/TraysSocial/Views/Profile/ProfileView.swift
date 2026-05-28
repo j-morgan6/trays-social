@@ -95,6 +95,7 @@ struct ProfileView: View {
     private func editorialProfileBody(_ user: User) -> some View {
         ProfileBody(
             user: user,
+            posts: viewModel.posts,
             isOwnProfile: viewModel.isOwnProfile,
             isFollowing: user.followedByCurrentUser == true,
             onEditProfile: { showEditProfile = true },
@@ -112,6 +113,7 @@ struct ProfileView: View {
 private struct ProfileBody: View {
     @Environment(\.colorScheme) private var colorScheme
     let user: User
+    let posts: [Post]
     let isOwnProfile: Bool
     let isFollowing: Bool
     let onEditProfile: () -> Void
@@ -156,9 +158,56 @@ private struct ProfileBody: View {
                 followButton
                     .padding(.top, 8)
             }
+
+            postsGrid
+                .padding(.top, 24)
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 110)
+    }
+
+    /// D74: restore the per-profile posts grid that W138's Pass 1
+    /// prototype port had dropped. The prototype showed only the
+    /// stats triplet and action list — but a recipe app's profile
+    /// without the cook's posts feels broken. 2-col grid of GridCard
+    /// (the W134 primitive) tapping into PostDetailView.
+    @ViewBuilder
+    private var postsGrid: some View {
+        if posts.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                SectionHeader(label: "Recipes", count: posts.count)
+                LazyVGrid(
+                    columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
+                    spacing: 10
+                ) {
+                    ForEach(posts) { post in
+                        NavigationLink(value: post) {
+                            GridCard(
+                                photoKey: photoKey(for: post),
+                                title: gridTitle(for: post)
+                            )
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
+        }
+    }
+
+    private func photoKey(for post: Post) -> FoodPalette.Key {
+        let keys = FoodPalette.Key.allCases
+        return keys[abs(post.id) % keys.count]
+    }
+
+    private func gridTitle(for post: Post) -> String {
+        let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return "Untitled" }
+        let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
+            .first?
+            .trimmingCharacters(in: .whitespaces) ?? raw
+        return candidate.isEmpty ? "Untitled" : candidate
     }
 
     private var avatar: some View {
