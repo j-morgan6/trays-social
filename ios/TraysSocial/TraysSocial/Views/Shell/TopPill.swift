@@ -19,7 +19,7 @@ struct TopPill: View {
             PillBar {
                 if showWordmark {
                     Text("Trays")
-                        .font(.serif(15))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Theme.accent)
                         .padding(.leading, 4)
                         .padding(.trailing, 4)

@@ -1,13 +1,12 @@
 import SwiftUI
 
-/// Editorial empty-state primitive: serif italic title + optional
-/// secondary subtext, centered with generous vertical padding so it
-/// reads as a deliberate state rather than a blank screen.
+/// Empty-state primitive: italic title + optional secondary subtext,
+/// centered with generous vertical padding so it reads as a deliberate
+/// state rather than a blank screen.
 ///
 /// Used by `BlockedUsersView`, `FollowListView`, and other places that
-/// need a "zero results" surface that matches the project's editorial
-/// voice. Pre-empts ad-hoc `Text("No X")` calls that would drift
-/// visually over time.
+/// need a "zero results" surface. Pre-empts ad-hoc `Text("No X")`
+/// calls that would drift visually over time.
 struct EditorialEmptyState: View {
     let title: String
     var subtitle: String?
@@ -16,7 +15,7 @@ struct EditorialEmptyState: View {
     var body: some View {
         VStack(spacing: 6) {
             Text(title)
-                .font(.serifItalic(17))
+                .font(.system(size: 17).italic())
                 .foregroundStyle(Theme.text)
                 .multilineTextAlignment(.center)
 

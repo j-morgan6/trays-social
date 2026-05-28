@@ -160,11 +160,11 @@ struct CreatePostView: View {
         .tint(Theme.primary)
     }
 
-    // MARK: - Editorial heading + section labels
+    // MARK: - Heading + section labels
 
-    /// Mono eyebrow + serif page heading at the top of the form,
-    /// mirroring IOSCreate's "Step 3 of 5 → What's in it?" pattern but
-    /// without the multi-step machinery.
+    /// Mono eyebrow + page heading at the top of the form, mirroring
+    /// IOSCreate's "Step 3 of 5 → What's in it?" pattern but without
+    /// the multi-step machinery.
     private var editorialHeading: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(viewModel.postType == .recipe ? "WRITING A RECIPE PAGE" : "WRITING A POST")
@@ -173,9 +173,8 @@ struct CreatePostView: View {
                 .foregroundStyle(Theme.primary)
 
             Text(viewModel.postType == .recipe ? "Tell us how you cooked it." : "Show us what you ate.")
-                .font(.serif(32))
+                .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(Theme.text)
-                .lineSpacing(-4)
         }
         .padding(.top, 4)
         .padding(.bottom, 6)
@@ -224,7 +223,7 @@ struct CreatePostView: View {
         // Ingredients
         VStack(alignment: .leading, spacing: 8) {
             Text("Ingredients")
-                .font(.serif(22))
+                .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(Theme.text)
 
             ForEach(Array(viewModel.ingredients.enumerated()), id: \.element.id) { index, ing in
@@ -270,7 +269,7 @@ struct CreatePostView: View {
         // Steps
         VStack(alignment: .leading, spacing: 8) {
             Text("Steps")
-                .font(.serif(22))
+                .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(Theme.text)
 
             ForEach(Array(viewModel.steps.enumerated()), id: \.element.id) { index, step in
@@ -311,7 +310,7 @@ struct CreatePostView: View {
         // Tools
         VStack(alignment: .leading, spacing: 8) {
             Text("Tools")
-                .font(.serif(22))
+                .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(Theme.text)
 
             FlowLayout(spacing: 6) {

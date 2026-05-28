@@ -101,14 +101,13 @@ struct WelcomeView: View {
     private var pitch: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Trays")
-                .font(.serif(22))
+                .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Theme.secondary)
 
             Text("A quiet place\nto cook from.")
-                .font(.serif(38))
+                .font(.system(size: 34, weight: .bold))
                 .foregroundStyle(Theme.text)
                 .lineSpacing(-4)
-                .tracking(-0.5)
 
             Text("Recipes from home cooks who actually cook. Ingredients, timing, method — written down well.")
                 .font(.system(size: 14))

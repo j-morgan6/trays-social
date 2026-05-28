@@ -76,7 +76,7 @@ struct FollowListView: View {
         VStack(spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(label)
-                    .font(.serif(18))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(active ? Theme.text : Theme.textSecondary)
                 if let count {
                     Text("\(count)")
