@@ -1,3 +1,4 @@
+import OSLog
 import SwiftUI
 
 @MainActor
@@ -10,8 +11,18 @@ final class FeedViewModel {
     var hasMore = true
     var errorMessage: String?
 
-    func loadFeed() async {
+    private static let log = Logger(subsystem: "com.trays.social", category: "feed")
+
+    /// Loads the first page. `userInitiated` distinguishes the on-appear
+    /// auto-load from a pull-to-refresh: when the auto-load fails but
+    /// the user already has posts on screen, the failure is logged but
+    /// no toast is surfaced — the existing feed remains usable and a
+    /// transient network blip would otherwise toast on every cold
+    /// launch. User-initiated refreshes and empty-state failures still
+    /// surface a toast so the user gets feedback.
+    func loadFeed(userInitiated: Bool = false) async {
         guard !isLoading else { return }
+        let hadPosts = !posts.isEmpty
         isLoading = true
         errorMessage = nil
 
@@ -23,8 +34,11 @@ final class FeedViewModel {
             cursor = response.cursor
             hasMore = response.cursor != nil
         } catch {
+            Self.log.error("loadFeed failed: \(String(describing: error), privacy: .public)")
             errorMessage = "Failed to load feed."
-            ErrorReporter.report(error, fallback: "Couldn't load your feed.")
+            if userInitiated || !hadPosts {
+                ErrorReporter.report(error, fallback: "Couldn't load your feed.")
+            }
         }
 
         isLoading = false
@@ -54,7 +68,7 @@ final class FeedViewModel {
     func refresh() async {
         cursor = nil
         hasMore = true
-        await loadFeed()
+        await loadFeed(userInitiated: true)
     }
 
     /// Replace a post in the feed with an updated version (e.g. after the user mutates it in PostDetailView).
