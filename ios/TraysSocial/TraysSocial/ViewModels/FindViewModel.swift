@@ -12,13 +12,12 @@ final class FindViewModel {
     var popularTags: [String] = []
     var isSearching = false
     var isLoadingTrending = false
-    var activeFilter: String?
 
     private var searchTask: Task<Void, Never>?
     private static let log = Logger(subsystem: "com.trays.social", category: "find")
 
     var showSearchResults: Bool {
-        !searchText.isEmpty || activeFilter != nil
+        !searchText.isEmpty
     }
 
     func loadTrending() async {
@@ -39,7 +38,7 @@ final class FindViewModel {
         searchTask?.cancel()
 
         // Nothing to search — clear results and bail
-        guard !searchText.isEmpty || activeFilter != nil else {
+        guard !searchText.isEmpty else {
             posts = []
             users = []
             isSearching = false
@@ -54,22 +53,9 @@ final class FindViewModel {
             defer { isSearching = false }
 
             do {
-                var queryItems: [URLQueryItem] = []
-                if !searchText.isEmpty {
-                    queryItems.append(.init(name: "q", value: searchText))
-                }
-                if let filter = activeFilter {
-                    switch filter {
-                    case "Under 30 min":
-                        queryItems.append(.init(name: "max_cooking_time", value: "30"))
-                    default:
-                        queryItems.append(.init(name: "tag", value: filter.lowercased()))
-                    }
-                }
-
                 let response: DataResponse<SearchResults> = try await APIClient.shared.get(
                     path: "/search",
-                    queryItems: queryItems
+                    queryItems: [.init(name: "q", value: searchText)]
                 )
                 if !Task.isCancelled {
                     posts = response.data.posts
@@ -90,20 +76,10 @@ final class FindViewModel {
         }
     }
 
-    func toggleFilter(_ filter: String) {
-        if activeFilter == filter {
-            activeFilter = nil
-        } else {
-            activeFilter = filter
-        }
-        search()
-    }
-
     func clearSearch() {
         searchTask?.cancel()
         searchTask = nil
         searchText = ""
-        activeFilter = nil
         posts = []
         users = []
         isSearching = false

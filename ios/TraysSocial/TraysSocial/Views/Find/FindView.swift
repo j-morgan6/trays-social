@@ -12,19 +12,6 @@ import SwiftUI
 struct FindView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var viewModel = FindViewModel()
-    @State private var activeChips: Set<String> = []
-
-    /// Locked launch chip set per the prototype + acceptance criteria.
-    /// Do not edit without updating the corresponding design spec.
-    private let filterChips: [String] = [
-        "Under 30 min",
-        "Breakfast",
-        "Vegetarian",
-        "Easy",
-        "Dinner",
-        "One pan",
-        "Bake",
-    ]
 
     var body: some View {
         ScrollView {
@@ -36,9 +23,6 @@ struct FindView: View {
 
                 searchBar
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 14)
-
-                chipRow
                     .padding(.bottom, 22)
 
                 trendingSection
@@ -61,7 +45,7 @@ struct FindView: View {
     }
 
     private var titleSection: some View {
-        Text("Find something to cook")
+        Text("Find Something to Cook")
             .font(.system(size: 28, weight: .bold))
             .tracking(-0.7)
             .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
@@ -97,51 +81,22 @@ struct FindView: View {
         .accessibilityLabel("Search recipes, ingredients, cooks (coming soon)")
     }
 
-    private var chipRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(filterChips, id: \.self) { chip in
-                    FilterChip(
-                        label: chip,
-                        isActive: activeChips.contains(chip),
-                        onTap: { toggle(chip) }
-                    )
-                }
-            }
-            .padding(.horizontal, 16)
-        }
-    }
-
-    private func toggle(_ chip: String) {
-        if activeChips.contains(chip) {
-            activeChips.remove(chip)
-        } else {
-            activeChips.insert(chip)
-        }
-    }
-
     @ViewBuilder
     private var trendingSection: some View {
         if viewModel.isLoadingTrending {
-            // D93: match the loaded `trendingGrid` layout — a
-            // SectionHeader skeleton above a 2-col LazyVGrid of
-            // GridCard-shaped tiles. Previously a single-column
-            // VStack that snapped to a grid on load.
-            VStack(alignment: .leading, spacing: 12) {
-                SkeletonSectionHeader()
-                LazyVGrid(
-                    columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
-                    spacing: 10
-                ) {
-                    ForEach(0 ..< 4, id: \.self) { _ in
-                        SkeletonGridTile()
-                    }
+            // W145: section header dropped from the loaded layout, so the
+            // skeleton mirrors with just a 2-col grid of tiles.
+            LazyVGrid(
+                columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
+                spacing: 10
+            ) {
+                ForEach(0 ..< 4, id: \.self) { _ in
+                    SkeletonGridTile()
                 }
-                .padding(.horizontal, 16)
             }
+            .padding(.horizontal, 16)
             .skeletonGroup(label: "Loading trending recipes")
         } else if !viewModel.trendingPosts.isEmpty {
-            SectionHeader(label: "Trending this week", count: viewModel.trendingPosts.count)
             trendingGrid
                 .padding(.horizontal, 16)
         } else {
