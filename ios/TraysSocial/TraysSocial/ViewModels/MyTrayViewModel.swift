@@ -1,3 +1,4 @@
+import OSLog
 import SwiftUI
 
 @MainActor
@@ -6,6 +7,8 @@ final class MyTrayViewModel {
     var posts: [Post] = []
     var isLoading = false
     var cursor: String?
+
+    private static let log = Logger(subsystem: "com.trays.social", category: "mytray")
 
     /// Recipes saved by the current user (Post.isRecipe == true).
     /// Derived view of `posts` so existing fetch + remove logic stays
@@ -26,8 +29,16 @@ final class MyTrayViewModel {
         savedRecipes.isEmpty && savedPosts.isEmpty
     }
 
-    func load() async {
+    /// Loads bookmarks. `userInitiated` distinguishes the on-appear
+    /// auto-load from a pull-to-refresh: when the auto-load fails but
+    /// the user already has bookmarks on screen, the failure is logged
+    /// but no toast is surfaced — the existing tray remains usable and
+    /// a transient network blip would otherwise toast on every cold
+    /// launch. User-initiated refreshes and empty-state failures still
+    /// surface a toast so the user gets feedback.
+    func load(userInitiated: Bool = false) async {
         guard !isLoading else { return }
+        let hadPosts = !posts.isEmpty
         isLoading = true
 
         do {
@@ -35,7 +46,10 @@ final class MyTrayViewModel {
             posts = response.data
             cursor = response.cursor
         } catch {
-            ErrorReporter.report(error, fallback: "Couldn't load your tray.")
+            Self.log.error("load failed: \(String(describing: error), privacy: .public)")
+            if userInitiated || !hadPosts {
+                ErrorReporter.report(error, fallback: "Couldn't load your tray.")
+            }
         }
 
         isLoading = false
@@ -51,6 +65,6 @@ final class MyTrayViewModel {
 
     func refresh() async {
         cursor = nil
-        await load()
+        await load(userInitiated: true)
     }
 }
