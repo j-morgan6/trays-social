@@ -121,28 +121,20 @@ struct WelcomeView: View {
     // MARK: - Auth actions
 
     private var authActions: some View {
-        @Bindable var bindableViewModel = viewModel
-
-        return VStack(spacing: 12) {
-            // D66: 13+ affirmative attestation gating Apple Sign In. Placed
-            // ABOVE the SignInWithAppleButton so it is collected BEFORE the
-            // ASAuthorization sheet animates in — putting it AFTER the sheet
-            // would re-introduce the D30 sheet-presentation race. Returning
-            // Apple users still see this toggle (the client cannot know who is
-            // returning until the server resolves the apple_id), but the
-            // server-side gate is a no-op for them — the lookup-by-apple_id
-            // branch in find_or_create_apple_user does not run the changeset.
-            Toggle(isOn: $bindableViewModel.ageConfirmed) {
-                Text("I confirm I am 13 years old or older.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.text)
-            }
-            .toggleStyle(.switch)
-            .tint(Theme.accent)
-            .padding(.horizontal, 4)
-            .padding(.bottom, 4)
-            .accessibilityIdentifier("welcome.ageConfirmation")
-
+        VStack(spacing: 12) {
+            // D75: the 13+ affirmation Toggle used to live above this
+            // button to gate Apple Sign In. Returning users saw it on
+            // every Welcome visit (the client can't know they're
+            // returning until the server resolves the apple_id post-
+            // tap), which the user reported as friction. Moved out of
+            // the login path entirely — affirmation is collected at
+            // account creation (RegisterView keeps its toggle for
+            // email signup) and via the implicit consent of tapping
+            // Apple Sign In here. AuthViewModel always sends
+            // ageConfirmation: true; the server's existing logic
+            // requires the affirmation only on new-user account
+            // creation via apple_id and is a no-op for returning
+            // users.
             SignInWithAppleButton(.signIn) { request in
                 // W104: per-attempt nonce, see AuthViewModel.
                 viewModel.prepareAppleSignInRequest(request)
@@ -154,11 +146,7 @@ struct WelcomeView: View {
             .signInWithAppleButtonStyle(.white)
             .frame(height: 52)
             .cornerRadius(26)
-            .disabled(!viewModel.ageConfirmed)
-            .opacity(viewModel.ageConfirmed ? 1 : 0.45)
-            .accessibilityHint(viewModel.ageConfirmed
-                ? "Sign in with your Apple ID"
-                : "Confirm you are 13 or older to enable Sign in with Apple")
+            .accessibilityHint("Sign in with your Apple ID")
 
             Button {
                 showRegister = true

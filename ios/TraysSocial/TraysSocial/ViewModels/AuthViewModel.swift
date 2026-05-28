@@ -227,15 +227,14 @@ final class AuthViewModel {
                     rawNonce: rawNonce,
                     email: email,
                     username: username,
-                    // D66: ageConfirmed is set by the Toggle on WelcomeView,
-                    // which gates the SignInWithAppleButton. By the time
-                    // handleAppleSignIn runs (Apple's sheet has already
-                    // completed), the user has affirmatively attested.
-                    // For returning Apple users the server ignores this
-                    // field (the changeset is not run on the lookup hit
-                    // path), so a returning user whose toggle is somehow
-                    // off still signs in.
-                    ageConfirmation: ageConfirmed
+                    // D75: tapping Apple Sign In is treated as the age
+                    // affirmation. The pre-button Toggle was removed
+                    // because it appeared on every Welcome visit even
+                    // for returning users (D75 user feedback). The
+                    // server still requires this true for new-user
+                    // account creation and ignores it on the lookup-
+                    // hit path for returning users.
+                    ageConfirmation: true
                 )
 
                 if response.needsUsername == true {
