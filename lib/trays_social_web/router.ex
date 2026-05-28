@@ -275,6 +275,8 @@ defmodule TraysSocialWeb.Router do
     live "/email-events", EmailEventsLive, :index
     live "/ios-crashes", IosCrashesLive, :index
     live "/ios-crashes/:id", IosCrashesLive, :show
+    live "/feedback", FeedbackLive, :index
+    live "/feedback/:id", FeedbackLive, :show
   end
 
   # W106: Resend webhook receiver. Signature is verified inside the

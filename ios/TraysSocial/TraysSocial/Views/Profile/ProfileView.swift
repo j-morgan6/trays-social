@@ -494,6 +494,7 @@ struct SettingsView: View {
     @State private var showAdminErrors = false
     @State private var showAdminDashboard = false
     @State private var showAdminIosCrashes = false
+    @State private var showAdminFeedback = false
     @AppStorage("colorScheme") private var colorSchemePreference = "system"
 
     var body: some View {
@@ -614,6 +615,19 @@ struct SettingsView: View {
                             }
                         }
                         .foregroundStyle(Theme.text)
+
+                        Button {
+                            showAdminFeedback = true
+                        } label: {
+                            HStack {
+                                Text("Feedback")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .foregroundStyle(Theme.text)
                     }
                 }
 
@@ -690,6 +704,9 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showAdminIosCrashes) {
                 SafariView(url: URL(string: Configuration.apiBaseURL + "/admin/ios-crashes")!)
+            }
+            .sheet(isPresented: $showAdminFeedback) {
+                SafariView(url: URL(string: Configuration.apiBaseURL + "/admin/feedback")!)
             }
         }
     }
