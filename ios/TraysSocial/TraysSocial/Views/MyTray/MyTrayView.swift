@@ -49,13 +49,37 @@ struct MyTrayView: View {
         }
         .overlay {
             if viewModel.isLoading, viewModel.isEmpty {
-                VStack(spacing: 10) {
-                    ForEach(0 ..< 4, id: \.self) { _ in
-                        SkeletonListRow()
+                // D93: match the loaded gridSection layout — a
+                // SectionHeader skeleton above a 2-col grid of
+                // GridCard-shaped tiles for each of Recipes /
+                // Saved posts. Replaces the pre-W127 list-row
+                // skeleton that snapped to a grid on load.
+                VStack(alignment: .leading, spacing: 16) {
+                    SkeletonSectionHeader()
+                    LazyVGrid(
+                        columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
+                        spacing: 10
+                    ) {
+                        ForEach(0 ..< 4, id: \.self) { _ in
+                            SkeletonGridTile()
+                        }
                     }
+                    .padding(.horizontal, 20)
+
+                    SkeletonSectionHeader()
+                        .padding(.top, 8)
+                    LazyVGrid(
+                        columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
+                        spacing: 10
+                    ) {
+                        ForEach(0 ..< 2, id: \.self) { _ in
+                            SkeletonGridTile()
+                        }
+                    }
+                    .padding(.horizontal, 20)
+
                     Spacer()
                 }
-                .padding(.horizontal, 20)
                 .padding(.top, 140)
                 .allowsHitTesting(false)
                 .skeletonGroup(label: "Loading saved recipes")
@@ -63,8 +87,17 @@ struct MyTrayView: View {
         }
         .refreshable { await viewModel.refresh() }
         .task {
-            if viewModel.posts.isEmpty {
-                await viewModel.load()
+            // D94: previously gated on viewModel.posts.isEmpty so the
+            // first cold visit loaded. With the .onReceive bookmark
+            // sync below we still need a periodic refresh on tab re-
+            // entry to pick up saves that happened before the app
+            // launched (no in-flight notification) — load() guards on
+            // isLoading so a double-fire is a no-op.
+            await viewModel.load()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .postUpdated)) { notification in
+            if let updated = notification.userInfo?["post"] as? Post {
+                viewModel.applyPostUpdate(updated)
             }
         }
     }
