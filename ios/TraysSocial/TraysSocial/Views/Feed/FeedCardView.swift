@@ -38,12 +38,7 @@ struct FeedCardView: View {
             appState.navigationPath.append(post.user.username)
         } label: {
             HStack(spacing: 10) {
-                Avi(
-                    initial: String(post.user.username.prefix(1)),
-                    size: 30,
-                    palette: aviPalette(for: post),
-                    border: true
-                )
+                avatar
                 Text("@\(post.user.username)")
                     .font(.system(size: 13.5, weight: .semibold))
                     .tracking(-0.135)
@@ -161,6 +156,42 @@ struct FeedCardView: View {
             .first?
             .trimmingCharacters(in: .whitespaces) ?? raw
         return candidate.isEmpty ? "Untitled" : candidate
+    }
+
+    // D100: real profile photo on the card header; falls back to the
+    // Avi gradient placeholder when the user hasn't uploaded one.
+    // Mirrors PostDetailView's byline avatar shape so the same image
+    // hits the shared ImageLoader cache.
+    @ViewBuilder
+    private var avatar: some View {
+        if let urlString = post.user.profilePhotoUrl, let url = urlString.asBackendURL {
+            CachedAsyncImage(url: url) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Avi(
+                    initial: String(post.user.username.prefix(1)),
+                    size: 30,
+                    palette: aviPalette(for: post),
+                    border: true
+                )
+            }
+            .frame(width: 30, height: 30)
+            .clipShape(Circle())
+            .overlay(
+                Circle().inset(by: 0.5).stroke(
+                    colorScheme == .dark ? Color.white.opacity(0.18) : Color.black.opacity(0.10),
+                    lineWidth: 1
+                )
+            )
+            .id(url)
+        } else {
+            Avi(
+                initial: String(post.user.username.prefix(1)),
+                size: 30,
+                palette: aviPalette(for: post),
+                border: true
+            )
+        }
     }
 
     private func photoKey(for post: Post) -> FoodPalette.Key {
