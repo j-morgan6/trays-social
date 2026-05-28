@@ -10,6 +10,14 @@ final class MyTrayViewModel {
 
     private static let log = Logger(subsystem: "com.trays.social", category: "mytray")
 
+    #if DEBUG
+        /// D99: exposed so MyTrayView's .onReceive handler can timestamp
+        /// the broadcast landing time without instantiating a separate
+        /// Logger. Debug-only — wrapped in #if DEBUG so it's stripped
+        /// from release builds.
+        static let debugLog = Logger(subsystem: "com.trays.social", category: "mytray.timing")
+    #endif
+
     /// Recipes saved by the current user (Post.isRecipe == true).
     /// Derived view of `posts` so existing fetch + remove logic stays
     /// single-source-of-truth.
@@ -29,24 +37,53 @@ final class MyTrayViewModel {
         savedRecipes.isEmpty && savedPosts.isEmpty
     }
 
-    /// Loads bookmarks. D95: read-path failures stay silent — log via
-    /// os.Logger and let the existing skeleton / empty-state surface
-    /// handle the no-content case. The pull-to-refresh spinner stopping
-    /// is the user-visible feedback. Toasts are reserved for write-path
-    /// mutations (see `ErrorReporter` doc comment).
-    func load() async {
+    /// D98: loads the user's own posts AND their bookmarked posts,
+    /// merges deduped by id, and surfaces them via the existing
+    /// savedRecipes/savedPosts partitions. `currentUsername` enables
+    /// the own-posts fetch — when nil (signed-out edge case) only
+    /// bookmarks are pulled.
+    ///
+    /// D95: read-path failures stay silent — log via os.Logger and let
+    /// the existing skeleton / empty-state surface handle the no-content
+    /// case. Toasts are reserved for write-path mutations.
+    func load(currentUsername: String? = nil) async {
         guard !isLoading else { return }
         isLoading = true
 
+        async let bookmarksTask: PaginatedResponse<[Post]> = APIClient.shared.get(path: "/bookmarks")
+        async let ownPostsTask: PaginatedResponse<[Post]>? = ownPosts(username: currentUsername)
+
         do {
-            let response: PaginatedResponse<[Post]> = try await APIClient.shared.get(path: "/bookmarks")
-            posts = response.data
-            cursor = response.cursor
+            let bookmarks = try await bookmarksTask
+            cursor = bookmarks.cursor
+
+            let ownPostsResponse = try await ownPostsTask
+            let own = ownPostsResponse?.data ?? []
+
+            // Merge deduped by post.id, sort by insertedAt desc so the
+            // existing visual order (newest first) is preserved across
+            // both sources.
+            var byId: [Int: Post] = [:]
+            for p in bookmarks.data {
+                byId[p.id] = p
+            }
+            for p in own {
+                byId[p.id] = p
+            }
+            posts = byId.values.sorted(by: { $0.insertedAt > $1.insertedAt })
         } catch {
             Self.log.error("load failed: \(String(describing: error), privacy: .public)")
         }
 
         isLoading = false
+    }
+
+    /// Helper so the optional `currentUsername` doesn't litter load()
+    /// with conditional async-let machinery. Returns nil when there's
+    /// no username — the caller treats that as 'no own posts to merge'.
+    private func ownPosts(username: String?) async throws -> PaginatedResponse<[Post]>? {
+        guard let username, !username.isEmpty else { return nil }
+        return try await APIClient.shared.get(path: "/users/\(username)/posts")
     }
 
     func removeBookmark(at index: Int) {
@@ -57,9 +94,9 @@ final class MyTrayViewModel {
         }
     }
 
-    func refresh() async {
+    func refresh(currentUsername: String? = nil) async {
         cursor = nil
-        await load()
+        await load(currentUsername: currentUsername)
     }
 
     /// D94: reconcile a bookmark toggle from elsewhere (Feed, PostDetail)

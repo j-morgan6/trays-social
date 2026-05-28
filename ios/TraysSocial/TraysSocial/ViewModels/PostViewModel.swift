@@ -196,6 +196,11 @@ final class PostViewModel {
     }
 
     private func broadcastUpdate(_ post: Post) {
+        #if DEBUG
+            // D99: timestamp the broadcast so the MyTrayView .onReceive
+            // landing-time delta can be measured in Console.app.
+            Self.log.debug("broadcastUpdate id=\(post.id) bookmarked=\(post.bookmarkedByCurrentUser == true) at=\(Date().timeIntervalSince1970)")
+        #endif
         NotificationCenter.default.post(name: .postUpdated, object: nil, userInfo: ["post": post])
     }
 }
