@@ -83,16 +83,33 @@ struct WelcomeView: View {
 
     // MARK: - Hero
 
-    /// Warm gradient placeholder — sits in for the food photo the
-    /// design's IOSSignin uses. Real photography goes here when it's
-    /// available.
+    /// D96: amber palette hero pulled from Theme tokens (matches the
+    /// rest of the app's accent family). Still a placeholder for a
+    /// curated food photo, but the colors are no longer off-palette,
+    /// the height is reduced from 320pt to 240pt so the pitch + buttons
+    /// take a larger share of the screen, and a centered wordmark
+    /// "Trays" sits inside the gradient so the block doesn't read as
+    /// empty. Real photography lands here when a curated asset is
+    /// shipped.
     private var hero: some View {
-        LinearGradient(
-            colors: [Color(hex: 0xD8B178), Color(hex: 0xC08A4F), Color(hex: 0x8A5A32)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .frame(height: 320)
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Theme.accent,
+                    Theme.accentInkLight,
+                    Theme.accentMuted,
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            Text("Trays")
+                .font(.system(size: 44, weight: .bold))
+                .tracking(-0.88)
+                .foregroundStyle(Theme.inkOnAccent)
+                .accessibilityHidden(true)
+        }
+        .frame(height: 240)
         .ignoresSafeArea(edges: .top)
     }
 
