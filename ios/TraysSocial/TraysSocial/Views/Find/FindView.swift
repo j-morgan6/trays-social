@@ -154,7 +154,8 @@ struct FindView: View {
                 NavigationLink(value: post) {
                     GridCard(
                         photoKey: photoKey(for: post),
-                        title: gridTitle(for: post)
+                        title: gridTitle(for: post),
+                        url: post.primaryPhotoURL?.asBackendURL
                     )
                 }
                 .buttonStyle(.borderless)
