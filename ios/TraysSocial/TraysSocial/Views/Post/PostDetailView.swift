@@ -3,6 +3,9 @@ import SwiftUI
 struct PostDetailView: View {
     @Environment(AppState.self) private var appState
     let postId: Int
+    /// D77: optional pre-filled Post from the feed cache. When set, the
+    /// view renders instantly and loadPost runs as a silent refresh.
+    var initialPost: Post?
     @State private var viewModel = PostViewModel()
     @State private var showCookMode = false
     @State private var showReport = false
@@ -118,6 +121,7 @@ struct PostDetailView: View {
             }
         }
         .task {
+            if let initialPost { viewModel.seed(post: initialPost) }
             await viewModel.loadPost(id: postId)
             await viewModel.loadComments(postId: postId)
         }
@@ -155,11 +159,14 @@ struct PostDetailView: View {
                         Text(post.user.username)
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Theme.text)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                         Text(post.insertedAt.timeAgo())
                             .font(.system(size: 12))
                             .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
                     }
-                    Spacer()
+                    Spacer(minLength: 8)
                 }
                 .contentShape(Rectangle())
             }
@@ -481,6 +488,8 @@ private struct CommentRow: View {
                     Text(comment.user.username)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Theme.text)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                     if comment.user.id == post.user.id {
                         // Recipe author replies get a Mint Whisper chip so
                         // readers know it's the cook answering.

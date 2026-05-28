@@ -69,7 +69,12 @@ struct AppShellView: View {
             }
             .background(Theme.background)
             .navigationDestination(for: Post.self) { post in
-                PostDetailView(postId: post.id)
+                // D77: pass the full Post (loaded by the feed/profile/find list)
+                // through so PostDetailView can render instantly while it
+                // refreshes /posts/:id in the background. Deep-link stubs
+                // come in with only the id populated — the optional
+                // initialPost is a no-op in that case.
+                PostDetailView(postId: post.id, initialPost: post.user.id == 0 ? nil : post)
             }
             .navigationDestination(for: String.self) { username in
                 ProfileView(username: username)

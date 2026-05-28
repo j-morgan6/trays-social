@@ -33,7 +33,8 @@ struct ProfileView: View {
             await viewModel.loadProfile(username: username, currentUserId: appState.currentUser?.id)
         }
         .navigationDestination(for: Post.self) { post in
-            PostDetailView(postId: post.id)
+            // D77: pre-fill from the profile grid's already-loaded Post.
+            PostDetailView(postId: post.id, initialPost: post.user.id == 0 ? nil : post)
         }
         .sheet(isPresented: $showEditProfile) {
             EditProfileView { updatedUser in
@@ -131,11 +132,18 @@ private struct ProfileBody: View {
                 .font(.system(size: 24, weight: .bold))
                 .tracking(-0.48)
                 .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 20)
 
             Text("@\(user.username)")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Theme.accentInk(for: colorScheme))
+                .lineLimit(1)
+                .truncationMode(.tail)
                 .padding(.top, 6)
+                .padding(.horizontal, 20)
 
             if let bio = user.bio, !bio.isEmpty {
                 Text(bio)

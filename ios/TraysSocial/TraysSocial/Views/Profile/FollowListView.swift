@@ -151,6 +151,8 @@ struct FollowListView: View {
                     Text(user.username)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.text)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                     if isNewCook(user) {
                         Text("NEW")
                             .font(.system(size: 9, weight: .medium, design: .monospaced))
@@ -165,6 +167,8 @@ struct FollowListView: View {
                 Text("@\(user.username)")
                     .font(.system(size: 11))
                     .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 if let bio = user.bio, !bio.isEmpty {
                     Text(bio)
                         .font(.system(size: 11))

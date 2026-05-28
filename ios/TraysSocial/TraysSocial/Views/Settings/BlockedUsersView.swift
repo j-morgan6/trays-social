@@ -63,8 +63,10 @@ struct BlockedUsersView: View {
             Text(user.username)
                 .font(.subheadline)
                 .foregroundStyle(Theme.text)
+                .lineLimit(1)
+                .truncationMode(.tail)
 
-            Spacer()
+            Spacer(minLength: 8)
 
             Button("Unblock") {
                 Task { await unblock(user) }

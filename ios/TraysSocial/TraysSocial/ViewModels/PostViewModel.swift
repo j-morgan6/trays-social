@@ -35,16 +35,32 @@ final class PostViewModel {
     var commentsLoadAttempted = false
 
     func loadPost(id: Int) async {
-        isLoading = true
+        // D77: when the post is already populated (pre-filled from the
+        // feed cache via PostDetailView's `initialPost`), refresh
+        // silently — skipping isLoading=true prevents flashing the
+        // skeleton over content that's already on screen.
+        let hadPost = post != nil
+        if !hadPost { isLoading = true }
         loadError = nil
         do {
             let response: DataResponse<Post> = try await APIClient.shared.get(path: "/posts/\(id)")
             post = response.data
         } catch {
-            loadError = error
-            ErrorReporter.report(error, fallback: "Couldn't load this post.")
+            // Only surface the error when we have nothing to show.
+            if !hadPost {
+                loadError = error
+                ErrorReporter.report(error, fallback: "Couldn't load this post.")
+            }
         }
-        isLoading = false
+        if !hadPost { isLoading = false }
+    }
+
+    /// Pre-seed from the feed cache. Caller passes the Post that was
+    /// already loaded by the feed/profile/find list — PostDetailView
+    /// renders it instantly while loadPost refreshes in the background.
+    func seed(post: Post) {
+        guard self.post == nil else { return }
+        self.post = post
     }
 
     func loadComments(postId: Int) async {
