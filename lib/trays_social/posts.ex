@@ -111,16 +111,45 @@ defmodule TraysSocial.Posts do
 
   @doc """
   Returns trending posts (highest like_count), excluding soft deleted.
+
+  Posts inserted within the last 7 days are preferred. If fewer than
+  `limit` qualify, the remainder is backfilled from older posts ordered
+  by like_count then recency — so the Find tab never renders empty on a
+  young or quiet board where no one has posted in the past week.
   """
   def list_trending_posts(limit \\ 10) do
     seven_days_ago = DateTime.utc_now() |> DateTime.add(-7, :day)
 
-    Post
-    |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at) and p.inserted_at >= ^seven_days_ago)
-    |> order_by([p], desc: p.like_count, desc: p.inserted_at)
-    |> limit(^limit)
-    |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
-    |> Repo.all()
+    trending =
+      Post
+      |> where(
+        [p],
+        is_nil(p.deleted_at) and is_nil(p.removed_at) and p.inserted_at >= ^seven_days_ago
+      )
+      |> order_by([p], desc: p.like_count, desc: p.inserted_at)
+      |> limit(^limit)
+      |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
+      |> Repo.all()
+
+    if length(trending) >= limit do
+      trending
+    else
+      trending_ids = Enum.map(trending, & &1.id)
+      remaining = limit - length(trending)
+
+      fallback =
+        Post
+        |> where(
+          [p],
+          is_nil(p.deleted_at) and is_nil(p.removed_at) and p.id not in ^trending_ids
+        )
+        |> order_by([p], desc: p.like_count, desc: p.inserted_at)
+        |> limit(^remaining)
+        |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
+        |> Repo.all()
+
+      trending ++ fallback
+    end
   end
 
   @doc """

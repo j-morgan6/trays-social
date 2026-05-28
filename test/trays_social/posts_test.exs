@@ -525,6 +525,35 @@ defmodule TraysSocial.PostsTest do
 
       assert Posts.list_trending_posts() == []
     end
+
+    test "falls back to older posts when fewer than limit qualify within the 7-day window" do
+      user = user_fixture()
+
+      # Two posts older than the 7-day window
+      old_one = post_fixture(%{user_id: user.id, caption: "Old one"})
+      old_two = post_fixture(%{user_id: user.id, caption: "Old two"})
+
+      eight_days_ago = DateTime.utc_now() |> DateTime.add(-8, :day) |> DateTime.truncate(:second)
+
+      {2, _} =
+        Repo.update_all(
+          from(p in TraysSocial.Posts.Post, where: p.id in ^[old_one.id, old_two.id]),
+          set: [inserted_at: eight_days_ago]
+        )
+
+      # One fresh post in the window
+      fresh = post_fixture(%{user_id: user.id, caption: "Fresh"})
+
+      trending = Posts.list_trending_posts(10)
+      ids = Enum.map(trending, & &1.id)
+
+      # All three are returned: the fresh one first (in-window), then
+      # the older two backfilled.
+      assert hd(trending).id == fresh.id
+      assert old_one.id in ids
+      assert old_two.id in ids
+      assert length(trending) == 3
+    end
   end
 
   describe "list_recent_posts/1" do
