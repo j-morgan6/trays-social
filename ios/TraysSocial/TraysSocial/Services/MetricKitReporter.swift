@@ -112,19 +112,27 @@ final class MetricKitReporter: NSObject, @unchecked Sendable {
 @available(iOS 14.0, *)
 extension MetricKitReporter: MXMetricManagerSubscriber {
     func didReceive(_ payloads: [MXMetricPayload]) {
+        // MX*Payload isn't Sendable in Swift 6 strict mode, so serialize
+        // each payload to Data on the MetricKit callback thread before
+        // hopping to the background queue. Data IS Sendable, so the
+        // closure capture below is clean.
+        let serialized: [Data] = payloads.map { $0.jsonRepresentation() }
         queue.async { [weak self] in
             guard let self else { return }
-            for payload in payloads {
-                post(payloadType: "metric", payloadJSON: payload.jsonRepresentation())
+            for data in serialized {
+                post(payloadType: "metric", payloadJSON: data)
             }
         }
     }
 
     func didReceive(_ payloads: [MXDiagnosticPayload]) {
+        // Same Sendable-bridge trick as the metric path above —
+        // jsonRepresentation() returns Sendable Data.
+        let serialized: [Data] = payloads.map { $0.jsonRepresentation() }
         queue.async { [weak self] in
             guard let self else { return }
-            for payload in payloads {
-                post(payloadType: "diagnostic", payloadJSON: payload.jsonRepresentation())
+            for data in serialized {
+                post(payloadType: "diagnostic", payloadJSON: data)
             }
         }
     }
