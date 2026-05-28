@@ -123,12 +123,22 @@ struct FindView: View {
     @ViewBuilder
     private var trendingSection: some View {
         if viewModel.isLoadingTrending {
-            VStack(spacing: 10) {
-                ForEach(0 ..< 4, id: \.self) { _ in
-                    SkeletonGridTile()
+            // D93: match the loaded `trendingGrid` layout — a
+            // SectionHeader skeleton above a 2-col LazyVGrid of
+            // GridCard-shaped tiles. Previously a single-column
+            // VStack that snapped to a grid on load.
+            VStack(alignment: .leading, spacing: 12) {
+                SkeletonSectionHeader()
+                LazyVGrid(
+                    columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
+                    spacing: 10
+                ) {
+                    ForEach(0 ..< 4, id: \.self) { _ in
+                        SkeletonGridTile()
+                    }
                 }
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, 20)
             .skeletonGroup(label: "Loading trending recipes")
         } else if !viewModel.trendingPosts.isEmpty {
             SectionHeader(label: "Trending this week", count: viewModel.trendingPosts.count)
