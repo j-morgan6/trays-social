@@ -22,6 +22,14 @@ final class AppState {
     /// restarts.
     var currentError: String?
 
+    /// D72: number of unread notifications. NotificationsViewModel
+    /// pushes the count here on initial load + markRead + PubSub
+    /// arrival; TopPill reads this via @Environment(AppState.self) so
+    /// the amber dot accurately reflects "you have something to
+    /// read." Previous behavior was hasUnread:true hardcoded which
+    /// meant the dot never cleared.
+    var unreadNotificationCount: Int = 0
+
     /// Cancellable handle for the auto-dismiss timer. Stored so a new
     /// `showError` call can cancel the previous countdown and start
     /// fresh from the most recent message.
@@ -96,6 +104,23 @@ final class AppState {
     func dismissCurrentError() {
         errorDismissTask?.cancel()
         currentError = nil
+    }
+
+    /// D72: pull the latest notifications and update
+    /// `unreadNotificationCount`. AppShellView calls this on appear
+    /// so the bell amber dot reflects reality before the user opens
+    /// the Notifications screen. Failures are silent — better an
+    /// out-of-date count than a noisy toast.
+    func refreshUnreadNotificationsCount() async {
+        guard isAuthenticated else { return }
+        do {
+            let response: PaginatedResponse<[AppNotification]> = try await APIClient.shared.get(
+                path: "/notifications"
+            )
+            unreadNotificationCount = response.data.count { !$0.isRead }
+        } catch {
+            // Silent — let the count stay at its prior value.
+        }
     }
 
     private func validateToken() {

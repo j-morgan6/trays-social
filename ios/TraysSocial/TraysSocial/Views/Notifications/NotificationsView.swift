@@ -14,6 +14,7 @@ import SwiftUI
 /// that notification read (not the whole list at once).
 struct NotificationsView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(AppState.self) private var appState
     @State private var viewModel = NotificationsViewModel()
 
     var body: some View {
@@ -41,7 +42,16 @@ struct NotificationsView: View {
         .background(Theme.background)
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await viewModel.load() }
+        .task {
+            await viewModel.load()
+            // D72: keep the shell's bell dot in sync with the screen
+            // we just rendered. Re-counts after markRead happen via
+            // onChange below.
+            appState.unreadNotificationCount = viewModel.unreadCount
+        }
+        .onChange(of: viewModel.notifications.map(\.isRead)) { _, _ in
+            appState.unreadNotificationCount = viewModel.unreadCount
+        }
     }
 
     private var headerSection: some View {

@@ -40,7 +40,8 @@ struct AppShellView: View {
                     if !shell.pillsHidden {
                         TopPill(
                             selectedTray: $state.selectedTray,
-                            hasUnread: true,
+                            hasUnread: appState.unreadNotificationCount > 0,
+                            unreadCount: appState.unreadNotificationCount,
                             onBellTap: {
                                 state.navigationPath.append(NotificationRoute())
                             }
@@ -85,6 +86,13 @@ struct AppShellView: View {
         }
         .tint(Theme.primary)
         .environment(shell)
+        .task {
+            // D72: refresh the bell's amber-dot signal on shell mount
+            // so the user sees the right state before they open
+            // Notifications. NotificationsView keeps it fresh after
+            // that via its own .task + onChange.
+            await appState.refreshUnreadNotificationsCount()
+        }
     }
 
     private func pillTransition(edge: Edge) -> AnyTransition {
