@@ -88,43 +88,13 @@ struct CookModeView: View {
 
             Spacer()
 
-            // Timer
-            if let detected = detectedTime, !timerActive {
-                Button {
-                    startTimer(seconds: detected)
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "timer")
-                        Text("Start \(formatTime(detected)) timer?")
-                    }
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Theme.accent)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 14)
-                    .background(Theme.accent.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Theme.accent.opacity(0.3), lineWidth: 1)
-                    )
-                }
-                .padding(.bottom, 16)
-            }
-
-            if timerActive {
-                VStack(spacing: 4) {
-                    Text(formatTime(timerRemaining))
-                        .font(.system(size: 36, weight: .bold, design: .monospaced))
-                        .foregroundStyle(timerRemaining <= 10 ? .red : Theme.accent)
-
-                    Button("Cancel timer") {
-                        stopTimer()
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.gray)
-                }
-                .padding(.bottom, 16)
-            }
+            // W141: per-step timer removed from the cook flow. The
+            // detectedTime parse + Timer state remain (callers can
+            // re-enable via a future surface), but the in-flow
+            // affordance + countdown display are gone — users found
+            // them noisy and the auto-detect occasionally fired on
+            // times that weren't durations (e.g. "preheat oven to
+            // 350°F for 10 min" vs "stir for 1 minute").
 
             // Navigation buttons
             HStack(spacing: 16) {
