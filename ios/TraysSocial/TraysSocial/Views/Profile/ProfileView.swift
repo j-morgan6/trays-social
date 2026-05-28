@@ -48,7 +48,7 @@ struct ProfileView: View {
             }
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView()
+            SettingsView(onEditProfile: { showEditProfile = true })
         }
         .sheet(isPresented: $showReportUser) {
             if let user = viewModel.user {
@@ -56,7 +56,17 @@ struct ProfileView: View {
             }
         }
         .toolbar {
-            if !viewModel.isOwnProfile, viewModel.user != nil {
+            if viewModel.isOwnProfile, viewModel.user != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .foregroundStyle(.gray)
+                    }
+                    .accessibilityLabel("Settings")
+                }
+            } else if !viewModel.isOwnProfile, viewModel.user != nil {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button("Block User", role: .destructive) {
@@ -91,17 +101,15 @@ struct ProfileView: View {
     /// (prototype.jsx lines 697-757): centered 84pt avatar with a 1pt
     /// border ring, 24pt bold name, amber-handle, centered bio, three
     /// stats (Recipes / Following / Followers in that order), and a
-    /// rounded card with the action list (own profile) or a Follow
-    /// button (other profile).
+    /// Follow button on other-user profiles. D88: own-profile actions
+    /// (Edit profile, Drafts, Settings, Sign out) moved from an inline
+    /// card to the gear toolbar item → SettingsView.
     private func editorialProfileBody(_ user: User) -> some View {
         ProfileBody(
             user: user,
             posts: viewModel.posts,
             isOwnProfile: viewModel.isOwnProfile,
             isFollowing: user.followedByCurrentUser == true,
-            onEditProfile: { showEditProfile = true },
-            onSettings: { showSettings = true },
-            onSignOut: { appState.logout() },
             onToggleFollow: { viewModel.toggleFollow() }
         )
     }
@@ -117,9 +125,6 @@ private struct ProfileBody: View {
     let posts: [Post]
     let isOwnProfile: Bool
     let isFollowing: Bool
-    let onEditProfile: () -> Void
-    let onSettings: () -> Void
-    let onSignOut: () -> Void
     let onToggleFollow: () -> Void
 
     var body: some View {
@@ -159,10 +164,7 @@ private struct ProfileBody: View {
                 .padding(.top, 18)
                 .padding(.bottom, 14)
 
-            if isOwnProfile {
-                actionList
-                    .padding(.top, 8)
-            } else {
+            if !isOwnProfile {
                 followButton
                     .padding(.top, 8)
             }
@@ -287,32 +289,6 @@ private struct ProfileBody: View {
                 .foregroundStyle(Theme.muted(for: colorScheme))
         }
         .accessibilityElement(children: .combine)
-    }
-
-    private var actionList: some View {
-        VStack(spacing: 0) {
-            ProfileActionRow(label: "Edit profile", onTap: onEditProfile)
-            divider
-            ProfileActionRow(label: "Your drafts", count: nil, onTap: {})
-            divider
-            ProfileActionRow(label: "Settings", onTap: onSettings)
-            divider
-            ProfileActionRow(label: "Help & support", onTap: {})
-            divider
-            ProfileActionRow(label: "Sign out", onTap: onSignOut)
-        }
-        .background(Theme.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Theme.hairline(for: colorScheme), lineWidth: 1)
-        )
-    }
-
-    private var divider: some View {
-        Rectangle()
-            .fill(Theme.hairline(for: colorScheme))
-            .frame(height: 1)
     }
 
     private var followButton: some View {
@@ -555,9 +531,44 @@ struct SettingsView: View {
     @State private var showSendFeedback = false
     @AppStorage("colorScheme") private var colorSchemePreference = "system"
 
+    /// Fired when the user taps "Edit profile". The parent (ProfileView)
+    /// is the natural owner of the EditProfileView sheet because it
+    /// needs to re-fetch the profile on save (username changes are part
+    /// of the route key). SettingsView dismisses itself before invoking
+    /// the callback so the two sheet transitions don't compete.
+    var onEditProfile: (() -> Void)?
+
     var body: some View {
         NavigationStack {
             List {
+                Section("Account") {
+                    Button {
+                        dismiss()
+                        onEditProfile?()
+                    } label: {
+                        HStack {
+                            Text("Edit profile")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .foregroundStyle(Theme.text)
+
+                    // Drafts: placeholder row, no destination yet. Kept
+                    // discoverable so a future drafts list lands in the
+                    // expected place without a layout shuffle.
+                    HStack {
+                        Text("Your drafts")
+                            .foregroundStyle(Theme.text.opacity(0.5))
+                        Spacer()
+                        Text("Coming soon")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
                 Section("Appearance") {
                     Picker("Mode", selection: $colorSchemePreference) {
                         Text("System").tag("system")
