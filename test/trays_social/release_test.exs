@@ -3,6 +3,7 @@ defmodule TraysSocial.ReleaseTest do
 
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.User
+  alias TraysSocial.Posts.Post
   alias TraysSocial.Release
 
   # 12+ chars so register_user's password validation passes (matches the
@@ -61,6 +62,25 @@ defmodule TraysSocial.ReleaseTest do
 
       assert Accounts.get_user_by_email_and_password("demo_alice@trays.app", new_password)
       refute Accounts.get_user_by_email_and_password("demo_alice@trays.app", @password)
+    end
+
+    # Re-running the seed must refresh a demo post's photo when the seed URL
+    # changed (how a broken/wrong image gets fixed on an already-seeded env
+    # without a delete + reseed).
+    test "re-seeding refreshes a demo post's photo to match the seed data" do
+      assert :ok = Release.do_seed_demo(@password)
+      alice = Accounts.get_user_by_email("demo_alice@trays.app")
+      caption = "Eggs Benedict for two in 30 minutes flat"
+      post = Repo.get_by(Post, user_id: alice.id, caption: caption)
+      assert post
+
+      # Simulate a stale/broken photo, then re-seed.
+      Repo.update!(Ecto.Changeset.change(post, photo_url: "https://example.com/broken.jpg"))
+      assert :ok = Release.do_seed_demo(@password)
+
+      refreshed = Repo.get_by(Post, user_id: alice.id, caption: caption)
+      refute refreshed.photo_url == "https://example.com/broken.jpg"
+      assert refreshed.photo_url =~ "images.unsplash.com"
     end
 
     test "is idempotent — re-running creates no duplicate users" do

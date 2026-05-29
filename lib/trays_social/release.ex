@@ -18,7 +18,7 @@ defmodule TraysSocial.Release do
   alias TraysSocial.Accounts.{Follow, User}
   alias TraysSocial.Posts
 
-  alias TraysSocial.Posts.{Comment, Post, PostLike}
+  alias TraysSocial.Posts.{Comment, Post, PostLike, PostPhoto}
 
   alias TraysSocial.Repo
 
@@ -192,7 +192,7 @@ defmodule TraysSocial.Release do
   defp upsert_demo_post(%User{} = user, %{caption: caption} = data) do
     case Repo.get_by(Post, user_id: user.id, caption: caption) do
       %Post{} = post ->
-        post
+        sync_demo_photo(post, data[:photo_url])
 
       nil ->
         # Build the full nested post in one create_post/2 call. change_post/2
@@ -205,6 +205,29 @@ defmodule TraysSocial.Release do
         post
     end
   end
+
+  # Keep an existing demo post's image in sync with the seed data on every
+  # run — the seed file is the source of truth. When a photo URL is corrected
+  # (e.g. a broken 404 or wrong-subject image fixed), re-running the seed
+  # refreshes both the Post.photo_url field and the position-0 post_photos row
+  # the iOS card actually renders (post.primaryPhotoURL), with no delete +
+  # reseed. No-op when the URL already matches.
+  defp sync_demo_photo(%Post{} = post, photo_url) when is_binary(photo_url) do
+    if post.photo_url == photo_url do
+      post
+    else
+      {:ok, updated} = Repo.update(Ecto.Changeset.change(post, photo_url: photo_url))
+
+      Repo.update_all(
+        from(pp in PostPhoto, where: pp.post_id == ^post.id and pp.position == 0),
+        set: [url: photo_url]
+      )
+
+      updated
+    end
+  end
+
+  defp sync_demo_photo(%Post{} = post, _photo_url), do: post
 
   defp build_post_attrs(caption, data) do
     %{
@@ -313,7 +336,7 @@ defmodule TraysSocial.Release do
         caption: "Eggs Benedict for two in 30 minutes flat",
         cooking_time_minutes: 30,
         servings: 2,
-        photo_url: "https://images.unsplash.com/photo-1551534962-58e3a0c4d0d2?w=800",
+        photo_url: "https://images.unsplash.com/photo-1608039829572-78524f79c4c7?w=800",
         tags: ["breakfast", "brunch", "eggs"],
         ingredients: [
           %{name: "English muffins", quantity: "2", unit: "split"},
@@ -522,7 +545,7 @@ defmodule TraysSocial.Release do
         caption: "Skillet cornbread, crusty edges, tender middle",
         cooking_time_minutes: 30,
         servings: 8,
-        photo_url: "https://images.unsplash.com/photo-1574323347407-f5e1c5a1ec21?w=800",
+        photo_url: "https://images.unsplash.com/photo-1724079908191-5f7fb8d34c6f?w=800",
         tags: ["southern", "baking", "side"],
         ingredients: [
           %{name: "Cornmeal", quantity: "1.5", unit: "cups"},
@@ -621,7 +644,7 @@ defmodule TraysSocial.Release do
         caption: "Sheet-pan harissa carrots with whipped feta",
         cooking_time_minutes: 30,
         servings: 4,
-        photo_url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800",
+        photo_url: "https://images.unsplash.com/photo-1550411294-b3b1bd5fce1b?w=800",
         tags: ["vegetarian", "mediterranean", "side"],
         ingredients: [
           %{name: "Carrots", quantity: "1.5", unit: "lb whole"},
