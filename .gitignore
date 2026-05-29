@@ -70,3 +70,6 @@ xcuserdata/
 DerivedData/
 build/
 .stride/
+
+# App Review demo credentials live here in plaintext (per Apple) — keep local, do not commit.
+docs/app-review-notes.md
