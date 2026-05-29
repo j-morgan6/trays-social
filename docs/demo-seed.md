@@ -22,8 +22,16 @@ seeds 12 cross-likes and 6 cross-comments so the feed has visible
 engagement when a reviewer logs in.
 
 All three accounts share the **same password** — whatever you set
-`DEMO_USER_PASSWORD` to in step 1 below. Reviewers log in as
-`demo_alice` (or any of the three) with that password.
+`DEMO_USER_PASSWORD` to in step 1 below. Reviewers log in with the
+**email** (`demo_alice@trays.app`, not the username) and that password.
+
+The `DEMO_USER_PASSWORD` secret is the single source of truth: every
+`seed_demo()` run **resets** the three accounts' password to the current
+secret value and ensures each account is **email-confirmed**. So to change
+or fix the demo password, just update the secret and re-run the seed — no
+need to delete the user rows first. (Accounts must be confirmed because the
+API gates posting/commenting behind email confirmation and
+`demo_*@trays.app` can't receive a confirmation link.)
 
 ---
 
@@ -85,9 +93,9 @@ existing data.
 ## When to re-run
 
 - **After a destructive DB restore** that drops the demo accounts
-- **When changing the demo password** (run after the new secret is set
-  — existing users are not updated by the seed, which is intentional;
-  delete the user row first via SQL if you need a fresh password)
+- **When changing the demo password** — update the `DEMO_USER_PASSWORD`
+  secret, then re-run the seed. It resets the three demo accounts' password
+  to the new value (and re-confirms them). No SQL / row deletion needed.
 - **Periodically as content drift insurance** — the seed is cheap and
   re-running on every release of a new app version is a reasonable
   habit, even if it's a no-op

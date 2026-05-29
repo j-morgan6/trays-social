@@ -1,6 +1,7 @@
 defmodule TraysSocial.ReleaseTest do
   use TraysSocial.DataCase, async: true
 
+  alias TraysSocial.Accounts
   alias TraysSocial.Accounts.User
   alias TraysSocial.Release
 
@@ -30,6 +31,36 @@ defmodule TraysSocial.ReleaseTest do
       # Seeded users are confirmed registrations — the changeset would have
       # rejected them outright if age_confirmation were missing/false.
       assert alice.hashed_password
+    end
+
+    # The API gates posting/commenting behind email confirmation, and
+    # demo_*@trays.app can't receive a confirmation link — so the demo
+    # accounts must be seeded already-confirmed or an App Reviewer is stuck.
+    test "demo users are email-confirmed" do
+      assert :ok = Release.do_seed_demo(@password)
+
+      for username <- ~w(demo_alice demo_ben demo_chloe) do
+        user = Repo.get_by(User, username: username)
+        assert user.confirmed_at, "expected #{username} to be email-confirmed"
+      end
+    end
+
+    test "demo login works with the seeded password" do
+      assert :ok = Release.do_seed_demo(@password)
+
+      assert Accounts.get_user_by_email_and_password("demo_alice@trays.app", @password),
+             "expected demo_alice to log in with the seeded password"
+    end
+
+    # The DEMO_USER_PASSWORD secret is authoritative: re-running with a new
+    # value resets existing demo accounts' passwords (no delete + reseed).
+    test "re-seeding resets the demo password to the current value" do
+      assert :ok = Release.do_seed_demo(@password)
+      new_password = "differentDemoPw_456"
+      assert :ok = Release.do_seed_demo(new_password)
+
+      assert Accounts.get_user_by_email_and_password("demo_alice@trays.app", new_password)
+      refute Accounts.get_user_by_email_and_password("demo_alice@trays.app", @password)
     end
 
     test "is idempotent — re-running creates no duplicate users" do

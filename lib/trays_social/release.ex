@@ -134,27 +134,58 @@ defmodule TraysSocial.Release do
   # --- Users --------------------------------------------------------
 
   defp upsert_demo_user(username, email, bio, password) do
-    case Repo.get_by(User, username: username) do
-      nil ->
-        {:ok, user} =
-          Accounts.register_user(%{
-            email: email,
-            username: username,
-            password: password,
-            bio: bio,
-            # Required by the registration changeset (validate_acceptance);
-            # the demo cooks are operator-seeded fixtures, so the 13+
-            # attestation is affirmed on their behalf — same as the test
-            # fixtures and the API/Apple registration paths.
-            age_confirmation: true
-          })
+    user =
+      case Repo.get_by(User, username: username) do
+        nil ->
+          {:ok, user} =
+            Accounts.register_user(%{
+              email: email,
+              username: username,
+              password: password,
+              bio: bio,
+              # Required by the registration changeset (validate_acceptance);
+              # the demo cooks are operator-seeded fixtures, so the 13+
+              # attestation is affirmed on their behalf — same as the test
+              # fixtures and the API/Apple registration paths.
+              age_confirmation: true
+            })
 
-        user
+          user
 
-      %User{} = user ->
-        user
-    end
+        %User{} = user ->
+          user
+      end
+
+    ensure_demo_credentials(user, password)
   end
+
+  # The DEMO_USER_PASSWORD secret is the single source of truth for demo
+  # logins. On every seed run we (1) reset the account password to the
+  # current secret and (2) ensure the account is email-confirmed. This makes
+  # fixing a demo account a one-liner — set the secret, re-run seed_demo —
+  # with no delete-and-reseed, and it self-heals accounts seeded by older
+  # versions of this task (wrong/unknown password, or unconfirmed).
+  #
+  # Confirmation matters because the API gates posting/commenting behind it
+  # and demo_*@trays.app can't receive a confirmation link, so an unconfirmed
+  # demo account leaves an App Reviewer unable to exercise the core flows.
+  defp ensure_demo_credentials(%User{} = user, password) do
+    user
+    |> reset_password(password)
+    |> ensure_confirmed()
+  end
+
+  defp reset_password(%User{} = user, password) do
+    {:ok, user} = Repo.update(User.password_changeset(user, %{password: password}))
+    user
+  end
+
+  defp ensure_confirmed(%User{confirmed_at: nil} = user) do
+    {:ok, user} = Repo.update(User.confirm_changeset(user))
+    user
+  end
+
+  defp ensure_confirmed(%User{} = user), do: user
 
   # --- Posts --------------------------------------------------------
 
