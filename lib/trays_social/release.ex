@@ -49,10 +49,17 @@ defmodule TraysSocial.Release do
     load_app()
     password = require_demo_password!()
 
-    {:ok, result, _} =
-      Ecto.Migrator.with_repo(Repo, fn _ -> do_seed_demo(password) end)
+    # Start the FULL supervision tree, not just the Repo. The seed calls
+    # real context functions — follow_user/2 -> create_notification/1 ->
+    # Phoenix.PubSub.broadcast/4 — and the named TraysSocial.PubSub process
+    # only exists when the app is started. `bin/<app> eval` boots the code
+    # but does NOT start the application, so a Repo-only start (the old
+    # with_repo wrapper) crashed at the first follow with "unknown registry:
+    # TraysSocial.PubSub" (prod, 2026-05-29). The Endpoint stays server:
+    # false here because PHX_SERVER is unset under eval, so no port is bound.
+    {:ok, _apps} = Application.ensure_all_started(:trays_social)
 
-    result
+    do_seed_demo(password)
   end
 
   defp require_demo_password! do
