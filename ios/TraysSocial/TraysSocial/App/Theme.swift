@@ -15,6 +15,14 @@ enum Theme {
     /// Golden Amber — accent, CTAs, highlights, badges
     static let accent = Color(hex: 0xFFB300)
 
+    /// Cream — wordmark on the emerald hero + the tray illustration fill
+    /// (Welcome screen brand surface). Fixed brand color, not adaptive.
+    static let cream = Color(hex: 0xF4EFE2)
+
+    /// Gold — eyebrow text on the emerald hero (Welcome screen brand).
+    /// Fixed brand color, not adaptive.
+    static let gold = Color(hex: 0xFFC65A)
+
     // MARK: - Semantic Colors
 
     /// Background adapts to light/dark mode
