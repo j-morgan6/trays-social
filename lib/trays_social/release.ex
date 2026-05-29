@@ -18,16 +18,7 @@ defmodule TraysSocial.Release do
   alias TraysSocial.Accounts.{Follow, User}
   alias TraysSocial.Posts
 
-  alias TraysSocial.Posts.{
-    Comment,
-    CookingStep,
-    Ingredient,
-    Post,
-    PostLike,
-    PostPhoto,
-    PostTag,
-    Tool
-  }
+  alias TraysSocial.Posts.{Comment, Post, PostLike}
 
   alias TraysSocial.Repo
 
@@ -81,7 +72,11 @@ defmodule TraysSocial.Release do
     end
   end
 
-  defp do_seed_demo(password) do
+  # Internal-public so the seed logic can be exercised under the test
+  # sandbox without the `with_repo`/env-var wrapper in seed_demo/0.
+  # Not part of the public API — call seed_demo/0 in production.
+  @doc false
+  def do_seed_demo(password) do
     alice =
       upsert_demo_user(
         "demo_alice",
@@ -139,7 +134,12 @@ defmodule TraysSocial.Release do
             email: email,
             username: username,
             password: password,
-            bio: bio
+            bio: bio,
+            # Required by the registration changeset (validate_acceptance);
+            # the demo cooks are operator-seeded fixtures, so the 13+
+            # attestation is affirmed on their behalf — same as the test
+            # fixtures and the API/Apple registration paths.
+            age_confirmation: true
           })
 
         user
@@ -157,49 +157,46 @@ defmodule TraysSocial.Release do
         post
 
       nil ->
-        {:ok, post} =
-          Posts.create_post(user.id, %{
-            caption: caption,
-            cooking_time_minutes: Map.get(data, :cooking_time_minutes),
-            servings: Map.get(data, :servings),
-            type: "recipe"
-          })
-
-        insert_post_children(post, data)
+        # Build the full nested post in one create_post/2 call. change_post/2
+        # cast_assoc's ingredients, tools, cooking_steps, post_tags, and
+        # post_photos and requires photo_url + at-least-one ingredient and
+        # cooking step, so the children must be present at insert time —
+        # creating the post first and inserting children separately fails
+        # those validations (the W111 prod-seed failure on 2026-05-29).
+        {:ok, post} = Posts.create_post(user.id, build_post_attrs(caption, data))
         post
     end
   end
 
-  defp insert_post_children(%Post{} = post, data) do
-    if photo = data[:photo_url] do
-      %PostPhoto{}
-      |> PostPhoto.changeset(%{post_id: post.id, url: photo, position: 0})
-      |> Repo.insert!()
-    end
-
-    Enum.with_index(data[:ingredients] || [], fn ingr, idx ->
-      %Ingredient{}
-      |> Ingredient.changeset(Map.merge(ingr, %{post_id: post.id, order: idx}))
-      |> Repo.insert!()
-    end)
-
-    Enum.with_index(data[:cooking_steps] || [], fn step, idx ->
-      %CookingStep{}
-      |> CookingStep.changeset(%{description: step, order: idx, post_id: post.id})
-      |> Repo.insert!()
-    end)
-
-    Enum.with_index(data[:tools] || [], fn tool, idx ->
-      %Tool{}
-      |> Tool.changeset(%{name: tool, order: idx, post_id: post.id})
-      |> Repo.insert!()
-    end)
-
-    Enum.each(data[:tags] || [], fn tag ->
-      %PostTag{}
-      |> PostTag.changeset(%{tag: tag, post_id: post.id})
-      |> Repo.insert!()
-    end)
+  defp build_post_attrs(caption, data) do
+    %{
+      type: "recipe",
+      caption: caption,
+      cooking_time_minutes: Map.get(data, :cooking_time_minutes),
+      servings: Map.get(data, :servings),
+      photo_url: data[:photo_url],
+      ingredients:
+        data[:ingredients]
+        |> List.wrap()
+        |> Enum.with_index()
+        |> Enum.map(fn {ingr, idx} -> Map.put(ingr, :order, idx) end),
+      cooking_steps:
+        data[:cooking_steps]
+        |> List.wrap()
+        |> Enum.with_index()
+        |> Enum.map(fn {step, idx} -> %{description: step, order: idx} end),
+      tools:
+        data[:tools]
+        |> List.wrap()
+        |> Enum.with_index()
+        |> Enum.map(fn {tool, idx} -> %{name: tool, order: idx} end),
+      post_tags: data[:tags] |> List.wrap() |> Enum.map(&%{tag: &1}),
+      post_photos:
+        case data[:photo_url] do
+          url when is_binary(url) -> [%{url: url, position: 0}]
+          _ -> []
+        end
+    }
   end
 
   # --- Follows / Likes / Comments ----------------------------------
