@@ -16,9 +16,23 @@ struct Photo: View {
     var body: some View {
         if let url {
             CachedAsyncImage(url: url) { image in
-                image
-                    .resizable()
-                    .scaledToFill()
+                // Host the image in a flexible Color.clear so its natural
+                // pixel size never participates in layout. A bare
+                // `.resizable().scaledToFill()` reports the source image's
+                // width during the measurement pass, which bled up and
+                // stretched the feed card / grid cell past the screen
+                // (symmetric edge clipping) once real photos replaced the
+                // gradient placeholders. Color.clear is flexible — it takes
+                // the size the caller's .aspectRatio proposes (matching the
+                // placeholder's behavior) — and the image fills it as an
+                // overlay, cropped. See swiftui-layout-pitfalls.
+                Color.clear
+                    .overlay {
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    }
+                    .clipped()
             } placeholder: {
                 gradientPlaceholder
             }
