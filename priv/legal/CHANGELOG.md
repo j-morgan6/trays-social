@@ -10,6 +10,19 @@ the document name (e.g. `## Community Guidelines v1.0 — …`). Entries
 that span multiple documents are unprefixed and the body lists which
 documents changed.
 
+## Privacy Policy v1.1 — 2026-05-29
+
+Privacy Policy only. Terms of Service unchanged at v1.1, Community Guidelines unchanged at v1.0.
+
+- Resolved the pending GDPR Article 27 representative placeholder by stating
+  the actual launch territory: Trays is offered only in Canada and the United
+  States and does not target EU/EEA/UK residents, so no Article 27
+  representative is required (App Store availability restricted to CA + US).
+  - §1: added the Canada + US territory statement
+  - §17: replaced the `[EU REP — TBD]` placeholders with the territory-based
+    explanation; if availability expands to the EU/EEA/UK, a representative
+    will be appointed before launching there
+
 ## Community Guidelines v1.0 — 2026-05-25
 
 Initial publication.

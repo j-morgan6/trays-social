@@ -22,7 +22,11 @@ defmodule TraysSocialWeb.LegalControllerTest do
         "the sole Director",
         "Do Not Sell or Share My Personal Information",
         "Sensitive Personal Information",
-        "GDPR Article 27"
+        # EU/UK Article 27 is handled by territory restriction (CA + US only),
+        # not an appointed representative — guard both the legal hook and the
+        # territory statement so neither can be silently dropped.
+        "Article 27 of the GDPR",
+        "Canada and the United States"
       ]
 
       for phrase <- required do

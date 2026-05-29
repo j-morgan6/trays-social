@@ -1,6 +1,6 @@
 ---
-effective_date: 2026-05-07
-version: 1.0
+effective_date: 2026-05-29
+version: 1.1
 ---
 
 # Privacy Policy
@@ -8,6 +8,8 @@ version: 1.0
 ## 1. Who we are and what this covers
 
 Trays Social is a food-focused social platform where home cooks share photos of their food, document recipes (ingredients, steps, tools, cooking time), and follow other cooks. Trays Social is operated by **1001366752 Ontario Inc.** (Ontario, Canada). Contact: `support@trays.app`. This policy covers the iOS app, the trays.app website, and the API serving both.
+
+Trays is offered only to users in **Canada and the United States**. We do not target or offer the service to residents of the European Union, the European Economic Area, or the United Kingdom, and the app is not listed on the App Store in those regions.
 
 ## 2. Information you give us
 
@@ -127,4 +129,4 @@ If we make material changes, we will notify you via in-app notice and/or email. 
 - General privacy questions: `support@trays.app`
 - Mailing address: available on written request to `support@trays.app`
 - Quebec residents: contact our privacy officer (the sole Director of 1001366752 Ontario Inc.) via `support@trays.app`
-- **EU and UK users (GDPR Article 27 representative):** `[EU REP NAME — TBD]`, `[EU REP ADDRESS — TBD]`, `[EU REP EMAIL — TBD]`. *(Operator action: appoint via Prighter / DataGuidance / EuRep before policy ships, or geofence EU traffic at the Phoenix layer.)*
+- **EU/EEA and UK residents:** Trays is offered only in Canada and the United States and does not target residents of the EU, EEA, or UK, so we have not appointed a representative under Article 27 of the GDPR or the UK GDPR. If we expand availability to those regions, we will appoint a representative before launching there.
