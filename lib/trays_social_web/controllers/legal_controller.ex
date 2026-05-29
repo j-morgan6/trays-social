@@ -28,14 +28,17 @@ defmodule TraysSocialWeb.LegalController do
                                :trays_social,
                                "priv/legal/community-guidelines.md"
                              )
+  @faq_path Application.app_dir(:trays_social, "priv/legal/faq.md")
 
   @external_resource @privacy_path
   @external_resource @terms_path
   @external_resource @community_guidelines_path
+  @external_resource @faq_path
 
   @privacy LegalDocParser.parse(@privacy_path)
   @terms LegalDocParser.parse(@terms_path)
   @community_guidelines LegalDocParser.parse(@community_guidelines_path)
+  @faq LegalDocParser.parse(@faq_path)
 
   def privacy(conn, _params), do: render_doc(conn, @privacy, "Privacy Policy")
 
@@ -43,6 +46,8 @@ defmodule TraysSocialWeb.LegalController do
 
   def community_guidelines(conn, _params),
     do: render_doc(conn, @community_guidelines, "Community Guidelines")
+
+  def faq(conn, _params), do: render_doc(conn, @faq, "FAQ")
 
   defp render_doc(conn, doc, title) do
     conn

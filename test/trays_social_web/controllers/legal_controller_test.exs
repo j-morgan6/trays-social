@@ -95,4 +95,36 @@ defmodule TraysSocialWeb.LegalControllerTest do
       end
     end
   end
+
+  describe "GET /faq" do
+    test "is public and returns 200 HTML with cache-control", %{conn: conn} do
+      conn = get(conn, ~p"/faq")
+
+      assert conn.status == 200
+      assert ["text/html" <> _] = get_resp_header(conn, "content-type")
+      assert ["public, max-age=3600"] = get_resp_header(conn, "cache-control")
+    end
+
+    test "covers every question and links to support", %{conn: conn} do
+      conn = get(conn, ~p"/faq")
+      body = response(conn, 200)
+
+      required = [
+        "What is Trays?",
+        "Who is it for?",
+        "Is it free?",
+        "Do you have ads?",
+        "Do you track me?",
+        "How do I report a problem?",
+        "How do I delete my account?",
+        "Where does my data live?",
+        "How do I contact support?",
+        "support@trays.app"
+      ]
+
+      for phrase <- required do
+        assert body =~ phrase, "expected /faq body to contain #{inspect(phrase)}"
+      end
+    end
+  end
 end

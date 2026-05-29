@@ -138,6 +138,7 @@ defmodule TraysSocialWeb.Router do
     get "/privacy", LegalController, :privacy
     get "/terms", LegalController, :terms
     get "/community-guidelines", LegalController, :community_guidelines
+    get "/faq", LegalController, :faq
   end
 
   # API v1 — unauthenticated routes
