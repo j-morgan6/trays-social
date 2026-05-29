@@ -122,6 +122,15 @@ defmodule TraysSocialWeb.Router do
     get "/apple-app-site-association", WellKnownController, :aasa
   end
 
+  # Public marketing landing page — anonymous visitors see the landing
+  # page; authenticated visitors are redirected to /feed by PageController.
+  # Indexable, no auth (W120).
+  scope "/", TraysSocialWeb do
+    pipe_through :browser
+
+    get "/", PageController, :home
+  end
+
   # Legal pages — public, indexable, no auth, cache-friendly
   scope "/", TraysSocialWeb do
     pipe_through :browser
@@ -130,7 +139,6 @@ defmodule TraysSocialWeb.Router do
     get "/terms", LegalController, :terms
     get "/community-guidelines", LegalController, :community_guidelines
   end
-
 
   # API v1 — unauthenticated routes
   scope "/api/v1/auth", TraysSocialWeb.API.V1, as: :api_v1_auth do
@@ -295,7 +303,7 @@ defmodule TraysSocialWeb.Router do
   scope "/admin", TraysSocialWeb do
     pipe_through [:browser, :require_authenticated_user, TraysSocialWeb.Plugs.RequireAdmin]
 
-    error_tracker_dashboard "/errors"
+    error_tracker_dashboard("/errors")
   end
 
   # Phoenix LiveDashboard — runtime stats (process tree, memory, telemetry,
@@ -326,10 +334,11 @@ defmodule TraysSocialWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     # Primary content surfaces — D60: gated to logged-in users so anonymous
-    # visitors don't see other users' recipes/profiles. /users/confirm/<token>,
-    # /privacy, /terms, /.well-known/*, and /api/* remain publicly accessible
-    # (intentional — see scopes above and the api_v1_auth scope).
-    live "/", FeedLive.Index, :index
+    # visitors don't see other users' recipes/profiles. The public landing
+    # page lives at "/" (W120); the personalized feed moved to "/feed".
+    # /users/confirm/<token>, /privacy, /terms, /.well-known/*, and /api/*
+    # remain publicly accessible (see scopes above and the api_v1_auth scope).
+    live "/feed", FeedLive.Index, :index
     live "/explore", ExploreLive.Index, :index
     live "/@:username", ProfileLive.Show, :show
     live "/@:username/followers", FollowersLive.Show, :followers

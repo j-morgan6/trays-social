@@ -17,7 +17,7 @@ defmodule TraysSocialWeb.UserRegistrationControllerTest do
     test "redirects if already logged in", %{conn: conn} do
       conn = conn |> log_in_user(user_fixture()) |> get(~p"/users/register")
 
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/feed"
     end
   end
 
@@ -32,7 +32,7 @@ defmodule TraysSocialWeb.UserRegistrationControllerTest do
         })
 
       assert get_session(conn, :user_token)
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/feed"
     end
 
     test "render errors for invalid data", %{conn: conn} do

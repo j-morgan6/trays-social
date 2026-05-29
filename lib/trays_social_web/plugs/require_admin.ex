@@ -50,7 +50,7 @@ defmodule TraysSocialWeb.Plugs.RequireAdmin do
     if admin?(socket.assigns) do
       {:cont, socket}
     else
-      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/")}
+      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/feed")}
     end
   end
 

@@ -14,7 +14,7 @@ defmodule TraysSocialWeb.ProfileLive.Show do
         {:ok,
          socket
          |> put_flash(:error, "User not found")
-         |> push_navigate(to: ~p"/")}
+         |> push_navigate(to: ~p"/feed")}
 
       user ->
         {:ok, mount_user_profile(socket, user)}

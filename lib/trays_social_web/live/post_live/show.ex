@@ -268,7 +268,7 @@ defmodule TraysSocialWeb.PostLive.Show do
           {:noreply,
            socket
            |> put_flash(:info, "Post deleted successfully")
-           |> push_navigate(to: ~p"/")}
+           |> push_navigate(to: ~p"/feed")}
 
         {:error, _changeset} ->
           {:noreply,

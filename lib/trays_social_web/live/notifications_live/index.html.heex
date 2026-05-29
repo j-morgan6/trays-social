@@ -45,7 +45,7 @@
         cond do
           n.type == "follow" -> ~p"/@#{n.actor.username}"
           n.post -> ~p"/posts/#{n.post.id}"
-          true -> ~p"/"
+          true -> ~p"/feed"
         end %>
       <.link navigate={target_path} class="contents">
         <.user_avatar

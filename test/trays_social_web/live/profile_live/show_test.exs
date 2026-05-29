@@ -95,7 +95,7 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
     test "redirects to feed when user not found", %{conn: conn} do
       {:error, {:live_redirect, %{to: path}}} = live(conn, ~p"/@nonexistentuser")
 
-      assert path == "/"
+      assert path == "/feed"
     end
 
     test "clicking on post navigates to post detail", %{conn: conn} do

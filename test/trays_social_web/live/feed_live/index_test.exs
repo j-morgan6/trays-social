@@ -16,7 +16,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
     end
 
     test "displays empty state when no posts", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, _view, html} = live(conn, ~p"/feed")
 
       assert html =~ "Feed"
       assert html =~ "No posts yet"
@@ -26,7 +26,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       user = user_fixture()
       post = post_fixture(user_id: user.id)
 
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, _view, html} = live(conn, ~p"/feed")
 
       assert html =~ "Feed"
       assert html =~ post.caption
@@ -39,7 +39,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       {:ok, _view, html} =
         conn
         |> log_in_user(user)
-        |> live(~p"/")
+        |> live(~p"/feed")
 
       # Editorial header now exposes the create flow via an amber
       # "New recipe" pill that links to /posts/new.
@@ -49,7 +49,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
 
     test "receives real-time updates for new posts", %{conn: conn} do
       user = user_fixture()
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/feed")
 
       # Create a new post and broadcast it
       post = post_fixture(user_id: user.id)
@@ -68,7 +68,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       user = user_fixture()
       _post = post_fixture(user_id: user.id)
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/feed")
 
       # With fewer than @page_size (20) posts, has_more should be false
       # load-more should be a no-op
@@ -84,7 +84,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       {:ok, view, html} =
         conn
         |> log_in_user(liker)
-        |> live(~p"/")
+        |> live(~p"/feed")
 
       # Post starts with 0 likes
       assert html =~ post.caption
@@ -102,7 +102,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       user = user_fixture()
       post = post_fixture(user_id: user.id)
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/feed")
 
       # Open the recipe drawer
       html = render_click(view, "open-drawer", %{"id" => to_string(post.id)})
@@ -127,7 +127,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
           ]
         )
 
-      {:ok, view, html} = live(conn, ~p"/")
+      {:ok, view, html} = live(conn, ~p"/feed")
 
       # Initial render shows both photo carousel arrows
       assert html =~ "next-photo"
@@ -148,7 +148,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       user = user_fixture()
       _post = post_fixture(user_id: user.id)
 
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, _view, html} = live(conn, ~p"/feed")
 
       assert html =~ "all caught up"
     end
@@ -157,7 +157,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       user = user_fixture()
       post = post_fixture(user_id: user.id)
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/feed")
 
       # Broadcast a like update
       Phoenix.PubSub.broadcast(
@@ -179,7 +179,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       {:ok, _view, html} =
         conn
         |> log_in_user(user)
-        |> live(~p"/")
+        |> live(~p"/feed")
 
       assert html =~ "Showing all recent posts"
       assert html =~ "Follow people to personalize your feed"
@@ -189,7 +189,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       user = user_fixture()
       _post = post_fixture(user_id: user.id)
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/feed")
 
       # Broadcast a like update for a non-existent post ID
       Phoenix.PubSub.broadcast(
@@ -209,7 +209,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       user = user_fixture()
       _post = post_fixture(user_id: user.id)
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/feed")
 
       # Navigate photo for a non-existent post ID
       html = render_click(view, "next-photo", %{"post-id" => "-999"})
@@ -220,7 +220,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       user = user_fixture()
       _post = post_fixture(user_id: user.id)
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/feed")
 
       # Navigate photo backward for a non-existent post ID
       html = render_click(view, "prev-photo", %{"post-id" => "-999"})
@@ -234,7 +234,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       {:ok, view, _html} =
         conn
         |> log_in_user(user)
-        |> live(~p"/")
+        |> live(~p"/feed")
 
       # Toggle like for a non-existent post
       html = render_click(view, "toggle-like", %{"post-id" => "-999"})
@@ -246,7 +246,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       # Post with only the main photo_url (no extra post_photos)
       post = post_fixture(user_id: user.id)
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/feed")
 
       # next-photo on a single-photo post should not change anything
       render_click(view, "next-photo", %{"post-id" => to_string(post.id)})
@@ -267,7 +267,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       {:ok, _view, html} =
         conn
         |> log_in_user(follower)
-        |> live(~p"/")
+        |> live(~p"/feed")
 
       assert html =~ followed_post.caption
       # Nudge should not appear for personalized feeds
@@ -278,7 +278,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       author = user_fixture()
       post = post_fixture(user_id: author.id)
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/feed")
 
       # Not saved initially
       refute TraysSocial.Posts.bookmarked?(viewer.id, post.id)
@@ -295,7 +295,7 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
 
   describe "Authentication (D60)" do
     test "anonymous visitors are redirected to login", %{conn: conn} do
-      {:error, {:redirect, %{to: path}}} = live(conn, ~p"/")
+      {:error, {:redirect, %{to: path}}} = live(conn, ~p"/feed")
       assert path =~ "/users/log-in"
     end
   end

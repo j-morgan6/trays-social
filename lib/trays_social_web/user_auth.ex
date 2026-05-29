@@ -232,7 +232,7 @@ defmodule TraysSocialWeb.UserAuth do
     end
   end
 
-  defp signed_in_path(_conn), do: ~p"/"
+  defp signed_in_path(_conn), do: ~p"/feed"
 
   @doc """
   Plug for routes that require the user to be authenticated.
@@ -260,7 +260,7 @@ defmodule TraysSocialWeb.UserAuth do
     else
       conn
       |> Controller.put_flash(:error, "You must confirm your email to do that.")
-      |> Controller.redirect(to: ~p"/")
+      |> Controller.redirect(to: ~p"/feed")
       |> halt()
     end
   end
@@ -306,7 +306,7 @@ defmodule TraysSocialWeb.UserAuth do
       socket =
         socket
         |> LiveView.put_flash(:error, "You must confirm your email to do that.")
-        |> LiveView.redirect(to: ~p"/")
+        |> LiveView.redirect(to: ~p"/feed")
 
       {:halt, socket}
     end

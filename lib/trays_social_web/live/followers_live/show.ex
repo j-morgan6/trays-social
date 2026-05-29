@@ -21,7 +21,7 @@ defmodule TraysSocialWeb.FollowersLive.Show do
         {:ok,
          socket
          |> put_flash(:error, "Cook not found")
-         |> push_navigate(to: ~p"/")}
+         |> push_navigate(to: ~p"/feed")}
 
       user ->
         tab = socket.assigns.live_action

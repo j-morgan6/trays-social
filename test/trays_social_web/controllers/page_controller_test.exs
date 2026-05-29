@@ -3,7 +3,17 @@ defmodule TraysSocialWeb.PageControllerTest do
 
   import TraysSocial.AccountsFixtures
 
-  test "GET / shows feed for an authenticated user", %{conn: conn} do
+  test "GET / renders the public landing page for anonymous visitors (W120)", %{conn: conn} do
+    conn = get(conn, ~p"/")
+    html = html_response(conn, 200)
+
+    # On-brand landing copy, not the Phoenix default template.
+    assert html =~ "For home cooks"
+    assert html =~ "recipe-sharing community"
+    refute html =~ "mix phx.server"
+  end
+
+  test "GET / redirects authenticated visitors to the feed (W120)", %{conn: conn} do
     user = user_fixture()
 
     conn =
@@ -11,11 +21,6 @@ defmodule TraysSocialWeb.PageControllerTest do
       |> log_in_user(user)
       |> get(~p"/")
 
-    assert html_response(conn, 200) =~ "Feed"
-  end
-
-  test "GET / redirects anonymous visitors to login (D60)", %{conn: conn} do
-    conn = get(conn, ~p"/")
-    assert redirected_to(conn) =~ "/users/log-in"
+    assert redirected_to(conn) == ~p"/feed"
   end
 end

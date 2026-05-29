@@ -35,7 +35,7 @@ defmodule TraysSocialWeb.WelcomeLive.IndexTest do
         |> log_in_user(user)
         |> live(~p"/welcome")
 
-      assert path == "/"
+      assert path == "/feed"
     end
 
     test "continue stamps seen_welcome_at and bounces to the feed", %{conn: conn} do
@@ -52,7 +52,7 @@ defmodule TraysSocialWeb.WelcomeLive.IndexTest do
         |> element("button", "Got it")
         |> render_click()
 
-      assert path == "/"
+      assert path == "/feed"
 
       reloaded = TraysSocial.Repo.reload(user)
       assert reloaded.seen_welcome_at != nil
@@ -64,7 +64,7 @@ defmodule TraysSocialWeb.WelcomeLive.IndexTest do
       {:error, {:live_redirect, %{to: path}}} =
         conn
         |> log_in_user(user)
-        |> live(~p"/")
+        |> live(~p"/feed")
 
       assert path == "/welcome"
     end

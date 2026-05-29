@@ -51,7 +51,7 @@
         <%!-- Primary nav: Feed / Find / My Tray --%>
         <nav class="hidden md:flex gap-6 ml-2">
           <.link
-            href={~p"/"}
+            href={~p"/feed"}
             class={[
               "text-sm py-[22px] border-b-2 transition-colors",
               if(nav_tab == :feed,
@@ -190,7 +190,7 @@
       <div class="flex items-center justify-around h-16">
         <%!-- Feed --%>
         <.link
-          navigate={~p"/"}
+          navigate={~p"/feed"}
           class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :feed, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}
         >
           <span class="hero-home w-6 h-6"></span>

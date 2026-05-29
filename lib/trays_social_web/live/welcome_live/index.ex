@@ -20,7 +20,7 @@ defmodule TraysSocialWeb.WelcomeLive.Index do
     # If the cook has already seen the welcome, don't show it again —
     # bounce them to the feed.
     if user.seen_welcome_at do
-      {:ok, push_navigate(socket, to: ~p"/")}
+      {:ok, push_navigate(socket, to: ~p"/feed")}
     else
       {:ok,
        socket
@@ -36,12 +36,12 @@ defmodule TraysSocialWeb.WelcomeLive.Index do
 
     case Accounts.mark_welcome_seen(user) do
       {:ok, _updated} ->
-        {:noreply, push_navigate(socket, to: ~p"/")}
+        {:noreply, push_navigate(socket, to: ~p"/feed")}
 
       {:error, _changeset} ->
         # Even if the stamp fails, don't block the cook — they can re-see
         # the welcome and try again.
-        {:noreply, push_navigate(socket, to: ~p"/")}
+        {:noreply, push_navigate(socket, to: ~p"/feed")}
     end
   end
 end

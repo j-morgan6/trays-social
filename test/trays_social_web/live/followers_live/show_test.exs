@@ -85,7 +85,7 @@ defmodule TraysSocialWeb.FollowersLive.ShowTest do
         |> log_in_user(viewer)
         |> live(~p"/@nonexistent/followers")
 
-      assert path == "/"
+      assert path == "/feed"
     end
 
     test "search filters the loaded cooks in-memory", %{conn: conn} do

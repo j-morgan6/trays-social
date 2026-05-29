@@ -59,7 +59,7 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
              |> element(~s|button[phx-click="delete"]|)
              |> render_click()
 
-      assert_redirect(view, ~p"/")
+      assert_redirect(view, ~p"/feed")
 
       # Verify post was soft deleted
       deleted_post = TraysSocial.Repo.get(TraysSocial.Posts.Post, post.id)
@@ -76,7 +76,7 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
              |> element("a", "Back to feed")
              |> render_click()
 
-      assert_redirect(view, ~p"/")
+      assert_redirect(view, ~p"/feed")
     end
 
     test "authenticated user can toggle like on a post", %{conn: conn} do
