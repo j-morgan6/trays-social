@@ -10,6 +10,7 @@ struct PostDetailView: View {
     @State private var showCookMode = false
     @State private var showReport = false
     @State private var showDeleteConfirm = false
+    @State private var showEditSheet = false
 
     /// W148: only a post's author may delete it. Gates the Delete menu item.
     private var isOwner: Bool {
@@ -54,6 +55,7 @@ struct PostDetailView: View {
                             onBookmark: { viewModel.toggleBookmark() },
                             isOwner: isOwner,
                             onReport: { showReport = true },
+                            onEdit: { showEditSheet = true },
                             onDelete: { showDeleteConfirm = true }
                         )
 
@@ -135,6 +137,11 @@ struct PostDetailView: View {
         }
         .sheet(isPresented: $showReport) {
             ReportSheetView(targetType: "post", targetId: postId)
+        }
+        .sheet(isPresented: $showEditSheet) {
+            if let post = viewModel.post {
+                EditPostView(post: post, postViewModel: viewModel)
+            }
         }
         // W148: destructive + irreversible to the user, so confirm first.
         .alert("Delete Post", isPresented: $showDeleteConfirm) {

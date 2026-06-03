@@ -109,6 +109,15 @@ actor APIClient {
         return try await execute(request)
     }
 
+    func patch<T: Decodable>(path: String, body: Encodable? = nil) async throws -> T {
+        var request = try buildRequest(method: "PATCH", path: path)
+        if let body {
+            request.httpBody = try JSONEncoder.apiEncoder.encode(body)
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+        return try await execute(request)
+    }
+
     @discardableResult
     func delete(path: String) async throws -> EmptyResponse {
         let request = try buildRequest(method: "DELETE", path: path)

@@ -129,6 +129,63 @@ final class OptimisticRollbackTests: XCTestCase {
         XCTAssertEqual(vm.posts.map(\.id), [1])
     }
 
+    // MARK: - PostViewModel.applyEdit (W149)
+
+    func test_applyEdit_appliesOptimisticUpdateImmediately() {
+        let vm = PostViewModel()
+        vm.post = post(id: 7, caption: "Old", cookingTime: 10, servings: 2)
+
+        vm.applyEdit(
+            caption: "New caption", cookingTimeMinutes: 25, servings: 3,
+            newPhotoURL: "https://images.unsplash.com/new?w=800"
+        )
+
+        // Synchronous optimistic state, before the detached PATCH resolves.
+        XCTAssertEqual(vm.post?.caption, "New caption")
+        XCTAssertEqual(vm.post?.cookingTimeMinutes, 25)
+        XCTAssertEqual(vm.post?.servings, 3)
+        XCTAssertEqual(vm.post?.photos.first?.url, "https://images.unsplash.com/new?w=800")
+    }
+
+    func test_applyEdit_unchangedPhoto_keepsExistingPhotos() {
+        let vm = PostViewModel()
+        vm.post = post(id: 7, caption: "Old", cookingTime: 10, photoURL: "https://img/original.jpg")
+
+        vm.applyEdit(caption: "Edited", cookingTimeMinutes: 10, servings: nil, newPhotoURL: nil)
+
+        XCTAssertEqual(vm.post?.caption, "Edited")
+        XCTAssertEqual(vm.post?.photos.first?.url, "https://img/original.jpg")
+    }
+
+    // MARK: - EditPostViewModel (W149)
+
+    func test_editPostViewModel_prefillsFromPost() {
+        let original = post(
+            id: 7, caption: "Hi", cookingTime: 40, servings: 6, photoURL: "https://img/p.jpg"
+        )
+
+        let vm = EditPostViewModel(post: original)
+
+        XCTAssertEqual(vm.caption, "Hi")
+        XCTAssertEqual(vm.cookingTimeMinutes, "40")
+        XCTAssertEqual(vm.servings, "6")
+        XCTAssertTrue(vm.isRecipe)
+        XCTAssertEqual(vm.currentPhotoURL, "https://img/p.jpg")
+    }
+
+    func test_editPostViewModel_editedFields_parsesOnlyTextFields() {
+        let vm = EditPostViewModel(post: post(id: 7))
+        vm.caption = "  trimmed me  "
+        vm.cookingTimeMinutes = "15"
+        vm.servings = "2"
+
+        let fields = vm.editedFields
+
+        XCTAssertEqual(fields.caption, "trimmed me")
+        XCTAssertEqual(fields.cookingTimeMinutes, 15)
+        XCTAssertEqual(fields.servings, 2)
+    }
+
     // MARK: - Toast copy
 
     func test_toast_lockedCopyMatchesSpec() {
@@ -138,6 +195,7 @@ final class OptimisticRollbackTests: XCTestCase {
         XCTAssertEqual(Toast.followFailed.message, "Couldn't follow. Try again.")
         XCTAssertEqual(Toast.unfollowFailed.message, "Couldn't unfollow. Try again.")
         XCTAssertEqual(Toast.deleteFailed.message, "Couldn't delete. Try again.")
+        XCTAssertEqual(Toast.editFailed.message, "Couldn't save changes. Try again.")
     }
 
     // MARK: - Helpers
@@ -146,17 +204,22 @@ final class OptimisticRollbackTests: XCTestCase {
         id: Int = 1,
         liked: Bool = false,
         likeCount: Int = 0,
-        bookmarked: Bool = false
+        bookmarked: Bool = false,
+        caption: String? = "Test",
+        cookingTime: Int? = nil,
+        servings: Int? = nil,
+        photoURL: String? = nil
     ) -> Post {
-        Post(
-            id: id, type: "recipe", caption: "Test",
-            cookingTimeMinutes: nil, servings: nil,
+        let photos = photoURL.map { [PostPhoto(url: $0, thumbUrl: nil, mediumUrl: nil, position: 0)] } ?? []
+        return Post(
+            id: id, type: "recipe", caption: caption,
+            cookingTimeMinutes: cookingTime, servings: servings,
             likeCount: likeCount, commentCount: 0,
             likedByCurrentUser: liked,
             bookmarkedByCurrentUser: bookmarked,
             insertedAt: Date(),
             user: PostUser(id: 1, username: "alice", profilePhotoUrl: nil),
-            photos: [], ingredients: [], cookingSteps: [], tools: [], tags: []
+            photos: photos, ingredients: [], cookingSteps: [], tools: [], tags: []
         )
     }
 }

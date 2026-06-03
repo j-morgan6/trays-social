@@ -197,6 +197,65 @@ final class PostViewModel {
         }
     }
 
+    /// Owner-only edit (W149). Applies the text + photo changes optimistically
+    /// (so the detail view and, via `.postUpdated`, the feed/profile reflect
+    /// them immediately), then PATCHes /api/v1/posts/:id. On success it
+    /// reconciles with the server's authoritative copy (processed thumb/medium
+    /// photo URLs); on failure it rolls back to the original and toasts.
+    /// `newPhotoURL` is nil when the photo was not changed — its absence keeps
+    /// the existing photo (the backend leaves photo_url untouched when omitted).
+    func applyEdit(caption: String, cookingTimeMinutes: Int?, servings: Int?, newPhotoURL: String?) {
+        guard let original = post else { return }
+        // Optimistic photos: only the position-0 image changes (the backend
+        // edit syncs just that row). Preserve any carousel tail so a multi-photo
+        // post doesn't visibly collapse to one image during the round-trip.
+        let photos: [PostPhoto]
+        if let newPhotoURL {
+            let lead = PostPhoto(url: newPhotoURL, thumbUrl: nil, mediumUrl: nil, position: 0)
+            photos = original.photos.isEmpty
+                ? [lead]
+                : original.photos.map { $0.position == 0 ? lead : $0 }
+        } else {
+            photos = original.photos
+        }
+        let optimistic = Post(
+            id: original.id, type: original.type, caption: caption,
+            cookingTimeMinutes: cookingTimeMinutes, servings: servings,
+            likeCount: original.likeCount, commentCount: original.commentCount,
+            likedByCurrentUser: original.likedByCurrentUser,
+            bookmarkedByCurrentUser: original.bookmarkedByCurrentUser,
+            insertedAt: original.insertedAt, user: original.user, photos: photos,
+            ingredients: original.ingredients, cookingSteps: original.cookingSteps,
+            tools: original.tools, tags: original.tags
+        )
+        post = optimistic
+        broadcastUpdate(optimistic)
+
+        Task { [weak self] in
+            do {
+                let body = EditPostRequest(
+                    caption: caption,
+                    cookingTimeMinutes: cookingTimeMinutes,
+                    servings: servings,
+                    photoUrl: newPhotoURL
+                )
+                let response: DataResponse<Post> = try await APIClient.shared.patch(
+                    path: "/posts/\(original.id)", body: body
+                )
+                await MainActor.run {
+                    self?.post = response.data
+                    self?.broadcastUpdate(response.data)
+                }
+            } catch {
+                await MainActor.run {
+                    self?.post = original
+                    self?.broadcastUpdate(original)
+                }
+                Toast.editFailed.show()
+            }
+        }
+    }
+
     func sendComment(postId: Int) async {
         guard !commentText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         isSendingComment = true
@@ -231,6 +290,33 @@ final class PostViewModel {
             ErrorReporter.report(error, fallback: "Couldn't post your comment.")
         }
         isSendingComment = false
+    }
+
+    /// PATCH body for an edit. The three text fields are ALWAYS present in the
+    /// form, so they're always sent — including an explicit null when a numeric
+    /// field is cleared (otherwise the cleared value would silently not persist).
+    /// `photoUrl` is the only conditional key: it's omitted when the photo was
+    /// not changed, which the backend treats as "keep the existing photo".
+    /// apiEncoder converts the camelCase keys to snake_case on the wire.
+    private struct EditPostRequest: Encodable {
+        let caption: String
+        let cookingTimeMinutes: Int?
+        let servings: Int?
+        let photoUrl: String?
+
+        enum CodingKeys: String, CodingKey {
+            case caption, cookingTimeMinutes, servings, photoUrl
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(caption, forKey: .caption)
+            // encode (not encodeIfPresent) so a cleared field sends explicit null.
+            try c.encode(cookingTimeMinutes, forKey: .cookingTimeMinutes)
+            try c.encode(servings, forKey: .servings)
+            // Conditional: absent => backend keeps the current photo_url.
+            try c.encodeIfPresent(photoUrl, forKey: .photoUrl)
+        }
     }
 
     private func broadcastUpdate(_ post: Post) {

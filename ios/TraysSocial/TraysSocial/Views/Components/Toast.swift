@@ -19,6 +19,7 @@ enum Toast {
     case unfollowFailed
     case commentFailed
     case deleteFailed
+    case editFailed
     case actionFailed
     case custom(String)
 
@@ -31,6 +32,7 @@ enum Toast {
         case .unfollowFailed: "Couldn't unfollow. Try again."
         case .commentFailed: "Couldn't post your comment. Try again."
         case .deleteFailed: "Couldn't delete. Try again."
+        case .editFailed: "Couldn't save changes. Try again."
         case .actionFailed: "Couldn't complete that. Try again."
         case let .custom(text): text
         }

@@ -19,6 +19,7 @@ struct RecipeHero: View {
     /// owner; Report stays available to everyone.
     var isOwner: Bool = false
     var onReport: () -> Void = {}
+    var onEdit: () -> Void = {}
     var onDelete: () -> Void = {}
 
     var body: some View {
@@ -119,6 +120,7 @@ struct RecipeHero: View {
                 )
                 Menu {
                     if isOwner {
+                        Button("Edit Post", action: onEdit)
                         Button("Delete Post", role: .destructive, action: onDelete)
                     }
                     Button("Report Post", role: .destructive, action: onReport)
