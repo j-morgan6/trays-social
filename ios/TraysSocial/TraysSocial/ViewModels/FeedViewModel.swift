@@ -73,4 +73,22 @@ final class FeedViewModel {
             posts[index] = post
         }
     }
+
+    // W148: optimistic-delete rollback. Stash a removed row (with its index)
+    // so a failed delete can re-insert it at its original position.
+    private var pendingDeletions: [Int: (index: Int, post: Post)] = [:]
+
+    func removePost(id: Int) {
+        guard let index = posts.firstIndex(where: { $0.id == id }) else { return }
+        pendingDeletions[id] = (index, posts[index])
+        posts.remove(at: index)
+    }
+
+    /// Assumes the list is stable while a delete is in flight; min(index, count)
+    /// guards against a shrunk list, but a concurrent reload could land the
+    /// restored row at a slightly different spot (acceptable for a rare failure).
+    func restorePost(id: Int) {
+        guard let stashed = pendingDeletions.removeValue(forKey: id) else { return }
+        posts.insert(stashed.post, at: min(stashed.index, posts.count))
+    }
 }

@@ -5,6 +5,14 @@ extension Notification.Name {
     /// Posted when a Post is mutated inside PostDetailView (like, bookmark, or comment).
     /// userInfo["post"] contains the updated Post so other screens (e.g. the feed) can sync.
     static let postUpdated = Notification.Name("trays.postUpdated")
+
+    /// Posted when an owner deletes their post. userInfo["postId"] (Int) lets
+    /// the feed/profile/tray drop the row optimistically without holding a Post.
+    static let postDeleted = Notification.Name("trays.postDeleted")
+
+    /// Posted when an optimistic delete fails server-side, so the lists that
+    /// removed the row on `.postDeleted` re-insert it. userInfo["postId"] (Int).
+    static let postDeleteFailed = Notification.Name("trays.postDeleteFailed")
 }
 
 @MainActor
@@ -155,6 +163,36 @@ final class PostViewModel {
                 } else {
                     Toast.saveFailed.show()
                 }
+            }
+        }
+    }
+
+    /// Owner-only deletion. Optimistically broadcasts `.postDeleted` so the
+    /// feed, profile, and tray drop the row immediately, then calls
+    /// DELETE /api/v1/posts/:id. On failure it broadcasts the paired
+    /// `.postDeleteFailed` so those lists re-insert the row they removed, and
+    /// toasts the user. Delete is a write-path action, so a failure toast is
+    /// correct here — unlike read/refresh failures, which stay silent (D95).
+    /// The View gates this behind an owner check + a confirmation alert.
+    func deletePost() {
+        guard let id = post?.id else { return }
+        NotificationCenter.default.post(name: .postDeleted, object: nil, userInfo: ["postId": id])
+        // No [weak self] needed (unlike toggleLike/toggleBookmark): this Task
+        // captures only the local `id` and static members — it never touches
+        // instance state, so there is no retain cycle to break.
+        Task {
+            do {
+                _ = try await APIClient.shared.delete(path: "/posts/\(id)") as EmptyResponse
+            } catch {
+                Self.log.error(
+                    "deletePost failed id=\(id, privacy: .public): \(String(describing: error), privacy: .public)"
+                )
+                await MainActor.run {
+                    NotificationCenter.default.post(
+                        name: .postDeleteFailed, object: nil, userInfo: ["postId": id]
+                    )
+                }
+                Toast.deleteFailed.show()
             }
         }
     }

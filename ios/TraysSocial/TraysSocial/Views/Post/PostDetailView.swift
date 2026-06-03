@@ -9,6 +9,14 @@ struct PostDetailView: View {
     @State private var viewModel = PostViewModel()
     @State private var showCookMode = false
     @State private var showReport = false
+    @State private var showDeleteConfirm = false
+
+    /// W148: only a post's author may delete it. Gates the Delete menu item.
+    private var isOwner: Bool {
+        guard let authorId = viewModel.post?.user.id, let me = appState.currentUser?.id
+        else { return false }
+        return authorId == me
+    }
 
     @Environment(\.dismiss) private var dismiss
 
@@ -43,7 +51,10 @@ struct PostDetailView: View {
                             bookmarked: post.bookmarkedByCurrentUser ?? false,
                             onBack: { dismiss() },
                             shareURL: URL(string: Configuration.apiBaseURL + "/p/\(post.id)"),
-                            onBookmark: { viewModel.toggleBookmark() }
+                            onBookmark: { viewModel.toggleBookmark() },
+                            isOwner: isOwner,
+                            onReport: { showReport = true },
+                            onDelete: { showDeleteConfirm = true }
                         )
 
                         // Recipe info (byline + metadata + cook's note +
@@ -108,18 +119,9 @@ struct PostDetailView: View {
         // `.toolbarVisibility(.hidden, for:)`.
         .toolbar(.hidden, for: .navigationBar)
         .ignoresSafeArea(edges: .top)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button("Report Post", role: .destructive) {
-                        showReport = true
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .foregroundStyle(.gray)
-                }
-            }
-        }
+        // W148: the overflow menu (Report for everyone, Delete for the
+        // owner) lives on the hero's floating controls — a toolbar menu
+        // would be hidden by `.toolbar(.hidden, for: .navigationBar)` above.
         .task {
             if let initialPost { viewModel.seed(post: initialPost) }
             await viewModel.loadPost(id: postId)
@@ -133,6 +135,16 @@ struct PostDetailView: View {
         }
         .sheet(isPresented: $showReport) {
             ReportSheetView(targetType: "post", targetId: postId)
+        }
+        // W148: destructive + irreversible to the user, so confirm first.
+        .alert("Delete Post", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                viewModel.deletePost()
+                dismiss()
+            }
+        } message: {
+            Text("This will permanently remove this post. This cannot be undone.")
         }
     }
 

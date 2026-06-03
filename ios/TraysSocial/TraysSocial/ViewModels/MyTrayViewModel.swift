@@ -116,4 +116,19 @@ final class MyTrayViewModel {
             posts.removeAll(where: { $0.id == post.id })
         }
     }
+
+    // W148: drop an owner-deleted post from the tray (own posts appear here
+    // per D98), stashing it so a failed delete re-inserts it in place.
+    private var pendingDeletions: [Int: (index: Int, post: Post)] = [:]
+
+    func removePost(id: Int) {
+        guard let index = posts.firstIndex(where: { $0.id == id }) else { return }
+        pendingDeletions[id] = (index, posts[index])
+        posts.remove(at: index)
+    }
+
+    func restorePost(id: Int) {
+        guard let stashed = pendingDeletions.removeValue(forKey: id) else { return }
+        posts.insert(stashed.post, at: min(stashed.index, posts.count))
+    }
 }

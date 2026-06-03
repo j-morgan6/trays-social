@@ -35,6 +35,16 @@ struct ProfileView: View {
         .task {
             await viewModel.loadProfile(username: username, currentUserId: appState.currentUser?.id)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .postDeleted)) { notification in
+            if let id = notification.userInfo?["postId"] as? Int {
+                viewModel.removePost(id: id)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .postDeleteFailed)) { notification in
+            if let id = notification.userInfo?["postId"] as? Int {
+                viewModel.restorePost(id: id)
+            }
+        }
         .navigationDestination(for: Post.self) { post in
             // D77: pre-fill from the profile grid's already-loaded Post.
             PostDetailView(postId: post.id, initialPost: post.user.id == 0 ? nil : post)

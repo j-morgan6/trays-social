@@ -80,4 +80,19 @@ final class ProfileViewModel {
             }
         }
     }
+
+    // W148: drop the owner's deleted post from their profile grid, stashing
+    // it so a failed delete re-inserts it at its original position.
+    private var pendingDeletions: [Int: (index: Int, post: Post)] = [:]
+
+    func removePost(id: Int) {
+        guard let index = posts.firstIndex(where: { $0.id == id }) else { return }
+        pendingDeletions[id] = (index, posts[index])
+        posts.remove(at: index)
+    }
+
+    func restorePost(id: Int) {
+        guard let stashed = pendingDeletions.removeValue(forKey: id) else { return }
+        posts.insert(stashed.post, at: min(stashed.index, posts.count))
+    }
 }

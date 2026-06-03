@@ -84,6 +84,16 @@ struct FeedView: View {
                 viewModel.applyPostUpdate(updated)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .postDeleted)) { notification in
+            if let id = notification.userInfo?["postId"] as? Int {
+                viewModel.removePost(id: id)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .postDeleteFailed)) { notification in
+            if let id = notification.userInfo?["postId"] as? Int {
+                viewModel.restorePost(id: id)
+            }
+        }
     }
 
     private var headerSection: some View {

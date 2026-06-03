@@ -13,6 +13,13 @@ struct RecipeHero: View {
     let onBack: () -> Void
     let shareURL: URL?
     let onBookmark: () -> Void
+    /// W148: the overflow (ellipsis) menu lives on the hero's floating
+    /// controls because the nav bar is hidden (`.toolbar(.hidden,...)`),
+    /// so a toolbar menu would be unreachable. Delete shows only for the
+    /// owner; Report stays available to everyone.
+    var isOwner: Bool = false
+    var onReport: () -> Void = {}
+    var onDelete: () -> Void = {}
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -110,6 +117,20 @@ struct RecipeHero: View {
                     tint: bookmarked ? Theme.accent : .white,
                     action: onBookmark
                 )
+                Menu {
+                    if isOwner {
+                        Button("Delete Post", role: .destructive, action: onDelete)
+                    }
+                    Button("Report Post", role: .destructive, action: onReport)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.white)
+                        .frame(width: 38, height: 38)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                }
+                .accessibilityLabel("More options")
             }
         }
         .padding(.horizontal, 16)

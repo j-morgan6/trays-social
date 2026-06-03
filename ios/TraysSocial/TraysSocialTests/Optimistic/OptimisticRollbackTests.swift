@@ -78,6 +78,57 @@ final class OptimisticRollbackTests: XCTestCase {
         XCTAssertEqual(vm.post?.bookmarkedByCurrentUser, false) // back to original
     }
 
+    // MARK: - PostViewModel.deletePost (W148)
+
+    func test_deletePost_broadcastsPostDeletedWithPostId() {
+        let vm = PostViewModel()
+        vm.post = post(id: 42)
+
+        // .postDeleted is posted synchronously inside deletePost(), before
+        // any await — this is the optimistic signal the lists react to.
+        let exp = expectation(forNotification: .postDeleted, object: nil) { note in
+            (note.userInfo?["postId"] as? Int) == 42
+        }
+
+        vm.deletePost()
+
+        wait(for: [exp], timeout: 1.0)
+    }
+
+    func test_deletePost_noPost_doesNotBroadcast() {
+        let vm = PostViewModel()
+        vm.post = nil
+
+        let exp = expectation(forNotification: .postDeleted, object: nil)
+        exp.isInverted = true
+
+        vm.deletePost()
+
+        wait(for: [exp], timeout: 0.2)
+    }
+
+    /// The list rollback contract: removePost stashes the row by index, and a
+    /// paired restorePost re-inserts it at its original position.
+    func test_feedViewModel_removeThenRestore_reinsertsAtOriginalIndex() {
+        let vm = FeedViewModel()
+        vm.posts = [post(id: 1), post(id: 2), post(id: 3)]
+
+        vm.removePost(id: 2)
+        XCTAssertEqual(vm.posts.map(\.id), [1, 3])
+
+        vm.restorePost(id: 2)
+        XCTAssertEqual(vm.posts.map(\.id), [1, 2, 3])
+    }
+
+    func test_feedViewModel_restoreWithoutPriorRemove_isNoOp() {
+        let vm = FeedViewModel()
+        vm.posts = [post(id: 1)]
+
+        vm.restorePost(id: 99)
+
+        XCTAssertEqual(vm.posts.map(\.id), [1])
+    }
+
     // MARK: - Toast copy
 
     func test_toast_lockedCopyMatchesSpec() {
@@ -86,17 +137,19 @@ final class OptimisticRollbackTests: XCTestCase {
         XCTAssertEqual(Toast.unsaveFailed.message, "Couldn't remove from tray. Try again.")
         XCTAssertEqual(Toast.followFailed.message, "Couldn't follow. Try again.")
         XCTAssertEqual(Toast.unfollowFailed.message, "Couldn't unfollow. Try again.")
+        XCTAssertEqual(Toast.deleteFailed.message, "Couldn't delete. Try again.")
     }
 
     // MARK: - Helpers
 
     private func post(
+        id: Int = 1,
         liked: Bool = false,
         likeCount: Int = 0,
         bookmarked: Bool = false
     ) -> Post {
         Post(
-            id: 1, type: "recipe", caption: "Test",
+            id: id, type: "recipe", caption: "Test",
             cookingTimeMinutes: nil, servings: nil,
             likeCount: likeCount, commentCount: 0,
             likedByCurrentUser: liked,
