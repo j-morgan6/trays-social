@@ -14,7 +14,11 @@ defmodule TraysSocialWeb.API.V1.PostController do
     bookmarked_post_ids = Posts.bookmarked_post_ids_for_user(user.id, post_ids)
 
     json(conn, %{
-      data: PostJSON.render_list(posts, %{liked_post_ids: liked_post_ids, bookmarked_post_ids: bookmarked_post_ids})
+      data:
+        PostJSON.render_list(posts, %{
+          liked_post_ids: liked_post_ids,
+          bookmarked_post_ids: bookmarked_post_ids
+        })
     })
   end
 
@@ -26,7 +30,13 @@ defmodule TraysSocialWeb.API.V1.PostController do
       liked_post_ids = Posts.liked_post_ids_for_user(user.id, [post.id])
       bookmarked_post_ids = Posts.bookmarked_post_ids_for_user(user.id, [post.id])
 
-      json(conn, %{data: PostJSON.render(post, %{liked_post_ids: liked_post_ids, bookmarked_post_ids: bookmarked_post_ids})})
+      json(conn, %{
+        data:
+          PostJSON.render(post, %{
+            liked_post_ids: liked_post_ids,
+            bookmarked_post_ids: bookmarked_post_ids
+          })
+      })
     rescue
       Ecto.NoResultsError -> {:error, :not_found}
       Ecto.Query.CastError -> {:error, :not_found}
@@ -51,6 +61,39 @@ defmodule TraysSocialWeb.API.V1.PostController do
 
       {:error, changeset} ->
         {:error, changeset}
+    end
+  end
+
+  def update(conn, %{"id" => id} = params) do
+    user = conn.assigns.current_user
+
+    try do
+      post = Posts.get_post!(id)
+
+      if post.user_id != user.id do
+        {:error, :forbidden}
+      else
+        # W147 scope: text + photo only. Allowlist the four editable fields so
+        # a client cannot switch :type (castable in Post.changeset) and so
+        # :user_id stays immutable (also stripped from the cast list, D44).
+        # Nested associations (ingredients/steps/tools/tags) are out of scope.
+        # update_post_details/2 also syncs the position-0 post_photos row the
+        # client actually renders — a plain photo_url write would not surface.
+        attrs = Map.take(params, ["caption", "cooking_time_minutes", "servings", "photo_url"])
+
+        case Posts.update_post_details(post, attrs) do
+          {:ok, updated} ->
+            # Re-fetch for preloaded associations; Repo.update returns them bare.
+            updated = Posts.get_post!(updated.id)
+            json(conn, %{data: PostJSON.render(updated)})
+
+          {:error, changeset} ->
+            {:error, changeset}
+        end
+      end
+    rescue
+      Ecto.NoResultsError -> {:error, :not_found}
+      Ecto.Query.CastError -> {:error, :not_found}
     end
   end
 

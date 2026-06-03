@@ -78,11 +78,13 @@ defmodule TraysSocial.Posts do
   # the first FROM table; both schemas expose a `user_id` column with the same
   # semantics (FK to users), so the generated SQL is correct for either.
   defp exclude_blocked_users(query, []), do: query
+
   defp exclude_blocked_users(query, blocked_ids) do
     where(query, [p], p.user_id not in ^blocked_ids)
   end
 
   defp exclude_muted_keywords(query, []), do: query
+
   defp exclude_muted_keywords(query, keywords) do
     Enum.reduce(keywords, query, fn keyword, q ->
       pattern = "%" <> String.downcase(keyword) <> "%"
@@ -178,7 +180,9 @@ defmodule TraysSocial.Posts do
   """
   def list_top_tags(limit \\ 6) do
     PostTag
-    |> join(:inner, [pt], p in Post, on: p.id == pt.post_id and is_nil(p.deleted_at) and is_nil(p.removed_at))
+    |> join(:inner, [pt], p in Post,
+      on: p.id == pt.post_id and is_nil(p.deleted_at) and is_nil(p.removed_at)
+    )
     |> group_by([pt], pt.tag)
     |> order_by([pt], desc: count(pt.id))
     |> limit(^limit)
@@ -215,14 +219,18 @@ defmodule TraysSocial.Posts do
             ilike(i.name, ^sanitized) or
             ilike(pt.tag, ^sanitized)
         )
-        |> distinct([p], [desc: p.inserted_at, asc: p.id])
+        |> distinct([p], desc: p.inserted_at, asc: p.id)
       else
         base
       end
 
     base =
       if max_cooking_time do
-        where(base, [p], not is_nil(p.cooking_time_minutes) and p.cooking_time_minutes <= ^max_cooking_time)
+        where(
+          base,
+          [p],
+          not is_nil(p.cooking_time_minutes) and p.cooking_time_minutes <= ^max_cooking_time
+        )
       else
         base
       end
@@ -230,7 +238,9 @@ defmodule TraysSocial.Posts do
     base =
       if tag && tag != "" do
         base
-        |> join(:inner, [p], pt in PostTag, on: pt.post_id == p.id and pt.tag == ^String.downcase(tag))
+        |> join(:inner, [p], pt in PostTag,
+          on: pt.post_id == p.id and pt.tag == ^String.downcase(tag)
+        )
         |> distinct([p], p.id)
       else
         base
@@ -400,6 +410,53 @@ defmodule TraysSocial.Posts do
     post
     |> Post.changeset(attrs)
     |> Repo.update()
+  end
+
+  @doc """
+  Updates a post's editable detail fields (caption, cooking_time_minutes,
+  servings, photo_url) and keeps the rendered primary photo in sync.
+
+  The API serializer and the iOS client read a post's image from the
+  `post_photos` association at position 0 (`Post.primaryPhotoURL`), NOT from
+  the scalar `posts.photo_url` column — see ELIXIR_PLUGIN_IMPROVEMENTS.md
+  (2026-06-03). A photo edit must therefore write BOTH the column and the
+  position-0 `post_photos` row, or the new image never reaches any client.
+  The two writes run in one transaction so they cannot diverge.
+
+  Nested associations (ingredients/steps/tools/tags) are intentionally NOT
+  touched here — out of scope for the text+photo edit endpoint (W147).
+  """
+  def update_post_details(%Post{} = post, attrs) do
+    Repo.transaction(fn ->
+      case post |> Post.changeset(attrs) |> Repo.update() do
+        {:ok, updated} ->
+          sync_primary_photo(updated)
+          updated
+
+        {:error, changeset} ->
+          Repo.rollback(changeset)
+      end
+    end)
+  end
+
+  # Mirror posts.photo_url onto the position-0 post_photos row (what the
+  # serializer + iOS primaryPhotoURL actually render): update it in place, or
+  # insert it when the post has no photos yet. No-op when photo_url is nil.
+  defp sync_primary_photo(%Post{photo_url: nil}), do: :ok
+
+  defp sync_primary_photo(%Post{photo_url: url, id: post_id}) do
+    case Repo.get_by(PostPhoto, post_id: post_id, position: 0) do
+      %PostPhoto{url: ^url} ->
+        :ok
+
+      %PostPhoto{} = photo ->
+        Repo.update!(Ecto.Changeset.change(photo, url: url))
+
+      nil ->
+        %PostPhoto{}
+        |> PostPhoto.changeset(%{post_id: post_id, url: url, position: 0})
+        |> Repo.insert!()
+    end
   end
 
   @doc """
@@ -721,10 +778,14 @@ defmodule TraysSocial.Posts do
     query =
       Bookmark
       |> where([b], b.user_id == ^user_id)
-      |> join(:inner, [b], p in Post, on: b.post_id == p.id and is_nil(p.deleted_at) and is_nil(p.removed_at))
+      |> join(:inner, [b], p in Post,
+        on: b.post_id == p.id and is_nil(p.deleted_at) and is_nil(p.removed_at)
+      )
       |> order_by([b], desc: b.inserted_at, desc: b.id)
       |> limit(^limit)
-      |> preload([b, p], post: {p, [:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags]})
+      |> preload([b, p],
+        post: {p, [:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags]}
+      )
 
     query =
       if cursor_id && cursor_time do

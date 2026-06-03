@@ -381,7 +381,11 @@ defmodule TraysSocial.PostsTest do
     test "create_post accepts https and app-relative photo_url (D44)" do
       user = user_fixture()
 
-      for url <- ["https://cdn.example.com/x.jpg", "http://example.com/y.png", "/uploads/local.jpg"] do
+      for url <- [
+            "https://cdn.example.com/x.jpg",
+            "http://example.com/y.png",
+            "/uploads/local.jpg"
+          ] do
         attrs = Map.put(@valid_attrs, :photo_url, url)
         assert {:ok, _} = Posts.create_post(user.id, attrs)
       end
@@ -405,7 +409,11 @@ defmodule TraysSocial.PostsTest do
     end
 
     test "PostPhoto.changeset accepts http(s) and app-relative URLs (D50)" do
-      for url <- ["https://cdn.example.com/x.jpg", "http://example.com/y.png", "/uploads/local.jpg"] do
+      for url <- [
+            "https://cdn.example.com/x.jpg",
+            "http://example.com/y.png",
+            "/uploads/local.jpg"
+          ] do
         cs =
           TraysSocial.Posts.PostPhoto.changeset(
             %TraysSocial.Posts.PostPhoto{},
@@ -435,6 +443,42 @@ defmodule TraysSocial.PostsTest do
 
       assert {:ok, %Post{} = updated} = Posts.update_post(post, %{cooking_time_minutes: 60})
       assert updated.cooking_time_minutes == 60
+    end
+
+    test "update_post_details/2 updates text fields" do
+      %{post: post} = create_user_and_post()
+
+      assert {:ok, %Post{} = updated} =
+               Posts.update_post_details(post, %{caption: "Edited", servings: 8})
+
+      assert updated.caption == "Edited"
+      assert updated.servings == 8
+    end
+
+    # The serializer + iOS render the photo from post_photos[0], not from the
+    # scalar photo_url — so a photo edit must sync the position-0 row or the
+    # change never reaches a client. See ELIXIR_PLUGIN_IMPROVEMENTS.md 2026-06-03.
+    test "update_post_details/2 syncs the position-0 post_photos row to the new photo_url" do
+      %{post: post} = create_user_and_post()
+      new_url = "https://images.unsplash.com/edited?w=800"
+
+      assert {:ok, _} = Posts.update_post_details(post, %{photo_url: new_url})
+
+      reloaded = Posts.get_post!(post.id)
+      primary = Enum.find(reloaded.post_photos, &(&1.position == 0))
+      assert primary
+      assert primary.url == new_url
+    end
+
+    test "update_post_details/2 rolls back the whole change on invalid attrs" do
+      %{post: post} = create_user_and_post()
+
+      assert {:error, %Ecto.Changeset{}} =
+               Posts.update_post_details(post, %{photo_url: nil})
+
+      # photo_url is validate_required, so the transaction rolls back and the
+      # original caption is untouched.
+      assert Posts.get_post!(post.id).caption == post.caption
     end
 
     test "delete_post/1 soft deletes the post" do

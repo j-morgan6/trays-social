@@ -215,6 +215,7 @@ defmodule TraysSocialWeb.Router do
 
     post "/uploads", UploadController, :create
     post "/posts", PostController, :create
+    patch "/posts/:id", PostController, :update
     delete "/posts/:id", PostController, :delete
 
     post "/posts/:post_id/like", LikeController, :create
