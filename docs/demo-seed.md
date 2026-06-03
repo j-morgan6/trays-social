@@ -84,9 +84,50 @@ configured password. You should see:
 - Comments on Alice's first post from Ben and Chloe
 
 Re-running the seed is safe — no duplicate users, posts, follows, likes,
-or comments are created. If you need to wipe and re-seed (rare), do it
-through the normal SQL channel; `seed_demo` deliberately never deletes
-existing data.
+or comments are created. `seed_demo` deliberately never deletes existing
+data; to remove the demo *content* before launch, use `purge_demo` below.
+
+---
+
+## Purge demo content before the App Store launch
+
+When you're ready to ship to real users, remove the demo cooks' content
+so it doesn't appear in real users' feeds — **but keep the three accounts**
+so an Apple App Reviewer can still log in to evaluate future submissions
+(Guideline 2.1 requires working demo credentials, and every app update is
+re-reviewed).
+
+```bash
+fly ssh console --app trays-social --command 'bin/trays_social eval "TraysSocial.Release.purge_demo()"'
+```
+
+Expected output (counts vary if real users interacted with demo content):
+
+```
+[purge_demo] OK — removed 15 posts, 6 follows, 24 notifications. Demo accounts kept for App Review login.
+```
+
+What it does:
+
+- **Hard-deletes** every post by `demo_alice` / `demo_ben` / `demo_chloe`.
+  The `posts` foreign keys are all `on_delete: :delete_all`, so each post
+  takes its ingredients, tools, cooking steps, tags, photos, likes,
+  comments, bookmarks, and post-scoped notifications with it — including
+  the 12 cross-likes and 6 cross-comments (they live only on demo posts).
+- **Removes** the mutual follows and the follow-notifications among the
+  demo accounts (these reference `users`, not `posts`, so they don't
+  cascade and are cleared explicitly). Also clears any real user's follow
+  of / notification about a demo cook.
+- **Leaves the three User rows untouched** — same password, still
+  email-confirmed — so demo login keeps working.
+
+Idempotent: re-running once the content is gone is a harmless no-op
+(`removed 0 posts, 0 follows, 0 notifications`).
+
+> Sequencing for launch: run `purge_demo` shortly **before** flipping the
+> app live. If you later re-run `seed_demo` (e.g. to fix the demo
+> password), it re-creates the content and you'll need to `purge_demo`
+> again.
 
 ---
 

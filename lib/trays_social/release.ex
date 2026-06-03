@@ -16,11 +16,16 @@ defmodule TraysSocial.Release do
 
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.{Follow, User}
+  alias TraysSocial.Notifications.Notification
   alias TraysSocial.Posts
 
   alias TraysSocial.Posts.{Comment, Post, PostLike, PostPhoto}
 
   alias TraysSocial.Repo
+
+  # The demo cooks an Apple App Reviewer logs in with. Shared by seed_demo/0
+  # and purge_demo/0 so the two operate on exactly the same set of accounts.
+  @demo_usernames ~w(demo_alice demo_ben demo_chloe)
 
   def migrate do
     load_app()
@@ -128,6 +133,84 @@ defmodule TraysSocial.Release do
     seed_cross_comments([alice, ben, chloe])
 
     IO.puts("[seed_demo] OK — demo_alice, demo_ben, demo_chloe ready")
+    :ok
+  end
+
+  @doc """
+  Remove the demo cooks' *content* before the App Store launch while KEEPING
+  their three accounts so an Apple App Reviewer can still log in to evaluate
+  future submissions (App Review Guideline 2.1 requires working demo
+  credentials, and every app update is re-reviewed). Callable from a release
+  shell via:
+
+      bin/trays_social eval "TraysSocial.Release.purge_demo()"
+
+  Hard-deletes every post authored by demo_alice/demo_ben/demo_chloe. The
+  `posts` foreign keys are all `on_delete: :delete_all`, so each post deletion
+  cascades to its ingredients, tools, cooking_steps, post_tags, post_photos,
+  likes, comments, bookmarks, and post-scoped notifications. The 12 demo
+  cross-likes and 6 cross-comments live only on each other's posts, so they go
+  with the posts. The mutual follows and the follow-notifications among the
+  demo accounts reference only `users` (not `posts`), so they are cleared
+  explicitly. The three User rows — and their passwords and confirmed_at —
+  are left untouched, so demo login keeps working.
+
+  Idempotent: re-running once the content is gone is a harmless no-op.
+  """
+  def purge_demo do
+    load_app()
+    # Started for symmetry with seed_demo/0; delete_all needs only the Repo,
+    # but booting the app keeps the operator entrypoint consistent and lets
+    # the Endpoint stay server: false under `eval` (PHX_SERVER unset).
+    {:ok, _apps} = Application.ensure_all_started(:trays_social)
+
+    do_purge_demo()
+  end
+
+  # Internal-public so the purge logic can run under the test sandbox without
+  # the app-start wrapper. Not part of the public API — call purge_demo/0 in
+  # production.
+  @doc false
+  def do_purge_demo do
+    demo_ids =
+      User
+      |> where([u], u.username in ^@demo_usernames)
+      |> select([u], u.id)
+      |> Repo.all()
+
+    {:ok, counts} =
+      Repo.transaction(fn ->
+        # Follow-notifications (post_id IS NULL) reference only users, so they
+        # do NOT cascade from post deletion — clear every notification touching
+        # a demo account as recipient or actor (also catches a real user being
+        # told "demo_alice followed you"). Post-scoped notifications cascade
+        # with their post below; deleting them here too is harmless.
+        {notifs, _} =
+          Notification
+          |> where([n], n.user_id in ^demo_ids or n.actor_id in ^demo_ids)
+          |> Repo.delete_all()
+
+        # Mutual demo follows, plus any real user who followed a demo cook.
+        {follows, _} =
+          Follow
+          |> where([f], f.follower_id in ^demo_ids or f.followed_id in ^demo_ids)
+          |> Repo.delete_all()
+
+        # Hard-delete the posts last — cascades children, likes, comments,
+        # bookmarks, and post-scoped notifications via on_delete: :delete_all.
+        {posts, _} =
+          Post
+          |> where([p], p.user_id in ^demo_ids)
+          |> Repo.delete_all()
+
+        %{posts: posts, follows: follows, notifications: notifs}
+      end)
+
+    IO.puts(
+      "[purge_demo] OK — removed #{counts.posts} posts, #{counts.follows} follows, " <>
+        "#{counts.notifications} notifications. Demo accounts kept for App Review login."
+    )
+
     :ok
   end
 
@@ -300,12 +383,33 @@ defmodule TraysSocial.Release do
 
     # Six distinct cross-comments so each cook leaves notes on both of
     # the other two cooks' lead posts.
-    ensure_comment(alice, hd(ben_posts_loaded), "Tried this — your brine made all the difference.")
-    ensure_comment(alice, hd(chloe_posts_loaded), "Adding this to the rotation. Love a sturdy weeknight bowl.")
+    ensure_comment(
+      alice,
+      hd(ben_posts_loaded),
+      "Tried this — your brine made all the difference."
+    )
+
+    ensure_comment(
+      alice,
+      hd(chloe_posts_loaded),
+      "Adding this to the rotation. Love a sturdy weeknight bowl."
+    )
+
     ensure_comment(ben, hd(alice_posts_loaded), "Swapped in scallions and it ran perfectly.")
-    ensure_comment(ben, hd(chloe_posts_loaded), "Skipped the chili crisp once. Won't do that again.")
+
+    ensure_comment(
+      ben,
+      hd(chloe_posts_loaded),
+      "Skipped the chili crisp once. Won't do that again."
+    )
+
     ensure_comment(chloe, hd(alice_posts_loaded), "Eggs benedict in 30 — I owe you one.")
-    ensure_comment(chloe, hd(ben_posts_loaded), "Smoked this Sunday. Family agreed: best of the year.")
+
+    ensure_comment(
+      chloe,
+      hd(ben_posts_loaded),
+      "Smoked this Sunday. Family agreed: best of the year."
+    )
   end
 
   defp ensure_comment(%User{} = user, %Post{} = post, body) do
