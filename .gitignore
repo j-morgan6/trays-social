@@ -63,6 +63,7 @@ docs/superpowers/specs/
 docs/superpowers/plans/
 
 # iOS / Xcode
+ios/TraysSocial/.regen-spec.tmp.yml
 ios/TraysSocial/TraysSocial.xcodeproj/xcuserdata/
 ios/TraysSocial/TraysSocial.xcodeproj/project.xcworkspace/xcuserdata/
 *.xcuserstate

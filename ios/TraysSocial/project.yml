@@ -5,6 +5,15 @@ options:
     iOS: "17.0"
   xcodeVersion: "16.0"
   createIntermediateGroups: true
+# Three build configurations. Beta is a release-type build (optimized,
+# distribution signing) that points at the review backend — it exists so
+# TestFlight builds can be exercised against review before prod is touched.
+# Declaring `configs` here overrides XcodeGen's default Debug/Release pair,
+# so all three must be listed.
+configs:
+  Debug: debug
+  Beta: release
+  Release: release
 settings:
   base:
     DEVELOPMENT_TEAM: "6TN2AZM26U"
@@ -29,6 +38,8 @@ targets:
       configs:
         debug:
           API_BASE_URL: "https://trays-social-review.fly.dev"
+        beta:
+          API_BASE_URL: "https://trays-social-review.fly.dev"
         release:
           API_BASE_URL: "https://trays.app"
   TraysSocialTests:
@@ -46,6 +57,8 @@ targets:
       - target: TraysSocial
 
 schemes:
+  # Production / App Store scheme. Archive -> Release -> prod (trays.app).
+  # This is the build you submit to the App Store. Unchanged.
   TraysSocial:
     build:
       targets:
@@ -60,5 +73,25 @@ schemes:
         - TraysSocialTests
     profile:
       config: Release
+    analyze:
+      config: Debug
+  # TestFlight staging scheme. Archive -> Beta -> review
+  # (trays-social-review.fly.dev). Use this to upload a build that exercises
+  # the review backend in TestFlight before approving the prod deploy. Do NOT
+  # submit a Beta archive to the App Store — it points at review.
+  TraysSocial Beta:
+    build:
+      targets:
+        TraysSocial: all
+    run:
+      config: Debug
+    archive:
+      config: Beta
+    test:
+      config: Debug
+      targets:
+        - TraysSocialTests
+    profile:
+      config: Beta
     analyze:
       config: Debug
