@@ -30,7 +30,7 @@ struct EmailVerificationGateView: View {
                     Text("We sent a verification link to")
                         .foregroundStyle(Theme.textSecondary)
 
-                    Text(appState.currentUser?.email ?? "your email")
+                    Text(appState.currentUser?.email ?? String(localized: "your email"))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.text)
                         .lineLimit(1)
@@ -110,12 +110,12 @@ struct EmailVerificationGateView: View {
     }
 
     private var resendLabel: String {
-        if isResending { return "Sending..." }
+        if isResending { return String(localized: "Sending...") }
         if isInCooldown, let last = lastResendAt {
             let remaining = Int(resendCooldown - Date().timeIntervalSince(last))
-            return "Resend in \(max(remaining, 1))s"
+            return String(localized: "Resend in \(max(remaining, 1))s")
         }
-        return "Resend verification email"
+        return String(localized: "Resend verification email")
     }
 
     private func refresh() async {
@@ -123,7 +123,7 @@ struct EmailVerificationGateView: View {
         defer { isRefreshing = false }
         await appState.refreshCurrentUser()
         if !(appState.currentUser?.isEmailConfirmed ?? false) {
-            statusMessage = "Not verified yet. Check your inbox and tap the link."
+            statusMessage = String(localized: "Not verified yet. Check your inbox and tap the link.")
         } else {
             statusMessage = nil
         }
@@ -136,9 +136,9 @@ struct EmailVerificationGateView: View {
         do {
             try await AuthService.resendConfirmation()
             lastResendAt = Date()
-            statusMessage = "Verification email sent."
+            statusMessage = String(localized: "Verification email sent.")
         } catch {
-            statusMessage = "Could not send email. Try again in a moment."
+            statusMessage = String(localized: "Could not send email. Try again in a moment.")
         }
     }
 }

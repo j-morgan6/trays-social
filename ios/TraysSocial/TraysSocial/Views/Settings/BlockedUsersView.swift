@@ -24,11 +24,11 @@ struct BlockedUsersView: View {
                     }
                     .padding(.top, 12)
                 }
-                .skeletonGroup(label: "Loading blocked users")
+                .skeletonGroup(label: String(localized: "Loading blocked users"))
             } else if blockedUsers.isEmpty {
                 EditorialEmptyState(
-                    title: "No one blocked.",
-                    subtitle: "Block someone from their profile and they'll show up here."
+                    title: String(localized: "No one blocked."),
+                    subtitle: String(localized: "Block someone from their profile and they'll show up here.")
                 )
             } else {
                 List {
@@ -99,7 +99,7 @@ struct BlockedUsersView: View {
             // D95: write-path failure — log + toast. Unblock is a
             // user-initiated mutation; silence would read as success.
             blockedLog.error("unblock failed: \(String(describing: error), privacy: .public)")
-            ErrorReporter.report(error, fallback: "Couldn't unblock \(user.username).")
+            ErrorReporter.report(error, fallback: String(localized: "Couldn't unblock \(user.username)."))
         }
     }
 }

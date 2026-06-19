@@ -81,7 +81,7 @@ struct MutedKeywordsView: View {
         } catch {
             // D95: write-path failure — log + toast. User-initiated save.
             mutedLog.error("saveKeywords failed: \(String(describing: error), privacy: .public)")
-            ErrorReporter.report(error, fallback: "Couldn't save muted keywords.")
+            ErrorReporter.report(error, fallback: String(localized: "Couldn't save muted keywords."))
         }
     }
 }

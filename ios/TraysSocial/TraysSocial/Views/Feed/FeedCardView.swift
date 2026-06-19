@@ -58,7 +58,7 @@ struct FeedCardView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("@\(post.user.username), posted \(post.insertedAt.timeAgo())")
+        .accessibilityLabel(String(localized: "@\(post.user.username), posted \(post.insertedAt.timeAgo())"))
     }
 
     // MARK: - Photo + overlays
@@ -104,7 +104,7 @@ struct FeedCardView: View {
         guard let minutes = post.cookingTimeMinutes else { return nil }
         let time = formatCookTime(minutes: minutes)
         if let servings = post.servings {
-            return "\(time) · \(servings) servings"
+            return String(localized: "\(time) · \(servings) servings")
         }
         return time
     }
@@ -112,9 +112,9 @@ struct FeedCardView: View {
     private func formatCookTime(minutes: Int) -> String {
         let h = minutes / 60
         let m = minutes % 60
-        if h == 0 { return "\(m) min" }
-        if m == 0 { return "\(h)h" }
-        return "\(h)h \(m)m"
+        if h == 0 { return String(localized: "\(m) min") }
+        if m == 0 { return String(localized: "\(h)h") }
+        return String(localized: "\(h)h \(m)m")
     }
 
     // MARK: - Content
@@ -151,11 +151,11 @@ struct FeedCardView: View {
 
     private var cardTitle: String {
         let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return "Untitled" }
+        guard !raw.isEmpty else { return String(localized: "Untitled") }
         let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
             .first?
             .trimmingCharacters(in: .whitespaces) ?? raw
-        return candidate.isEmpty ? "Untitled" : candidate
+        return candidate.isEmpty ? String(localized: "Untitled") : candidate
     }
 
     // D100: real profile photo on the card header; falls back to the

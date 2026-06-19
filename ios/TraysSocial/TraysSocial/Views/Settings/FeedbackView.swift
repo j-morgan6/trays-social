@@ -113,7 +113,7 @@ struct FeedbackView: View {
         } catch {
             // Preserve subject/body so the user can retry without
             // re-typing — the W125 pitfall is explicit about this.
-            errorMessage = ErrorReporter.userMessage(for: error, fallback: "Couldn't send your feedback. Please try again.")
+            errorMessage = ErrorReporter.userMessage(for: error, fallback: String(localized: "Couldn't send your feedback. Please try again."))
         }
 
         isSubmitting = false

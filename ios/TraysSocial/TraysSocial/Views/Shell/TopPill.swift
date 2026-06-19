@@ -33,7 +33,7 @@ struct TopPill: View {
         .frame(height: 56)
     }
 
-    private func tabSegment(for tray: AppState.TrayTab, label: String) -> some View {
+    private func tabSegment(for tray: AppState.TrayTab, label: LocalizedStringKey) -> some View {
         TabSegment(label: label, isActive: selectedTray == tray) {
             withAnimation(.easeInOut(duration: 0.18)) {
                 selectedTray = tray
@@ -63,9 +63,9 @@ struct TopPill: View {
     private var bellAccessibilityLabel: String {
         if hasUnread {
             return unreadCount > 0
-                ? "Notifications, \(unreadCount) unread"
-                : "Notifications, unread"
+                ? String(localized: "Notifications, \(unreadCount) unread")
+                : String(localized: "Notifications, unread")
         }
-        return "Notifications"
+        return String(localized: "Notifications")
     }
 }

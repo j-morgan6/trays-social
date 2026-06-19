@@ -71,11 +71,8 @@ struct NotificationsView: View {
 
     private var subtitle: String {
         let unread = viewModel.notifications.count(where: { !$0.isRead })
-        switch unread {
-        case 0: return "You're caught up."
-        case 1: return "1 unread."
-        default: return "\(unread) unread."
-        }
+        if unread == 0 { return String(localized: "You're caught up.") }
+        return String(localized: "\(unread) unread.")
     }
 
     private var notificationCard: some View {
@@ -140,7 +137,7 @@ private struct NotificationRow: View {
                         .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text("\(notification.insertedAt.timeAgo()) ago")
+                    Text(String(localized: "\(notification.insertedAt.timeAgo()) ago"))
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.subtle(for: colorScheme))
                 }
@@ -165,7 +162,7 @@ private struct NotificationRow: View {
 
     /// Pretty-print the notification with amber-ink @username highlight.
     private var phrase: AttributedString {
-        let actor = notification.actor?.username ?? "Someone"
+        let actor = notification.actor?.username ?? String(localized: "Someone")
         let handle = "@\(actor) "
         let body = phraseBody(for: notification.type)
 
@@ -179,12 +176,12 @@ private struct NotificationRow: View {
 
     private func phraseBody(for type: String) -> String {
         switch type {
-        case "like": "liked your recipe."
-        case "comment": "commented on your post."
-        case "follow": "started following you."
-        case "save": "saved your recipe."
-        case "share": "shared a recipe with you."
-        default: "interacted with you."
+        case "like": String(localized: "liked your recipe.")
+        case "comment": String(localized: "commented on your post.")
+        case "follow": String(localized: "started following you.")
+        case "save": String(localized: "saved your recipe.")
+        case "share": String(localized: "shared a recipe with you.")
+        default: String(localized: "interacted with you.")
         }
     }
 
@@ -199,9 +196,10 @@ private struct NotificationRow: View {
     }
 
     private var accessibilityLabel: String {
-        let actor = notification.actor?.username ?? "Someone"
+        let actor = notification.actor?.username ?? String(localized: "Someone")
         let body = phraseBody(for: notification.type)
-        let unread = notification.isRead ? "" : ", unread"
-        return "@\(actor) \(body) \(notification.insertedAt.timeAgo()) ago\(unread)"
+        let timeAgo = String(localized: "\(notification.insertedAt.timeAgo()) ago")
+        let unread = notification.isRead ? "" : String(localized: ", unread")
+        return "@\(actor) \(body) \(timeAgo)\(unread)"
     }
 }

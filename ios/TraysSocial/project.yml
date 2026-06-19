@@ -5,6 +5,13 @@ options:
     iOS: "17.0"
   xcodeVersion: "16.0"
   createIntermediateGroups: true
+  # Localization (G37): English is the development/base language; fr and es are
+  # supplied via Resources/Localizable.xcstrings. XcodeGen has no settable
+  # knownRegions key — it default-adds Base + en and then derives the rest of
+  # knownRegions from the locales present in the String Catalog, so fr/es land
+  # in the generated project automatically. The OS-facing list of available
+  # localizations is declared separately as CFBundleLocalizations in Info.plist.
+  developmentLanguage: en
 # Three build configurations. Beta is a release-type build (optimized,
 # distribution signing) that points at the review backend — it exists so
 # TestFlight builds can be exercised against review before prod is touched.

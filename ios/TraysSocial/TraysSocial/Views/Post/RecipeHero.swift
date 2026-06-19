@@ -144,7 +144,7 @@ struct RecipeHero: View {
         let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
             .first?
             .trimmingCharacters(in: .whitespaces) ?? raw
-        return candidate.isEmpty ? "A recipe on Trays" : candidate
+        return candidate.isEmpty ? String(localized: "A recipe on Trays") : candidate
     }
 
     private var titleBlock: some View {
@@ -169,11 +169,11 @@ struct RecipeHero: View {
 
     private var titleText: String {
         let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return "Untitled recipe" }
+        guard !raw.isEmpty else { return String(localized: "Untitled recipe") }
         let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
             .first?
             .trimmingCharacters(in: .whitespaces) ?? raw
-        return candidate.isEmpty ? "Untitled recipe" : candidate
+        return candidate.isEmpty ? String(localized: "Untitled recipe") : candidate
     }
 
     /// First 3 tags as a "·"-separated breadcrumb. Same convention the

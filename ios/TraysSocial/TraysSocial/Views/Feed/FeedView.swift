@@ -61,7 +61,7 @@ struct FeedView: View {
                     }
                 }
                 .allowsHitTesting(false)
-                .skeletonGroup(label: "Loading feed")
+                .skeletonGroup(label: String(localized: "Loading feed"))
                 .transition(.opacity)
             } else if viewModel.posts.isEmpty, !viewModel.isLoading {
                 VStack(spacing: 8) {

@@ -119,11 +119,11 @@ struct FindView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .skeletonGroup(label: "Searching")
+            .skeletonGroup(label: String(localized: "Searching"))
         } else if viewModel.posts.isEmpty, viewModel.users.isEmpty {
             EditorialEmptyState(
-                title: "No results for \u{201C}\(viewModel.searchText)\u{201D}.",
-                subtitle: "Try a different recipe, ingredient, or cook."
+                title: String(localized: "No results for \u{201C}\(viewModel.searchText)\u{201D}."),
+                subtitle: String(localized: "Try a different recipe, ingredient, or cook.")
             )
         } else {
             VStack(alignment: .leading, spacing: 24) {
@@ -139,7 +139,7 @@ struct FindView: View {
 
     private var userResults: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionHeader(label: "Cooks")
+            SectionHeader(label: String(localized: "Cooks"))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 4)
 
@@ -210,7 +210,7 @@ struct FindView: View {
 
     private var postResults: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(label: "Recipes")
+            SectionHeader(label: String(localized: "Recipes"))
                 .padding(.horizontal, 20)
 
             LazyVGrid(
@@ -246,7 +246,7 @@ struct FindView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .skeletonGroup(label: "Loading trending recipes")
+            .skeletonGroup(label: String(localized: "Loading trending recipes"))
         } else if !viewModel.trendingPosts.isEmpty {
             trendingGrid
                 .padding(.horizontal, 16)
@@ -255,8 +255,8 @@ struct FindView: View {
             // new install (nothing has trended yet) or a transient
             // backend blip that pull-to-refresh will recover from.
             EditorialEmptyState(
-                title: "Nothing trending yet.",
-                subtitle: "Pull to refresh, or check back later when posts pick up."
+                title: String(localized: "Nothing trending yet."),
+                subtitle: String(localized: "Pull to refresh, or check back later when posts pick up.")
             )
         }
     }
@@ -286,10 +286,10 @@ struct FindView: View {
 
     private func gridTitle(for post: Post) -> String {
         let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return "Untitled" }
+        guard !raw.isEmpty else { return String(localized: "Untitled") }
         let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
             .first?
             .trimmingCharacters(in: .whitespaces) ?? raw
-        return candidate.isEmpty ? "Untitled" : candidate
+        return candidate.isEmpty ? String(localized: "Untitled") : candidate
     }
 }

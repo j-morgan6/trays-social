@@ -60,7 +60,7 @@ struct SectionHeader: View {
                     .padding(4)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("See all \(label.lowercased())")
+                .accessibilityLabel(String(localized: "See all \(label.lowercased())"))
             }
         }
         .padding(.horizontal, 20)

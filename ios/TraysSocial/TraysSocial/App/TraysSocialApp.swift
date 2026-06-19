@@ -7,6 +7,11 @@ private let appLog = Logger(subsystem: "com.trays.social", category: "deeplinks"
 struct TraysSocialApp: App {
     @State private var appState = AppState()
     @AppStorage("colorScheme") private var colorSchemePreference = "system"
+    // G37/W153: in-app language override. "system" follows the device
+    // locale; "en"/"fr"/"es" force that localization. Kept in sync with
+    // the AppleLanguages bundle override applied in init() below and the
+    // Language picker in SettingsView.
+    @AppStorage("appLanguage") private var appLanguagePreference = "system"
 
     private var preferredScheme: ColorScheme? {
         switch colorSchemePreference {
@@ -16,7 +21,34 @@ struct TraysSocialApp: App {
         }
     }
 
+    /// The locale to push into the SwiftUI environment. nil-equivalent
+    /// ("system") falls back to the autoupdating device locale so the app
+    /// follows later device-language changes.
+    private var overrideLocale: Locale {
+        appLanguagePreference == "system"
+            ? .autoupdatingCurrent
+            : Locale(identifier: appLanguagePreference)
+    }
+
+    /// W153: enforce the persisted language on the bundle at launch.
+    /// Setting AppleLanguages here (before any localized string is read)
+    /// makes Bundle.main resolve the chosen .lproj for `String(localized:)`
+    /// and other bundle-based lookups, which the SwiftUI environment locale
+    /// alone does not cover. "system" REMOVES the override so the app
+    /// follows the device locale (pitfall: never write the current device
+    /// language as the override).
+    static func applyPersistedLanguage() {
+        let pref = UserDefaults.standard.string(forKey: "appLanguage") ?? "system"
+        if pref == "system" {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.set([pref], forKey: "AppleLanguages")
+        }
+    }
+
     init() {
+        Self.applyPersistedLanguage()
+
         // 50MB memory / 200MB disk cache for images. Stays synchronous:
         // URLCache.shared is read by the first network call (validateToken
         // dispatched from AppState.init), so deferring this would race the
@@ -74,6 +106,12 @@ struct TraysSocialApp: App {
                     .environment(appState)
             }
             .preferredColorScheme(preferredScheme)
+            // W153: drive the environment locale so date/number formatting
+            // and SwiftUI Text lookups react to the chosen language. The
+            // bundle-level AppleLanguages override (applied in init) covers
+            // String(localized:) and fully aligns on the next launch — the
+            // Settings footer tells the user a restart finishes the switch.
+            .environment(\.locale, overrideLocale)
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { userActivity in
                 // Universal Link tap. Routes by path prefix:
                 //   /users/confirm/<token>  — email confirmation

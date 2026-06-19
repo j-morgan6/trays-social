@@ -25,15 +25,15 @@ enum Toast {
 
     var message: String {
         switch self {
-        case .likeFailed: "Couldn't like. Try again."
-        case .saveFailed: "Couldn't save. Try again."
-        case .unsaveFailed: "Couldn't remove from tray. Try again."
-        case .followFailed: "Couldn't follow. Try again."
-        case .unfollowFailed: "Couldn't unfollow. Try again."
-        case .commentFailed: "Couldn't post your comment. Try again."
-        case .deleteFailed: "Couldn't delete. Try again."
-        case .editFailed: "Couldn't save changes. Try again."
-        case .actionFailed: "Couldn't complete that. Try again."
+        case .likeFailed: String(localized: "Couldn't like. Try again.")
+        case .saveFailed: String(localized: "Couldn't save. Try again.")
+        case .unsaveFailed: String(localized: "Couldn't remove from tray. Try again.")
+        case .followFailed: String(localized: "Couldn't follow. Try again.")
+        case .unfollowFailed: String(localized: "Couldn't unfollow. Try again.")
+        case .commentFailed: String(localized: "Couldn't post your comment. Try again.")
+        case .deleteFailed: String(localized: "Couldn't delete. Try again.")
+        case .editFailed: String(localized: "Couldn't save changes. Try again.")
+        case .actionFailed: String(localized: "Couldn't complete that. Try again.")
         case let .custom(text): text
         }
     }

@@ -25,7 +25,7 @@ struct ProfileView: View {
                     }
                     .padding(.horizontal, 16)
                 }
-                .skeletonGroup(label: "Loading profile")
+                .skeletonGroup(label: String(localized: "Loading profile"))
             } else if let user = viewModel.user {
                 editorialProfileBody(user)
             }
@@ -107,7 +107,7 @@ struct ProfileView: View {
             } catch {
                 // D95: write-path failure — log + toast. User-initiated.
                 profileLog.error("blockUser failed: \(String(describing: error), privacy: .public)")
-                ErrorReporter.report(error, fallback: "Couldn't block @\(username).")
+                ErrorReporter.report(error, fallback: String(localized: "Couldn't block @\(username)."))
             }
         }
     }
@@ -202,7 +202,7 @@ private struct ProfileBody: View {
             EmptyView()
         } else {
             VStack(alignment: .leading, spacing: 12) {
-                SectionHeader(label: "Recipes", count: posts.count)
+                SectionHeader(label: String(localized: "Recipes"), count: posts.count)
                 LazyVGrid(
                     columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
                     spacing: 10
@@ -229,11 +229,11 @@ private struct ProfileBody: View {
 
     private func gridTitle(for post: Post) -> String {
         let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return "Untitled" }
+        guard !raw.isEmpty else { return String(localized: "Untitled") }
         let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
             .first?
             .trimmingCharacters(in: .whitespaces) ?? raw
-        return candidate.isEmpty ? "Untitled" : candidate
+        return candidate.isEmpty ? String(localized: "Untitled") : candidate
     }
 
     private var avatar: some View {
@@ -293,13 +293,14 @@ private struct ProfileBody: View {
         }
     }
 
-    private func statCell(value: Int, label: String) -> some View {
+    private func statCell(value: Int, label: LocalizedStringKey) -> some View {
         VStack(spacing: 4) {
             Text("\(value)")
                 .font(.system(size: 22, weight: .semibold))
                 .tracking(-0.44)
                 .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
-            Text(label.uppercased())
+            Text(label)
+                .textCase(.uppercase)
                 .font(.system(size: 11, weight: .medium))
                 .tracking(0.66)
                 .foregroundStyle(Theme.muted(for: colorScheme))
@@ -309,7 +310,8 @@ private struct ProfileBody: View {
 
     private var followButton: some View {
         Button(action: onToggleFollow) {
-            Text(isFollowing ? "Following" : "Follow @\(user.username)")
+            let followLabel: String = isFollowing ? String(localized: "Following") : String(localized: "Follow @\(user.username)")
+            Text(followLabel)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(isFollowing ? (colorScheme == .dark ? Theme.textDark : Theme.textLight) : Theme.inkOnAccent)
                 .frame(maxWidth: .infinity, minHeight: 44)
@@ -477,13 +479,13 @@ struct EditProfileView: View {
     private func validate() -> String? {
         let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 3, trimmed.count <= 30 else {
-            return "Username must be 3–30 characters"
+            return String(localized: "Username must be 3–30 characters")
         }
         guard trimmed.range(of: #"^[a-zA-Z0-9_]+$"#, options: .regularExpression) != nil else {
-            return "Username can only contain letters, numbers, and underscores"
+            return String(localized: "Username can only contain letters, numbers, and underscores")
         }
         guard bio.count <= 500 else {
-            return "Bio must be 500 characters or less"
+            return String(localized: "Bio must be 500 characters or less")
         }
         return nil
     }
@@ -524,7 +526,7 @@ struct EditProfileView: View {
             // pitfall list — route the error through the shared mapper so
             // network blips read "Couldn't load — check your connection."
             // instead of Cocoa's "The operation couldn't be completed..."
-            errorMessage = ErrorReporter.userMessage(for: error, fallback: "Couldn't save your profile.")
+            errorMessage = ErrorReporter.userMessage(for: error, fallback: String(localized: "Couldn't save your profile."))
             isSaving = false
         }
     }
@@ -546,6 +548,9 @@ struct SettingsView: View {
     @State private var showAdminFeedback = false
     @State private var showSendFeedback = false
     @AppStorage("colorScheme") private var colorSchemePreference = "system"
+    // G37/W153: in-app language override, mirrors colorSchemePreference.
+    // Values: system / en / fr / es. Applied app-wide in TraysSocialApp.
+    @AppStorage("appLanguage") private var appLanguagePreference = "system"
 
     /// Fired when the user taps "Edit profile". The parent (ProfileView)
     /// is the natural owner of the EditProfileView sheet because it
@@ -592,6 +597,35 @@ struct SettingsView: View {
                         Text("Dark").tag("dark")
                     }
                     .pickerStyle(.segmented)
+                }
+
+                // G37/W153: language override, styled like Appearance above.
+                // Language names show as endonyms (verbatim) so they read the
+                // same regardless of the current locale. The footer states
+                // that a restart finishes applying the change.
+                Section {
+                    Picker("Language", selection: $appLanguagePreference) {
+                        Text("System").tag("system")
+                        Text(verbatim: "English").tag("en")
+                        Text(verbatim: "Français").tag("fr")
+                        Text(verbatim: "Español").tag("es")
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: appLanguagePreference) { _, newValue in
+                        // Keep the bundle override in sync immediately so the
+                        // choice persists and the next launch is fully aligned.
+                        // "system" REMOVES the override (never write the device
+                        // language) so the app keeps following device changes.
+                        if newValue == "system" {
+                            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+                        } else {
+                            UserDefaults.standard.set([newValue], forKey: "AppleLanguages")
+                        }
+                    }
+                } header: {
+                    Text("Language")
+                } footer: {
+                    Text("Language changes finish applying after you restart Trays.")
                 }
 
                 Section("Content Filters") {

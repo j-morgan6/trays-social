@@ -11,13 +11,26 @@ struct ReportSheetView: View {
     @State private var submitted = false
     @State private var errorMessage: String?
 
-    private let reasons = [
+    /// First element is the API value (sent to the server, never localized);
+    /// second is the display label, a LocalizedStringKey so the menu shows the
+    /// translated reason while the wire value stays stable.
+    private let reasons: [(String, LocalizedStringKey)] = [
         ("spam", "Spam"),
         ("off_topic", "Off Topic"),
         ("harassment", "Harassment"),
         ("inappropriate", "Inappropriate"),
         ("other", "Other"),
     ]
+
+    /// Discrete keys per target type rather than interpolating the capitalized
+    /// English word into the title (which would not translate).
+    private var navigationTitleText: LocalizedStringKey {
+        switch targetType {
+        case "comment": "Report Comment"
+        case "user": "Report User"
+        default: "Report Post"
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -46,7 +59,7 @@ struct ReportSheetView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Theme.background)
-            .navigationTitle("Report \(targetType.capitalized)")
+            .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -102,7 +115,7 @@ struct ReportSheetView: View {
             try? await Task.sleep(for: .seconds(1.5))
             dismiss()
         } catch {
-            errorMessage = "Failed to submit report. Please try again."
+            errorMessage = String(localized: "Failed to submit report. Please try again.")
         }
 
         isSubmitting = false

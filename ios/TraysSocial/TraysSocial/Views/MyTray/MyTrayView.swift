@@ -32,7 +32,7 @@ struct MyTrayView: View {
 
                     if !viewModel.savedRecipes.isEmpty {
                         SectionHeader(
-                            label: "Recipes",
+                            label: String(localized: "Recipes"),
                             count: viewModel.savedRecipes.count,
                             style: .editorial
                         )
@@ -44,7 +44,7 @@ struct MyTrayView: View {
 
                     if !viewModel.savedPosts.isEmpty {
                         SectionHeader(
-                            label: "Saved posts",
+                            label: String(localized: "Saved posts"),
                             count: viewModel.savedPosts.count,
                             style: .editorial
                         )
@@ -93,7 +93,7 @@ struct MyTrayView: View {
                 }
                 .padding(.top, 140)
                 .allowsHitTesting(false)
-                .skeletonGroup(label: "Loading saved recipes")
+                .skeletonGroup(label: String(localized: "Loading saved recipes"))
             }
         }
         .refreshable { await viewModel.refresh(currentUsername: appState.currentUser?.username) }
@@ -173,11 +173,11 @@ struct MyTrayView: View {
     /// savedTitle helper's logic so card titles stay consistent.
     private func gridTitle(for post: Post) -> String {
         let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return "Untitled" }
+        guard !raw.isEmpty else { return String(localized: "Untitled") }
         let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
             .first?
             .trimmingCharacters(in: .whitespaces) ?? raw
-        return candidate.isEmpty ? "Untitled" : candidate
+        return candidate.isEmpty ? String(localized: "Untitled") : candidate
     }
 }
 

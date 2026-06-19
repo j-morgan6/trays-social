@@ -46,7 +46,7 @@ struct SaveButtonView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(isSaved ? "Saved" : "Save to tray")
+        .accessibilityLabel(isSaved ? LocalizedStringKey("Saved") : LocalizedStringKey("Save to tray"))
         .onAppear { didInitialize = true }
     }
 

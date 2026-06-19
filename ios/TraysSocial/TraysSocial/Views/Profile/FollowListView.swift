@@ -49,7 +49,7 @@ struct FollowListView: View {
             }
         }
         .background(Theme.background)
-        .navigationTitle(route.mode == .followers ? "Followers" : "Following")
+        .navigationTitle(route.mode == .followers ? LocalizedStringKey("Followers") : LocalizedStringKey("Following"))
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.load() }
     }
@@ -72,7 +72,7 @@ struct FollowListView: View {
         }
     }
 
-    private func tabPill(label: String, count: Int?, active: Bool) -> some View {
+    private func tabPill(label: LocalizedStringKey, count: Int?, active: Bool) -> some View {
         VStack(spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(label)
@@ -116,8 +116,8 @@ struct FollowListView: View {
     private var searchPrompt: String {
         let n = viewModel.users.count
         switch route.mode {
-        case .followers: return "Search \(n) followers"
-        case .following: return "Search \(n) people"
+        case .followers: return String(localized: "Search \(n) followers")
+        case .following: return String(localized: "Search \(n) people")
         }
     }
 
@@ -235,12 +235,13 @@ struct FollowListView: View {
             }
         }
         .padding(.top, 6)
-        .skeletonGroup(label: route.mode == .followers ? "Loading followers" : "Loading following")
+        .skeletonGroup(label: String(localized: route.mode == .followers ? "Loading followers" : "Loading following"))
     }
 
     private var errorSurface: some View {
         VStack(spacing: 10) {
-            Text("Couldn't load \(route.mode == .followers ? "followers" : "following").")
+            let errorText: LocalizedStringKey = route.mode == .followers ? "Couldn't load followers." : "Couldn't load following."
+            Text(errorText)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Theme.text)
             Button {
@@ -263,19 +264,19 @@ struct FollowListView: View {
 
     private var emptyTitle: String {
         if !query.isEmpty {
-            return "No one matches \u{201C}\(query)\u{201D}."
+            return String(localized: "No one matches \u{201C}\(query)\u{201D}.")
         }
         switch route.mode {
-        case .followers: return "No followers yet."
-        case .following: return "Not following anyone yet."
+        case .followers: return String(localized: "No followers yet.")
+        case .following: return String(localized: "Not following anyone yet.")
         }
     }
 
     private var emptySubtitle: String? {
-        if !query.isEmpty { return "Try a different name." }
+        if !query.isEmpty { return String(localized: "Try a different name.") }
         switch route.mode {
-        case .followers: return "Share recipes you're proud of and they'll find you."
-        case .following: return "Tap a cook's handle to follow them."
+        case .followers: return String(localized: "Share recipes you're proud of and they'll find you.")
+        case .following: return String(localized: "Tap a cook's handle to follow them.")
         }
     }
 

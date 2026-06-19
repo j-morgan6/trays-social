@@ -135,7 +135,7 @@ struct WelcomeView: View {
 
     /// A filled tray compartment with a centered label. Rounded 18pt with a
     /// hairline inner stroke standing in for the design's subtle inset shadow.
-    private func compartment(_ title: String, fill: Color, foreground: Color) -> some View {
+    private func compartment(_ title: LocalizedStringKey, fill: Color, foreground: Color) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 18, style: .continuous).fill(fill)
             Text(title)

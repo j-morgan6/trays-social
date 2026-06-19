@@ -14,7 +14,7 @@ import SwiftUI
 /// accessibility rule that color must never be the sole signal.
 struct TabSegment: View {
     @Environment(\.colorScheme) private var colorScheme
-    let label: String
+    let label: LocalizedStringKey
     let isActive: Bool
     let action: () -> Void
 

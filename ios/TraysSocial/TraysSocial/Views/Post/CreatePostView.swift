@@ -111,7 +111,8 @@ struct CreatePostView: View {
                         } else {
                             HStack(spacing: 8) {
                                 Image(systemName: "paperplane.fill")
-                                Text(viewModel.postType == .recipe ? "Publish recipe" : "Publish post")
+                                let publishLabel: LocalizedStringKey = viewModel.postType == .recipe ? "Publish recipe" : "Publish post"
+                                Text(publishLabel)
                             }
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color(hex: 0x2A1C00))
@@ -147,7 +148,7 @@ struct CreatePostView: View {
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
                 keyboardVisible = false
             }
-            .navigationTitle("New \(viewModel.postType == .recipe ? "Recipe" : "Post")")
+            .navigationTitle(viewModel.postType == .recipe ? LocalizedStringKey("New Recipe") : LocalizedStringKey("New Post"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -167,12 +168,14 @@ struct CreatePostView: View {
     /// the multi-step machinery.
     private var editorialHeading: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(viewModel.postType == .recipe ? "WRITING A RECIPE PAGE" : "WRITING A POST")
+            let eyebrow: LocalizedStringKey = viewModel.postType == .recipe ? "WRITING A RECIPE PAGE" : "WRITING A POST"
+            Text(eyebrow)
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .tracking(2)
                 .foregroundStyle(Theme.primary)
 
-            Text(viewModel.postType == .recipe ? "Tell us how you cooked it." : "Show us what you ate.")
+            let heading: LocalizedStringKey = viewModel.postType == .recipe ? "Tell us how you cooked it." : "Show us what you ate."
+            Text(heading)
                 .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(Theme.text)
         }
@@ -182,7 +185,7 @@ struct CreatePostView: View {
 
     /// Small monospace caps section label — matches the design's
     /// per-section eyebrows.
-    private func sectionLabel(_ text: String) -> some View {
+    private func sectionLabel(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(.system(size: 10, weight: .medium, design: .monospaced))
             .tracking(1.6)

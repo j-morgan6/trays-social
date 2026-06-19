@@ -28,7 +28,7 @@ struct PostDetailView: View {
                     SkeletonPostDetail()
                         .padding(.bottom, 80)
                 }
-                .skeletonGroup(label: "Loading recipe")
+                .skeletonGroup(label: String(localized: "Loading recipe"))
                 .allowsHitTesting(false)
                 .transition(.opacity)
             } else if viewModel.post == nil, let error = viewModel.loadError {
@@ -132,7 +132,7 @@ struct PostDetailView: View {
         .animation(.easeInOut(duration: 0.18), value: viewModel.isLoading)
         .fullScreenCover(isPresented: $showCookMode) {
             if let post = viewModel.post {
-                CookModeView(steps: post.cookingSteps, title: post.caption ?? "Recipe")
+                CookModeView(steps: post.cookingSteps, title: post.caption ?? String(localized: "Recipe"))
             }
         }
         .sheet(isPresented: $showReport) {
@@ -236,7 +236,8 @@ struct PostDetailView: View {
                 Button { viewModel.toggleBookmark() } label: {
                     HStack(spacing: 5) {
                         Image(systemName: post.bookmarkedByCurrentUser == true ? "bookmark.fill" : "bookmark")
-                        Text(post.bookmarkedByCurrentUser == true ? "Saved" : "Save")
+                        let bookmarkLabel: LocalizedStringKey = post.bookmarkedByCurrentUser == true ? "Saved" : "Save"
+                        Text(bookmarkLabel)
                     }
                     .foregroundStyle(post.bookmarkedByCurrentUser == true ? Theme.primaryLight : Theme.textSecondary)
                 }
@@ -278,9 +279,10 @@ struct PostDetailView: View {
         }
     }
 
-    private func metadataCell(label: String, value: String) -> some View {
+    private func metadataCell(label: LocalizedStringKey, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label.uppercased())
+            Text(label)
+                .textCase(.uppercase)
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
                 .foregroundStyle(Theme.textSecondary)
                 .tracking(1.5)
@@ -310,9 +312,9 @@ struct PostDetailView: View {
     private func formatCookTime(_ minutes: Int) -> String {
         let hours = minutes / 60
         let mins = minutes % 60
-        if hours == 0 { return "\(mins) min" }
-        if mins == 0 { return "\(hours) hr" }
-        return "\(hours) hr \(mins) min"
+        if hours == 0 { return String(localized: "\(mins) min") }
+        if mins == 0 { return String(localized: "\(hours) hr") }
+        return String(localized: "\(hours) hr \(mins) min")
     }
 
     // Recipe body extracted into RecipeBodySection below so
@@ -449,7 +451,7 @@ private struct CommentsSection: View {
             }
         }
         .opacity(skeletonVisible ? 1 : 0)
-        .skeletonGroup(label: "Loading notes")
+        .skeletonGroup(label: String(localized: "Loading notes"))
         .task {
             // Wait 220ms before showing skeletons — a fast-cached
             // /posts/:id/comments returns in well under 200ms and the
@@ -584,13 +586,15 @@ private struct PostUnavailableSurface: View {
                 .foregroundStyle(Theme.textSecondary)
 
             VStack(spacing: 6) {
-                Text(isNotFound ? "Post not available" : "Couldn't load this post")
+                let title: LocalizedStringKey = isNotFound ? "Post not available" : "Couldn't load this post"
+                Text(title)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Theme.text)
 
-                Text(isNotFound
+                let detail: LocalizedStringKey = isNotFound
                     ? "It may have been removed or the link is wrong."
-                    : "Check your connection and try again.")
+                    : "Check your connection and try again."
+                Text(detail)
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.textSecondary)
                     .multilineTextAlignment(.center)
