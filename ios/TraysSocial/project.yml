@@ -25,6 +25,14 @@ settings:
   base:
     DEVELOPMENT_TEAM: "6TN2AZM26U"
     SWIFT_VERSION: "6.0"
+    # G37: the String Catalog has keys that differ only by case or trailing
+    # punctuation (USERNAME/Username/username, SERVINGS/Servings, Edit Profile/
+    # Edit profile, the search prompt with/without the ellipsis). Xcode's
+    # type-safe symbol generation can't produce unique Swift identifiers for
+    # those and fails the Release build. We localize via string-literal keys
+    # (Text("..."), String(localized:)) and never use the generated symbols,
+    # so symbol generation is turned off.
+    STRING_CATALOG_GENERATE_SYMBOLS: "NO"
 targets:
   TraysSocial:
     type: application
