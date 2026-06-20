@@ -64,38 +64,43 @@ struct MyTrayView: View {
                 // SectionHeader skeleton above a 2-col grid of
                 // GridCard-shaped tiles for each of Recipes /
                 // Saved posts. Replaces the pre-W127 list-row
-                // skeleton that snapped to a grid on load.
-                VStack(alignment: .leading, spacing: 16) {
-                    SkeletonSectionHeader()
-                    LazyVGrid(
-                        columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
-                        spacing: 10
-                    ) {
-                        ForEach(0 ..< 4, id: \.self) { _ in
-                            SkeletonGridTile()
+                // skeleton that snapped to a grid on load. D101: the
+                // real headers are SectionHeader(style: .editorial)
+                // (22pt centered), so the skeleton headers match.
+                SkeletonFade {
+                    VStack(alignment: .leading, spacing: 16) {
+                        SkeletonSectionHeader(style: .editorial)
+                        LazyVGrid(
+                            columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
+                            spacing: 10
+                        ) {
+                            ForEach(0 ..< 4, id: \.self) { _ in
+                                SkeletonGridTile()
+                            }
                         }
-                    }
-                    .padding(.horizontal, 20)
+                        .padding(.horizontal, 20)
 
-                    SkeletonSectionHeader()
-                        .padding(.top, 8)
-                    LazyVGrid(
-                        columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
-                        spacing: 10
-                    ) {
-                        ForEach(0 ..< 2, id: \.self) { _ in
-                            SkeletonGridTile()
+                        SkeletonSectionHeader(style: .editorial)
+                            .padding(.top, 8)
+                        LazyVGrid(
+                            columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
+                            spacing: 10
+                        ) {
+                            ForEach(0 ..< 2, id: \.self) { _ in
+                                SkeletonGridTile()
+                            }
                         }
-                    }
-                    .padding(.horizontal, 20)
+                        .padding(.horizontal, 20)
 
-                    Spacer()
+                        Spacer()
+                    }
+                    .padding(.top, 140)
+                    .allowsHitTesting(false)
+                    .skeletonGroup(label: String(localized: "Loading saved recipes"))
                 }
-                .padding(.top, 140)
-                .allowsHitTesting(false)
-                .skeletonGroup(label: String(localized: "Loading saved recipes"))
             }
         }
+        .animation(.easeInOut(duration: 0.18), value: viewModel.isLoading)
         .refreshable { await viewModel.refresh(currentUsername: appState.currentUser?.username) }
         .task {
             // D94: previously gated on viewModel.posts.isEmpty so the

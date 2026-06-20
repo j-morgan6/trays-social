@@ -53,16 +53,17 @@ struct FeedView: View {
         }
         .overlay {
             if viewModel.isLoading, viewModel.posts.isEmpty {
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(0 ..< 4, id: \.self) { _ in
-                            SkeletonPostCard()
+                SkeletonFade {
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(0 ..< 4, id: \.self) { _ in
+                                SkeletonPostCard()
+                            }
                         }
                     }
+                    .allowsHitTesting(false)
+                    .skeletonGroup(label: String(localized: "Loading feed"))
                 }
-                .allowsHitTesting(false)
-                .skeletonGroup(label: String(localized: "Loading feed"))
-                .transition(.opacity)
             } else if viewModel.posts.isEmpty, !viewModel.isLoading {
                 VStack(spacing: 8) {
                     Text("No recipes yet")
@@ -74,6 +75,7 @@ struct FeedView: View {
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.18), value: viewModel.isLoading)
         .task {
             if viewModel.posts.isEmpty {
                 await viewModel.loadFeed()

@@ -405,6 +405,7 @@ private struct CommentsSection: View {
     let error: Error?
     let onRetry: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var skeletonVisible = false
 
     var body: some View {
@@ -416,6 +417,7 @@ private struct CommentsSection: View {
         }
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.easeInOut(duration: 0.18), value: isLoading)
     }
 
     private var header: some View {
@@ -435,19 +437,26 @@ private struct CommentsSection: View {
             errorSurface(error: error)
         } else if isLoading, comments.isEmpty {
             loadingSurface
+                .transition(.opacity)
         } else if loadAttempted, comments.isEmpty {
             emptySurface
         } else {
-            ForEach(comments) { comment in
-                CommentRow(comment: comment, post: post)
+            // Preserve the 16pt inter-row spacing the parent body VStack
+            // gave these rows before they were wrapped for the transition.
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(comments) { comment in
+                    CommentRow(comment: comment, post: post)
+                }
             }
+            .transition(.opacity)
         }
     }
 
     private var loadingSurface: some View {
         VStack(spacing: 6) {
             ForEach(0 ..< 3, id: \.self) { _ in
-                SkeletonListRow()
+                // Match CommentRow's 28pt avatar.
+                SkeletonListRow(avatarSize: 28)
             }
         }
         .opacity(skeletonVisible ? 1 : 0)
@@ -458,7 +467,14 @@ private struct CommentsSection: View {
             // brief flash of skeleton would feel worse than no
             // indicator at all.
             try? await Task.sleep(for: .milliseconds(220))
-            skeletonVisible = true
+            guard !Task.isCancelled else { return }
+            // Crossfade in rather than snapping (D101). Reduce Motion
+            // shows it instantly.
+            if reduceMotion {
+                skeletonVisible = true
+            } else {
+                withAnimation(.easeInOut(duration: 0.18)) { skeletonVisible = true }
+            }
         }
     }
 

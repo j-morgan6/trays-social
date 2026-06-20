@@ -16,15 +16,18 @@ struct BlockedUsersView: View {
     var body: some View {
         Group {
             if isLoading, blockedUsers.isEmpty {
-                ScrollView {
-                    VStack(spacing: 6) {
-                        ForEach(0 ..< 4, id: \.self) { _ in
-                            SkeletonListRow()
+                SkeletonFade {
+                    ScrollView {
+                        VStack(spacing: 6) {
+                            ForEach(0 ..< 4, id: \.self) { _ in
+                                // Match blockedRow's 36pt avatar.
+                                SkeletonListRow(avatarSize: 36)
+                            }
                         }
+                        .padding(.top, 12)
                     }
-                    .padding(.top, 12)
+                    .skeletonGroup(label: String(localized: "Loading blocked users"))
                 }
-                .skeletonGroup(label: String(localized: "Loading blocked users"))
             } else if blockedUsers.isEmpty {
                 EditorialEmptyState(
                     title: String(localized: "No one blocked."),
@@ -39,6 +42,7 @@ struct BlockedUsersView: View {
                 .listStyle(.plain)
             }
         }
+        .animation(.easeInOut(duration: 0.18), value: isLoading)
         .background(Theme.background)
         .navigationTitle("Blocked Users")
         .navigationBarTitleDisplayMode(.inline)

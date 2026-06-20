@@ -35,6 +35,8 @@ struct FindView: View {
             }
             .padding(.top, 116)
             .padding(.bottom, 116)
+            .animation(.easeInOut(duration: 0.18), value: viewModel.isLoadingTrending)
+            .animation(.easeInOut(duration: 0.18), value: viewModel.isSearching)
         }
         .onChange(of: viewModel.searchText) {
             // ViewModel.search() debounces 300ms and cancels any in-flight
@@ -110,16 +112,18 @@ struct FindView: View {
     private var resultsSection: some View {
         if viewModel.isSearching, viewModel.posts.isEmpty, viewModel.users.isEmpty {
             // Query in flight with nothing yet — mirror the trending skeleton.
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
-                spacing: 10
-            ) {
-                ForEach(0 ..< 4, id: \.self) { _ in
-                    SkeletonGridTile()
+            SkeletonFade {
+                LazyVGrid(
+                    columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
+                    spacing: 10
+                ) {
+                    ForEach(0 ..< 4, id: \.self) { _ in
+                        SkeletonGridTile()
+                    }
                 }
+                .padding(.horizontal, 16)
+                .skeletonGroup(label: String(localized: "Searching"))
             }
-            .padding(.horizontal, 16)
-            .skeletonGroup(label: String(localized: "Searching"))
         } else if viewModel.posts.isEmpty, viewModel.users.isEmpty {
             EditorialEmptyState(
                 title: String(localized: "No results for \u{201C}\(viewModel.searchText)\u{201D}."),
@@ -237,19 +241,22 @@ struct FindView: View {
         if viewModel.isLoadingTrending {
             // W145: section header dropped from the loaded layout, so the
             // skeleton mirrors with just a 2-col grid of tiles.
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
-                spacing: 10
-            ) {
-                ForEach(0 ..< 4, id: \.self) { _ in
-                    SkeletonGridTile()
+            SkeletonFade {
+                LazyVGrid(
+                    columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
+                    spacing: 10
+                ) {
+                    ForEach(0 ..< 4, id: \.self) { _ in
+                        SkeletonGridTile()
+                    }
                 }
+                .padding(.horizontal, 16)
+                .skeletonGroup(label: String(localized: "Loading trending recipes"))
             }
-            .padding(.horizontal, 16)
-            .skeletonGroup(label: String(localized: "Loading trending recipes"))
         } else if !viewModel.trendingPosts.isEmpty {
             trendingGrid
                 .padding(.horizontal, 16)
+                .transition(.opacity)
         } else {
             // D73: post-load with no trending posts. Could be a brand-
             // new install (nothing has trended yet) or a transient

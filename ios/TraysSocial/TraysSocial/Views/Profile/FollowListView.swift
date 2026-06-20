@@ -41,12 +41,14 @@ struct FollowListView: View {
                     EditorialEmptyState(title: emptyTitle, subtitle: emptySubtitle)
                 } else {
                     list
+                        .transition(.opacity)
                 }
 
                 if viewModel.isLoadingMore {
                     ProgressView().tint(.gray).padding()
                 }
             }
+            .animation(.easeInOut(duration: 0.18), value: viewModel.isLoading)
         }
         .background(Theme.background)
         .navigationTitle(route.mode == .followers ? LocalizedStringKey("Followers") : LocalizedStringKey("Following"))
@@ -229,13 +231,15 @@ struct FollowListView: View {
     // MARK: - Loading / error / empty
 
     private var loadingSkeleton: some View {
-        VStack(spacing: 6) {
-            ForEach(0 ..< 4, id: \.self) { _ in
-                SkeletonListRow()
+        SkeletonFade {
+            VStack(spacing: 6) {
+                ForEach(0 ..< 4, id: \.self) { _ in
+                    SkeletonListRow()
+                }
             }
+            .padding(.top, 6)
+            .skeletonGroup(label: String(localized: route.mode == .followers ? "Loading followers" : "Loading following"))
         }
-        .padding(.top, 6)
-        .skeletonGroup(label: String(localized: route.mode == .followers ? "Loading followers" : "Loading following"))
     }
 
     private var errorSurface: some View {

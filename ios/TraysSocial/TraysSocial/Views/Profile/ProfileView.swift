@@ -16,20 +16,24 @@ struct ProfileView: View {
     var body: some View {
         ScrollView {
             if viewModel.isLoading {
-                VStack(spacing: 20) {
-                    SkeletonProfileHeader()
-                    LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 8) {
-                        ForEach(0 ..< 4, id: \.self) { _ in
-                            SkeletonGridTile()
+                SkeletonFade {
+                    VStack(spacing: 20) {
+                        SkeletonProfileHeader()
+                        LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 8) {
+                            ForEach(0 ..< 4, id: \.self) { _ in
+                                SkeletonGridTile()
+                            }
                         }
+                        .padding(.horizontal, 16)
                     }
-                    .padding(.horizontal, 16)
+                    .skeletonGroup(label: String(localized: "Loading profile"))
                 }
-                .skeletonGroup(label: String(localized: "Loading profile"))
             } else if let user = viewModel.user {
                 editorialProfileBody(user)
+                    .transition(.opacity)
             }
         }
+        .animation(.easeInOut(duration: 0.18), value: viewModel.isLoading)
         .background(Theme.background)
         .navigationBarTitleDisplayMode(.inline)
         .task {
