@@ -2,6 +2,7 @@ defmodule TraysSocialWeb.API.V1.FeedController do
   use TraysSocialWeb, :controller
 
   alias TraysSocial.Accounts
+  alias TraysSocial.Monetization
   alias TraysSocial.Posts
   alias TraysSocialWeb.API.V1.JSON.PostJSON
 
@@ -31,7 +32,11 @@ defmodule TraysSocialWeb.API.V1.FeedController do
 
     json(conn, %{
       data: PostJSON.render_list(posts, %{liked_post_ids: liked_post_ids, bookmarked_post_ids: bookmarked_post_ids}),
-      cursor: next_cursor
+      cursor: next_cursor,
+      # G38/W158: tells the iOS client whether to inject native ad slots and
+      # how often. `enabled` is false while the :in_app_ads flag is off and
+      # always false for subscribers, so this ships inert until launch.
+      ad_config: Monetization.ad_config(user)
     })
   end
 

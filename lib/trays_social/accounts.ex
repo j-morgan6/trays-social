@@ -151,6 +151,17 @@ defmodule TraysSocial.Accounts do
   end
 
   @doc """
+  Sets the `is_subscriber` (paid-tier) flag on a user. Server-side only —
+  never accepts user input. Called from a verified purchase / billing
+  webhook (W160). See `User.subscriber_changeset/2`.
+  """
+  def set_subscriber(%User{} = user, is_subscriber) when is_boolean(is_subscriber) do
+    user
+    |> User.subscriber_changeset(is_subscriber)
+    |> Repo.update()
+  end
+
+  @doc """
   Stamps `seen_welcome_at` so the user is not redirected to the
   onboarding welcome screen again. Idempotent — calling on a user who
   already has a stamp is a no-op.

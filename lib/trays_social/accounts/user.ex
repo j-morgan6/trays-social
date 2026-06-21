@@ -17,6 +17,7 @@ defmodule TraysSocial.Accounts.User do
     field :apple_id, :string
     field :muted_keywords, {:array, :string}, default: []
     field :is_admin, :boolean, default: false
+    field :is_subscriber, :boolean, default: false
     field :seen_welcome_at, :utc_datetime
     field :suspended_until, :utc_datetime
 
@@ -54,6 +55,19 @@ defmodule TraysSocial.Accounts.User do
   """
   def admin_changeset(user, is_admin) when is_boolean(is_admin) do
     change(user, is_admin: is_admin)
+  end
+
+  @doc """
+  Server-side-only changeset for granting/revoking paid-tier entitlement.
+
+  G38 monetization (W160). Like `admin_changeset/2`, `is_subscriber` is
+  intentionally absent from every user-facing changeset, so a crafted POST
+  carrying `is_subscriber: true` is silently dropped. The flag is flipped
+  only from a verified purchase / billing webhook via
+  `TraysSocial.Accounts.set_subscriber/2`.
+  """
+  def subscriber_changeset(user, is_subscriber) when is_boolean(is_subscriber) do
+    change(user, is_subscriber: is_subscriber)
   end
 
   @doc """

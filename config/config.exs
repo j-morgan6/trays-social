@@ -52,6 +52,16 @@ config :trays_social, :mailer_from_email, "noreply@trays.social"
 # via email/password OR manually flip is_admin in the DB.
 config :trays_social, :admin_emails, ["jsm10242000@gmail.com"]
 
+# G38 monetization feature flags. All OFF by default — the entire
+# monetization surface (in-app ads, web ads, paid tier) ships inert until a
+# deploy flips a flag here or via the FEATURES_* env overrides in
+# config/runtime.exs. See TraysSocial.Monetization. NORTH STAR: these gate
+# ad slots and the paid utility tier, never recipe content.
+config :trays_social, :features,
+  in_app_ads: false,
+  web_ads: false,
+  paid_tier: false
+
 # Configure ErrorTracker — captures unhandled exceptions and persists them
 # to the trays_social Postgres database. Self-hosted, no third-party calls.
 config :error_tracker, repo: TraysSocial.Repo, otp_app: :trays_social

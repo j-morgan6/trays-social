@@ -288,7 +288,10 @@ defmodule TraysSocialWeb.API.V1.AuthController do
       # render the Admin section (links to /admin/reports, /admin/errors,
       # /admin/dashboard). Per-env: flag lives on the user row in whichever
       # database the iOS build is currently talking to.
-      is_admin: user.is_admin
+      is_admin: user.is_admin,
+      # G38 paid-tier entitlement (W160). The client uses this to suppress
+      # ads and unlock the utility bundle. Server-side-only source of truth.
+      is_subscriber: user.is_subscriber
     }
   end
 end

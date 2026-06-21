@@ -99,6 +99,15 @@ defmodule TraysSocial.AccountsFixtures do
     user
   end
 
+  @doc """
+  A user fixture that holds the paid-tier entitlement (G38/W160).
+  """
+  def subscriber_user_fixture(attrs \\ %{}) do
+    user = user_fixture(attrs)
+    {:ok, user} = Accounts.set_subscriber(user, true)
+    user
+  end
+
   def extract_user_token(fun) do
     {:ok, captured_email} = fun.(&"[TOKEN]#{&1}[TOKEN]")
     [_, token | _] = String.split(captured_email.text_body, "[TOKEN]")

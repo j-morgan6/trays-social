@@ -326,6 +326,26 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
       assert data["needs_username"] == false
     end
 
+    test "surfaces the is_subscriber entitlement flag", %{conn: conn} do
+      conn = get(conn, ~p"/api/v1/auth/me")
+
+      assert %{"data" => data} = json_response(conn, 200)
+      # Default user is not a subscriber; the key is always present so the
+      # iOS client can rely on it (G38/W160).
+      assert data["is_subscriber"] == false
+    end
+
+    test "reports is_subscriber true for a paid-tier user", %{conn: conn, user: user} do
+      {:ok, _} = TraysSocial.Accounts.set_subscriber(user, true)
+
+      # The auth plug reloads the user from the Bearer token on each request,
+      # so the same authenticated conn now reflects the flipped entitlement.
+      conn = get(conn, ~p"/api/v1/auth/me")
+
+      assert %{"data" => data} = json_response(conn, 200)
+      assert data["is_subscriber"] == true
+    end
+
     test "requires authentication", %{} do
       conn =
         build_conn()

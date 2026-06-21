@@ -1045,4 +1045,27 @@ defmodule TraysSocial.AccountsTest do
       assert User.is_suspended?(reloaded)
     end
   end
+
+  describe "set_subscriber/2 (G38/W160)" do
+    test "grants and revokes the paid-tier entitlement" do
+      user = user_fixture()
+      refute user.is_subscriber
+
+      {:ok, subscribed} = Accounts.set_subscriber(user, true)
+      assert subscribed.is_subscriber
+      assert Accounts.get_user!(user.id).is_subscriber
+
+      {:ok, unsubscribed} = Accounts.set_subscriber(subscribed, false)
+      refute unsubscribed.is_subscriber
+    end
+
+    test "is_subscriber is not settable through the user-facing profile changeset" do
+      user = user_fixture()
+
+      changeset = User.profile_changeset(user, %{is_subscriber: true, bio: "hi"})
+
+      # The flag is server-side only — a crafted param is silently dropped.
+      refute Ecto.Changeset.get_change(changeset, :is_subscriber)
+    end
+  end
 end

@@ -32,6 +32,32 @@ if config_env() == :prod do
            admin_emails |> String.split(",") |> Enum.map(&String.trim/1)
   end
 
+  # G38 monetization flags — per-deploy toggles for the monetization surface
+  # (see TraysSocial.Monetization). Each FEATURES_* var enables one flag when
+  # set to "1" or "true"; unset leaves the flag off. This lets review/prod
+  # enable ads or the paid tier independently without a code change.
+  #
+  # NOTE: this overlays the FEATURES_* overrides onto the config/config.exs
+  # default rather than replacing it wholesale, so a flag added to config.exs
+  # is not silently dropped in prod when no env override is set.
+  enable_feature = fn var, default ->
+    case System.get_env(var) do
+      nil -> default
+      value -> value in ~w(1 true TRUE)
+    end
+  end
+
+  features_default = Application.get_env(:trays_social, :features, [])
+
+  features =
+    Keyword.merge(features_default,
+      in_app_ads: enable_feature.("FEATURES_IN_APP_ADS", features_default[:in_app_ads] || false),
+      web_ads: enable_feature.("FEATURES_WEB_ADS", features_default[:web_ads] || false),
+      paid_tier: enable_feature.("FEATURES_PAID_TIER", features_default[:paid_tier] || false)
+    )
+
+  config :trays_social, :features, features
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """
