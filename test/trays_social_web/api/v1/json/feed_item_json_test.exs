@@ -58,11 +58,55 @@ defmodule TraysSocialWeb.API.V1.JSON.FeedItemJSONTest do
     end
   end
 
-  describe "render_ad/1 (stub for W163)" do
+  describe "render_ad/1" do
     test "wraps an ad payload as a tagged ad item" do
       ad = %{headline: "Sponsored", destination_url: "https://example.com"}
 
       assert FeedItemJSON.render_ad(ad) == %{type: "ad", ad: ad}
+    end
+  end
+
+  describe "interleave_ads/2 (G38/W163)" do
+    # Opaque post items — interleave_ads doesn't inspect post contents, so tiny
+    # stand-ins keep the density assertions readable.
+    defp post_items(n), do: for(i <- 1..n, do: %{type: "post", post: %{id: i}})
+
+    defp types(items), do: Enum.map(items, & &1.type)
+
+    test "inserts no ad when there are fewer than freq posts (short page)" do
+      items = post_items(1)
+      assert FeedItemJSON.interleave_ads(items, 2) == items
+    end
+
+    test "inserts no ad when the page ends exactly on a group boundary (no trailing ad)" do
+      items = post_items(2)
+      assert FeedItemJSON.interleave_ads(items, 2) == items
+
+      four = post_items(4)
+      # 4 posts / freq 2 = exactly two full groups -> still no trailing ad.
+      assert types(FeedItemJSON.interleave_ads(four, 2)) == ["post", "post", "ad", "post", "post"]
+    end
+
+    test "inserts one ad after the first freq posts when the page spills over" do
+      result = FeedItemJSON.interleave_ads(post_items(3), 2)
+
+      assert types(result) == ["post", "post", "ad", "post"]
+      ad = Enum.at(result, 2)
+      assert ad == %{type: "ad", ad: %{slot: 0, placement: "feed"}}
+    end
+
+    test "inserts multiple ads with incrementing slot indices, none trailing" do
+      result = FeedItemJSON.interleave_ads(post_items(5), 2)
+
+      assert types(result) == ["post", "post", "ad", "post", "post", "ad", "post"]
+      assert Enum.at(result, 2).ad.slot == 0
+      assert Enum.at(result, 5).ad.slot == 1
+      # last element is a post, never an ad
+      assert List.last(result).type == "post"
+    end
+
+    test "empty list stays empty" do
+      assert FeedItemJSON.interleave_ads([], 8) == []
     end
   end
 end

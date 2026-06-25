@@ -151,4 +151,53 @@ defmodule TraysSocialWeb.API.V1.FeedControllerTest do
       assert union_cursor == flat_cursor
     end
   end
+
+  describe "GET /api/v1/feed — server-side ad insertion (G38/W163)" do
+    defp item_types(data), do: Enum.map(data, & &1["type"])
+
+    test "interleaves one labeled ad slot per ad_frequency posts when ads are served",
+         %{conn: conn, user: user} do
+      # One more than the frequency so exactly one ad slot is inserted.
+      count = TraysSocial.Monetization.ad_frequency() + 1
+      for _ <- 1..count, do: post_fixture(%{user_id: user.id})
+      enable_in_app_ads()
+
+      %{"data" => data} = conn |> get(~p"/api/v1/feed") |> json_response(200)
+
+      ads = Enum.filter(data, &(&1["type"] == "ad"))
+      posts = Enum.filter(data, &(&1["type"] == "post"))
+
+      assert length(ads) == 1
+      assert length(posts) == count
+      # The ad sits after the first `freq` posts, not at the very end.
+      assert item_types(data) |> List.last() == "post"
+      assert hd(ads)["ad"] == %{"slot" => 0, "placement" => "feed"}
+    end
+
+    test "short pages (fewer than ad_frequency posts) carry no ad",
+         %{conn: conn, user: user} do
+      for _ <- 1..3, do: post_fixture(%{user_id: user.id})
+      enable_in_app_ads()
+
+      %{"data" => data} = conn |> get(~p"/api/v1/feed") |> json_response(200)
+
+      assert Enum.all?(data, &(&1["type"] == "post"))
+    end
+
+    test "the cursor still derives only from real posts even with ads inserted",
+         %{conn: conn, user: user} do
+      count = TraysSocial.Monetization.ad_frequency() + 1
+      for _ <- 1..count, do: post_fixture(%{user_id: user.id})
+
+      flat_cursor =
+        conn |> get(~p"/api/v1/feed") |> json_response(200) |> Map.fetch!("cursor")
+
+      enable_in_app_ads()
+      %{"data" => data, "cursor" => ad_cursor} = conn |> get(~p"/api/v1/feed") |> json_response(200)
+
+      assert Enum.any?(data, &(&1["type"] == "ad"))
+      assert is_binary(flat_cursor)
+      assert ad_cursor == flat_cursor
+    end
+  end
 end

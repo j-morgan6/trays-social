@@ -31,11 +31,39 @@ defmodule TraysSocialWeb.API.V1.JSON.FeedItemJSON do
   @doc """
   Render a list of posts as tagged `post` feed items.
 
-  Ad items are interleaved by the controller (W163), not here — this builds
-  the post branch of the union from the real-post list.
+  This builds only the post branch; call `interleave_ads/2` to splice ad slots
+  into the result at the configured density.
   """
   def render_list(posts, opts \\ %{}) do
     Enum.map(posts, &render_post(&1, opts))
+  end
+
+  @doc ~S"""
+  W163: splice ad slots into an already-rendered list of `post` feed items at a
+  density of one ad per `freq` posts.
+
+  Density / placement rules (monetization design spec section 4.1):
+
+    * One ad slot after every `freq` posts — never between every item.
+    * No trailing ad: the slot goes *between* groups of `freq`, so a page that
+      ends exactly on a group boundary has no ad tacked on the end.
+    * Short pages (fewer than `freq` posts, e.g. the tail page) get no ad at all
+      rather than being forced to carry one.
+
+  Cursor stability is preserved by construction: this operates purely on the
+  rendered item list and never touches the underlying post list the controller
+  derives the cursor from. Each ad carries a 0-based `slot` index so the client
+  can request/cache one ad creative per slot.
+  """
+  def interleave_ads(post_items, freq) when is_integer(freq) and freq > 0 do
+    chunks = Enum.chunk_every(post_items, freq)
+    last_index = length(chunks) - 1
+
+    chunks
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {chunk, index} ->
+      if index < last_index, do: chunk ++ [render_ad(ad_slot(index))], else: chunk
+    end)
   end
 
   @doc ~S"""
@@ -51,11 +79,17 @@ defmodule TraysSocialWeb.API.V1.JSON.FeedItemJSON do
   @doc ~S"""
   Wrap an ad payload as a tagged feed item: `%{type: "ad", ad: <ad>}`.
 
-  Stub for the ad branch of the union — W163 supplies real ad payloads and the
-  insertion cadence. Kept here so the union has both arms and the iOS union
-  model can be built against a stable shape.
+  The server emits ad *slots* (a position + index), not ad creative — the iOS
+  client fills each slot from the ad network (AdMob) on-device. See `ad_slot/1`
+  for the slot payload `interleave_ads/2` produces.
   """
   def render_ad(ad) do
     %{type: "ad", ad: ad}
   end
+
+  # The slot descriptor the server hands the client for one feed ad position.
+  # Deliberately minimal: a stable 0-based index within the page plus the
+  # surface, so the client knows where to render and can cache per slot. No ad
+  # creative — that comes from the on-device ad network.
+  defp ad_slot(index), do: %{slot: index, placement: "feed"}
 end

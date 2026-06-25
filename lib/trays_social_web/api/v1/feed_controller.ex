@@ -57,7 +57,12 @@ defmodule TraysSocialWeb.API.V1.FeedController do
   #   (which equals this same predicate) to know which shape to expect.
   defp render_feed_data(posts, render_opts, user) do
     if Monetization.ads_enabled?(user) do
-      FeedItemJSON.render_list(posts, render_opts)
+      # W163: interleave ad slots into the union at ~1 per ad_frequency posts.
+      # interleave_ads/2 operates only on the rendered items, so the cursor
+      # (derived from `posts` above) is unaffected.
+      posts
+      |> FeedItemJSON.render_list(render_opts)
+      |> FeedItemJSON.interleave_ads(Monetization.ad_frequency())
     else
       PostJSON.render_list(posts, render_opts)
     end

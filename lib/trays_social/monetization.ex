@@ -26,10 +26,12 @@ defmodule TraysSocial.Monetization do
 
   alias TraysSocial.Accounts.User
 
-  # How many posts between injected ad slots in the feed (W158). Lives here so
-  # the server is the single source of truth and the iOS client just renders
-  # whatever frequency the feed response reports.
-  @ad_frequency 5
+  # How many posts between injected ad slots in the feed (W158/W163). Lives here
+  # so the server is the single source of truth: it interleaves the ad slots
+  # server-side at this density and also reports the value in ad_config. The
+  # monetization design spec calls for ~1 commercial unit per screenful (~1 per
+  # 8 items), never between every item.
+  @ad_frequency 8
 
   @doc """
   Returns true when the named monetization feature flag is enabled.
