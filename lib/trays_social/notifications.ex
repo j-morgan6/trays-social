@@ -15,7 +15,7 @@ defmodule TraysSocial.Notifications do
     if user_id && actor_id && user_id != actor_id do
       case %Notification{} |> Notification.changeset(attrs) |> Repo.insert() do
         {:ok, notification} ->
-          notification = Repo.preload(notification, [:actor, :post])
+          notification = Repo.preload(notification, [:actor, post: :post_photos])
 
           Phoenix.PubSub.broadcast(
             TraysSocial.PubSub,
@@ -46,7 +46,7 @@ defmodule TraysSocial.Notifications do
     |> where([n], n.user_id == ^user_id)
     |> order_by([n], desc: n.inserted_at)
     |> limit(50)
-    |> preload([:actor, :post])
+    |> preload([:actor, post: :post_photos])
     |> Repo.all()
   end
 
@@ -76,7 +76,7 @@ defmodule TraysSocial.Notifications do
       |> exclude_blocked_actors(blocked_user_ids)
       |> order_by([n], desc: n.inserted_at, desc: n.id)
       |> limit(^limit)
-      |> preload([:actor, :post])
+      |> preload([:actor, post: :post_photos])
 
     query =
       if cursor_id && cursor_time do

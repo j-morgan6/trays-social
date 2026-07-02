@@ -33,6 +33,49 @@ defmodule TraysSocialWeb.API.V1.NotificationControllerTest do
       assert notification["read_at"] == nil
     end
 
+    # D106 regression: the serializer read photo.photo_url (field is :url) and
+    # the query never preloaded post_photos — both masked by a blanket rescue,
+    # so every thumbnail rendered nil forever with no error logged.
+    test "returns the post thumbnail from the primary photo", %{conn: conn, user: user} do
+      other_user = user_fixture()
+
+      post =
+        post_fixture(%{
+          user_id: user.id,
+          post_photos: [%{url: "/uploads/thumb_test.jpg", position: 0}]
+        })
+
+      TraysSocial.Notifications.create_notification(%{
+        type: "like",
+        user_id: user.id,
+        actor_id: other_user.id,
+        post_id: post.id
+      })
+
+      conn = get(conn, ~p"/api/v1/notifications")
+
+      assert %{"data" => [notification]} = json_response(conn, 200)
+      assert notification["post"]["id"] == post.id
+      assert is_binary(notification["post"]["thumbnail_url"])
+    end
+
+    test "renders nil thumbnail for a post with no photos", %{conn: conn, user: user} do
+      other_user = user_fixture()
+      post = post_fixture(%{user_id: user.id})
+
+      TraysSocial.Notifications.create_notification(%{
+        type: "comment",
+        user_id: user.id,
+        actor_id: other_user.id,
+        post_id: post.id
+      })
+
+      conn = get(conn, ~p"/api/v1/notifications")
+
+      assert %{"data" => [notification]} = json_response(conn, 200)
+      assert notification["post"]["thumbnail_url"] == nil
+    end
+
     test "supports cursor pagination", %{conn: conn, user: user} do
       other_user = user_fixture()
 

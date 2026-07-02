@@ -28,18 +28,19 @@ defmodule TraysSocialWeb.API.V1.JSON.NotificationJSON do
 
   defp render_post(nil), do: nil
 
+  # D106: no rescue here — a blanket rescue previously masked both a wrong
+  # field name (photo_url vs url) and a missing post_photos preload for
+  # weeks. If the preload is absent this should crash loudly in test.
   defp render_post(post) do
     thumb_url =
-      case Map.get(post, :post_photos) do
-        [photo | _] when not is_nil(photo) -> ImageProcessor.thumb_url(photo.photo_url)
-        _ -> nil
+      case Enum.sort_by(post.post_photos, & &1.position) do
+        [photo | _] -> ImageProcessor.thumb_url(photo.url)
+        [] -> nil
       end
 
     %{
       id: post.id,
       thumbnail_url: thumb_url
     }
-  rescue
-    _ -> %{id: post.id, thumbnail_url: nil}
   end
 end

@@ -15,13 +15,19 @@ defmodule TraysSocial.Notifications.PushSender do
 
   alias TraysSocial.Notifications
 
+  require Logger
+
   @doc """
   Sends a push notification to all of a user's registered devices.
   Runs asynchronously — failures never affect the calling process.
   """
   def send_push(user_id, title, body, data \\ %{}) do
     if push_enabled?() do
-      Task.Supervisor.async_nolink(TraysSocial.PushTaskSupervisor, fn ->
+      # D106: start_child, NOT async_nolink — async_nolink sends {ref, result}
+      # and :DOWN messages to the caller, which crashes LiveView callers that
+      # have no catch-all handle_info. Fire-and-forget must leave the caller's
+      # mailbox untouched.
+      Task.Supervisor.start_child(TraysSocial.PushTaskSupervisor, fn ->
         do_send_push(user_id, title, body, data)
       end)
     end
@@ -42,19 +48,37 @@ defmodule TraysSocial.Notifications.PushSender do
         )
         |> Pigeon.APNS.Notification.put_custom(data)
 
-      case Pigeon.push(dispatcher, notification) do
-        %{response: :success} ->
-          :ok
+      # Per-token isolation: one raising token must not abort delivery to
+      # the user's remaining devices.
+      try do
+        case Pigeon.push(dispatcher, notification) do
+          %{response: :success} ->
+            :ok
 
-        %{response: response} when response in [:bad_device_token, :unregistered] ->
-          Notifications.delete_device_token(device_token.token)
+          %{response: response} when response in [:bad_device_token, :unregistered] ->
+            Logger.info("PushSender: pruning dead device token id=#{device_token.id} (#{response})")
+            Notifications.delete_device_token(device_token.token)
 
-        _ ->
+          %{response: response} ->
+            Logger.warning(
+              "PushSender: APNs delivery failed for device token id=#{device_token.id}: #{inspect(response)}"
+            )
+
+          other ->
+            Logger.warning(
+              "PushSender: unexpected Pigeon.push result for device token id=#{device_token.id}: #{inspect(other)}"
+            )
+        end
+      rescue
+        exception ->
+          Logger.error(
+            "PushSender: crashed pushing to device token id=#{device_token.id} for user_id=#{user_id}: " <>
+              Exception.format(:error, exception, __STACKTRACE__)
+          )
+
           :ok
       end
     end
-  rescue
-    _ -> :ok
   end
 
   defp push_enabled? do
