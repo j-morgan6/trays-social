@@ -57,7 +57,8 @@ final class ProfileViewModel {
             followerCount: (original.followerCount ?? 0) + (wasFollowing ? -1 : 1),
             followingCount: original.followingCount,
             followedByCurrentUser: !wasFollowing,
-            isAdmin: original.isAdmin
+            isAdmin: original.isAdmin,
+            isSubscriber: original.isSubscriber
         )
 
         Task { [weak self] in
