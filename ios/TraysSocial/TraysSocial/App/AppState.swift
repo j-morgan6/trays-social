@@ -2,6 +2,7 @@ import os
 import SwiftUI
 
 private let deeplinkLog = Logger(subsystem: "com.trays.social", category: "deeplinks")
+private let authLog = Logger(subsystem: "com.trays.social", category: "auth")
 
 @MainActor
 @Observable
@@ -129,14 +130,19 @@ final class AppState {
             do {
                 let user = try await AuthService.fetchMe()
                 self.currentUser = user
-                self.isValidatingToken = false
             } catch let APIError.suspended(message, until) {
                 self.handleSuspended(message: message, until: until)
-                self.isValidatingToken = false
-            } catch {
+            } catch APIError.unauthorized {
+                // The server rejected the token — a genuine logout.
                 self.handleUnauthorized()
-                self.isValidatingToken = false
+            } catch {
+                // D105: transport/server errors (airplane mode, cold backend,
+                // DNS, 5xx) must NOT destroy credentials — the stored token is
+                // still presumed valid and Face ID login must survive. Keep
+                // the session; per D95 the failure is logged, never toasted.
+                authLog.error("validateToken deferred (non-auth error): \(String(describing: error), privacy: .public)")
             }
+            self.isValidatingToken = false
         }
     }
 
