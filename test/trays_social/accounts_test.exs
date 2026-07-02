@@ -638,6 +638,16 @@ defmodule TraysSocial.AccountsTest do
       assert {:ok, _} = Accounts.delete_account(user)
       refute TraysSocial.Repo.get(User, user.id)
     end
+
+    test "deletes the account and its feedback submissions (D103 regression)" do
+      user = user_fixture()
+      {:ok, _} = TraysSocial.Feedback.submit(%{user_id: user.id, body: "love the app"})
+
+      assert {:ok, _} = Accounts.delete_account(user)
+
+      refute TraysSocial.Repo.get(User, user.id)
+      assert TraysSocial.Repo.all(TraysSocial.Feedback.Submission) == []
+    end
   end
 
   describe "follow_user/2" do

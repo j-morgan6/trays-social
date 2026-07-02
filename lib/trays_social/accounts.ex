@@ -385,6 +385,12 @@ defmodule TraysSocial.Accounts do
       from(t in UserToken, where: t.user_id == ^user_id)
       |> Repo.delete_all()
 
+      # Delete feedback submissions. The FK is on_delete: :delete_all (since
+      # D103), but the explicit delete keeps this function the single complete
+      # list of what account deletion removes.
+      from(fs in TraysSocial.Feedback.Submission, where: fs.user_id == ^user_id)
+      |> Repo.delete_all()
+
       # Delete the user record itself (Apple App Store requirement)
       Repo.delete!(user)
     end)
