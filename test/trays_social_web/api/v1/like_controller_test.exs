@@ -31,6 +31,18 @@ defmodule TraysSocialWeb.API.V1.LikeControllerTest do
     end
   end
 
+  describe "POST like when blocked (W166)" do
+    test "returns 403 blocked when the author blocked the requester", %{conn: conn, user: user} do
+      author = user_fixture()
+      post = post_fixture(%{user_id: author.id})
+      {:ok, _} = TraysSocial.Accounts.block_user(author.id, user.id)
+
+      conn = post(conn, ~p"/api/v1/posts/#{post.id}/like")
+
+      assert %{"errors" => [%{"message" => "blocked"}]} = json_response(conn, 403)
+    end
+  end
+
   describe "DELETE /api/v1/posts/:post_id/like" do
     test "unlikes a post", %{conn: conn, user: user} do
       post_record = post_fixture(%{user_id: user.id})

@@ -12,7 +12,10 @@ defmodule TraysSocial.Notifications do
     user_id = Map.get(attrs, :user_id)
     actor_id = Map.get(attrs, :actor_id)
 
-    if user_id && actor_id && user_id != actor_id do
+    # W166: no notification (row OR push) between blocked pairs — blocks are
+    # enforced at write time, not just filtered at read time.
+    if user_id && actor_id && user_id != actor_id &&
+         not TraysSocial.Accounts.blocked_between?(user_id, actor_id) do
       case %Notification{} |> Notification.changeset(attrs) |> Repo.insert() do
         {:ok, notification} ->
           notification = Repo.preload(notification, [:actor, post: :post_photos])
@@ -141,8 +144,13 @@ defmodule TraysSocial.Notifications do
   Returns the count of unread notifications for a user.
   """
   def unread_count(user_id) do
+    # W166: apply the same blocked-actor exclusion as the list queries so the
+    # badge count can always be reconciled with the visible list.
+    blocked_ids = TraysSocial.Accounts.blocked_user_ids(user_id)
+
     Notification
     |> where([n], n.user_id == ^user_id and is_nil(n.read_at))
+    |> exclude_blocked_actors(blocked_ids)
     |> Repo.aggregate(:count)
   end
 

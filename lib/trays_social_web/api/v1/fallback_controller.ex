@@ -32,6 +32,13 @@ defmodule TraysSocialWeb.API.V1.FallbackController do
     |> json(%{errors: [%{message: "forbidden"}]})
   end
 
+  # W166: writes refused between blocked user pairs.
+  def call(conn, {:error, :blocked}) do
+    conn
+    |> put_status(:forbidden)
+    |> json(%{errors: [%{message: "blocked"}]})
+  end
+
   defp format_changeset_errors(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
       Regex.replace(~r"%{(\w+)}", msg, fn _, key ->

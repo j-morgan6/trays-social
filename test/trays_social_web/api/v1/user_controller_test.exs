@@ -75,6 +75,17 @@ defmodule TraysSocialWeb.API.V1.UserControllerTest do
 
       assert json_response(conn, 403)
     end
+
+    # W166: a blocked user re-following their blocker was the review's
+    # harassment-vector repro — must be a 403, not a silent success.
+    test "returns 403 blocked when the target blocked the requester", %{conn: conn, user: user} do
+      other = user_fixture()
+      {:ok, _} = TraysSocial.Accounts.block_user(other.id, user.id)
+
+      conn = post(conn, ~p"/api/v1/users/#{other.username}/follow")
+
+      assert %{"errors" => [%{"message" => "blocked"}]} = json_response(conn, 403)
+    end
   end
 
   describe "DELETE /api/v1/users/:username/follow" do

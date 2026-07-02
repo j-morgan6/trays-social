@@ -60,6 +60,7 @@ defmodule TraysSocialWeb.API.V1.UserController do
         case Accounts.follow_user(current_user, user) do
           {:ok, _} -> json(conn, %{data: %{message: "followed"}})
           {:error, :cannot_follow_self} -> {:error, :forbidden}
+          {:error, :blocked} -> {:error, :blocked}
         end
     end
   end

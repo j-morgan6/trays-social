@@ -644,6 +644,18 @@ defmodule TraysSocial.Accounts do
   Follows a user. No-op if already following.
   """
   def follow_user(follower, followed) when follower.id != followed.id do
+    # W166: a block in either direction refuses the follow — otherwise a
+    # blocked user could simply re-follow after block_user's auto-unfollow.
+    if blocked_between?(follower.id, followed.id) do
+      {:error, :blocked}
+    else
+      do_follow_user(follower, followed)
+    end
+  end
+
+  def follow_user(_follower, _followed), do: {:error, :cannot_follow_self}
+
+  defp do_follow_user(follower, followed) do
     result =
       %Follow{}
       |> Follow.changeset(%{follower_id: follower.id, followed_id: followed.id})
@@ -663,8 +675,6 @@ defmodule TraysSocial.Accounts do
         other
     end
   end
-
-  def follow_user(_follower, _followed), do: {:error, :cannot_follow_self}
 
   @doc """
   Unfollows a user.
@@ -785,6 +795,23 @@ defmodule TraysSocial.Accounts do
   def blocked?(blocker_id, blocked_id) do
     UserBlock
     |> where([b], b.blocker_id == ^blocker_id and b.blocked_id == ^blocked_id)
+    |> Repo.exists?()
+  end
+
+  @doc """
+  Returns true if a block exists in EITHER direction between the two users.
+
+  W166: this is the write-path gate — follows, likes, comments, and
+  notifications are all refused between blocked pairs regardless of who
+  blocked whom.
+  """
+  def blocked_between?(a_id, b_id) do
+    UserBlock
+    |> where(
+      [b],
+      (b.blocker_id == ^a_id and b.blocked_id == ^b_id) or
+        (b.blocker_id == ^b_id and b.blocked_id == ^a_id)
+    )
     |> Repo.exists?()
   end
 

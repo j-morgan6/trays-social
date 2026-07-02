@@ -538,6 +538,14 @@ defmodule TraysSocial.Posts do
   Likes a post. Increments like_count atomically. No-op if already liked.
   """
   def like_post(%Post{} = post, user) do
+    if TraysSocial.Accounts.blocked_between?(user.id, post.user_id) do
+      {:error, :blocked}
+    else
+      do_like_post(post, user)
+    end
+  end
+
+  defp do_like_post(%Post{} = post, user) do
     Ecto.Multi.new()
     |> Ecto.Multi.insert(
       :like,
@@ -684,6 +692,14 @@ defmodule TraysSocial.Posts do
   Creates a comment on a post and increments comment_count atomically.
   """
   def create_comment(%Post{} = post, user, attrs) do
+    if TraysSocial.Accounts.blocked_between?(user.id, post.user_id) do
+      {:error, :blocked}
+    else
+      do_create_comment(post, user, attrs)
+    end
+  end
+
+  defp do_create_comment(%Post{} = post, user, attrs) do
     Ecto.Multi.new()
     |> Ecto.Multi.insert(
       :comment,

@@ -116,6 +116,18 @@ defmodule TraysSocialWeb.API.V1.CommentControllerTest do
     end
   end
 
+  describe "POST comment when blocked (W166)" do
+    test "returns 403 blocked when the author blocked the requester", %{conn: conn, user: user} do
+      author = user_fixture()
+      post = post_fixture(%{user_id: author.id})
+      {:ok, _} = TraysSocial.Accounts.block_user(author.id, user.id)
+
+      conn = post(conn, ~p"/api/v1/posts/#{post.id}/comments", %{"body" => "still here"})
+
+      assert %{"errors" => [%{"message" => "blocked"}]} = json_response(conn, 403)
+    end
+  end
+
   describe "DELETE /api/v1/comments/:id" do
     test "deletes own comment", %{conn: conn, user: user} do
       post = post_fixture(%{user_id: user.id})
