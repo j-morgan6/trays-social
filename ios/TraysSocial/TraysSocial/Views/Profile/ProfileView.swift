@@ -796,9 +796,16 @@ struct SettingsView: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Delete", role: .destructive) {
                     Task {
-                        _ = try? await APIClient.shared.delete(path: "/auth/me") as EmptyResponse
-                        appState.handleUnauthorized()
-                        dismiss()
+                        do {
+                            // D104: only a confirmed 2xx means the account is
+                            // gone — logging out on failure would leave the
+                            // user believing data was deleted when it wasn't.
+                            _ = try await APIClient.shared.delete(path: "/auth/me") as EmptyResponse
+                            appState.handleUnauthorized()
+                            dismiss()
+                        } catch {
+                            Toast.custom(String(localized: "Couldn't delete your account. Try again.")).show()
+                        }
                     }
                 }
             } message: {
