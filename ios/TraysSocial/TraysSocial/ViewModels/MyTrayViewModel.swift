@@ -46,12 +46,20 @@ final class MyTrayViewModel {
     /// D95: read-path failures stay silent — log via os.Logger and let
     /// the existing skeleton / empty-state surface handle the no-content
     /// case. Toasts are reserved for write-path mutations.
+    /// W170: remembered from load() so applyPostUpdate can tell the user's
+    /// own posts (kept in the tray regardless of bookmark state, D98) from
+    /// bookmarked-only posts (removed on unsave).
+    private var currentUsername: String?
+
     func load(currentUsername: String? = nil) async {
         guard !isLoading else { return }
+        if let currentUsername { self.currentUsername = currentUsername }
         isLoading = true
 
         async let bookmarksTask: PaginatedResponse<[Post]> = APIClient.shared.get(path: "/bookmarks")
-        async let ownPostsTask: PaginatedResponse<[Post]>? = ownPosts(username: currentUsername)
+        // Stored value is the source of truth — a later refresh() without
+        // the argument must still merge own posts (W170 review note).
+        async let ownPostsTask: PaginatedResponse<[Post]>? = ownPosts(username: self.currentUsername)
 
         do {
             let bookmarks = try await bookmarksTask
@@ -110,6 +118,12 @@ final class MyTrayViewModel {
             if !posts.contains(where: { $0.id == post.id }) {
                 posts.insert(post, at: 0)
             } else if let index = posts.firstIndex(where: { $0.id == post.id }) {
+                posts[index] = post
+            }
+        } else if let username = currentUsername, post.user.username == username {
+            // W170: the tray intentionally contains the user's OWN posts even
+            // when unbookmarked (D98) — update in place, never remove.
+            if let index = posts.firstIndex(where: { $0.id == post.id }) {
                 posts[index] = post
             }
         } else {

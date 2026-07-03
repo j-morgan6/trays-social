@@ -124,6 +124,10 @@ struct MyTrayView: View {
                 viewModel.applyPostUpdate(updated)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .postCreated)) { _ in
+            // W170: own posts belong in the tray (D98); refresh on publish.
+            Task { await viewModel.refresh(currentUsername: appState.currentUser?.username) }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .postDeleted)) { notification in
             if let id = notification.userInfo?["postId"] as? Int {
                 viewModel.removePost(id: id)

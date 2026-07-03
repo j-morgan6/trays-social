@@ -99,6 +99,11 @@ struct CreatePostView: View {
                     Button {
                         Task {
                             if await viewModel.publish() {
+                                // W170: Feed and My Tray observe this to
+                                // refresh — their .task gates never refire
+                                // under the paging TabView, so a new post
+                                // was invisible until manual pull-to-refresh.
+                                NotificationCenter.default.post(name: .postCreated, object: nil)
                                 dismiss()
                             }
                         }

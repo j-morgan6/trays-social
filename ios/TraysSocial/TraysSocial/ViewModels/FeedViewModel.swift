@@ -13,6 +13,12 @@ final class FeedViewModel {
 
     private static let log = Logger(subsystem: "com.trays.social", category: "feed")
 
+    /// W170: bumped by refresh(). An in-flight loadMore captures the
+    /// generation before awaiting; if a refresh resets the feed while the
+    /// page is in flight, the stale page is discarded instead of being
+    /// appended onto fresh page 1 (which also overwrote the cursor).
+    private var loadGeneration = 0
+
     /// Loads the first page. D95: read-path failures stay silent — they
     /// log via os.Logger and the screen falls back to its existing
     /// empty / skeleton state. The pull-to-refresh spinner stopping is
@@ -42,15 +48,18 @@ final class FeedViewModel {
     func loadMore() async {
         guard !isLoadingMore, hasMore, let cursor else { return }
         isLoadingMore = true
+        let generation = loadGeneration
 
         do {
             let response: PaginatedResponse<[Post]> = try await APIClient.shared.get(
                 path: "/feed",
                 queryItems: [.init(name: "cursor", value: cursor)]
             )
-            posts.append(contentsOf: response.data)
-            self.cursor = response.cursor
-            hasMore = response.cursor != nil
+            if generation == loadGeneration {
+                posts.append(contentsOf: response.data)
+                self.cursor = response.cursor
+                hasMore = response.cursor != nil
+            }
         } catch {
             // ok: pagination silently fails — existing content stays
             // visible and refresh-to-retry is one swipe away. Surfacing
@@ -61,6 +70,7 @@ final class FeedViewModel {
     }
 
     func refresh() async {
+        loadGeneration += 1
         cursor = nil
         hasMore = true
         await loadFeed()

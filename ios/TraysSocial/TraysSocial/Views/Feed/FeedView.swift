@@ -86,6 +86,11 @@ struct FeedView: View {
                 viewModel.applyPostUpdate(updated)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .postCreated)) { _ in
+            // W170: the paging TabView keeps this view alive, so .task never
+            // refires — refresh explicitly when a post is published.
+            Task { await viewModel.refresh() }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .postDeleted)) { notification in
             if let id = notification.userInfo?["postId"] as? Int {
                 viewModel.removePost(id: id)
@@ -119,7 +124,7 @@ struct FeedView: View {
         // Optimistic UI update — flip the row in place.
         if let index = viewModel.posts.firstIndex(where: { $0.id == post.id }) {
             let p = viewModel.posts[index]
-            viewModel.posts[index] = Post(
+            let updated = Post(
                 id: p.id, type: p.type, caption: p.caption,
                 cookingTimeMinutes: p.cookingTimeMinutes, servings: p.servings,
                 likeCount: p.likeCount, commentCount: p.commentCount,
@@ -129,6 +134,11 @@ struct FeedView: View {
                 ingredients: p.ingredients, cookingSteps: p.cookingSteps,
                 tools: p.tools, tags: p.tags
             )
+            viewModel.posts[index] = updated
+            // W170: PostDetail's identical toggle broadcasts (D94) so My Tray
+            // syncs — this path forgot to, leaving the tray stale until a
+            // manual refresh.
+            NotificationCenter.default.post(name: .postUpdated, object: nil, userInfo: ["post": updated])
         }
 
         Task {
@@ -146,6 +156,8 @@ struct FeedView: View {
                     if let index = viewModel.posts.firstIndex(where: { $0.id == original.id }) {
                         viewModel.posts[index] = original
                     }
+                    // W170: propagate the rollback so My Tray reverts too.
+                    NotificationCenter.default.post(name: .postUpdated, object: nil, userInfo: ["post": original])
                 }
                 if newValue {
                     Toast.saveFailed.show()

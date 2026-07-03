@@ -10,6 +10,10 @@ extension Notification.Name {
     /// the feed/profile/tray drop the row optimistically without holding a Post.
     static let postDeleted = Notification.Name("trays.postDeleted")
 
+    /// W170: a new post was published. No payload — observers refresh from
+    /// the server so ordering/ad-slots stay canonical.
+    static let postCreated = Notification.Name("trays.postCreated")
+
     /// Posted when an optimistic delete fails server-side, so the lists that
     /// removed the row on `.postDeleted` re-insert it. userInfo["postId"] (Int).
     static let postDeleteFailed = Notification.Name("trays.postDeleteFailed")
