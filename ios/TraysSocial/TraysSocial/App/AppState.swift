@@ -157,9 +157,12 @@ final class AppState {
     }
 
     func logout() {
-        Task {
-            try? await APIClient.shared.delete(path: "/auth/logout")
-        }
+        // D111: capture the token BEFORE clearing the keychain. The revoke
+        // request reads its bearer at build time, so the old order always
+        // sent an unauthenticated DELETE that 401'd — the session stayed
+        // valid server-side for up to 60 days after "logging out".
+        let bearer = KeychainService.getToken()
+
         KeychainService.deleteToken()
         KeychainService.deleteBiometricCredential()
         currentUser = nil
@@ -167,6 +170,25 @@ final class AppState {
         // Drop pushed destinations from the previous session so the next
         // login starts on the root view. (D32.)
         navigationPath = NavigationPath()
+
+        // D111: shared caches can hold authenticated responses and avatars —
+        // clear them so the next account on this device never sees the
+        // previous account's data.
+        URLCache.shared.removeAllCachedResponses()
+        ImageLoader.shared.clearMemoryCache()
+
+        // Best-effort server-side revocation with the captured bearer; local
+        // logout never blocks on the network. Failure is logged, not toasted
+        // (the local session is gone either way).
+        if let bearer {
+            Task {
+                do {
+                    try await APIClient.shared.revokeSession(bearer: bearer)
+                } catch {
+                    authLog.error("logout revoke failed: \(String(describing: error), privacy: .public)")
+                }
+            }
+        }
     }
 
     func handleUnauthorized() {

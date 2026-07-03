@@ -54,6 +54,12 @@ final class ImageLoader: @unchecked Sendable {
         memoryCache = cache
     }
 
+    /// D111: drop every decoded image on logout so the next account on a
+    /// shared device is never served the previous account's avatars/photos.
+    func clearMemoryCache() {
+        memoryCache.removeAllObjects()
+    }
+
     /// Synchronous cache probe. Returns the cached UIImage if one is
     /// already decoded for this URL, otherwise nil. Used by
     /// `CachedAsyncImage` so the first render is instant on a cache

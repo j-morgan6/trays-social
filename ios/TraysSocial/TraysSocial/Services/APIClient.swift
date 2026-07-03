@@ -129,6 +129,17 @@ actor APIClient {
         return try await execute(request)
     }
 
+    /// D111: server-side session revocation with an explicitly captured
+    /// bearer. `buildRequest` reads the keychain at build time, so calling
+    /// the normal `delete` after logout has cleared the keychain sends an
+    /// unauthenticated request that always 401s — leaving the token valid
+    /// server-side. Best-effort: failures are the caller's to log.
+    func revokeSession(bearer: String) async throws {
+        var request = try buildRequest(method: "DELETE", path: "/auth/logout")
+        request.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization")
+        _ = try await execute(request) as EmptyResponse
+    }
+
     // MARK: - Multipart Upload
 
     func upload(path: String, imageData: Data, filename: String) async throws -> String {
