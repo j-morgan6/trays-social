@@ -2,9 +2,32 @@ import os
 import SwiftUI
 
 private let appLog = Logger(subsystem: "com.trays.social", category: "deeplinks")
+private let pushLog = Logger(subsystem: "com.trays.social", category: "push")
+
+/// W169: SwiftUI apps receive APNs token callbacks only through a
+/// UIApplicationDelegate — without this adaptor,
+/// registerForRemoteNotifications() had nowhere to deliver the token and
+/// the push pipeline was dead end-to-end.
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        PushNotificationService.handleDeviceToken(deviceToken)
+    }
+
+    func application(
+        _: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        // Expected on the simulator; on hardware this is worth a log line.
+        pushLog.error("APNs registration failed: \(String(describing: error), privacy: .public)")
+    }
+}
 
 @main
 struct TraysSocialApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var appState = AppState()
     @AppStorage("colorScheme") private var colorSchemePreference = "system"
     // G37/W153: in-app language override. "system" follows the device

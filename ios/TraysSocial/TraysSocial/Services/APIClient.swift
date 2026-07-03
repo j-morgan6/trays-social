@@ -129,6 +129,15 @@ actor APIClient {
         return try await execute(request)
     }
 
+    /// W169: unregister a device token with an explicitly captured bearer —
+    /// used during logout AFTER the keychain is cleared (same build-time
+    /// token-read hazard as revokeSession below).
+    func unregisterDevice(token: String, bearer: String) async throws {
+        var request = try buildRequest(method: "DELETE", path: "/devices/\(token)")
+        request.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization")
+        _ = try await execute(request) as EmptyResponse
+    }
+
     /// D111: server-side session revocation with an explicitly captured
     /// bearer. `buildRequest` reads the keychain at build time, so calling
     /// the normal `delete` after logout has cleared the keychain sends an

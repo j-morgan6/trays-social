@@ -97,6 +97,12 @@ struct AppShellView: View {
             // Notifications. NotificationsView keeps it fresh after
             // that via its own .task + onChange.
             await appState.refreshUnreadNotificationsCount()
+
+            // W169: the shell only mounts for authenticated users, so this
+            // is the contextual post-login moment to prompt for push
+            // permission (first run) or silently re-register a possibly
+            // rotated token / rebind it to a newly logged-in account.
+            PushNotificationService.syncRegistration()
         }
     }
 

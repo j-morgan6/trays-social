@@ -182,6 +182,17 @@ final class AppState {
         // (the local session is gone either way).
         if let bearer {
             Task {
+                // W169: unregister the device token FIRST — the revoke kills
+                // this bearer, and a logged-out device must not keep
+                // receiving the previous account's notifications.
+                if let deviceToken = PushNotificationService.storedToken {
+                    do {
+                        try await APIClient.shared.unregisterDevice(token: deviceToken, bearer: bearer)
+                    } catch {
+                        authLog.error("logout device unregister failed: \(String(describing: error), privacy: .public)")
+                    }
+                }
+
                 do {
                     try await APIClient.shared.revokeSession(bearer: bearer)
                 } catch {
