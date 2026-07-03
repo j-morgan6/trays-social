@@ -8,7 +8,8 @@ defmodule TraysSocialWeb.API.V1.PostController do
 
   def trending(conn, _params) do
     user = conn.assigns.current_user
-    posts = Posts.list_trending_posts(20)
+    blocked_ids = TraysSocial.Accounts.blocked_pair_ids(user.id)
+    posts = Posts.list_trending_posts(20, blocked_user_ids: blocked_ids)
     post_ids = Enum.map(posts, & &1.id)
     liked_post_ids = Posts.liked_post_ids_for_user(user.id, post_ids)
     bookmarked_post_ids = Posts.bookmarked_post_ids_for_user(user.id, post_ids)
@@ -27,6 +28,13 @@ defmodule TraysSocialWeb.API.V1.PostController do
 
     try do
       post = Posts.get_post!(id)
+
+      # W167: a direct post link is still invisible across a block, in either
+      # direction. 404 (not 403) so blocks aren't enumerable.
+      if TraysSocial.Accounts.blocked_between?(user.id, post.user_id) do
+        throw(:blocked_not_found)
+      end
+
       liked_post_ids = Posts.liked_post_ids_for_user(user.id, [post.id])
       bookmarked_post_ids = Posts.bookmarked_post_ids_for_user(user.id, [post.id])
 
@@ -40,6 +48,8 @@ defmodule TraysSocialWeb.API.V1.PostController do
     rescue
       Ecto.NoResultsError -> {:error, :not_found}
       Ecto.Query.CastError -> {:error, :not_found}
+    catch
+      :blocked_not_found -> {:error, :not_found}
     end
   end
 

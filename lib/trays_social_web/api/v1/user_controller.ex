@@ -17,7 +17,13 @@ defmodule TraysSocialWeb.API.V1.UserController do
         {:error, :not_found}
 
       user ->
-        json(conn, %{data: user_profile_json(user, current_user)})
+        # W167: profiles are invisible across a block in either direction.
+        # 404 (not 403) so blocks aren't enumerable.
+        if Accounts.blocked_between?(current_user.id, user.id) do
+          {:error, :not_found}
+        else
+          json(conn, %{data: user_profile_json(user, current_user)})
+        end
     end
   end
 
@@ -29,23 +35,30 @@ defmodule TraysSocialWeb.API.V1.UserController do
         {:error, :not_found}
 
       user ->
-        {cursor_id, cursor_time} = decode_cursor(params["cursor"])
+        # W167: a blocked pair can't read each other's posts (404 like show).
+        if Accounts.blocked_between?(current_user.id, user.id) do
+          {:error, :not_found}
+        else
+          {cursor_id, cursor_time} = decode_cursor(params["cursor"])
 
-        posts =
-          Posts.list_posts_by_user(user.id,
-            limit: @page_size,
-            cursor_id: cursor_id,
-            cursor_time: cursor_time,
-            filter: params["filter"]
-          )
+          posts =
+            Posts.list_posts_by_user(user.id,
+              limit: @page_size,
+              cursor_id: cursor_id,
+              cursor_time: cursor_time,
+              filter: params["filter"]
+            )
 
-        liked_post_ids = Posts.liked_post_ids_for_user(current_user.id, Enum.map(posts, & &1.id))
-        next_cursor = encode_cursor(List.last(posts))
+          liked_post_ids =
+            Posts.liked_post_ids_for_user(current_user.id, Enum.map(posts, & &1.id))
 
-        json(conn, %{
-          data: PostJSON.render_list(posts, %{liked_post_ids: liked_post_ids}),
-          cursor: next_cursor
-        })
+          next_cursor = encode_cursor(List.last(posts))
+
+          json(conn, %{
+            data: PostJSON.render_list(posts, %{liked_post_ids: liked_post_ids}),
+            cursor: next_cursor
+          })
+        end
     end
   end
 
@@ -87,7 +100,13 @@ defmodule TraysSocialWeb.API.V1.UserController do
 
       user ->
         cursor_id = parse_int(conn.params["cursor_id"])
-        followers = Accounts.list_followers(user.id, limit: @page_size, cursor_id: cursor_id)
+
+        followers =
+          Accounts.list_followers(user.id,
+            limit: @page_size,
+            cursor_id: cursor_id,
+            blocked_user_ids: Accounts.blocked_pair_ids(current_user.id)
+          )
 
         json(conn, %{
           data: Enum.map(followers, &user_list_json(&1, current_user))
@@ -104,7 +123,13 @@ defmodule TraysSocialWeb.API.V1.UserController do
 
       user ->
         cursor_id = parse_int(conn.params["cursor_id"])
-        following = Accounts.list_following(user.id, limit: @page_size, cursor_id: cursor_id)
+
+        following =
+          Accounts.list_following(user.id,
+            limit: @page_size,
+            cursor_id: cursor_id,
+            blocked_user_ids: Accounts.blocked_pair_ids(current_user.id)
+          )
 
         json(conn, %{
           data: Enum.map(following, &user_list_json(&1, current_user))

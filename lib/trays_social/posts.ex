@@ -128,7 +128,8 @@ defmodule TraysSocial.Posts do
   by like_count then recency — so the Find tab never renders empty on a
   young or quiet board where no one has posted in the past week.
   """
-  def list_trending_posts(limit \\ 10) do
+  def list_trending_posts(limit \\ 10, opts \\ []) do
+    blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
     seven_days_ago = DateTime.utc_now() |> DateTime.add(-7, :day)
 
     trending =
@@ -137,6 +138,7 @@ defmodule TraysSocial.Posts do
         [p],
         is_nil(p.deleted_at) and is_nil(p.removed_at) and p.inserted_at >= ^seven_days_ago
       )
+      |> exclude_blocked_users(blocked_user_ids)
       |> order_by([p], desc: p.like_count, desc: p.inserted_at)
       |> limit(^limit)
       |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
@@ -154,6 +156,7 @@ defmodule TraysSocial.Posts do
           [p],
           is_nil(p.deleted_at) and is_nil(p.removed_at) and p.id not in ^trending_ids
         )
+        |> exclude_blocked_users(blocked_user_ids)
         |> order_by([p], desc: p.like_count, desc: p.inserted_at)
         |> limit(^remaining)
         |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
@@ -198,10 +201,12 @@ defmodule TraysSocial.Posts do
     limit = Keyword.get(opts, :limit, 20)
     max_cooking_time = Keyword.get(opts, :max_cooking_time)
     tag = Keyword.get(opts, :tag)
+    blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
 
     base =
       Post
       |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
+      |> exclude_blocked_users(blocked_user_ids)
       |> order_by([p], desc: p.inserted_at)
       |> limit(^limit)
       |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])

@@ -76,6 +76,15 @@ defmodule TraysSocialWeb.API.V1.UserControllerTest do
       assert json_response(conn, 403)
     end
 
+    # W167: profiles are invisible across a block in either direction.
+    test "GET show and posts return 404 across a block", %{conn: conn, user: user} do
+      other = user_fixture()
+      {:ok, _} = TraysSocial.Accounts.block_user(other.id, user.id)
+
+      assert conn |> get(~p"/api/v1/users/#{other.username}") |> json_response(404)
+      assert conn |> get(~p"/api/v1/users/#{other.username}/posts") |> json_response(404)
+    end
+
     # W166: a blocked user re-following their blocker was the review's
     # harassment-vector repro — must be a 403, not a silent success.
     test "returns 403 blocked when the target blocked the requester", %{conn: conn, user: user} do

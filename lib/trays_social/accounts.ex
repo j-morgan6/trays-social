@@ -721,11 +721,13 @@ defmodule TraysSocial.Accounts do
   def list_followers(user_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
     cursor_id = Keyword.get(opts, :cursor_id)
+    blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
 
     query =
       Follow
       |> where([f], f.followed_id == ^user_id)
       |> join(:inner, [f], u in User, on: u.id == f.follower_id)
+      |> exclude_follow_user_ids(blocked_user_ids)
       |> order_by([f], desc: f.inserted_at)
       |> limit(^limit)
       |> select([f, u], u)
@@ -746,11 +748,13 @@ defmodule TraysSocial.Accounts do
   def list_following(user_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
     cursor_id = Keyword.get(opts, :cursor_id)
+    blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
 
     query =
       Follow
       |> where([f], f.follower_id == ^user_id)
       |> join(:inner, [f], u in User, on: u.id == f.followed_id)
+      |> exclude_follow_user_ids(blocked_user_ids)
       |> order_by([f], desc: f.inserted_at)
       |> limit(^limit)
       |> select([f, u], u)
@@ -764,6 +768,10 @@ defmodule TraysSocial.Accounts do
 
     Repo.all(query)
   end
+
+  # W167: joined-user exclusion for the follower/following listings.
+  defp exclude_follow_user_ids(query, []), do: query
+  defp exclude_follow_user_ids(query, ids), do: where(query, [f, u], u.id not in ^ids)
 
   # --- Blocking ---
 
@@ -820,6 +828,23 @@ defmodule TraysSocial.Accounts do
     |> where([b], b.blocker_id == ^user_id)
     |> select([b], b.blocked_id)
     |> Repo.all()
+  end
+
+  @doc """
+  Returns the ids of every user with a block in EITHER direction relative to
+  the given user.
+
+  W167: the read-surface exclusion list — feed, trending, search, followers,
+  and profiles hide users in both directions. Compute once per request and
+  pass into queries (never per-row).
+  """
+  def blocked_pair_ids(user_id) do
+    UserBlock
+    |> where([b], b.blocker_id == ^user_id or b.blocked_id == ^user_id)
+    |> select([b], {b.blocker_id, b.blocked_id})
+    |> Repo.all()
+    |> Enum.map(fn {blocker, blocked} -> if blocker == user_id, do: blocked, else: blocker end)
+    |> Enum.uniq()
   end
 
   def list_blocked_users(user_id) do
@@ -926,12 +951,14 @@ defmodule TraysSocial.Accounts do
 
   def search_users(query_string, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
+    blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
 
     if query_string && query_string != "" do
       sanitized = "%#{sanitize_like(query_string)}%"
 
       User
       |> where([u], ilike(u.username, ^sanitized))
+      |> exclude_user_ids(blocked_user_ids)
       |> order_by([u], asc: u.username)
       |> limit(^limit)
       |> Repo.all()
@@ -939,6 +966,9 @@ defmodule TraysSocial.Accounts do
       []
     end
   end
+
+  defp exclude_user_ids(query, []), do: query
+  defp exclude_user_ids(query, ids), do: where(query, [u], u.id not in ^ids)
 
   defp sanitize_like(string) do
     string

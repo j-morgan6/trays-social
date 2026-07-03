@@ -20,6 +20,18 @@ defmodule TraysSocialWeb.API.V1.PostControllerTest do
       assert data["user"]["id"] == user.id
     end
 
+    # W167: direct post links are invisible across a block in either
+    # direction — 404, not 403, so blocks aren't enumerable.
+    test "returns 404 for a post whose author blocked the requester", %{conn: conn, user: user} do
+      author = user_fixture()
+      post = post_fixture(%{user_id: author.id})
+      {:ok, _} = TraysSocial.Accounts.block_user(author.id, user.id)
+
+      conn = get(conn, ~p"/api/v1/posts/#{post.id}")
+
+      assert json_response(conn, 404)
+    end
+
     test "returns 404 for nonexistent post", %{conn: conn} do
       conn = get(conn, ~p"/api/v1/posts/999999")
 

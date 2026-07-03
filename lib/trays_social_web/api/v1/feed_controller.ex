@@ -13,7 +13,8 @@ defmodule TraysSocialWeb.API.V1.FeedController do
     user = conn.assigns.current_user
     {cursor_id, cursor_time} = decode_cursor(params["cursor"])
 
-    blocked_ids = Accounts.blocked_user_ids(user.id)
+    # W167: both-direction exclusion — users you blocked AND users who blocked you.
+    blocked_ids = Accounts.blocked_pair_ids(user.id)
     muted_keywords = Accounts.get_muted_keywords(user.id)
 
     posts =

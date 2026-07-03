@@ -89,6 +89,59 @@ defmodule TraysSocial.BlockGatingTest do
     end
   end
 
+  describe "read surfaces exclude blocked pairs (W167)" do
+    test "blocked_pair_ids/1 returns both directions", %{blocker: blocker, blocked: blocked} do
+      third = user_fixture()
+      {:ok, _} = Accounts.block_user(third.id, blocker.id)
+
+      assert Enum.sort(Accounts.blocked_pair_ids(blocker.id)) ==
+               Enum.sort([blocked.id, third.id])
+    end
+
+    test "trending and search exclude blocked users' posts", %{
+      blocker: blocker,
+      blocked: blocked
+    } do
+      blocked_post = post_fixture(user_id: blocked.id, caption: "secret pasta")
+      visible_post = post_fixture(user_id: user_fixture().id, caption: "public pasta")
+      pair_ids = Accounts.blocked_pair_ids(blocker.id)
+
+      trending_ids =
+        Posts.list_trending_posts(20, blocked_user_ids: pair_ids) |> Enum.map(& &1.id)
+
+      refute blocked_post.id in trending_ids
+      assert visible_post.id in trending_ids
+
+      search_ids =
+        Posts.search_posts("pasta", blocked_user_ids: pair_ids) |> Enum.map(& &1.id)
+
+      refute blocked_post.id in search_ids
+      assert visible_post.id in search_ids
+    end
+
+    test "search_users excludes blocked pairs", %{blocker: blocker, blocked: blocked} do
+      pair_ids = Accounts.blocked_pair_ids(blocker.id)
+      prefix = String.slice(blocked.username, 0, 8)
+
+      results = Accounts.search_users(prefix, blocked_user_ids: pair_ids)
+      refute Enum.any?(results, &(&1.id == blocked.id))
+    end
+
+    test "follower listings exclude blocked pairs", %{blocker: blocker, blocked: blocked} do
+      target = user_fixture()
+      {:ok, _} = Accounts.follow_user(blocked, target)
+      {:ok, _} = Accounts.follow_user(blocker, target)
+
+      pair_ids = Accounts.blocked_pair_ids(blocker.id)
+
+      follower_ids =
+        Accounts.list_followers(target.id, blocked_user_ids: pair_ids) |> Enum.map(& &1.id)
+
+      refute blocked.id in follower_ids
+      assert blocker.id in follower_ids
+    end
+  end
+
   describe "unread_count/1 parity with the filtered list" do
     test "excludes notifications from actors the user later blocked", %{blocker: blocker} do
       harasser = user_fixture()

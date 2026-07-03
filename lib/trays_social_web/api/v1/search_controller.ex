@@ -13,19 +13,21 @@ defmodule TraysSocialWeb.API.V1.SearchController do
     query = sanitize(params["q"], @max_query_length) || ""
     max_cooking_time = parse_int(params["max_cooking_time"])
     tag = sanitize(params["tag"], @max_tag_length)
+    blocked_ids = Accounts.blocked_pair_ids(user.id)
 
     posts =
       Posts.search_posts(query,
         limit: 20,
         max_cooking_time: max_cooking_time,
-        tag: tag
+        tag: tag,
+        blocked_user_ids: blocked_ids
       )
 
     users =
       if tag || max_cooking_time do
         []
       else
-        Accounts.search_users(query, limit: 10)
+        Accounts.search_users(query, limit: 10, blocked_user_ids: blocked_ids)
       end
 
     post_ids = Enum.map(posts, & &1.id)
