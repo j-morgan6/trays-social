@@ -720,26 +720,18 @@ defmodule TraysSocial.Accounts do
   """
   def list_followers(user_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
-    cursor_id = Keyword.get(opts, :cursor_id)
+    cursor = Keyword.get(opts, :cursor)
     blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
 
-    query =
-      Follow
-      |> where([f], f.followed_id == ^user_id)
-      |> join(:inner, [f], u in User, on: u.id == f.follower_id)
-      |> exclude_follow_user_ids(blocked_user_ids)
-      |> order_by([f], desc: f.inserted_at)
-      |> limit(^limit)
-      |> select([f, u], u)
-
-    query =
-      if cursor_id do
-        where(query, [f], f.follower_id < ^cursor_id)
-      else
-        query
-      end
-
-    Repo.all(query)
+    Follow
+    |> where([f], f.followed_id == ^user_id)
+    |> join(:inner, [f], u in User, on: u.id == f.follower_id)
+    |> exclude_follow_user_ids(blocked_user_ids)
+    |> follow_cursor_where(cursor)
+    |> order_by([f], desc: f.inserted_at, desc: f.id)
+    |> limit(^limit)
+    |> select([f, u], %{user: u, followed_at: f.inserted_at, follow_id: f.id})
+    |> Repo.all()
   end
 
   @doc """
@@ -747,26 +739,47 @@ defmodule TraysSocial.Accounts do
   """
   def list_following(user_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
-    cursor_id = Keyword.get(opts, :cursor_id)
+    cursor = Keyword.get(opts, :cursor)
     blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
 
-    query =
-      Follow
-      |> where([f], f.follower_id == ^user_id)
-      |> join(:inner, [f], u in User, on: u.id == f.followed_id)
-      |> exclude_follow_user_ids(blocked_user_ids)
-      |> order_by([f], desc: f.inserted_at)
-      |> limit(^limit)
-      |> select([f, u], u)
+    Follow
+    |> where([f], f.follower_id == ^user_id)
+    |> join(:inner, [f], u in User, on: u.id == f.followed_id)
+    |> exclude_follow_user_ids(blocked_user_ids)
+    |> follow_cursor_where(cursor)
+    |> order_by([f], desc: f.inserted_at, desc: f.id)
+    |> limit(^limit)
+    |> select([f, u], %{user: u, followed_at: f.inserted_at, follow_id: f.id})
+    |> Repo.all()
+  end
 
-    query =
-      if cursor_id do
-        where(query, [f], f.followed_id < ^cursor_id)
-      else
-        query
-      end
+  # D109: keyset cursor on the FOLLOW row's (inserted_at, id) — the columns
+  # the query orders by. The previous cursor filtered on the joined user's id,
+  # an uncorrelated dimension, so pages skipped and repeated users.
+  defp follow_cursor_where(query, nil), do: query
 
-    Repo.all(query)
+  defp follow_cursor_where(query, {cursor_time, cursor_id}) do
+    where(
+      query,
+      [f],
+      f.inserted_at < ^cursor_time or (f.inserted_at == ^cursor_time and f.id < ^cursor_id)
+    )
+  end
+
+  @doc """
+  Returns a MapSet of ids (from `user_ids`) that `viewer_id` follows.
+
+  D109: one query, replacing the per-row `following?/2` N+1 on the web
+  followers list.
+  """
+  def following_ids_among(_viewer_id, []), do: MapSet.new()
+
+  def following_ids_among(viewer_id, user_ids) do
+    Follow
+    |> where([f], f.follower_id == ^viewer_id and f.followed_id in ^user_ids)
+    |> select([f], f.followed_id)
+    |> Repo.all()
+    |> MapSet.new()
   end
 
   # W167: joined-user exclusion for the follower/following listings.

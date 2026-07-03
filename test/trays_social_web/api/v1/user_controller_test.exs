@@ -76,6 +76,28 @@ defmodule TraysSocialWeb.API.V1.UserControllerTest do
       assert json_response(conn, 403)
     end
 
+    # D109: followers/following now return a cursor and page on the follow
+    # row's (inserted_at, id) — the old user-id cursor repeated/skipped users
+    # and the API never returned a cursor at all.
+    test "followers paginate via the returned cursor without repeats", %{conn: conn, user: user} do
+      followers = for _ <- 1..3, do: user_fixture()
+      for f <- followers, do: {:ok, _} = TraysSocial.Accounts.follow_user(f, user)
+
+      # page size is 20; fetch all on page 1 to grab the cursor shape,
+      # then verify a cursor-bounded request excludes everything before it.
+      conn1 = get(conn, ~p"/api/v1/users/#{user.username}/followers")
+      assert %{"data" => page1, "cursor" => cursor} = json_response(conn1, 200)
+      assert length(page1) == 3
+      assert is_binary(cursor)
+
+      conn2 = get(conn, ~p"/api/v1/users/#{user.username}/followers?cursor=#{cursor}")
+      assert %{"data" => [], "cursor" => nil} = json_response(conn2, 200)
+
+      conn3 = get(conn, ~p"/api/v1/users/#{user.username}/followers?cursor=garbage!")
+      assert %{"data" => page_again} = json_response(conn3, 200)
+      assert length(page_again) == 3
+    end
+
     # W167: profiles are invisible across a block in either direction.
     test "GET show and posts return 404 across a block", %{conn: conn, user: user} do
       other = user_fixture()

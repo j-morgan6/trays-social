@@ -24,14 +24,19 @@ defmodule TraysSocialWeb.FollowersLive.Show do
          |> push_navigate(to: ~p"/feed")}
 
       user ->
-        tab = socket.assigns.live_action
-        {:ok, assign_for(socket, user, tab)}
+        {:ok, assign(socket, :user, user)}
     end
   end
 
+  # D109: the tabs patch between /followers and /following, which re-runs
+  # handle_params — not mount — so the list/tab assigns must be built here.
+  # Previously this was a no-op and tab clicks changed only the URL.
   @impl true
   def handle_params(_params, _uri, socket) do
-    {:noreply, socket}
+    case socket.assigns[:user] do
+      nil -> {:noreply, socket}
+      user -> {:noreply, assign_for(socket, user, socket.assigns.live_action)}
+    end
   end
 
   defp assign_for(socket, user, tab) do
@@ -42,16 +47,15 @@ defmodule TraysSocialWeb.FollowersLive.Show do
         :followers -> Accounts.list_followers(user.id, limit: 40)
         :following -> Accounts.list_following(user.id, limit: 40)
       end
+      |> Enum.map(& &1.user)
 
     follower_count = Accounts.get_follower_count(user.id)
     following_count = Accounts.get_following_count(user.id)
 
+    # D109: one batched query instead of a following?/2 exists-check per row.
     following_ids =
       if viewer do
-        cooks
-        |> Enum.filter(&Accounts.following?(viewer.id, &1.id))
-        |> Enum.map(& &1.id)
-        |> MapSet.new()
+        Accounts.following_ids_among(viewer.id, Enum.map(cooks, & &1.id))
       else
         MapSet.new()
       end

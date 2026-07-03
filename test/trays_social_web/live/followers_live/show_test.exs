@@ -55,6 +55,34 @@ defmodule TraysSocialWeb.FollowersLive.ShowTest do
       assert html =~ follower.username
     end
 
+    # D109: tab clicks patch the URL; handle_params must rebuild the list.
+    # Previously handle_params was a no-op and the list/active tab froze.
+    test "patching between tabs reloads the list and active state", %{conn: conn} do
+      user = user_fixture()
+      follower = user_fixture()
+      followee = user_fixture()
+      viewer = user_fixture()
+
+      {:ok, _} = Accounts.follow_user(follower, user)
+      {:ok, _} = Accounts.follow_user(user, followee)
+
+      {:ok, view, html} =
+        conn
+        |> log_in_user(viewer)
+        |> live(~p"/@#{user.username}/followers")
+
+      assert html =~ follower.username
+      refute html =~ followee.username
+
+      html =
+        view
+        |> element("a", "Following")
+        |> render_click()
+
+      assert html =~ followee.username
+      refute html =~ follower.username
+    end
+
     test "toggle-follow flips the inline action", %{conn: conn} do
       user = user_fixture()
       target = user_fixture()

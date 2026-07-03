@@ -99,17 +99,16 @@ defmodule TraysSocialWeb.API.V1.UserController do
         {:error, :not_found}
 
       user ->
-        cursor_id = parse_int(conn.params["cursor_id"])
-
-        followers =
+        entries =
           Accounts.list_followers(user.id,
             limit: @page_size,
-            cursor_id: cursor_id,
+            cursor: decode_follow_cursor(conn.params["cursor"]),
             blocked_user_ids: Accounts.blocked_pair_ids(current_user.id)
           )
 
         json(conn, %{
-          data: Enum.map(followers, &user_list_json(&1, current_user))
+          data: Enum.map(entries, &user_list_json(&1.user, current_user)),
+          cursor: encode_follow_cursor(List.last(entries))
         })
     end
   end
@@ -122,17 +121,16 @@ defmodule TraysSocialWeb.API.V1.UserController do
         {:error, :not_found}
 
       user ->
-        cursor_id = parse_int(conn.params["cursor_id"])
-
-        following =
+        entries =
           Accounts.list_following(user.id,
             limit: @page_size,
-            cursor_id: cursor_id,
+            cursor: decode_follow_cursor(conn.params["cursor"]),
             blocked_user_ids: Accounts.blocked_pair_ids(current_user.id)
           )
 
         json(conn, %{
-          data: Enum.map(following, &user_list_json(&1, current_user))
+          data: Enum.map(entries, &user_list_json(&1.user, current_user)),
+          cursor: encode_follow_cursor(List.last(entries))
         })
     end
   end
@@ -202,14 +200,6 @@ defmodule TraysSocialWeb.API.V1.UserController do
     }
   end
 
-  defp parse_int(nil), do: nil
-  defp parse_int(val) when is_binary(val) do
-    case Integer.parse(val) do
-      {int, _} -> int
-      :error -> nil
-    end
-  end
-
   defp user_profile_json(user, current_user) do
     %{
       id: user.id,
@@ -247,5 +237,30 @@ defmodule TraysSocialWeb.API.V1.UserController do
 
   defp encode_cursor(post) do
     Base.url_encode64("#{post.id}:#{DateTime.to_iso8601(post.inserted_at)}", padding: false)
+  end
+  # D109: strict decode — malformed cursors degrade to page 1 instead of
+  # leaking Ecto/DBConnection errors as 500s. Cursor encodes the FOLLOW
+  # row's (id, inserted_at), the columns the listing orders by.
+  defp decode_follow_cursor(nil), do: nil
+
+  defp decode_follow_cursor(cursor) when is_binary(cursor) do
+    with {:ok, decoded} <- Base.url_decode64(cursor, padding: false),
+         [id_str, time_str] <- String.split(decoded, ":", parts: 2),
+         {id, ""} when id > 0 and id < 9_223_372_036_854_775_807 <- Integer.parse(id_str),
+         {:ok, time, _offset} <- DateTime.from_iso8601(time_str) do
+      {time, id}
+    else
+      _ -> nil
+    end
+  end
+
+  defp decode_follow_cursor(_), do: nil
+
+  defp encode_follow_cursor(nil), do: nil
+
+  defp encode_follow_cursor(entry) do
+    Base.url_encode64("#{entry.follow_id}:#{DateTime.to_iso8601(entry.followed_at)}",
+      padding: false
+    )
   end
 end

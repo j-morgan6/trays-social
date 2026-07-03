@@ -135,7 +135,8 @@ defmodule TraysSocial.BlockGatingTest do
       pair_ids = Accounts.blocked_pair_ids(blocker.id)
 
       follower_ids =
-        Accounts.list_followers(target.id, blocked_user_ids: pair_ids) |> Enum.map(& &1.id)
+        Accounts.list_followers(target.id, blocked_user_ids: pair_ids)
+        |> Enum.map(& &1.user.id)
 
       refute blocked.id in follower_ids
       assert blocker.id in follower_ids
