@@ -210,9 +210,7 @@ struct FollowListView: View {
     private func followToggle(for user: User) -> some View {
         let following = user.followedByCurrentUser == true
         Button {
-            // Hook into viewmodel toggle when it exists; for now this
-            // is a visual pill that the user can wire to the existing
-            // follow API.
+            viewModel.toggleFollow(userId: user.id)
         } label: {
             Text(following ? "Following" : "Follow")
                 .font(.system(size: 11, weight: .semibold))

@@ -52,6 +52,39 @@ final class FollowListViewModel {
         isLoading = false
     }
 
+    /// D112: rows with an in-flight toggle — a second tap is ignored until
+    /// the first request settles, so racing requests can't end opposite to
+    /// the server state.
+    private var togglingUserIds: Set<Int> = []
+
+    func toggleFollow(userId: Int) {
+        guard !togglingUserIds.contains(userId),
+              let index = users.firstIndex(where: { $0.id == userId })
+        else { return }
+
+        let wasFollowing = users[index].followedByCurrentUser == true
+        let username = users[index].username
+        togglingUserIds.insert(userId)
+        users[index] = users[index].withFollowedByCurrentUser(!wasFollowing)
+
+        Task { [weak self] in
+            defer { self?.togglingUserIds.remove(userId) }
+            do {
+                if wasFollowing {
+                    _ = try await APIClient.shared.delete(path: "/users/\(username)/follow") as EmptyResponse
+                } else {
+                    _ = try await APIClient.shared.post(path: "/users/\(username)/follow")
+                }
+            } catch {
+                // Roll back only the follow flag (from the row's CURRENT
+                // value, not a stale snapshot) and toast — write path.
+                guard let self, let idx = users.firstIndex(where: { $0.id == userId }) else { return }
+                users[idx] = users[idx].withFollowedByCurrentUser(wasFollowing)
+                (wasFollowing ? Toast.unfollowFailed : Toast.followFailed).show()
+            }
+        }
+    }
+
     func loadMore() async {
         guard !isLoadingMore, hasMore, let cursor else { return }
         isLoadingMore = true

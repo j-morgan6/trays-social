@@ -32,6 +32,20 @@ struct User: Codable, Identifiable, Sendable {
         confirmedAt != nil
     }
 
+    /// Copy with only the follow state changed. Centralizes the manual
+    /// memberwise reconstruction (a missed argument here broke the build
+    /// in D102) so optimistic follow toggles never snapshot whole objects.
+    func withFollowedByCurrentUser(_ followed: Bool) -> User {
+        User(
+            id: id, username: username, email: email, bio: bio,
+            profilePhotoUrl: profilePhotoUrl, insertedAt: insertedAt,
+            confirmedAt: confirmedAt, postCount: postCount,
+            followerCount: followerCount, followingCount: followingCount,
+            followedByCurrentUser: followed, isAdmin: isAdmin,
+            isSubscriber: isSubscriber
+        )
+    }
+
     var hasAdminAccess: Bool {
         isAdmin == true
     }
