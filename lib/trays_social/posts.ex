@@ -784,22 +784,38 @@ defmodule TraysSocial.Posts do
   """
   def delete_comment(%Comment{} = comment, user) do
     if comment.user_id == user.id do
-      Ecto.Multi.new()
-      |> Ecto.Multi.update(
-        :comment,
-        Ecto.Changeset.change(comment, deleted_at: DateTime.utc_now(:second))
-      )
-      |> Ecto.Multi.run(:count, fn _repo, _changes ->
-        {1, _} =
-          Post
-          |> where([p], p.id == ^comment.post_id)
-          |> Repo.update_all(inc: [comment_count: -1])
+      now = DateTime.utc_now(:second)
 
-        {:ok, :decremented}
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:soft_delete, fn _repo, _changes ->
+        # D110: atomic guard — only the FIRST delete matches a row
+        # (deleted_at IS NULL), so a retried or concurrent delete cannot
+        # decrement comment_count a second time (it drifted negative).
+        case Comment
+             |> where([c], c.id == ^comment.id and is_nil(c.deleted_at))
+             |> Repo.update_all(set: [deleted_at: now]) do
+          {1, _} -> {:ok, :deleted}
+          {0, _} -> {:ok, :already_deleted}
+        end
+      end)
+      |> Ecto.Multi.run(:count, fn _repo, %{soft_delete: result} ->
+        case result do
+          :already_deleted ->
+            {:ok, :skipped}
+
+          :deleted ->
+            {1, _} =
+              Post
+              |> where([p], p.id == ^comment.post_id)
+              |> Repo.update_all(inc: [comment_count: -1])
+
+            {:ok, :decremented}
+        end
       end)
       |> Repo.transaction()
       |> case do
-        {:ok, %{comment: comment}} -> {:ok, comment}
+        # Idempotent: a repeat delete succeeds without side effects.
+        {:ok, _} -> {:ok, %{comment | deleted_at: comment.deleted_at || now}}
         {:error, _, reason, _} -> {:error, reason}
       end
     else

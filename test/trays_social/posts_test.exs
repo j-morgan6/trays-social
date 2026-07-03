@@ -992,6 +992,23 @@ defmodule TraysSocial.PostsTest do
       assert final_post.comment_count == 0
     end
 
+    # D110 regression: a retried DELETE decremented comment_count again on
+    # every call, drifting it negative (empirically confirmed in review).
+    test "delete_comment/2 is idempotent — repeat deletes never re-decrement" do
+      %{post: post} = create_user_and_post()
+      commenter = user_fixture()
+
+      {:ok, comment} = Posts.create_comment(post, commenter, %{body: "retry me"})
+
+      assert {:ok, _} = Posts.delete_comment(comment, commenter)
+      # Retry with the stale struct (as an iOS timeout-retry would) and with
+      # a freshly fetched soft-deleted row — neither may decrement again.
+      assert {:ok, _} = Posts.delete_comment(comment, commenter)
+      assert {:ok, _} = Posts.delete_comment(Posts.get_comment!(comment.id), commenter)
+
+      assert Posts.get_post!(post.id).comment_count == 0
+    end
+
     test "delete_comment/2 returns :unauthorized when user is not the comment owner" do
       %{post: post} = create_user_and_post()
       commenter = user_fixture()
