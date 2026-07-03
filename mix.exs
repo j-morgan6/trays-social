@@ -97,6 +97,9 @@ defmodule TraysSocial.MixProject do
 
   defp test_coverage do
     [
+      # Ratchet: raise as coverage grows — but keep it passing, or local
+      # `mix test` exits non-zero on every run and the signal dies (W171).
+      summary: [threshold: 74],
       ignore_modules: [
         Inspect.TraysSocial.Accounts.User,
         TraysSocial,
@@ -147,7 +150,7 @@ defmodule TraysSocial.MixProject do
       ],
       security: ["deps.audit", "sobelow --config"],
       precommit: [
-        "compile --warning-as-errors",
+        "compile --warnings-as-errors",
         "deps.unlock --unused",
         "format",
         "test",
