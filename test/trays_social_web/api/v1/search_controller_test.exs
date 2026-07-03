@@ -50,5 +50,35 @@ defmodule TraysSocialWeb.API.V1.SearchControllerTest do
 
       assert %{"data" => %{"posts" => _, "users" => _}} = json_response(conn, 200)
     end
+
+    # D107: query + tag together crashed with Ecto's double-distinct error.
+    test "query with tag filter returns 200 and a cursor", %{conn: conn, user: user} do
+      post_fixture(%{
+        user_id: user.id,
+        caption: "pasta primavera",
+        post_tags: [%{tag: "dinner"}]
+      })
+
+      conn = get(conn, ~p"/api/v1/search?q=pasta&tag=dinner")
+
+      assert %{"data" => %{"posts" => [post]}, "cursor" => cursor} = json_response(conn, 200)
+      assert post["caption"] == "pasta primavera"
+      assert is_binary(cursor)
+    end
+
+    test "malformed cursor degrades to page 1 instead of 500", %{conn: conn, user: user} do
+      post_fixture(%{user_id: user.id, caption: "pasta bake"})
+
+      bad_cursors = [
+        "not-base64!",
+        Base.url_encode64("abc:def", padding: false),
+        Base.url_encode64("99999999999999999999:2026-01-01T00:00:00Z", padding: false)
+      ]
+
+      for bad <- bad_cursors do
+        conn = get(conn, ~p"/api/v1/search?q=pasta&cursor=#{bad}")
+        assert %{"data" => %{"posts" => [_]}} = json_response(conn, 200)
+      end
+    end
   end
 end

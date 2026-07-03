@@ -212,12 +212,21 @@ defmodule TraysSocial.Posts do
     max_cooking_time = Keyword.get(opts, :max_cooking_time)
     tag = Keyword.get(opts, :tag)
     blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
+    cursor_id = Keyword.get(opts, :cursor_id)
+    cursor_time = Keyword.get(opts, :cursor_time)
 
+    # D107: match ingredients/tags via EXISTS subqueries instead of joins +
+    # distinct. The previous shape applied distinct/2 in both the query and
+    # tag branches — combining them raised "only one distinct expression is
+    # allowed"; the tag branch's distinct also prepended `p.id ASC` to the
+    # ORDER BY, returning oldest-first. EXISTS keeps one row per post, so
+    # ordering and keyset cursors work like every other listing.
     base =
-      Post
+      from(p in Post, as: :post)
       |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
       |> exclude_blocked_users(blocked_user_ids)
-      |> order_by([p], desc: p.inserted_at)
+      |> cursor_where(cursor_id, cursor_time)
+      |> order_by([p], desc: p.inserted_at, desc: p.id)
       |> limit(^limit)
       |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
 
@@ -225,16 +234,21 @@ defmodule TraysSocial.Posts do
       if query_string && query_string != "" do
         sanitized = "%#{sanitize_like(query_string)}%"
 
-        base
-        |> join(:left, [p], i in Ingredient, on: i.post_id == p.id, as: :ingredient)
-        |> join(:left, [p], pt in PostTag, on: pt.post_id == p.id, as: :search_tag)
-        |> where(
-          [p, ingredient: i, search_tag: pt],
-          ilike(p.caption, ^sanitized) or
-            ilike(i.name, ^sanitized) or
-            ilike(pt.tag, ^sanitized)
+        ingredient_match =
+          from(i in Ingredient,
+            where: i.post_id == parent_as(:post).id and ilike(i.name, ^sanitized)
+          )
+
+        tag_match =
+          from(pt in PostTag,
+            where: pt.post_id == parent_as(:post).id and ilike(pt.tag, ^sanitized)
+          )
+
+        where(
+          base,
+          [p],
+          ilike(p.caption, ^sanitized) or exists(ingredient_match) or exists(tag_match)
         )
-        |> distinct([p], desc: p.inserted_at, asc: p.id)
       else
         base
       end
@@ -252,11 +266,12 @@ defmodule TraysSocial.Posts do
 
     base =
       if tag && tag != "" do
-        base
-        |> join(:inner, [p], pt in PostTag,
-          on: pt.post_id == p.id and pt.tag == ^String.downcase(tag)
-        )
-        |> distinct([p], p.id)
+        tag_filter =
+          from(pt in PostTag,
+            where: pt.post_id == parent_as(:post).id and pt.tag == ^String.downcase(tag)
+          )
+
+        where(base, [p], exists(tag_filter))
       else
         base
       end
