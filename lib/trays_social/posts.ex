@@ -95,10 +95,14 @@ defmodule TraysSocial.Posts do
 
   defp exclude_muted_keywords(query, []), do: query
 
+  # D108: two subtleties. (1) `not ilike(NULL, x)` is NULL under SQL
+  # three-valued logic — without the is_nil branch, ONE muted keyword hid
+  # every caption-less post. (2) keywords must be LIKE-escaped or a keyword
+  # containing % mutes every captioned post.
   defp exclude_muted_keywords(query, keywords) do
     Enum.reduce(keywords, query, fn keyword, q ->
-      pattern = "%" <> String.downcase(keyword) <> "%"
-      where(q, [p], not ilike(p.caption, ^pattern))
+      pattern = "%" <> sanitize_like(String.downcase(keyword)) <> "%"
+      where(q, [p], is_nil(p.caption) or not ilike(p.caption, ^pattern))
     end)
   end
 
