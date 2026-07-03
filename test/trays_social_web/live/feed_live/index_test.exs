@@ -22,6 +22,53 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       assert html =~ "No posts yet"
     end
 
+    # W168: the web feed applies the same block/mute filters as the API feed.
+    test "excludes blocked users' posts and muted-keyword posts", %{
+      conn: conn,
+      viewer: viewer
+    } do
+      blocked = user_fixture()
+      {:ok, _} = TraysSocial.Accounts.block_user(viewer.id, blocked.id)
+      post_fixture(user_id: blocked.id, caption: "blocked pancakes")
+
+      poster = user_fixture()
+      post_fixture(user_id: poster.id, caption: "cilantro salad")
+      post_fixture(user_id: poster.id, caption: "plain toast")
+
+      {:ok, _} = TraysSocial.Accounts.set_muted_keywords(viewer, ["cilantro"])
+
+      {:ok, _view, html} = live(conn, ~p"/feed")
+
+      refute html =~ "blocked pancakes"
+      refute html =~ "cilantro salad"
+      assert html =~ "plain toast"
+    end
+
+    # W168: the realtime :new_post handler applies the same rules and must
+    # not crash when the broadcast post was deleted before handling.
+    test "realtime new_post respects blocks and tolerates deleted posts", %{
+      conn: conn,
+      viewer: viewer
+    } do
+      blocked = user_fixture()
+      {:ok, _} = TraysSocial.Accounts.block_user(viewer.id, blocked.id)
+
+      {:ok, view, _html} = live(conn, ~p"/feed")
+
+      blocked_post = post_fixture(user_id: blocked.id, caption: "sneaky broadcast")
+      send(view.pid, {:new_post, blocked_post})
+      refute render(view) =~ "sneaky broadcast"
+
+      ghost = post_fixture(user_id: user_fixture().id, caption: "ghost post")
+      {:ok, _} = TraysSocial.Posts.delete_post(ghost)
+      send(view.pid, {:new_post, ghost})
+
+      # The LiveView survives the deleted-post broadcast (get_post! raised here
+      # before W168) and does not render it.
+      html = render(view)
+      refute html =~ "ghost post"
+    end
+
     test "lists all posts", %{conn: conn} do
       user = user_fixture()
       post = post_fixture(user_id: user.id)

@@ -90,15 +90,21 @@ defmodule TraysSocialWeb.FeedLive.Index do
 
   @impl true
   def handle_info({:new_post, post}, socket) do
-    full_post = Posts.get_post!(post.id)
+    # W168: the global posts:new topic reaches every connected session — apply
+    # the same block/mute/personalization rules as the query path, and
+    # tolerate the post having been deleted between broadcast and handling.
+    with true <- show_in_live_feed?(socket, post),
+         %Posts.Post{} = full_post <- Posts.get_post(post.id) do
+      socket =
+        socket
+        |> assign(:no_posts, false)
+        |> update(:posts_map, &Map.put(&1, full_post.id, full_post))
+        |> stream_insert(:posts, full_post, at: 0)
 
-    socket =
-      socket
-      |> assign(:no_posts, false)
-      |> update(:posts_map, &Map.put(&1, full_post.id, full_post))
-      |> stream_insert(:posts, full_post, at: 0)
-
-    {:noreply, socket}
+      {:noreply, socket}
+    else
+      _ -> {:noreply, socket}
+    end
   end
 
   @impl true
@@ -119,6 +125,26 @@ defmodule TraysSocialWeb.FeedLive.Index do
     end
   end
 
+  defp show_in_live_feed?(socket, post) do
+    viewer_id = current_user_id(socket)
+
+    cond do
+      post.user_id in socket.assigns.blocked_ids -> false
+      muted_caption?(post.caption, socket.assigns.muted_keywords) -> false
+      viewer_id && post.user_id == viewer_id -> true
+      socket.assigns.personalized_feed -> Accounts.following?(viewer_id, post.user_id)
+      true -> true
+    end
+  end
+
+  defp muted_caption?(nil, _keywords), do: false
+  defp muted_caption?(_caption, []), do: false
+
+  defp muted_caption?(caption, keywords) do
+    down = String.downcase(caption)
+    Enum.any?(keywords, &String.contains?(down, String.downcase(&1)))
+  end
+
   defp mount_connected(socket) do
     Phoenix.PubSub.subscribe(TraysSocial.PubSub, "posts:new")
     Phoenix.PubSub.subscribe(TraysSocial.PubSub, "posts:likes")
@@ -126,10 +152,20 @@ defmodule TraysSocialWeb.FeedLive.Index do
     current_user_id = current_user_id(socket)
     is_following = current_user_id && Accounts.has_follows?(current_user_id)
 
+    # W168: same block/mute filters as the API feed (feed_controller.ex),
+    # computed once per mount and reused by load_more and the realtime
+    # :new_post handler.
+    blocked_ids = (current_user_id && Accounts.blocked_pair_ids(current_user_id)) || []
+    muted_keywords = (current_user_id && Accounts.get_muted_keywords(current_user_id)) || []
+    personalized_feed = (current_user_id && Posts.personalized_feed?(current_user_id)) || false
+
     posts =
       Posts.list_posts(
         limit: @page_size,
-        for_user_id: current_user_id
+        for_user_id: current_user_id,
+        blocked_user_ids: blocked_ids,
+        muted_keywords: muted_keywords,
+        personalized: personalized_feed
       )
 
     liked_post_ids = fetch_liked_post_ids(socket, Enum.map(posts, & &1.id))
@@ -145,6 +181,9 @@ defmodule TraysSocialWeb.FeedLive.Index do
     |> assign(:bookmarked_post_ids, bookmarked_post_ids)
     |> assign(:posts_map, Map.new(posts, &{&1.id, &1}))
     |> assign(:is_personalized, is_following || false)
+    |> assign(:blocked_ids, blocked_ids)
+    |> assign(:muted_keywords, muted_keywords)
+    |> assign(:personalized_feed, personalized_feed)
     |> stream(:posts, posts)
   end
 
@@ -159,6 +198,9 @@ defmodule TraysSocialWeb.FeedLive.Index do
     |> assign(:bookmarked_post_ids, MapSet.new())
     |> assign(:posts_map, %{})
     |> assign(:is_personalized, false)
+    |> assign(:blocked_ids, [])
+    |> assign(:muted_keywords, [])
+    |> assign(:personalized_feed, false)
     |> stream(:posts, [])
   end
 
@@ -200,7 +242,10 @@ defmodule TraysSocialWeb.FeedLive.Index do
         limit: @page_size,
         cursor_id: cursor_id,
         cursor_time: cursor_time,
-        for_user_id: current_user_id(socket)
+        for_user_id: current_user_id(socket),
+        blocked_user_ids: socket.assigns.blocked_ids,
+        muted_keywords: socket.assigns.muted_keywords,
+        personalized: socket.assigns.personalized_feed
       )
 
     new_liked_ids = fetch_liked_post_ids(socket, Enum.map(posts, & &1.id))

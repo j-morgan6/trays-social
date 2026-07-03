@@ -47,20 +47,12 @@ defmodule TraysSocial.Posts do
     # as soon as it finds the fifth row, which on the indexed
     # follower_id column is sub-millisecond regardless of how many
     # thousands of follows the user has accumulated.
-    follows_at_least_5 =
-      if for_user_id do
-        Follow
-        |> where([f], f.follower_id == ^for_user_id)
-        |> limit(5)
-        |> select([f], 1)
-        |> Repo.all()
-        |> length()
-        |> Kernel.>=(5)
-      else
-        false
-      end
-
-    personalized = for_user_id && follows_at_least_5
+    # Callers that already ran personalized_feed?/1 (e.g. the web feed's
+    # mount) can pass :personalized to skip the duplicate LIMIT-5 probe.
+    personalized =
+      Keyword.get_lazy(opts, :personalized, fn ->
+        for_user_id && personalized_feed?(for_user_id)
+      end)
 
     Post
     |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
@@ -72,6 +64,24 @@ defmodule TraysSocial.Posts do
     |> then(fn q -> if limit, do: limit(q, ^limit), else: q end)
     |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags, :post_photos])
     |> Repo.all()
+  end
+
+  @doc """
+  True when the user's feed is personalized (followed-only). Mirrors the
+  W132 short-circuit: `LIMIT 5` lets Postgres stop scanning at the fifth
+  follow row, so this is sub-millisecond on the indexed follower_id column.
+
+  W168: public so the web feed's realtime `:new_post` handler can apply the
+  same rule as the query path.
+  """
+  def personalized_feed?(user_id) do
+    Follow
+    |> where([f], f.follower_id == ^user_id)
+    |> limit(5)
+    |> select([f], 1)
+    |> Repo.all()
+    |> length()
+    |> Kernel.>=(5)
   end
 
   # Reused by both Post and Comment queries. `[p]` is a positional binding for
@@ -373,6 +383,19 @@ defmodule TraysSocial.Posts do
     |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
     |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags, :post_photos])
     |> Repo.get!(id)
+  end
+
+  @doc """
+  Like `get_post!/1` but returns `nil` when the post is missing or deleted.
+
+  W168: for PubSub handlers where the post may have been deleted between
+  broadcast and handling — raising would crash the subscriber LiveView.
+  """
+  def get_post(id) do
+    Post
+    |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
+    |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags, :post_photos])
+    |> Repo.get(id)
   end
 
   @doc """

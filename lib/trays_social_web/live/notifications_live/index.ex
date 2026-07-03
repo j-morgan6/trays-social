@@ -9,7 +9,13 @@ defmodule TraysSocialWeb.NotificationsLive.Index do
   @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns.current_scope.user
-    notifications = Notifications.list_notifications(user.id)
+
+    # W168: same blocked-actor exclusion as the API list and the shared
+    # unread badge, so the web list can always reconcile with the count.
+    notifications =
+      Notifications.list_notifications(user.id,
+        blocked_user_ids: TraysSocial.Accounts.blocked_user_ids(user.id)
+      )
 
     if connected?(socket) do
       Notifications.mark_all_read(user.id)

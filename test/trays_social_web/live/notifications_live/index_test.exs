@@ -25,6 +25,29 @@ defmodule TraysSocialWeb.NotificationsLive.IndexTest do
       assert html =~ "Notes for you"
     end
 
+    # W168: the web list applies the same blocked-actor exclusion as the API
+    # list and the shared unread badge.
+    test "hides notifications from blocked actors", %{conn: conn} do
+      user = user_fixture()
+      harasser = user_fixture()
+
+      {:ok, _} =
+        TraysSocial.Notifications.create_notification(%{
+          type: "follow",
+          user_id: user.id,
+          actor_id: harasser.id
+        })
+
+      {:ok, _} = TraysSocial.Accounts.block_user(user.id, harasser.id)
+
+      {:ok, _view, html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/notifications")
+
+      refute html =~ harasser.username
+    end
+
     test "displays like notification", %{conn: conn} do
       user = user_fixture()
       actor = user_fixture()

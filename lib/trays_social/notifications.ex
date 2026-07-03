@@ -44,9 +44,12 @@ defmodule TraysSocial.Notifications do
   @doc """
   Returns notifications for a user, newest first, with actor and post preloaded.
   """
-  def list_notifications(user_id) do
+  def list_notifications(user_id, opts \\ []) do
+    blocked_ids = Keyword.get(opts, :blocked_user_ids, [])
+
     Notification
     |> where([n], n.user_id == ^user_id)
+    |> exclude_blocked_actors(blocked_ids)
     |> order_by([n], desc: n.inserted_at)
     |> limit(50)
     |> preload([:actor, post: :post_photos])
