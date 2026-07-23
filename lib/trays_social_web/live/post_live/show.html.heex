@@ -194,6 +194,10 @@
     </p>
   <% end %>
 
+  <%!-- W159 sponsored slot A — between the cook's note and the recipe body.
+       Gated per-viewer by @show_ads (flag on AND not a subscriber). --%>
+  <.sponsored_slot :if={@show_ads} id="ad-slot-a" position="in-content-1" />
+
   <%!-- Ingredients | Method two-column on web, stacked on mobile. --%>
   <%= if has_ingredients or has_steps do %>
     <div class="grid grid-cols-1 md:grid-cols-[0.85fr_1fr] gap-10 md:gap-14">
@@ -266,6 +270,10 @@
       <% end %>
     </div>
   <% end %>
+
+  <%!-- W159 sponsored slot B — after the recipe body, before engagement.
+       Two units per page is the hard density cap (see AdComponents). --%>
+  <.sponsored_slot :if={@show_ads} id="ad-slot-b" position="in-content-2" />
 
   <%!-- Engagement row — quiet, subordinate to the recipe. --%>
   <div class="flex flex-wrap items-center gap-x-5 gap-y-3 mt-12 pt-6 border-t-2 border-base-300">

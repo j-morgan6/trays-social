@@ -33,6 +33,81 @@ defmodule TraysSocialWeb.LegalControllerTest do
         assert body =~ phrase, "expected /privacy body to contain #{inspect(phrase)}"
       end
     end
+
+    test "links the ads-choices page and keeps the no-ad-cookies statement", %{conn: conn} do
+      conn = get(conn, ~p"/privacy")
+      body = response(conn, 200)
+
+      # W159: the CCPA do-not-sell section now points at the functional
+      # preference control instead of calling the link a no-op.
+      assert body =~ "/privacy/ads-choices"
+      # This sentence must survive verbatim — the preference cookie is
+      # disclosed separately and is not an advertising cookie.
+      assert body =~ "We do not set advertising or analytics cookies"
+    end
+  end
+
+  describe "GET /privacy/ads-choices" do
+    test "returns 200 HTML, uncacheable, with the preference form", %{conn: conn} do
+      conn = get(conn, ~p"/privacy/ads-choices")
+
+      assert conn.status == 200
+      assert ["text/html" <> _] = get_resp_header(conn, "content-type")
+      assert ["private, no-store"] = get_resp_header(conn, "cache-control")
+
+      body = response(conn, 200)
+      assert body =~ "No opt-out preference is set."
+      assert body =~ ~s|action="/privacy/ads-choices"|
+      assert body =~ ~s|name="choice"|
+      assert body =~ ~s|value="opt_out"|
+      assert body =~ "Global Privacy Control"
+    end
+
+    test "shows the opted-out status and the opt-in form when the cookie is set",
+         %{conn: conn} do
+      conn =
+        conn
+        |> put_req_cookie("trays_ads_opt_out", "1")
+        |> get(~p"/privacy/ads-choices")
+
+      body = response(conn, 200)
+      assert body =~ "You are opted out of advertising-related cookies."
+      assert body =~ ~s|value="opt_in"|
+    end
+  end
+
+  describe "POST /privacy/ads-choices" do
+    test "opt_out sets the preference cookie (readable by JS) and redirects",
+         %{conn: conn} do
+      conn = post(conn, ~p"/privacy/ads-choices", %{"choice" => "opt_out"})
+
+      assert redirected_to(conn) == ~p"/privacy/ads-choices"
+
+      cookie = conn.resp_cookies["trays_ads_opt_out"]
+      assert cookie.value == "1"
+      assert cookie.max_age == 31_536_000
+      assert cookie.same_site == "Lax"
+      # http_only: false is deliberate — the AdSlot JS hook reads this cookie
+      # before requesting any ad script, and the value carries no identifier.
+      assert cookie.http_only == false
+    end
+
+    test "opt_in deletes the preference cookie and redirects", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_cookie("trays_ads_opt_out", "1")
+        |> post(~p"/privacy/ads-choices", %{"choice" => "opt_in"})
+
+      assert redirected_to(conn) == ~p"/privacy/ads-choices"
+      assert %{max_age: 0} = conn.resp_cookies["trays_ads_opt_out"]
+    end
+
+    test "unknown choice redirects without touching the cookie", %{conn: conn} do
+      conn = post(conn, ~p"/privacy/ads-choices", %{"choice" => "whatever"})
+
+      assert redirected_to(conn) == ~p"/privacy/ads-choices"
+      refute Map.has_key?(conn.resp_cookies, "trays_ads_opt_out")
+    end
   end
 
   describe "GET /terms" do

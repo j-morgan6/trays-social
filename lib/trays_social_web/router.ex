@@ -136,6 +136,11 @@ defmodule TraysSocialWeb.Router do
     pipe_through :browser
 
     get "/privacy", LegalController, :privacy
+    # W159: CCPA advertising-cookie preference page. GET renders the current
+    # choice (cache-control: private, no-store — per-visitor state); POST
+    # sets/clears the first-party trays_ads_opt_out cookie.
+    get "/privacy/ads-choices", LegalController, :ads_choices
+    post "/privacy/ads-choices", LegalController, :update_ads_choices
     get "/terms", LegalController, :terms
     get "/community-guidelines", LegalController, :community_guidelines
     get "/faq", LegalController, :faq

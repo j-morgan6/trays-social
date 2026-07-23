@@ -49,6 +49,46 @@ defmodule TraysSocialWeb.LegalController do
 
   def faq(conn, _params), do: render_doc(conn, @faq, "FAQ")
 
+  # W159: CCPA "Do Not Sell or Share" preference page. Unlike the markdown
+  # docs above this is stateful per visitor (reads the opt-out cookie), so it
+  # must never be cached by shared caches — hence private, no-store instead
+  # of render_doc's public, max-age.
+  def ads_choices(conn, _params) do
+    conn
+    |> put_resp_header("cache-control", "private, no-store")
+    |> put_root_layout(false)
+    |> put_layout(false)
+    |> render(:ads_choices,
+      title: "Advertising Choices",
+      opted_out: conn.cookies["trays_ads_opt_out"] == "1"
+    )
+  end
+
+  # Sets or clears the first-party opt-out preference cookie. http_only is
+  # deliberately false: the AdSlot JS hook reads the cookie client-side
+  # before requesting any ad script, and the cookie carries no identifier —
+  # its value is the literal "1", so exposure to JS is harmless.
+  def update_ads_choices(conn, %{"choice" => "opt_out"}) do
+    conn
+    |> put_resp_cookie("trays_ads_opt_out", "1",
+      max_age: 31_536_000,
+      http_only: false,
+      same_site: "Lax"
+    )
+    |> redirect(to: ~p"/privacy/ads-choices")
+  end
+
+  def update_ads_choices(conn, %{"choice" => "opt_in"}) do
+    conn
+    |> delete_resp_cookie("trays_ads_opt_out")
+    |> redirect(to: ~p"/privacy/ads-choices")
+  end
+
+  # Unknown/missing choice — redirect back without touching the cookie.
+  def update_ads_choices(conn, _params) do
+    redirect(conn, to: ~p"/privacy/ads-choices")
+  end
+
   defp render_doc(conn, doc, title) do
     conn
     |> put_resp_header("cache-control", "public, max-age=3600")

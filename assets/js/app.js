@@ -116,11 +116,44 @@ const CookTimer = {
   }
 }
 
+// AdSlot — sponsored-slot loader for the public recipe pages (W159). The
+// server renders the slot with first-party house copy; this hook only
+// requests a third-party network script when the server handed it a
+// data-script-url (nil config = no attribute = no-op). Consent guards run
+// before any request: the Global Privacy Control browser signal and the
+// first-party opt-out (cookie set at /privacy/ads-choices, or the
+// localStorage mirror) both short-circuit. The script is requested at most
+// once per page no matter how many slots render.
+// NOTE: the router's @csp_header intentionally still blocks all third-party
+// script origins — until a follow-up amends the CSP for a vetted network,
+// the injection below is additionally a no-op at the browser level.
+// Defense in depth: nil config, consent guards, AND CSP.
+const AdSlot = {
+  mounted() {
+    const url = this.el.dataset.scriptUrl
+    if (!url) return
+    if (navigator.globalPrivacyControl) return
+    if (
+      document.cookie.split("; ").includes("trays_ads_opt_out=1") ||
+      localStorage.getItem("trays:ads-opt-out") === "1"
+    ) return
+    if (window.__traysAdScriptRequested) return
+    window.__traysAdScriptRequested = true
+
+    const script = document.createElement("script")
+    script.async = true
+    script.src = url
+    const siteId = this.el.dataset.siteId
+    if (siteId) script.dataset.siteId = siteId
+    document.head.appendChild(script)
+  }
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, LazyLoad, InfiniteScroll, CookTimer},
+  hooks: {...colocatedHooks, LazyLoad, InfiniteScroll, CookTimer, AdSlot},
 })
 
 // Show progress bar on live navigation and form submits

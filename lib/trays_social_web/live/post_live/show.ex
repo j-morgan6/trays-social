@@ -1,7 +1,10 @@
 defmodule TraysSocialWeb.PostLive.Show do
   use TraysSocialWeb, :live_view
 
+  import TraysSocialWeb.AdComponents
+
   alias TraysSocial.Accounts
+  alias TraysSocial.Monetization
   alias TraysSocial.Posts
 
   on_mount {TraysSocialWeb.UserAuth, :mount_current_scope}
@@ -41,6 +44,7 @@ defmodule TraysSocialWeb.PostLive.Show do
       |> assign(:checked_ingredient_ids, MapSet.new())
       |> assign(:cooking_started_at, nil)
       |> assign(:comment_body, "")
+      |> assign(:show_ads, Monetization.web_ads_enabled?(viewer))
       |> stream(:comments, comments)
 
     {:ok, socket}

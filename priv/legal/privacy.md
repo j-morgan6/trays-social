@@ -1,6 +1,6 @@
 ---
-effective_date: 2026-05-29
-version: 1.1
+effective_date: 2026-07-23
+version: 1.2
 ---
 
 # Privacy Policy
@@ -92,13 +92,13 @@ Depending on where you live, you have specific rights over your data:
 
 **EU and UK users (GDPR):** right of access, rectification, erasure, portability (delivered as a single JSON file containing your user record plus your posts, comments, and photo URLs — machine-readable per Article 20), restriction, objection, and the right to lodge a complaint with your supervisory authority.
 
-**California residents (CCPA / CPRA):** right to know, delete, and correct. **We do not sell your personal information** and **we do not share it for cross-context behavioral advertising**. The "[Do Not Sell or Share My Personal Information](#california-do-not-sell)" link below is required by CCPA — it is a no-op for us because there is nothing to opt out of, but it is here for transparency. You may use an authorized agent. **We do not collect Sensitive Personal Information as defined by CCPA/CPRA** (no precise geolocation, government IDs, financial account data, racial or ethnic origin, religious beliefs, biometric data, health data, sexual orientation data, or contents of mail, email, or text messages).
+**California residents (CCPA / CPRA):** right to know, delete, and correct. **We do not sell your personal information** and **we do not share it for cross-context behavioral advertising**. The "[Do Not Sell or Share My Personal Information](#california-do-not-sell)" section below explains the functional opt-out control we provide at [/privacy/ads-choices](/privacy/ads-choices). You may use an authorized agent. **We do not collect Sensitive Personal Information as defined by CCPA/CPRA** (no precise geolocation, government IDs, financial account data, racial or ethnic origin, religious beliefs, biometric data, health data, sexual orientation data, or contents of mail, email, or text messages).
 
 <a id="california-do-not-sell"></a>
 
 ### California — Do Not Sell or Share My Personal Information
 
-Trays does not sell or share your personal information for cross-context behavioral advertising. Nothing for you to opt out of.
+Trays does not sell or share your personal information for cross-context behavioral advertising — no sale or sharing occurs today. A functional preference control is available at [/privacy/ads-choices](/privacy/ads-choices): it sets a first-party opt-out cookie that the trays.app website honors before loading any advertising script. We also honor the [Global Privacy Control](https://globalprivacycontrol.org/) browser signal automatically. If third-party advertising is ever introduced, this recorded preference and the GPC signal will apply to it.
 
 **Quebec residents (Law 25):** privacy officer contact (the sole Director of 1001366752 Ontario Inc., reachable via `support@trays.app`), automated decisions disclosure (we do not make automated decisions about you), and portability (same JSON format as GDPR).
 
@@ -114,7 +114,11 @@ We hash passwords with bcrypt, transport everything over TLS, and rate-limit end
 
 ## 14. Cookies and similar technologies
 
-The trays.app website sets a session cookie when you log in. We do not set advertising or analytics cookies.
+The trays.app website sets a session cookie when you log in. We do not set advertising or analytics cookies. The only other cookie we may set is a single first-party preference cookie, `trays_ads_opt_out`, stored only if you opt out at [/privacy/ads-choices](/privacy/ads-choices) — it contains no identifier and is not used for tracking.
+
+### Advertising on the trays.app website
+
+The website may display clearly labeled sponsored placements on public recipe pages. Today any such placements are first-party house content: there are no third-party ad partners, and no advertising cookies or ad tracking exist. If a third-party advertising partner is introduced, this policy will be updated first with partner and cookie disclosures, and the [Do Not Sell or Share opt-out](#california-do-not-sell) and Global Privacy Control handling will apply to it.
 
 ## 15. Push notifications
 

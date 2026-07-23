@@ -10,6 +10,25 @@ the document name (e.g. `## Community Guidelines v1.0 — …`). Entries
 that span multiple documents are unprefixed and the body lists which
 documents changed.
 
+## Privacy Policy v1.2 — 2026-07-23
+
+Privacy Policy only. Terms of Service unchanged at v1.1, Community Guidelines unchanged at v1.0.
+
+- §11 California / Do-Not-Sell section: replaced the "no-op, nothing to opt
+  out of" phrasing with the functional preference control now available at
+  `/privacy/ads-choices` (first-party opt-out cookie honored by the website)
+  and the automatically honored Global Privacy Control browser signal; the
+  no-sale / no-sharing statements are unchanged and remain true
+- §14 Cookies: appended a disclosure of the single first-party preference
+  cookie `trays_ads_opt_out` (no identifier, not used for tracking, set only
+  if the user opts out); the "We do not set advertising or analytics
+  cookies" statement is unchanged
+- §14: added an "Advertising on the trays.app website" subsection — clearly
+  labeled sponsored placements on public recipe pages are first-party house
+  content today, with no third-party ad partners and no ad tracking; any
+  future third-party partner requires a policy update first, and the opt-out
+  and GPC handling will apply to it
+
 ## Privacy Policy v1.1 — 2026-05-29
 
 Privacy Policy only. Terms of Service unchanged at v1.1, Community Guidelines unchanged at v1.0.

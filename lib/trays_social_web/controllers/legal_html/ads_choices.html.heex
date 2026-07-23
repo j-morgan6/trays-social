@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>{@title} · Trays</title>
+    <link rel="stylesheet" href={~p"/legal/legal.css"} />
+  </head>
+  <body class="legal">
+    <div class="legal-shell">
+      <div class="legal-header">
+        <a class="legal-brand" href="/">Trays</a>
+        <span class="legal-meta">Do Not Sell or Share My Personal Information</span>
+      </div>
+      <article class="legal-content">
+        <h1>Advertising Choices</h1>
+
+        <p>
+          <strong>
+            <%= if @opted_out do %>
+              You are opted out of advertising-related cookies.
+            <% else %>
+              No opt-out preference is set.
+            <% end %>
+          </strong>
+        </p>
+
+        <p>
+          Trays sets no advertising cookies today. The website may show clearly
+          labeled sponsored placements, but they are first-party house content
+          and do not track you. This page exists so that if third-party
+          advertising is ever introduced, your choice is already recorded and
+          honored.
+        </p>
+
+        <p>
+          If you opt out, the only thing stored is a single preference cookie
+          named <code>trays_ads_opt_out</code>. It contains no identifier — its
+          value is the literal <code>1</code> — and it is never used for
+          tracking. It simply tells your browser not to load advertising
+          scripts on trays.app.
+        </p>
+
+        <p>
+          Browsers that send the Global Privacy Control signal are honored
+          automatically, with no cookie required.
+        </p>
+
+        <form method="post" action={~p"/privacy/ads-choices"}>
+          <input
+            type="hidden"
+            name="_csrf_token"
+            value={Phoenix.Controller.get_csrf_token()}
+          />
+          <%= if @opted_out do %>
+            <input type="hidden" name="choice" value="opt_in" />
+            <button type="submit">Remove my opt-out preference</button>
+          <% else %>
+            <input type="hidden" name="choice" value="opt_out" />
+            <button type="submit">Opt out of advertising cookies</button>
+          <% end %>
+        </form>
+
+        <p>
+          <a href={~p"/privacy"}>Back to the Privacy Policy</a>
+        </p>
+      </article>
+      <div class="legal-footer">
+        <p>1001366752 Ontario Inc. · <a href="mailto:support@trays.app">support@trays.app</a></p>
+      </div>
+    </div>
+  </body>
+</html>

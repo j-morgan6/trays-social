@@ -62,6 +62,15 @@ config :trays_social, :features,
   web_ads: false,
   paid_tier: false
 
+# W159 web ad network wiring. Both values stay nil until the ad-network
+# account exists AND the router @csp_header is amended in a follow-up to
+# allow the network's origins — with nil script_url the AdSlot JS hook is a
+# no-op and the sponsored slots render first-party house copy only.
+# Overridable in prod via WEB_ADS_SCRIPT_URL / WEB_ADS_SITE_ID (runtime.exs).
+config :trays_social, :web_ads,
+  script_url: nil,
+  site_id: nil
+
 # Configure ErrorTracker — captures unhandled exceptions and persists them
 # to the trays_social Postgres database. Self-hosted, no third-party calls.
 config :error_tracker, repo: TraysSocial.Repo, otp_app: :trays_social

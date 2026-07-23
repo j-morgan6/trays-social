@@ -58,6 +58,21 @@ if config_env() == :prod do
 
   config :trays_social, :features, features
 
+  # W159 web ad network wiring — per-deploy override for the script/site pair
+  # the sponsored slots hand to the AdSlot JS hook. Same overlay-not-replace
+  # pattern as FEATURES_* above: unset env vars keep the config/config.exs
+  # defaults (nil until the ad-network account exists and the CSP follow-up
+  # lands) instead of silently dropping them.
+  web_ads_default = Application.get_env(:trays_social, :web_ads, [])
+
+  web_ads =
+    Keyword.merge(web_ads_default,
+      script_url: System.get_env("WEB_ADS_SCRIPT_URL") || web_ads_default[:script_url],
+      site_id: System.get_env("WEB_ADS_SITE_ID") || web_ads_default[:site_id]
+    )
+
+  config :trays_social, :web_ads, web_ads
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """
