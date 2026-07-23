@@ -108,5 +108,12 @@ defmodule TraysSocialWeb.API.V1.JSON.FeedItemJSONTest do
     test "empty list stays empty" do
       assert FeedItemJSON.interleave_ads([], 8) == []
     end
+
+    test "stamps the given placement on ad payloads (W158)" do
+      result = FeedItemJSON.interleave_ads(post_items(9), 8, "find")
+
+      assert types(result) == List.duplicate("post", 8) ++ ["ad", "post"]
+      assert Enum.at(result, 8) == %{type: "ad", ad: %{slot: 0, placement: "find"}}
+    end
   end
 end

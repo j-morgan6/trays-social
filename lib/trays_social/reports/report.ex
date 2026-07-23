@@ -2,7 +2,14 @@ defmodule TraysSocial.Reports.Report do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @valid_target_types ~w(post comment user)
+  # W158 ad-report convention: ads are ephemeral slots, not stored records, so
+  # an "ad" report's target_id encodes placement + slot index (client-side:
+  # feed = 0 + slot, find = 10_000 + slot, cook_mode_finish = 20_000 + slot)
+  # and the client self-describes the surface in details, e.g.
+  # "placement=feed slot=1". The existing partial unique index (one OPEN
+  # report per reporter/target_type/target_id) therefore dedups per
+  # (reporter, placement, slot).
+  @valid_target_types ~w(post comment user ad)
   @valid_reasons ~w(spam off_topic harassment inappropriate other)
   schema "reports" do
     field :target_type, :string

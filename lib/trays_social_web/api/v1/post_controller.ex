@@ -3,7 +3,9 @@ defmodule TraysSocialWeb.API.V1.PostController do
 
   action_fallback TraysSocialWeb.API.V1.FallbackController
 
+  alias TraysSocial.Monetization
   alias TraysSocial.Posts
+  alias TraysSocialWeb.API.V1.JSON.FeedItemJSON
   alias TraysSocialWeb.API.V1.JSON.PostJSON
 
   def trending(conn, _params) do
@@ -14,13 +16,33 @@ defmodule TraysSocialWeb.API.V1.PostController do
     liked_post_ids = Posts.liked_post_ids_for_user(user.id, post_ids)
     bookmarked_post_ids = Posts.bookmarked_post_ids_for_user(user.id, post_ids)
 
+    render_opts = %{liked_post_ids: liked_post_ids, bookmarked_post_ids: bookmarked_post_ids}
+
     json(conn, %{
-      data:
-        PostJSON.render_list(posts, %{
-          liked_post_ids: liked_post_ids,
-          bookmarked_post_ids: bookmarked_post_ids
-        })
+      data: render_trending_data(posts, render_opts, user),
+      # G38/W158: same contract as /api/v1/feed — tells the iOS client whether
+      # ad slots are being served on this surface and at what cadence.
+      ad_config: Monetization.ad_config(user)
     })
+  end
+
+  # G38/W158: Find-tab twin of FeedController.render_feed_data/3 (kept
+  # deliberately duplicated — two call sites don't justify a shared module).
+  #
+  # * ads served (`:in_app_ads` on AND not a subscriber) -> tagged FeedItem
+  #   union with ad slots interleaved at ad_frequency, placement "find".
+  # * otherwise (the default everywhere today) -> legacy flat PostJSON list,
+  #   byte-identical to before this change, so the shipped iOS client that
+  #   decodes `data` as `[Post]` keeps working. Clients key off
+  #   `ad_config.enabled` to know which shape to expect.
+  defp render_trending_data(posts, render_opts, user) do
+    if Monetization.ads_enabled?(user) do
+      posts
+      |> FeedItemJSON.render_list(render_opts)
+      |> FeedItemJSON.interleave_ads(Monetization.ad_frequency(), "find")
+    else
+      PostJSON.render_list(posts, render_opts)
+    end
   end
 
   def show(conn, %{"id" => id}) do

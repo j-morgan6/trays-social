@@ -1,10 +1,137 @@
 defmodule TraysSocialWeb.API.V1.PostControllerTest do
-  use TraysSocialWeb.ConnCase, async: true
+  # async: false — the trending tests toggle the global :in_app_ads feature
+  # flag via Application.put_env/3 (G38/W158); running serially keeps that
+  # mutation from racing other tests that read :features.
+  use TraysSocialWeb.ConnCase, async: false
 
   import TraysSocial.AccountsFixtures
   import TraysSocial.PostsFixtures
 
   setup :register_and_api_authenticate_user
+
+  # Turn the :in_app_ads flag on for the duration of one test, restoring the
+  # prior config on exit.
+  defp enable_in_app_ads do
+    original = Application.get_env(:trays_social, :features, [])
+    Application.put_env(:trays_social, :features, Keyword.put(original, :in_app_ads, true))
+    on_exit(fn -> Application.put_env(:trays_social, :features, original) end)
+  end
+
+  describe "GET /api/v1/posts/trending" do
+    # Seed `count` posts with strictly descending like_count so the trending
+    # order (like_count desc, inserted_at desc) is deterministic regardless of
+    # second-precision timestamp ties. Returns post ids in expected trending
+    # order.
+    defp seed_trending_posts(user, count) do
+      for i <- 0..(count - 1) do
+        post = post_fixture(%{user_id: user.id})
+
+        {:ok, updated} =
+          post
+          |> Ecto.Changeset.change(like_count: 1000 - i)
+          |> TraysSocial.Repo.update()
+
+        updated.id
+      end
+    end
+
+    test "flag off (default): flat PostJSON list with ad_config disabled",
+         %{conn: conn, user: user} do
+      seed_trending_posts(user, 3)
+
+      conn = get(conn, ~p"/api/v1/posts/trending")
+
+      assert %{"data" => [item | _] = data, "ad_config" => ad_config} =
+               json_response(conn, 200)
+
+      assert ad_config["enabled"] == false
+      assert ad_config["frequency"] == TraysSocial.Monetization.ad_frequency()
+
+      # Flat shape: post fields at the top level, no union wrapper. An item's
+      # "type" is the post's own content-type ("recipe"/"post"), never "ad".
+      assert Map.has_key?(item, "id")
+      assert Map.has_key?(item, "caption")
+      refute Map.has_key?(item, "post")
+      refute Map.has_key?(item, "ad")
+      refute Enum.any?(data, &(&1["type"] == "ad"))
+    end
+
+    test "flag on: tagged union with ad slots at placement \"find\" and correct cadence",
+         %{conn: conn, user: user} do
+      freq = TraysSocial.Monetization.ad_frequency()
+      seed_trending_posts(user, freq + 1)
+      enable_in_app_ads()
+
+      conn = get(conn, ~p"/api/v1/posts/trending")
+
+      assert %{"data" => data, "ad_config" => %{"enabled" => true}} = json_response(conn, 200)
+
+      assert Enum.all?(data, &(&1["type"] in ["post", "ad"]))
+
+      # One ad after each full group of `freq` posts, never trailing: with
+      # freq + 1 posts that is exactly one ad, sitting after the first group.
+      assert Enum.map(data, & &1["type"]) ==
+               List.duplicate("post", freq) ++ ["ad", "post"]
+
+      [ad] = Enum.filter(data, &(&1["type"] == "ad"))
+      assert %{"slot" => 0, "placement" => "find"} = ad["ad"]
+    end
+
+    test "organic integrity: union post order matches the flat order with no dup or drop",
+         %{conn: conn, user: user} do
+      freq = TraysSocial.Monetization.ad_frequency()
+      expected_ids = seed_trending_posts(user, freq + 1)
+
+      flat_ids =
+        conn
+        |> get(~p"/api/v1/posts/trending")
+        |> json_response(200)
+        |> Map.fetch!("data")
+        |> Enum.map(& &1["id"])
+
+      enable_in_app_ads()
+
+      union_ids =
+        conn
+        |> get(~p"/api/v1/posts/trending")
+        |> json_response(200)
+        |> Map.fetch!("data")
+        |> Enum.filter(&(&1["type"] == "post"))
+        |> Enum.map(& &1["post"]["id"])
+
+      assert flat_ids == expected_ids
+      assert union_ids == expected_ids
+    end
+
+    test "subscribers keep the flat shape and disabled ad_config even with the flag on",
+         %{conn: conn, user: user} do
+      {:ok, _} = TraysSocial.Accounts.set_subscriber(user, true)
+      enable_in_app_ads()
+      seed_trending_posts(user, 3)
+
+      conn = get(conn, ~p"/api/v1/posts/trending")
+
+      assert %{"data" => [item | _], "ad_config" => %{"enabled" => false}} =
+               json_response(conn, 200)
+
+      assert Map.has_key?(item, "id")
+      refute Map.has_key?(item, "post")
+    end
+
+    test "flag on with fewer than ad_frequency posts: union shape, zero ads",
+         %{conn: conn, user: user} do
+      seed_trending_posts(user, 3)
+      enable_in_app_ads()
+
+      conn = get(conn, ~p"/api/v1/posts/trending")
+
+      assert %{"data" => data, "ad_config" => %{"enabled" => true}} = json_response(conn, 200)
+
+      assert length(data) == 3
+      assert Enum.all?(data, &(&1["type"] == "post"))
+      assert Enum.all?(data, &Map.has_key?(&1, "post"))
+    end
+  end
 
   describe "GET /api/v1/posts/:id" do
     test "returns post with all associations", %{conn: conn, user: user} do

@@ -42,6 +42,10 @@ defmodule TraysSocialWeb.API.V1.JSON.FeedItemJSON do
   W163: splice ad slots into an already-rendered list of `post` feed items at a
   density of one ad per `freq` posts.
 
+  `placement` names the surface the slots are for (defaults to `"feed"`; the
+  Find tab passes `"find"`, W158) and is stamped into each ad payload so the
+  client renders the right creative format per surface.
+
   Density / placement rules (monetization design spec section 4.1):
 
     * One ad slot after every `freq` posts — never between every item.
@@ -55,14 +59,15 @@ defmodule TraysSocialWeb.API.V1.JSON.FeedItemJSON do
   derives the cursor from. Each ad carries a 0-based `slot` index so the client
   can request/cache one ad creative per slot.
   """
-  def interleave_ads(post_items, freq) when is_integer(freq) and freq > 0 do
+  def interleave_ads(post_items, freq, placement \\ "feed")
+      when is_integer(freq) and freq > 0 do
     chunks = Enum.chunk_every(post_items, freq)
     last_index = length(chunks) - 1
 
     chunks
     |> Enum.with_index()
     |> Enum.flat_map(fn {chunk, index} ->
-      if index < last_index, do: chunk ++ [render_ad(ad_slot(index))], else: chunk
+      if index < last_index, do: chunk ++ [render_ad(ad_slot(index, placement))], else: chunk
     end)
   end
 
@@ -80,16 +85,16 @@ defmodule TraysSocialWeb.API.V1.JSON.FeedItemJSON do
   Wrap an ad payload as a tagged feed item: `%{type: "ad", ad: <ad>}`.
 
   The server emits ad *slots* (a position + index), not ad creative — the iOS
-  client fills each slot from the ad network (AdMob) on-device. See `ad_slot/1`
-  for the slot payload `interleave_ads/2` produces.
+  client fills each slot from the ad network (AdMob) on-device. See `ad_slot/2`
+  for the slot payload `interleave_ads/3` produces.
   """
   def render_ad(ad) do
     %{type: "ad", ad: ad}
   end
 
-  # The slot descriptor the server hands the client for one feed ad position.
+  # The slot descriptor the server hands the client for one ad position.
   # Deliberately minimal: a stable 0-based index within the page plus the
-  # surface, so the client knows where to render and can cache per slot. No ad
-  # creative — that comes from the on-device ad network.
-  defp ad_slot(index), do: %{slot: index, placement: "feed"}
+  # surface (placement), so the client knows where to render and can cache per
+  # slot. No ad creative — that comes from the on-device ad network.
+  defp ad_slot(index, placement), do: %{slot: index, placement: placement}
 end
