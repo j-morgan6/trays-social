@@ -11,7 +11,10 @@
     <link rel="apple-touch-icon" href={~p"/apple-touch-icon.png"} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif&display=swap"
+      rel="stylesheet"
+    />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
@@ -56,7 +59,8 @@
               "text-sm py-[22px] border-b-2 transition-colors",
               if(nav_tab == :feed,
                 do: "text-base-content font-semibold border-primary",
-                else: "text-base-content/60 font-medium border-transparent hover:text-base-content"
+                else:
+                  "text-base-content/60 font-medium border-transparent hover:text-base-content"
               )
             ]}
           >
@@ -68,7 +72,8 @@
               "text-sm py-[22px] border-b-2 transition-colors",
               if(nav_tab == :explore,
                 do: "text-base-content font-semibold border-primary",
-                else: "text-base-content/60 font-medium border-transparent hover:text-base-content"
+                else:
+                  "text-base-content/60 font-medium border-transparent hover:text-base-content"
               )
             ]}
           >
@@ -81,7 +86,8 @@
                 "text-sm py-[22px] border-b-2 transition-colors",
                 if(nav_tab == :my_tray,
                   do: "text-base-content font-semibold border-primary",
-                  else: "text-base-content/60 font-medium border-transparent hover:text-base-content"
+                  else:
+                    "text-base-content/60 font-medium border-transparent hover:text-base-content"
                 )
               ]}
             >
@@ -104,7 +110,10 @@
 
         <%= if @current_scope do %>
           <%!-- Notifications bell with amber unread dot --%>
-          <.link navigate={~p"/notifications"} class="relative p-1.5 text-base-content/70 hover:text-base-content transition-colors">
+          <.link
+            navigate={~p"/notifications"}
+            class="relative p-1.5 text-base-content/70 hover:text-base-content transition-colors"
+          >
             <.icon name="hero-bell" class="size-5" />
             <%= if assigns[:unread_notifications] && assigns[:unread_notifications] > 0 do %>
               <span class="absolute top-0 right-0 w-2 h-2 rounded-full bg-accent"></span>
@@ -168,7 +177,11 @@
             Please confirm your email address to post, comment, and interact with others.
             Check your inbox for the confirmation link.
           </p>
-          <.link href={~p"/users/confirmation/resend"} method="post" class="btn btn-warning btn-xs shrink-0">
+          <.link
+            href={~p"/users/confirmation/resend"}
+            method="post"
+            class="btn btn-warning btn-xs shrink-0"
+          >
             Resend email
           </.link>
         </div>

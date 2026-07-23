@@ -12,9 +12,14 @@ defmodule TraysSocialWeb.API.V1.LikeController do
       post = Posts.get_post!(post_id)
 
       case Posts.like_post(post, user) do
-        {:ok, _} -> json(conn, %{data: %{message: "liked", like_count: post.like_count + 1}})
-        {:error, :blocked} -> {:error, :blocked}
-        {:error, _} -> json(conn, %{data: %{message: "already liked", like_count: post.like_count}})
+        {:ok, _} ->
+          json(conn, %{data: %{message: "liked", like_count: post.like_count + 1}})
+
+        {:error, :blocked} ->
+          {:error, :blocked}
+
+        {:error, _} ->
+          json(conn, %{data: %{message: "already liked", like_count: post.like_count}})
       end
     rescue
       Ecto.NoResultsError -> {:error, :not_found}
@@ -29,8 +34,11 @@ defmodule TraysSocialWeb.API.V1.LikeController do
       post = Posts.get_post!(post_id)
 
       case Posts.unlike_post(post, user) do
-        {:ok, _} -> json(conn, %{data: %{message: "unliked", like_count: max(post.like_count - 1, 0)}})
-        {:error, _} -> json(conn, %{data: %{message: "not liked", like_count: post.like_count}})
+        {:ok, _} ->
+          json(conn, %{data: %{message: "unliked", like_count: max(post.like_count - 1, 0)}})
+
+        {:error, _} ->
+          json(conn, %{data: %{message: "not liked", like_count: post.like_count}})
       end
     rescue
       Ecto.NoResultsError -> {:error, :not_found}

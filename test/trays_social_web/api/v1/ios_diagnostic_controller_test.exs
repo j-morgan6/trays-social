@@ -39,7 +39,8 @@ defmodule TraysSocialWeb.API.V1.IosDiagnosticControllerTest do
       # a future iOS payload because its shape is novel.
       body = %{@valid_body | "payload" => %{"futureField" => 42, "list" => [1, 2, 3]}}
 
-      assert %{"data" => %{"id" => _}} = post(conn, ~p"/api/v1/ios_diagnostics", body) |> json_response(201)
+      assert %{"data" => %{"id" => _}} =
+               post(conn, ~p"/api/v1/ios_diagnostics", body) |> json_response(201)
     end
 
     test "returns 422 when payload_type is missing", %{conn: conn} do

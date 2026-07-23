@@ -126,7 +126,11 @@ defmodule TraysSocialWeb.SettingsLive.Index do
   # of session validity. Matches the step-up pattern already in place for
   # change_email / change_password. Single generic error for both missing
   # and incorrect password (don't distinguish failure modes).
-  def handle_event("delete_account", %{"user" => %{"current_password" => current_password}}, socket)
+  def handle_event(
+        "delete_account",
+        %{"user" => %{"current_password" => current_password}},
+        socket
+      )
       when is_binary(current_password) do
     user = socket.assigns.user
 

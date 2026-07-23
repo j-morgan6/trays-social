@@ -134,9 +134,12 @@ defmodule TraysSocialWeb.Admin.FeedbackLive do
                 </dd>
               </div>
               <div>
-                <dt class="text-xs uppercase tracking-wide text-base-content/60">App / OS / Device</dt>
+                <dt class="text-xs uppercase tracking-wide text-base-content/60">
+                  App / OS / Device
+                </dt>
                 <dd class="font-mono text-xs">
-                  {@selected.app_version || "—"} / {@selected.os_version || "—"} / {@selected.device_model || "—"}
+                  {@selected.app_version || "—"} / {@selected.os_version || "—"} / {@selected.device_model ||
+                    "—"}
                 </dd>
               </div>
             </dl>

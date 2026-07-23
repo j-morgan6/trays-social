@@ -18,9 +18,10 @@ defmodule TraysSocial.Repo.Migrations.CreateReports do
     create index(:reports, [:reporter_id])
     create index(:reports, [:target_type, :target_id])
     create index(:reports, [:status])
+
     create unique_index(:reports, [:reporter_id, :target_type, :target_id],
-      name: :reports_reporter_target_unique,
-      where: "status = 'open'"
-    )
+             name: :reports_reporter_target_unique,
+             where: "status = 'open'"
+           )
   end
 end

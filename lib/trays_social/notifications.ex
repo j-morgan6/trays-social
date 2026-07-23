@@ -164,9 +164,15 @@ defmodule TraysSocial.Notifications do
   defp push_title_for(%{type: "follow"}), do: "New Follower"
   defp push_title_for(_), do: "Trays"
 
-  defp push_body_for(%{actor: %{username: username}, type: "like"}), do: "#{username} liked your post"
-  defp push_body_for(%{actor: %{username: username}, type: "comment"}), do: "#{username} commented on your post"
-  defp push_body_for(%{actor: %{username: username}, type: "follow"}), do: "#{username} started following you"
+  defp push_body_for(%{actor: %{username: username}, type: "like"}),
+    do: "#{username} liked your post"
+
+  defp push_body_for(%{actor: %{username: username}, type: "comment"}),
+    do: "#{username} commented on your post"
+
+  defp push_body_for(%{actor: %{username: username}, type: "follow"}),
+    do: "#{username} started following you"
+
   defp push_body_for(_), do: "You have a new notification"
 
   ## Device Tokens

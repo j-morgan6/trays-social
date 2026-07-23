@@ -33,7 +33,10 @@ defmodule TraysSocialWeb.API.V1.FeedControllerTest do
       assert ad_config["frequency"] == TraysSocial.Monetization.ad_frequency()
     end
 
-    test "ad_config is disabled for subscribers even when ads are enabled", %{conn: conn, user: user} do
+    test "ad_config is disabled for subscribers even when ads are enabled", %{
+      conn: conn,
+      user: user
+    } do
       {:ok, _} = TraysSocial.Accounts.set_subscriber(user, true)
 
       original = Application.get_env(:trays_social, :features, [])
@@ -193,7 +196,9 @@ defmodule TraysSocialWeb.API.V1.FeedControllerTest do
         conn |> get(~p"/api/v1/feed") |> json_response(200) |> Map.fetch!("cursor")
 
       enable_in_app_ads()
-      %{"data" => data, "cursor" => ad_cursor} = conn |> get(~p"/api/v1/feed") |> json_response(200)
+
+      %{"data" => data, "cursor" => ad_cursor} =
+        conn |> get(~p"/api/v1/feed") |> json_response(200)
 
       assert Enum.any?(data, &(&1["type"] == "ad"))
       assert is_binary(flat_cursor)

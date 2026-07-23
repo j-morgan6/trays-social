@@ -93,90 +93,89 @@
           <% end %>
         </p>
       </div>
-
     <% Enum.empty?(visible_cooks) -> %>
       <div class="bg-base-100 border border-base-300 rounded-sm p-8 text-center">
         <p class="font-serif-editorial italic text-[15px] text-base-content/70">
           No one matches &ldquo;{@query}&rdquo; in this list.
         </p>
       </div>
-
     <% true -> %>
-    <div class="bg-base-100 border border-base-300 rounded-sm divide-y divide-base-300">
-      <%= for cook <- visible_cooks do %>
-        <% is_viewer = @viewer_id == cook.id %>
-        <% is_following = MapSet.member?(@following_ids, cook.id) %>
+      <div class="bg-base-100 border border-base-300 rounded-sm divide-y divide-base-300">
+        <%= for cook <- visible_cooks do %>
+          <% is_viewer = @viewer_id == cook.id %>
+          <% is_following = MapSet.member?(@following_ids, cook.id) %>
 
-        <div class="grid grid-cols-[48px_1fr_auto] gap-3.5 px-5 md:px-6 py-4 items-center">
-          <.link navigate={~p"/@#{cook.username}"} class="contents">
-            <.user_avatar
-              username={cook.username}
-              photo_url={cook.profile_photo_url}
-              size="lg"
-            />
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2 flex-wrap">
-                <span class="text-[15px] font-semibold text-base-content truncate">
-                  {cook.username}
-                </span>
-                <span class="text-[12px] text-base-content/60 truncate">
-                  @{cook.username}
-                </span>
-                <%= if new_cook?(cook) do %>
-                  <span class="inline-flex items-center font-mono text-[10px] uppercase tracking-[0.1em] text-[#2a5430] bg-secondary/40 px-2 py-0.5 rounded-full">
-                    New cook
+          <div class="grid grid-cols-[48px_1fr_auto] gap-3.5 px-5 md:px-6 py-4 items-center">
+            <.link navigate={~p"/@#{cook.username}"} class="contents">
+              <.user_avatar
+                username={cook.username}
+                photo_url={cook.profile_photo_url}
+                size="lg"
+              />
+              <div class="min-w-0">
+                <div class="flex items-baseline gap-2 flex-wrap">
+                  <span class="text-[15px] font-semibold text-base-content truncate">
+                    {cook.username}
                   </span>
+                  <span class="text-[12px] text-base-content/60 truncate">
+                    @{cook.username}
+                  </span>
+                  <%= if new_cook?(cook) do %>
+                    <span class="inline-flex items-center font-mono text-[10px] uppercase tracking-[0.1em] text-[#2a5430] bg-secondary/40 px-2 py-0.5 rounded-full">
+                      New cook
+                    </span>
+                  <% end %>
+                </div>
+                <%= if cook.bio do %>
+                  <div class="text-[13px] text-base-content/60 leading-[1.4] mt-0.5 line-clamp-1">
+                    {cook.bio}
+                  </div>
                 <% end %>
               </div>
-              <%= if cook.bio do %>
-                <div class="text-[13px] text-base-content/60 leading-[1.4] mt-0.5 line-clamp-1">
-                  {cook.bio}
-                </div>
-              <% end %>
-            </div>
-          </.link>
+            </.link>
 
-          <%= cond do %>
-            <% is_viewer -> %>
-              <%!-- Don't render an action for the viewer's own row --%>
-              <span></span>
-            <% @viewer_id == nil -> %>
-              <.link
-                href={~p"/users/log-in"}
-                class="inline-flex items-center justify-center h-8 px-3.5 rounded-md bg-primary text-primary-content text-[12px] font-semibold hover:brightness-110 transition"
-              >
-                Follow
-              </.link>
-            <% true -> %>
-              <button
-                type="button"
-                phx-click="toggle-follow"
-                phx-value-id={cook.id}
-                class={[
-                  "inline-flex items-center justify-center h-8 px-3.5 rounded-md text-[12px] font-semibold transition",
-                  if(is_following,
-                    do: "bg-base-100 border border-base-300 text-base-content hover:bg-base-200",
-                    else: "bg-primary text-primary-content hover:brightness-110"
-                  )
-                ]}
-              >
-                {if is_following, do: "Following", else: "Follow"}
-              </button>
-          <% end %>
-        </div>
+            <%= cond do %>
+              <% is_viewer -> %>
+                <%!-- Don't render an action for the viewer's own row --%>
+                <span></span>
+              <% @viewer_id == nil -> %>
+                <.link
+                  href={~p"/users/log-in"}
+                  class="inline-flex items-center justify-center h-8 px-3.5 rounded-md bg-primary text-primary-content text-[12px] font-semibold hover:brightness-110 transition"
+                >
+                  Follow
+                </.link>
+              <% true -> %>
+                <button
+                  type="button"
+                  phx-click="toggle-follow"
+                  phx-value-id={cook.id}
+                  class={[
+                    "inline-flex items-center justify-center h-8 px-3.5 rounded-md text-[12px] font-semibold transition",
+                    if(is_following,
+                      do:
+                        "bg-base-100 border border-base-300 text-base-content hover:bg-base-200",
+                      else: "bg-primary text-primary-content hover:brightness-110"
+                    )
+                  ]}
+                >
+                  {if is_following, do: "Following", else: "Follow"}
+                </button>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <%= cond do %>
+        <% @query != "" -> %>
+          <div class="text-center mt-4 font-serif-editorial italic text-[13px] text-base-content/60">
+            {length(visible_cooks)} {if length(visible_cooks) == 1, do: "match", else: "matches"} for &ldquo;{@query}&rdquo;
+          </div>
+        <% length(@cooks) < list_count -> %>
+          <div class="text-center mt-4 font-serif-editorial italic text-[13px] text-base-content/60">
+            Showing {length(@cooks)} of {list_count} · scroll for more
+          </div>
+        <% true -> %>
       <% end %>
-    </div>
-
-    <%= cond do %>
-      <% @query != "" -> %>
-        <div class="text-center mt-4 font-serif-editorial italic text-[13px] text-base-content/60">
-          {length(visible_cooks)} {if length(visible_cooks) == 1, do: "match", else: "matches"} for &ldquo;{@query}&rdquo;
-        </div>
-      <% length(@cooks) < list_count -> %>
-        <div class="text-center mt-4 font-serif-editorial italic text-[13px] text-base-content/60">
-          Showing {length(@cooks)} of {list_count} · scroll for more
-        </div>
-      <% true -> %>
-    <% end %>
   <% end %>
 </main>

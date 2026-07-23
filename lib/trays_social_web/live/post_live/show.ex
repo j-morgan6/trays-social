@@ -120,7 +120,8 @@ defmodule TraysSocialWeb.PostLive.Show do
     socket =
       socket
       |> assign(:cooking_started_at, new_started_at)
-      |> assign(:checked_ingredient_ids,
+      |> assign(
+        :checked_ingredient_ids,
         if(new_started_at, do: MapSet.new(), else: socket.assigns.checked_ingredient_ids)
       )
 

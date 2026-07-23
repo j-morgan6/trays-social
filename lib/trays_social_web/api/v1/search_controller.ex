@@ -39,7 +39,11 @@ defmodule TraysSocialWeb.API.V1.SearchController do
 
     json(conn, %{
       data: %{
-        posts: PostJSON.render_list(posts, %{liked_post_ids: liked_post_ids, bookmarked_post_ids: bookmarked_post_ids}),
+        posts:
+          PostJSON.render_list(posts, %{
+            liked_post_ids: liked_post_ids,
+            bookmarked_post_ids: bookmarked_post_ids
+          }),
         users: Enum.map(users, &render_user/1)
       },
       cursor: encode_cursor(List.last(posts))
@@ -92,11 +96,13 @@ defmodule TraysSocialWeb.API.V1.SearchController do
   defp parse_int(_), do: nil
 
   defp sanitize(nil, _max), do: nil
+
   defp sanitize(value, max) when is_binary(value) do
     case value |> String.trim() |> String.slice(0, max) do
       "" -> nil
       trimmed -> trimmed
     end
   end
+
   defp sanitize(_, _), do: nil
 end

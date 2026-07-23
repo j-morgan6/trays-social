@@ -36,7 +36,8 @@
     >
       <%!-- Amber unread dot, left-anchored. --%>
       <%= if is_nil(n.read_at) do %>
-        <span class="absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-accent"></span>
+        <span class="absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-accent">
+        </span>
       <% end %>
 
       <%!-- Actor avatar — links to actor profile for non-post events,
@@ -60,16 +61,15 @@
             <%= case n.type do %>
               <% "like" -> %>
                 <span class="font-semibold">{n.actor.username}</span>
-                found your <em>{post_title(n.post) || "recipe"}</em> helpful
+                found your <em>{post_title(n.post) || "recipe"}</em>
+                helpful
               <% "comment" -> %>
                 <span class="font-semibold">{n.actor.username}</span>
                 left a note on <em>{post_title(n.post) || "your recipe"}</em>
               <% "follow" -> %>
-                <span class="font-semibold">{n.actor.username}</span>
-                followed you
+                <span class="font-semibold">{n.actor.username}</span> followed you
               <% _ -> %>
-                <span class="font-semibold">{n.actor.username}</span>
-                interacted with you
+                <span class="font-semibold">{n.actor.username}</span> interacted with you
             <% end %>
           </p>
 

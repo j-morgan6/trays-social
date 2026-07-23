@@ -56,7 +56,10 @@ defmodule TraysSocial.Notifications.PushSender do
             :ok
 
           %{response: response} when response in [:bad_device_token, :unregistered] ->
-            Logger.info("PushSender: pruning dead device token id=#{device_token.id} (#{response})")
+            Logger.info(
+              "PushSender: pruning dead device token id=#{device_token.id} (#{response})"
+            )
+
             Notifications.delete_device_token(device_token.token)
 
           %{response: response} ->

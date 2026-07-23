@@ -58,7 +58,8 @@ defmodule TraysSocialWeb.Admin.ReportsLive do
       Posts.remove_post(post, %{removed_by_id: current_user.id, reason: report.reason})
     end
 
-    {:ok, _} = Reports.resolve_report(report, %{status: "resolved", resolved_by_id: current_user.id})
+    {:ok, _} =
+      Reports.resolve_report(report, %{status: "resolved", resolved_by_id: current_user.id})
 
     {:noreply, reload_reports(socket)}
   end
@@ -205,7 +206,6 @@ defmodule TraysSocialWeb.Admin.ReportsLive do
         </button>
       </div>
 
-
       <div class="space-y-4">
         <div :for={report <- @reports} class="card bg-base-100 shadow p-4">
           <div class="flex justify-between items-start">
@@ -227,12 +227,30 @@ defmodule TraysSocialWeb.Admin.ReportsLive do
           <p :if={report.details} class="mt-1 text-sm text-base-content/70">{report.details}</p>
 
           <div :if={report.status == "open"} class="mt-3 flex gap-2 flex-wrap">
-            <button :if={report.target_type == "post"} phx-click="remove_post" phx-value-id={report.id}
-              class="btn btn-sm btn-error">Remove Post</button>
-            <button phx-click="resolve" phx-value-id={report.id} phx-value-status="resolved"
-              class="btn btn-sm btn-success">Resolve</button>
-            <button phx-click="resolve" phx-value-id={report.id} phx-value-status="dismissed"
-              class="btn btn-sm btn-ghost">Dismiss</button>
+            <button
+              :if={report.target_type == "post"}
+              phx-click="remove_post"
+              phx-value-id={report.id}
+              class="btn btn-sm btn-error"
+            >
+              Remove Post
+            </button>
+            <button
+              phx-click="resolve"
+              phx-value-id={report.id}
+              phx-value-status="resolved"
+              class="btn btn-sm btn-success"
+            >
+              Resolve
+            </button>
+            <button
+              phx-click="resolve"
+              phx-value-id={report.id}
+              phx-value-status="dismissed"
+              class="btn btn-sm btn-ghost"
+            >
+              Dismiss
+            </button>
           </div>
 
           <div :if={report.target_type == "user"} class="mt-3 border-t pt-3">
@@ -243,11 +261,16 @@ defmodule TraysSocialWeb.Admin.ReportsLive do
                 <%= if User.is_suspended?(target) do %>
                   <div class="flex items-center gap-3 text-sm">
                     <span>
-                      <strong>@{target.username}</strong> suspended
-                      {format_suspended_until(target.suspended_until)}.
+                      <strong>@{target.username}</strong>
+                      suspended {format_suspended_until(target.suspended_until)}.
                     </span>
-                    <button phx-click="unsuspend_user" phx-value-id={report.id}
-                      class="btn btn-xs btn-ghost">Lift suspension</button>
+                    <button
+                      phx-click="unsuspend_user"
+                      phx-value-id={report.id}
+                      class="btn btn-xs btn-ghost"
+                    >
+                      Lift suspension
+                    </button>
                   </div>
                 <% else %>
                   <form phx-submit="suspend_user" class="flex items-center gap-2 flex-wrap text-sm">

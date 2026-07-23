@@ -75,7 +75,10 @@ defmodule TraysSocialWeb.API.V1.DeviceControllerTest do
       # register the same token — must NOT silently rebind it to B. Must
       # also respond identically to the unknown-token case (404).
       other_user = user_fixture()
-      {:ok, %{user_id: a_id}} = TraysSocial.Notifications.register_device(other_user.id, "shared_token", "ios")
+
+      {:ok, %{user_id: a_id}} =
+        TraysSocial.Notifications.register_device(other_user.id, "shared_token", "ios")
+
       refute a_id == user.id
 
       conn = post(conn, ~p"/api/v1/devices", %{token: "shared_token"})

@@ -143,7 +143,10 @@ defmodule TraysSocial.Accounts.UserNotifierTest do
       # In the rendered HTML, the raw URL string must be encoded inside attributes
       # (& -> &amp;, " -> &quot;). The text_body must preserve the original URL
       # for extract_user_token/1 splitting in support fixtures.
-      refute String.contains?(email.html_body, ~s(href="https://trays.app/users/confirm/token?foo=bar&baz=qux"x")),
+      refute String.contains?(
+               email.html_body,
+               ~s(href="https://trays.app/users/confirm/token?foo=bar&baz=qux"x")
+             ),
              "raw unescaped URL should not appear inside an href"
 
       assert String.contains?(email.html_body, "&amp;baz=qux")
@@ -154,9 +157,11 @@ defmodule TraysSocial.Accounts.UserNotifierTest do
   # ---------- helpers ----------
 
   defp assert_email_html_contains_cta(email, url) do
-    assert is_binary(email.html_body), "expected html_body to be set, got: #{inspect(email.html_body)}"
+    assert is_binary(email.html_body),
+           "expected html_body to be set, got: #{inspect(email.html_body)}"
 
-    assert email.html_body =~ ~r/<a [^>]*href="[^"]*#{Regex.escape(escape_url_for_html(url))}[^"]*"/,
+    assert email.html_body =~
+             ~r/<a [^>]*href="[^"]*#{Regex.escape(escape_url_for_html(url))}[^"]*"/,
            "expected html_body to contain an <a href> pointing at #{url}; got:\n#{email.html_body}"
   end
 

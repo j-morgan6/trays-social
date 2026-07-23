@@ -373,7 +373,10 @@
   <%!-- Cook's notes — collapsed by default. The summary acts as the
        "calm collapsed hint" from the design; opening the <details> reveals
        the full thread + composer. --%>
-  <details id="cooks-notes" class="mt-6 group rounded-sm border border-base-300 bg-base-100 open:bg-base-100">
+  <details
+    id="cooks-notes"
+    class="mt-6 group rounded-sm border border-base-300 bg-base-100 open:bg-base-100"
+  >
     <summary class="flex items-center gap-3 p-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
       <.icon name="hero-chat-bubble-left-ellipsis" class="size-4 text-base-content/60" />
       <span class="text-[13px] text-base-content">
@@ -439,7 +442,12 @@
       </div>
 
       <%= if assigns[:current_scope] && @current_scope.user do %>
-        <.form for={%{}} as={:comment} phx-submit="add-comment" class="flex gap-2 pt-2 border-t border-base-300">
+        <.form
+          for={%{}}
+          as={:comment}
+          phx-submit="add-comment"
+          class="flex gap-2 pt-2 border-t border-base-300"
+        >
           <input
             type="text"
             name="comment[body]"

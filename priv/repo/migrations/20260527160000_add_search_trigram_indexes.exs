@@ -39,27 +39,27 @@ defmodule TraysSocial.Repo.Migrations.AddSearchTrigramIndexes do
     )
 
     create_if_not_exists index(
-                          :posts,
-                          ["caption gin_trgm_ops"],
-                          name: :posts_caption_trgm_idx,
-                          using: :gin,
-                          concurrently: true
-                        )
+                           :posts,
+                           ["caption gin_trgm_ops"],
+                           name: :posts_caption_trgm_idx,
+                           using: :gin,
+                           concurrently: true
+                         )
 
     create_if_not_exists index(
-                          :ingredients,
-                          ["name gin_trgm_ops"],
-                          name: :ingredients_name_trgm_idx,
-                          using: :gin,
-                          concurrently: true
-                        )
+                           :ingredients,
+                           ["name gin_trgm_ops"],
+                           name: :ingredients_name_trgm_idx,
+                           using: :gin,
+                           concurrently: true
+                         )
 
     create_if_not_exists index(
-                          :post_tags,
-                          ["tag gin_trgm_ops"],
-                          name: :post_tags_tag_trgm_idx,
-                          using: :gin,
-                          concurrently: true
-                        )
+                           :post_tags,
+                           ["tag gin_trgm_ops"],
+                           name: :post_tags_tag_trgm_idx,
+                           using: :gin,
+                           concurrently: true
+                         )
   end
 end

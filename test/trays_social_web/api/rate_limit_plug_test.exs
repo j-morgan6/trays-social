@@ -29,7 +29,12 @@ defmodule TraysSocialWeb.API.RateLimitPlugTest do
       opts = RateLimitPlug.init(max_requests: 2, interval_ms: 60_000)
 
       # Use a unique path to avoid interference from other tests
-      conn = Map.put(conn, :request_path, "/api/v1/auth/test-rate-limit-#{System.unique_integer([:positive])}")
+      conn =
+        Map.put(
+          conn,
+          :request_path,
+          "/api/v1/auth/test-rate-limit-#{System.unique_integer([:positive])}"
+        )
 
       _conn1 = RateLimitPlug.call(conn, opts)
       _conn2 = RateLimitPlug.call(conn, opts)
@@ -38,13 +43,21 @@ defmodule TraysSocialWeb.API.RateLimitPlugTest do
       assert conn3.halted
       assert conn3.status == 429
       assert get_resp_header(conn3, "retry-after") == ["60"]
-      assert Jason.decode!(conn3.resp_body) == %{"errors" => [%{"message" => "too many requests"}]}
+
+      assert Jason.decode!(conn3.resp_body) == %{
+               "errors" => [%{"message" => "too many requests"}]
+             }
     end
 
     test "includes Retry-After header in 429 response", %{conn: conn} do
       opts = RateLimitPlug.init(max_requests: 1, interval_ms: 120_000)
 
-      conn = Map.put(conn, :request_path, "/api/v1/auth/test-retry-#{System.unique_integer([:positive])}")
+      conn =
+        Map.put(
+          conn,
+          :request_path,
+          "/api/v1/auth/test-retry-#{System.unique_integer([:positive])}"
+        )
 
       _conn1 = RateLimitPlug.call(conn, opts)
       conn2 = RateLimitPlug.call(conn, opts)

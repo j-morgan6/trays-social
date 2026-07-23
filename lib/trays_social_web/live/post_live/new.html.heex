@@ -100,10 +100,10 @@
   <main class="max-w-[760px] mx-auto px-6 md:px-8 pt-10 pb-16">
     <div class="mb-8">
       <div class="font-mono text-[11px] text-primary uppercase tracking-[0.18em] mb-3">
-        <%= if is_recipe, do: "Writing a recipe page", else: "Writing a post" %>
+        {if is_recipe, do: "Writing a recipe page", else: "Writing a post"}
       </div>
       <h1 class="font-serif-editorial text-[44px] md:text-[52px] leading-none tracking-[-0.015em] text-base-content mb-3">
-        <%= if is_recipe, do: "Tell us how you cooked it.", else: "Show us what you ate." %>
+        {if is_recipe, do: "Tell us how you cooked it.", else: "Show us what you ate."}
       </h1>
       <p class="text-[15px] text-base-content/70 leading-[1.55] max-w-[560px]">
         <%= if is_recipe do %>
@@ -145,7 +145,9 @@
               <div class="w-14 h-14 rounded-full bg-base-200 flex items-center justify-center mb-4">
                 <.icon name="hero-camera" class="size-7 text-base-content/40" />
               </div>
-              <p class="font-serif-editorial text-[20px] text-base-content">Drop the hero shot here</p>
+              <p class="font-serif-editorial text-[20px] text-base-content">
+                Drop the hero shot here
+              </p>
               <p class="text-[13px] text-base-content/60 mt-1">
                 Or click to browse. PNG, JPG, HEIC, up to 10MB each.
               </p>
@@ -208,14 +210,23 @@
         <div class="flex items-baseline gap-3 mb-4">
           <span class="font-serif-editorial italic text-[24px] text-primary leading-none">2</span>
           <h2 class="font-serif-editorial text-[24px] text-base-content">
-            <%= if is_recipe, do: "Title & cook's note", else: "Caption" %>
+            {if is_recipe, do: "Title & cook's note", else: "Caption"}
           </h2>
         </div>
         <.input
           field={f[:caption]}
           type="textarea"
-          label={if is_recipe, do: "What's the recipe called? Add a short note about how you'd cook it.", else: "Describe your dish"}
-          placeholder={if is_recipe, do: "Sunday short ribs over polenta.\n\nA short note: the trick is reducing the wine long enough that it stops smelling like wine — three minutes longer than feels right.", else: "Tell us about it…"}
+          label={
+            if is_recipe,
+              do: "What's the recipe called? Add a short note about how you'd cook it.",
+              else: "Describe your dish"
+          }
+          placeholder={
+            if is_recipe,
+              do:
+                "Sunday short ribs over polenta.\n\nA short note: the trick is reducing the wine long enough that it stops smelling like wine — three minutes longer than feels right.",
+              else: "Tell us about it…"
+          }
           phx-debounce="300"
           rows="5"
         />
@@ -230,7 +241,9 @@
         <%!-- Ingredients --%>
         <section>
           <div class="flex items-baseline gap-3 mb-4">
-            <span class="font-serif-editorial italic text-[24px] text-primary leading-none">3</span>
+            <span class="font-serif-editorial italic text-[24px] text-primary leading-none">
+              3
+            </span>
             <h2 class="font-serif-editorial text-[24px] text-base-content">Ingredients</h2>
             <span class="text-[12px] text-base-content/60">At least one required</span>
             <div class="flex-1"></div>
@@ -274,7 +287,11 @@
                   placeholder="—"
                   class="bg-transparent border-0 outline-none text-[13px] font-mono text-base-content placeholder:text-base-content/30 px-0 focus:ring-0"
                 />
-                <input type="hidden" name={"post[ingredients][#{row_id}][order]"} value={display_idx} />
+                <input
+                  type="hidden"
+                  name={"post[ingredients][#{row_id}][order]"}
+                  value={display_idx}
+                />
                 <%= if length(@ingredient_rows) > 1 do %>
                   <button
                     type="button"
@@ -296,7 +313,9 @@
         <%!-- Tools (optional) --%>
         <section>
           <div class="flex items-baseline gap-3 mb-4">
-            <span class="font-serif-editorial italic text-[24px] text-primary leading-none">4</span>
+            <span class="font-serif-editorial italic text-[24px] text-primary leading-none">
+              4
+            </span>
             <h2 class="font-serif-editorial text-[24px] text-base-content">Tools</h2>
             <span class="text-[12px] text-base-content/60">Optional</span>
             <div class="flex-1"></div>
@@ -343,7 +362,9 @@
         <%!-- Time + servings --%>
         <section>
           <div class="flex items-baseline gap-3 mb-4">
-            <span class="font-serif-editorial italic text-[24px] text-primary leading-none">5</span>
+            <span class="font-serif-editorial italic text-[24px] text-primary leading-none">
+              5
+            </span>
             <h2 class="font-serif-editorial text-[24px] text-base-content">Timing</h2>
           </div>
           <div class="grid grid-cols-2 gap-4">
@@ -369,7 +390,9 @@
         <%!-- Method --%>
         <section>
           <div class="flex items-baseline gap-3 mb-4">
-            <span class="font-serif-editorial italic text-[24px] text-primary leading-none">6</span>
+            <span class="font-serif-editorial italic text-[24px] text-primary leading-none">
+              6
+            </span>
             <h2 class="font-serif-editorial text-[24px] text-base-content">Method</h2>
             <span class="text-[12px] text-base-content/60">At least one step</span>
             <div class="flex-1"></div>
@@ -395,7 +418,11 @@
                   rows="3"
                   class="bg-transparent border-0 outline-none text-[14px] text-base-content leading-[1.55] placeholder:text-base-content/30 resize-none px-0 focus:ring-0 w-full"
                 >{field_value(@form_params, "cooking_steps", row_id, "description")}</textarea>
-                <input type="hidden" name={"post[cooking_steps][#{row_id}][order]"} value={display_idx} />
+                <input
+                  type="hidden"
+                  name={"post[cooking_steps][#{row_id}][order]"}
+                  value={display_idx}
+                />
                 <%= if length(@step_rows) > 1 do %>
                   <button
                     type="button"
@@ -419,7 +446,7 @@
       <section>
         <div class="flex items-baseline gap-3 mb-4">
           <span class="font-serif-editorial italic text-[24px] text-primary leading-none">
-            <%= if is_recipe, do: "7", else: "3" %>
+            {if is_recipe, do: "7", else: "3"}
           </span>
           <h2 class="font-serif-editorial text-[24px] text-base-content">Tags</h2>
           <span class="text-[12px] text-base-content/60">Optional · comma separated</span>
@@ -449,7 +476,7 @@
           class="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-md bg-accent text-accent-content text-[15px] font-semibold hover:brightness-95 transition"
         >
           <.icon name="hero-paper-airplane" class="size-4" />
-          <%= if is_recipe, do: "Publish recipe", else: "Publish post" %>
+          {if is_recipe, do: "Publish recipe", else: "Publish post"}
         </button>
       </div>
     </.form>

@@ -62,7 +62,6 @@
           </div>
         <% end %>
       </div>
-
     <% Enum.empty?(@bookmarks) -> %>
       <div class="bg-base-100 border border-base-300 rounded-sm p-10 text-center">
         <p class="font-serif-editorial italic text-[18px] text-base-content/70 mb-2">
@@ -75,11 +74,9 @@
           navigate={~p"/explore"}
           class="inline-flex items-center gap-1.5 h-10 px-5 rounded-md bg-primary text-primary-content text-sm font-semibold hover:brightness-110 transition"
         >
-          <.icon name="hero-magnifying-glass" class="size-4" />
-          Find recipes to save
+          <.icon name="hero-magnifying-glass" class="size-4" /> Find recipes to save
         </.link>
       </div>
-
     <% true -> %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         <%= for bookmark <- @bookmarks do %>

@@ -15,12 +15,27 @@ defmodule TraysSocialWeb.API.V1.UploadController do
       {:error, :invalid_extension} ->
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{errors: [%{field: "photo", message: "invalid file type. Allowed: #{Enum.join(Photo.allowed_extensions(), ", ")}"}]})
+        |> json(%{
+          errors: [
+            %{
+              field: "photo",
+              message:
+                "invalid file type. Allowed: #{Enum.join(Photo.allowed_extensions(), ", ")}"
+            }
+          ]
+        })
 
       {:error, :file_too_large} ->
         conn
         |> put_status(:unprocessable_entity)
-        |> json(%{errors: [%{field: "photo", message: "file too large. Maximum: #{div(Photo.max_file_size(), 1024 * 1024)}MB"}]})
+        |> json(%{
+          errors: [
+            %{
+              field: "photo",
+              message: "file too large. Maximum: #{div(Photo.max_file_size(), 1024 * 1024)}MB"
+            }
+          ]
+        })
 
       {:error, _reason} ->
         conn

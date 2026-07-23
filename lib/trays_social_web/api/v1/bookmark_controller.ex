@@ -13,7 +13,11 @@ defmodule TraysSocialWeb.API.V1.BookmarkController do
     {cursor_id, cursor_time} = decode_cursor(params["cursor"])
 
     bookmarks =
-      Posts.list_bookmarks(user.id, limit: @page_size, cursor_id: cursor_id, cursor_time: cursor_time)
+      Posts.list_bookmarks(user.id,
+        limit: @page_size,
+        cursor_id: cursor_id,
+        cursor_time: cursor_time
+      )
 
     posts = Enum.map(bookmarks, & &1.post)
     liked_post_ids = Posts.liked_post_ids_for_user(user.id, Enum.map(posts, & &1.id))
@@ -21,7 +25,11 @@ defmodule TraysSocialWeb.API.V1.BookmarkController do
     next_cursor = encode_cursor(List.last(bookmarks))
 
     json(conn, %{
-      data: PostJSON.render_list(posts, %{liked_post_ids: liked_post_ids, bookmarked_post_ids: bookmarked_post_ids}),
+      data:
+        PostJSON.render_list(posts, %{
+          liked_post_ids: liked_post_ids,
+          bookmarked_post_ids: bookmarked_post_ids
+        }),
       cursor: next_cursor
     })
   end
@@ -79,6 +87,8 @@ defmodule TraysSocialWeb.API.V1.BookmarkController do
   defp encode_cursor(nil), do: nil
 
   defp encode_cursor(bookmark) do
-    Base.url_encode64("#{bookmark.id}:#{DateTime.to_iso8601(bookmark.inserted_at)}", padding: false)
+    Base.url_encode64("#{bookmark.id}:#{DateTime.to_iso8601(bookmark.inserted_at)}",
+      padding: false
+    )
   end
 end

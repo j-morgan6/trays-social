@@ -125,10 +125,12 @@ defmodule TraysSocial.Uploads.Photo do
         File.cp!(local_path, variant_local)
 
         if String.contains?(size, "x") and not String.ends_with?(size, "x") do
-            Mogrify.open(variant_local) |> Mogrify.resize_to_fill(size) |> Mogrify.save(in_place: true)
-          else
-            Mogrify.open(variant_local) |> Mogrify.resize(size) |> Mogrify.save(in_place: true)
-          end
+          Mogrify.open(variant_local)
+          |> Mogrify.resize_to_fill(size)
+          |> Mogrify.save(in_place: true)
+        else
+          Mogrify.open(variant_local) |> Mogrify.resize(size) |> Mogrify.save(in_place: true)
+        end
 
         if File.exists?(variant_local) do
           content = File.read!(variant_local)

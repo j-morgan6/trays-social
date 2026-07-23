@@ -69,7 +69,10 @@ defmodule TraysSocialWeb.Webhooks.ResendController do
         # the raw body. Indicates a router-config mistake (the :webhook
         # pipeline must skip the JSON parser); fail loudly so it doesn't
         # silently accept unsigned events.
-        Logger.error("resend webhook: raw body unavailable — router pipeline is parsing JSON before the controller")
+        Logger.error(
+          "resend webhook: raw body unavailable — router pipeline is parsing JSON before the controller"
+        )
+
         send_resp(conn, 500, "")
 
       {:error, :invalid_payload} ->

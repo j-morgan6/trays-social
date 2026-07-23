@@ -29,8 +29,19 @@ defmodule TraysSocialWeb.API.V1.SearchControllerTest do
     end
 
     test "filters by max_cooking_time", %{conn: conn, user: user} do
-      post_fixture(%{user_id: user.id, type: "recipe", cooking_time_minutes: 15, caption: "Quick meal"})
-      post_fixture(%{user_id: user.id, type: "recipe", cooking_time_minutes: 60, caption: "Slow meal"})
+      post_fixture(%{
+        user_id: user.id,
+        type: "recipe",
+        cooking_time_minutes: 15,
+        caption: "Quick meal"
+      })
+
+      post_fixture(%{
+        user_id: user.id,
+        type: "recipe",
+        cooking_time_minutes: 60,
+        caption: "Slow meal"
+      })
 
       conn = get(conn, ~p"/api/v1/search?max_cooking_time=30")
 

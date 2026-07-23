@@ -139,10 +139,14 @@ defmodule TraysSocialWeb.API.V1.UserController do
     current_user = conn.assigns.current_user
 
     case Accounts.get_user_by_username(username) do
-      nil -> {:error, :not_found}
+      nil ->
+        {:error, :not_found}
+
       user ->
         case Accounts.block_user(current_user.id, user.id) do
-          {:ok, _} -> json(conn, %{data: %{message: "User blocked"}})
+          {:ok, _} ->
+            json(conn, %{data: %{message: "User blocked"}})
+
           {:error, changeset} ->
             errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)
             conn |> put_status(:unprocessable_entity) |> json(%{errors: errors})
@@ -154,7 +158,9 @@ defmodule TraysSocialWeb.API.V1.UserController do
     current_user = conn.assigns.current_user
 
     case Accounts.get_user_by_username(username) do
-      nil -> {:error, :not_found}
+      nil ->
+        {:error, :not_found}
+
       user ->
         Accounts.unblock_user(current_user.id, user.id)
         json(conn, %{data: %{message: "User unblocked"}})
@@ -168,6 +174,7 @@ defmodule TraysSocialWeb.API.V1.UserController do
     case Accounts.set_muted_keywords(user, keywords) do
       {:ok, updated} ->
         json(conn, %{data: %{muted_keywords: updated.muted_keywords}})
+
       {:error, _} ->
         conn |> put_status(:unprocessable_entity) |> json(%{errors: %{keywords: ["invalid"]}})
     end
@@ -178,9 +185,10 @@ defmodule TraysSocialWeb.API.V1.UserController do
     blocked = Accounts.list_blocked_users(current_user.id)
 
     json(conn, %{
-      data: Enum.map(blocked, fn u ->
-        %{id: u.id, username: u.username, profile_photo_url: u.profile_photo_url}
-      end)
+      data:
+        Enum.map(blocked, fn u ->
+          %{id: u.id, username: u.username, profile_photo_url: u.profile_photo_url}
+        end)
     })
   end
 
@@ -238,6 +246,7 @@ defmodule TraysSocialWeb.API.V1.UserController do
   defp encode_cursor(post) do
     Base.url_encode64("#{post.id}:#{DateTime.to_iso8601(post.inserted_at)}", padding: false)
   end
+
   # D109: strict decode — malformed cursors degrade to page 1 instead of
   # leaking Ecto/DBConnection errors as 500s. Cursor encodes the FOLLOW
   # row's (id, inserted_at), the columns the listing orders by.

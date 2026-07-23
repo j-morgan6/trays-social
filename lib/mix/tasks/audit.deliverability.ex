@@ -92,7 +92,9 @@ defmodule Mix.Tasks.Audit.Deliverability do
     label = "RESEND  DKIM (resend._domainkey.#{domain})"
 
     case lookup_txt("resend._domainkey.#{domain}") do
-      [] -> {:resend_dkim, label, :fail, "no TXT record at resend._domainkey selector"}
+      [] ->
+        {:resend_dkim, label, :fail, "no TXT record at resend._domainkey selector"}
+
       records ->
         if Enum.any?(records, fn r -> String.contains?(r, "p=") end) do
           {:resend_dkim, label, :pass, "DKIM selector resolves with a public key"}
@@ -115,7 +117,9 @@ defmodule Mix.Tasks.Audit.Deliverability do
     label = "DMARC   _dmarc.#{domain}"
 
     case lookup_txt("_dmarc.#{domain}") do
-      [] -> {:dmarc, label, :fail, "no TXT record at _dmarc — DMARC not published"}
+      [] ->
+        {:dmarc, label, :fail, "no TXT record at _dmarc — DMARC not published"}
+
       records ->
         if Enum.any?(records, fn r -> String.starts_with?(r, "v=DMARC1") end) do
           {:dmarc, label, :pass, "DMARC record published"}

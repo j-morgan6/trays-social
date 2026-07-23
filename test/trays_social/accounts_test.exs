@@ -888,7 +888,8 @@ defmodule TraysSocial.AccountsTest do
     test "rejects tokens older than the validity window (D38)", %{user: user, token: token} do
       # Backdate the row past the 60-day validity window. The token bytes are
       # still valid by hash, but the time filter excludes it.
-      sixty_one_days_ago = DateTime.utc_now() |> DateTime.add(-61, :day) |> DateTime.truncate(:second)
+      sixty_one_days_ago =
+        DateTime.utc_now() |> DateTime.add(-61, :day) |> DateTime.truncate(:second)
 
       Repo.update_all(
         from(t in UserToken, where: t.user_id == ^user.id and t.context == "api"),

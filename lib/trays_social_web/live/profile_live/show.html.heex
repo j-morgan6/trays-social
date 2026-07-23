@@ -27,8 +27,7 @@
       </h1>
       <div class="text-sm text-base-content/60 mb-3">
         @{@user.username}
-        <span class="mx-2">·</span>
-        Joined {Calendar.strftime(@user.inserted_at, "%B %Y")}
+        <span class="mx-2">·</span> Joined {Calendar.strftime(@user.inserted_at, "%B %Y")}
       </div>
       <%= if @user.bio do %>
         <p class="text-[15px] text-base-content max-w-[560px] leading-[1.55]">
@@ -52,13 +51,19 @@
           </span>
           <%!-- Followers / following are tappable — open the editorial
                Followers / Following list LiveView (FollowersLive.Show). --%>
-          <.link navigate={~p"/@#{@user.username}/followers"} class="hover:text-base-content transition-colors">
+          <.link
+            navigate={~p"/@#{@user.username}/followers"}
+            class="hover:text-base-content transition-colors"
+          >
             <span class="font-serif-editorial text-[18px] text-base-content mr-1">
               {format_count(@follower_count)}
             </span>
             {if @follower_count == 1, do: "follower", else: "followers"}
           </.link>
-          <.link navigate={~p"/@#{@user.username}/following"} class="hover:text-base-content transition-colors">
+          <.link
+            navigate={~p"/@#{@user.username}/following"}
+            class="hover:text-base-content transition-colors"
+          >
             <span class="font-serif-editorial text-[18px] text-base-content mr-1">
               {format_count(@following_count)}
             </span>

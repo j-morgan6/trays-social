@@ -69,6 +69,8 @@ defmodule TraysSocialWeb.API.V1.NotificationController do
   defp encode_cursor(nil), do: nil
 
   defp encode_cursor(notification) do
-    Base.url_encode64("#{notification.id}:#{DateTime.to_iso8601(notification.inserted_at)}", padding: false)
+    Base.url_encode64("#{notification.id}:#{DateTime.to_iso8601(notification.inserted_at)}",
+      padding: false
+    )
   end
 end
