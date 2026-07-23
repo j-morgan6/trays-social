@@ -109,24 +109,25 @@ final class OptimisticRollbackTests: XCTestCase {
 
     /// The list rollback contract: removePost stashes the row by index, and a
     /// paired restorePost re-inserts it at its original position.
+    /// W158: the feed list is `[FeedItem]` now — helpers index via `$0.post?.id`.
     func test_feedViewModel_removeThenRestore_reinsertsAtOriginalIndex() {
         let vm = FeedViewModel()
-        vm.posts = [post(id: 1), post(id: 2), post(id: 3)]
+        vm.items = [.post(post(id: 1)), .post(post(id: 2)), .post(post(id: 3))]
 
         vm.removePost(id: 2)
-        XCTAssertEqual(vm.posts.map(\.id), [1, 3])
+        XCTAssertEqual(vm.items.compactMap(\.post?.id), [1, 3])
 
         vm.restorePost(id: 2)
-        XCTAssertEqual(vm.posts.map(\.id), [1, 2, 3])
+        XCTAssertEqual(vm.items.compactMap(\.post?.id), [1, 2, 3])
     }
 
     func test_feedViewModel_restoreWithoutPriorRemove_isNoOp() {
         let vm = FeedViewModel()
-        vm.posts = [post(id: 1)]
+        vm.items = [.post(post(id: 1))]
 
         vm.restorePost(id: 99)
 
-        XCTAssertEqual(vm.posts.map(\.id), [1])
+        XCTAssertEqual(vm.items.compactMap(\.post?.id), [1])
     }
 
     // MARK: - PostViewModel.applyEdit (W149)

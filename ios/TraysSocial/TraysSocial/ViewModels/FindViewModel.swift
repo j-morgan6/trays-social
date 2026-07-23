@@ -8,7 +8,9 @@ final class FindViewModel {
     var searchText = ""
     var posts: [Post] = []
     var users: [User] = []
-    var trendingPosts: [Post] = []
+    /// W158: trending is a discriminated union now — posts interleaved
+    /// with server-placed ad slots (rendered as `SponsoredTileView`).
+    var trendingItems: [FeedItem] = []
     var popularTags: [String] = []
     var isSearching = false
     var isLoadingTrending = false
@@ -24,8 +26,9 @@ final class FindViewModel {
         isLoadingTrending = true
 
         do {
-            let response: DataResponse<[Post]> = try await APIClient.shared.get(path: "/posts/trending")
-            trendingPosts = response.data
+            let response: AdAwarePaginatedResponse<[FeedItem]> = try await APIClient.shared.get(path: "/posts/trending")
+            trendingItems = response.data
+            AdSettings.shared.config = response.adConfig
         } catch {
             // D95: read-path failures stay silent — log only.
             Self.log.error("loadTrending failed: \(String(describing: error), privacy: .public)")

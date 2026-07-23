@@ -4,7 +4,10 @@ import SwiftUI
 @MainActor
 @Observable
 final class FeedViewModel {
-    var posts: [Post] = []
+    /// W158: the feed is a discriminated union now — posts interleaved
+    /// with server-placed ad slots. Post-mutation helpers below index
+    /// via `$0.post?.id`, which skips ad/unknown items naturally.
+    var items: [FeedItem] = []
     var isLoading = false
     var isLoadingMore = false
     var cursor: String?
@@ -31,12 +34,13 @@ final class FeedViewModel {
         errorMessage = nil
 
         do {
-            let response: PaginatedResponse<[Post]> = try await APIClient.shared.get(
+            let response: AdAwarePaginatedResponse<[FeedItem]> = try await APIClient.shared.get(
                 path: "/feed"
             )
-            posts = response.data
+            items = response.data
             cursor = response.cursor
             hasMore = response.cursor != nil
+            AdSettings.shared.config = response.adConfig
         } catch {
             Self.log.error("loadFeed failed: \(String(describing: error), privacy: .public)")
             errorMessage = "Failed to load feed."
@@ -51,14 +55,15 @@ final class FeedViewModel {
         let generation = loadGeneration
 
         do {
-            let response: PaginatedResponse<[Post]> = try await APIClient.shared.get(
+            let response: AdAwarePaginatedResponse<[FeedItem]> = try await APIClient.shared.get(
                 path: "/feed",
                 queryItems: [.init(name: "cursor", value: cursor)]
             )
             if generation == loadGeneration {
-                posts.append(contentsOf: response.data)
+                items.append(contentsOf: response.data)
                 self.cursor = response.cursor
                 hasMore = response.cursor != nil
+                AdSettings.shared.config = response.adConfig
             }
         } catch {
             // ok: pagination silently fails — existing content stays
@@ -77,10 +82,10 @@ final class FeedViewModel {
     }
 
     /// Replace a post in the feed with an updated version (e.g. after the user mutates it in PostDetailView).
-    /// No-op if the post is no longer in the loaded page (user paginated past it).
+    /// No-op if the post is no longer in the loaded page (user paginated past it). Ad slots are skipped.
     func applyPostUpdate(_ post: Post) {
-        if let index = posts.firstIndex(where: { $0.id == post.id }) {
-            posts[index] = post
+        if let index = items.firstIndex(where: { $0.post?.id == post.id }) {
+            items[index] = .post(post)
         }
     }
 
@@ -89,9 +94,10 @@ final class FeedViewModel {
     private var pendingDeletions: [Int: (index: Int, post: Post)] = [:]
 
     func removePost(id: Int) {
-        guard let index = posts.firstIndex(where: { $0.id == id }) else { return }
-        pendingDeletions[id] = (index, posts[index])
-        posts.remove(at: index)
+        guard let index = items.firstIndex(where: { $0.post?.id == id }),
+              let post = items[index].post else { return }
+        pendingDeletions[id] = (index, post)
+        items.remove(at: index)
     }
 
     /// Assumes the list is stable while a delete is in flight; min(index, count)
@@ -99,6 +105,6 @@ final class FeedViewModel {
     /// restored row at a slightly different spot (acceptable for a rare failure).
     func restorePost(id: Int) {
         guard let stashed = pendingDeletions.removeValue(forKey: id) else { return }
-        posts.insert(stashed.post, at: min(stashed.index, posts.count))
+        items.insert(.post(stashed.post), at: min(stashed.index, items.count))
     }
 }

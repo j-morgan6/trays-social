@@ -5,6 +5,9 @@ struct CookModeView: View {
     let title: String
     @Environment(\.dismiss) private var dismiss
     @State private var currentStep = 0
+    /// W158: last-step "Done" now lands on a completion screen (with an
+    /// optional sponsored card) instead of dismissing immediately.
+    @State private var isComplete = false
     @State private var timerSeconds: Int?
     @State private var timerRemaining: Int = 0
     @State private var timerActive = false
@@ -54,7 +57,7 @@ struct CookModeView: View {
             // Food-safety disclaimer — shown only on step 1 so it greets the
             // user when they begin cooking but does not clutter later steps.
             // Wording matches Terms of Service §10 verbatim.
-            if currentStep == 0 {
+            if currentStep == 0, !isComplete {
                 Text("Recipes are user-submitted. We don't verify ingredients, allergens, or food safety — cook at your own risk.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -68,24 +71,30 @@ struct CookModeView: View {
 
             Spacer()
 
-            // Step content
-            VStack(spacing: 20) {
-                Text("STEP \(currentStep + 1)")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.gray)
-                    .tracking(2)
+            if isComplete {
+                // W158: completion screen — replaces step content and the
+                // nav buttons once the last step's Done is tapped.
+                completionContent
+            } else {
+                // Step content
+                VStack(spacing: 20) {
+                    Text("STEP \(currentStep + 1)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.gray)
+                        .tracking(2)
 
-                if currentStep < steps.count {
-                    Text(steps[currentStep].instruction)
-                        .font(.system(size: 26, weight: .regular))
-                        .foregroundStyle(Theme.text)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(6)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 24)
+                    if currentStep < steps.count {
+                        Text(steps[currentStep].instruction)
+                            .font(.system(size: 26, weight: .regular))
+                            .foregroundStyle(Theme.text)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(6)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 24)
+                    }
                 }
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
 
             Spacer()
 
@@ -97,58 +106,77 @@ struct CookModeView: View {
             // times that weren't durations (e.g. "preheat oven to
             // 350°F for 10 min" vs "stir for 1 minute").
 
-            // Navigation buttons
-            HStack(spacing: 16) {
-                Button {
-                    withAnimation { currentStep = max(0, currentStep - 1) }
-                    stopTimer()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                        Text("Previous")
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(.gray)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 14)
-                    .background(Theme.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .opacity(currentStep > 0 ? 1 : 0.3)
-                .disabled(currentStep == 0)
-
-                Spacer()
-
-                if currentStep < steps.count - 1 {
-                    Button {
-                        withAnimation { currentStep += 1 }
-                        stopTimer()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text("Next")
-                            Image(systemName: "chevron.right")
-                        }
+            if isComplete {
+                // Full-width Done — the only affordance on the
+                // completion screen.
+                Button { dismiss() } label: {
+                    Text("Done")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 24)
+                        .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(Theme.primary)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 32)
+            } else {
+                // Navigation buttons
+                HStack(spacing: 16) {
+                    Button {
+                        withAnimation { currentStep = max(0, currentStep - 1) }
+                        stopTimer()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                            Text("Previous")
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(.gray)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 14)
+                        .background(Theme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                } else {
-                    Button { dismiss() } label: {
-                        Text("Done")
+                    .opacity(currentStep > 0 ? 1 : 0.3)
+                    .disabled(currentStep == 0)
+
+                    Spacer()
+
+                    if currentStep < steps.count - 1 {
+                        Button {
+                            withAnimation { currentStep += 1 }
+                            stopTimer()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text("Next")
+                                Image(systemName: "chevron.right")
+                            }
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 24)
                             .padding(.vertical, 14)
                             .background(Theme.primary)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                    } else {
+                        Button {
+                            withAnimation { isComplete = true }
+                            stopTimer()
+                        } label: {
+                            Text("Done")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 14)
+                                .background(Theme.primary)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
                     }
                 }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 32)
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 32)
         }
         .background(Theme.background)
         .onAppear {
@@ -161,6 +189,8 @@ struct CookModeView: View {
         .gesture(
             DragGesture(minimumDistance: 50)
                 .onEnded { value in
+                    // W158: step swiping is disabled on the completion screen.
+                    guard !isComplete else { return }
                     if value.translation.width < -50, currentStep < steps.count - 1 {
                         withAnimation { currentStep += 1 }
                         stopTimer()
@@ -172,10 +202,35 @@ struct CookModeView: View {
         )
     }
 
+    // MARK: - Completion (W158)
+
+    private var completionContent: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(Theme.primary)
+
+            Text("Recipe complete")
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(Theme.text)
+                .multilineTextAlignment(.center)
+
+            // Single sponsored card, only when the server flag is on.
+            // NO ads during the cooking steps themselves.
+            if AdSettings.shared.config?.enabled == true {
+                SponsoredCardView(slot: AdSlot(slot: 0, placement: "cook_mode_finish"))
+                    .padding(.top, 8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .transition(.opacity)
+    }
+
     // MARK: - Helpers
 
     private var progress: CGFloat {
         guard !steps.isEmpty else { return 0 }
+        if isComplete { return 1 }
         return CGFloat(currentStep + 1) / CGFloat(steps.count)
     }
 

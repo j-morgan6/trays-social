@@ -16,19 +16,26 @@ struct FeedView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 16)
 
-                ForEach(viewModel.posts) { post in
-                    NavigationLink(value: post) {
-                        FeedCardView(
-                            post: post,
-                            onSaveTap: { newValue in
-                                toggleBookmark(post, newValue: newValue)
-                            }
-                        )
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.borderless)
-                    .onAppear {
-                        prefetchIfNeeded(post)
+                ForEach(viewModel.items) { item in
+                    switch item {
+                    case let .post(post):
+                        NavigationLink(value: post) {
+                            FeedCardView(
+                                post: post,
+                                onSaveTap: { newValue in
+                                    toggleBookmark(post, newValue: newValue)
+                                }
+                            )
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.borderless)
+                        .onAppear {
+                            prefetchIfNeeded(post)
+                        }
+                    case let .ad(_, slot):
+                        SponsoredCardView(slot: slot)
+                    case .unknown:
+                        EmptyView()
                     }
                 }
 
@@ -36,7 +43,7 @@ struct FeedView: View {
                     ProgressView()
                         .tint(.gray)
                         .padding(.vertical, 12)
-                } else if !viewModel.posts.isEmpty {
+                } else if !viewModel.items.isEmpty {
                     Text("You're all caught up.")
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.subtle(for: colorScheme))
@@ -52,7 +59,7 @@ struct FeedView: View {
             await viewModel.refresh()
         }
         .overlay {
-            if viewModel.isLoading, viewModel.posts.isEmpty {
+            if viewModel.isLoading, viewModel.items.isEmpty {
                 SkeletonFade {
                     ScrollView {
                         LazyVStack(spacing: 12) {
@@ -64,7 +71,7 @@ struct FeedView: View {
                     .allowsHitTesting(false)
                     .skeletonGroup(label: String(localized: "Loading feed"))
                 }
-            } else if viewModel.posts.isEmpty, !viewModel.isLoading {
+            } else if viewModel.items.isEmpty, !viewModel.isLoading {
                 VStack(spacing: 8) {
                     Text("No recipes yet")
                         .font(.headline)
@@ -77,7 +84,7 @@ struct FeedView: View {
         }
         .animation(.easeInOut(duration: 0.18), value: viewModel.isLoading)
         .task {
-            if viewModel.posts.isEmpty {
+            if viewModel.items.isEmpty {
                 await viewModel.loadFeed()
             }
         }
@@ -121,9 +128,10 @@ struct FeedView: View {
         // Snapshot the pre-tap version so we can revert on rollback.
         let original = post
 
-        // Optimistic UI update — flip the row in place.
-        if let index = viewModel.posts.firstIndex(where: { $0.id == post.id }) {
-            let p = viewModel.posts[index]
+        // Optimistic UI update — flip the row in place. W158: routed
+        // through applyPostUpdate, which indexes via $0.post?.id and
+        // therefore skips ad slots.
+        if let p = viewModel.items.first(where: { $0.post?.id == post.id })?.post {
             let updated = Post(
                 id: p.id, type: p.type, caption: p.caption,
                 cookingTimeMinutes: p.cookingTimeMinutes, servings: p.servings,
@@ -134,7 +142,7 @@ struct FeedView: View {
                 ingredients: p.ingredients, cookingSteps: p.cookingSteps,
                 tools: p.tools, tags: p.tags
             )
-            viewModel.posts[index] = updated
+            viewModel.applyPostUpdate(updated)
             // W170: PostDetail's identical toggle broadcasts (D94) so My Tray
             // syncs — this path forgot to, leaving the tray stale until a
             // manual refresh.
@@ -153,9 +161,7 @@ struct FeedView: View {
                 // the locked toast copy so the user knows the save
                 // didn't actually stick.
                 await MainActor.run {
-                    if let index = viewModel.posts.firstIndex(where: { $0.id == original.id }) {
-                        viewModel.posts[index] = original
-                    }
+                    viewModel.applyPostUpdate(original)
                     // W170: propagate the rollback so My Tray reverts too.
                     NotificationCenter.default.post(name: .postUpdated, object: nil, userInfo: ["post": original])
                 }
@@ -170,8 +176,8 @@ struct FeedView: View {
 
     private func prefetchIfNeeded(_ post: Post) {
         let threshold = 5
-        guard let index = viewModel.posts.firstIndex(where: { $0.id == post.id }) else { return }
-        if index >= viewModel.posts.count - threshold {
+        guard let index = viewModel.items.firstIndex(where: { $0.post?.id == post.id }) else { return }
+        if index >= viewModel.items.count - threshold {
             Task { await viewModel.loadMore() }
         }
     }

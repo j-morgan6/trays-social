@@ -8,7 +8,8 @@ import SwiftUI
 /// `FindViewModel.search()` (300ms) and hit `GET /search?q=`. While a
 /// query is active the trending grid is replaced by results — a "Cooks"
 /// rows section over a "Recipes" `GridCard` grid. Trending data flows
-/// from the `FindViewModel.trendingPosts` pipeline when the field is empty.
+/// from the `FindViewModel.trendingItems` pipeline when the field is
+/// empty (posts interleaved with sponsored tiles, W158).
 struct FindView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var viewModel = FindViewModel()
@@ -253,7 +254,7 @@ struct FindView: View {
                 .padding(.horizontal, 16)
                 .skeletonGroup(label: String(localized: "Loading trending recipes"))
             }
-        } else if !viewModel.trendingPosts.isEmpty {
+        } else if !viewModel.trendingItems.isEmpty {
             trendingGrid
                 .padding(.horizontal, 16)
                 .transition(.opacity)
@@ -273,15 +274,22 @@ struct FindView: View {
             columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
             spacing: 10
         ) {
-            ForEach(viewModel.trendingPosts) { post in
-                NavigationLink(value: post) {
-                    GridCard(
-                        photoKey: photoKey(for: post),
-                        title: gridTitle(for: post),
-                        url: post.primaryPhotoURL?.asBackendURL
-                    )
+            ForEach(viewModel.trendingItems) { item in
+                switch item {
+                case let .post(post):
+                    NavigationLink(value: post) {
+                        GridCard(
+                            photoKey: photoKey(for: post),
+                            title: gridTitle(for: post),
+                            url: post.primaryPhotoURL?.asBackendURL
+                        )
+                    }
+                    .buttonStyle(.borderless)
+                case let .ad(_, slot):
+                    SponsoredTileView(slot: slot)
+                case .unknown:
+                    EmptyView()
                 }
-                .buttonStyle(.borderless)
             }
         }
     }

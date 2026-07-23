@@ -1,8 +1,13 @@
 import SwiftUI
 
 struct ReportSheetView: View {
-    let targetType: String // "post", "comment", or "user"
+    let targetType: String // "post", "comment", "user", or "ad"
     let targetId: Int
+    /// W158: machine-readable ad slot context ("placement=feed slot=0").
+    /// Prepended to the submitted details so an ad report identifies the
+    /// slot even when the user types nothing. Defaulted so the existing
+    /// post/comment/user call sites are unaffected.
+    var adContext: String? = nil
     @Environment(\.dismiss) private var dismiss
 
     @State private var reason = "spam"
@@ -28,6 +33,7 @@ struct ReportSheetView: View {
         switch targetType {
         case "comment": "Report Comment"
         case "user": "Report User"
+        case "ad": "Report Ad"
         default: "Report Post"
         }
     }
@@ -109,7 +115,16 @@ struct ReportSheetView: View {
         errorMessage = nil
 
         do {
-            let body = ReportRequest(targetType: targetType, targetId: targetId, reason: reason, details: details)
+            // W158: ad reports carry the slot context ahead of whatever
+            // the user typed, so the slot is identifiable server-side.
+            var submittedDetails = details
+            if let adContext {
+                submittedDetails = adContext + "\n" + details
+            }
+            // Server enforces validate_length(:details, max: 1000); the ad
+            // context prefix must never push a valid comment over the cap.
+            submittedDetails = String(submittedDetails.prefix(1000))
+            let body = ReportRequest(targetType: targetType, targetId: targetId, reason: reason, details: submittedDetails)
             let _: MessageResponse = try await APIClient.shared.post(path: "/reports", body: body)
             submitted = true
             try? await Task.sleep(for: .seconds(1.5))
