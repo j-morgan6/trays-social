@@ -201,6 +201,9 @@ defmodule TraysSocialWeb.Router do
 
     get "/bookmarks", BookmarkController, :index
 
+    get "/collections", CollectionController, :index
+    get "/collections/:id", CollectionController, :show
+
     post "/devices", DeviceController, :create
     delete "/devices/:token", DeviceController, :delete
 
@@ -231,6 +234,14 @@ defmodule TraysSocialWeb.Router do
 
     post "/bookmarks/:post_id", BookmarkController, :create
     delete "/bookmarks/:post_id", BookmarkController, :delete
+
+    # W172: Trays Plus collections. Create/rename/add are subscription-gated
+    # in the controller; delete and remove always work (graceful re-lock).
+    post "/collections", CollectionController, :create
+    patch "/collections/:id", CollectionController, :update
+    delete "/collections/:id", CollectionController, :delete
+    post "/collections/:id/posts/:post_id", CollectionController, :add_post
+    delete "/collections/:id/posts/:post_id", CollectionController, :remove_post
 
     post "/users/:username/follow", UserController, :follow
     delete "/users/:username/follow", UserController, :unfollow

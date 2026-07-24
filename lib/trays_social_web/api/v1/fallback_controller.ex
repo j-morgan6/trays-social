@@ -32,6 +32,18 @@ defmodule TraysSocialWeb.API.V1.FallbackController do
     |> json(%{errors: [%{message: "forbidden"}]})
   end
 
+  # W172: gated Trays Plus writes for non-subscribers (or with :paid_tier
+  # off). Coded-error style follows AuthPlug.send_suspended — the iOS
+  # APIClient pattern-matches errors[0].code and presents the paywall on
+  # "subscription_required".
+  def call(conn, {:error, :subscription_required}) do
+    conn
+    |> put_status(:forbidden)
+    |> json(%{
+      errors: [%{code: "subscription_required", message: "Trays Plus subscription required"}]
+    })
+  end
+
   # W166: writes refused between blocked user pairs.
   def call(conn, {:error, :blocked}) do
     conn
