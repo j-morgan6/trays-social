@@ -204,6 +204,10 @@ defmodule TraysSocialWeb.Router do
     get "/collections", CollectionController, :index
     get "/collections/:id", CollectionController, :show
 
+    # W173: Trays Plus meal planner reads — never gated (graceful re-lock).
+    get "/meal-plan", MealPlanController, :show
+    get "/meal-plan/grocery-list", MealPlanController, :grocery_list
+
     post "/devices", DeviceController, :create
     delete "/devices/:token", DeviceController, :delete
 
@@ -242,6 +246,13 @@ defmodule TraysSocialWeb.Router do
     delete "/collections/:id", CollectionController, :delete
     post "/collections/:id/posts/:post_id", CollectionController, :add_post
     delete "/collections/:id/posts/:post_id", CollectionController, :remove_post
+
+    # W173: Trays Plus meal planner. Planning an entry is subscription-gated
+    # in the controller; entry deletes and grocery checks always work
+    # (graceful re-lock). PUT for checks: idempotent set, like /muted-keywords.
+    post "/meal-plan/entries", MealPlanController, :create_entry
+    delete "/meal-plan/entries/:id", MealPlanController, :delete_entry
+    put "/meal-plan/grocery-checks", MealPlanController, :update_check
 
     post "/users/:username/follow", UserController, :follow
     delete "/users/:username/follow", UserController, :unfollow
