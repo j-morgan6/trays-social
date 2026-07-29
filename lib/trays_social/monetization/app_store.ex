@@ -31,7 +31,11 @@ defmodule TraysSocial.Monetization.AppStore do
           type: String.t(),
           subtype: String.t() | nil,
           uuid: String.t() | nil,
-          transaction: transaction()
+          action: :grant | :revoke | :ignore,
+          # nil for notification types we take no action on, and for Apple
+          # payloads that carry no signedTransactionInfo (TEST, summary-shaped
+          # RENEWAL_EXTENSION).
+          transaction: transaction() | nil
         }
 
   # Family Sharing is a legitimate entitlement; anything else (e.g. a
