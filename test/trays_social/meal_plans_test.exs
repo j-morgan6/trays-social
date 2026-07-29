@@ -202,10 +202,12 @@ defmodule TraysSocial.MealPlansTest do
 
       assert [group_a, group_b] = MealPlans.grocery_list(user.id, @monday)
 
+      # The context returns the raw stored URL — thumbnailing is the JSON
+      # view's job (see MealPlanJSON.render_grocery_list/1).
       assert group_a.post == %{
                id: post_a.id,
                caption: "Pancakes",
-               thumbnail: "/uploads/pancakes_thumb.jpg"
+               photo_url: "/uploads/pancakes.jpg"
              }
 
       assert group_a.items == [
@@ -226,7 +228,7 @@ defmodule TraysSocial.MealPlansTest do
              ]
 
       assert group_b.post.id == post_b.id
-      assert group_b.post.thumbnail == nil
+      assert group_b.post.photo_url == nil
 
       assert [%{item_key: item_key, name: "Carrot", checked: false}] = group_b.items
       assert item_key == "#{post_b.id}:#{ids_b["Carrot"]}"

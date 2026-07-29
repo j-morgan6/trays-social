@@ -16,49 +16,38 @@ defmodule TraysSocialWeb.API.V1.MealPlanController do
   def show(conn, params) do
     user = conn.assigns.current_user
 
-    case parse_week_start(params["week_start"]) do
-      {:ok, week_start} ->
-        entries = MealPlans.list_entries(user.id, week_start)
+    with {:ok, week_start} <- parse_week_start(params["week_start"]) do
+      entries = MealPlans.list_entries(user.id, week_start)
 
-        json(conn, %{
-          data: %{
-            week_start: Date.to_iso8601(week_start),
-            entries: MealPlanJSON.render_entries(entries)
-          }
-        })
-
-      :error ->
-        invalid_week_start(conn)
+      json(conn, %{
+        data: %{
+          week_start: Date.to_iso8601(week_start),
+          entries: MealPlanJSON.render_entries(entries)
+        }
+      })
     end
   end
 
   def create_entry(conn, params) do
     user = conn.assigns.current_user
 
-    with :ok <- require_subscription(user) do
-      case parse_date(params["date"]) do
-        {:ok, date} ->
-          try do
-            post = Posts.get_post!(params["post_id"])
+    with :ok <- require_subscription(user),
+         {:ok, date} <- parse_date(params["date"], "date") do
+      try do
+        post = Posts.get_post!(params["post_id"])
 
-            case MealPlans.create_entry(user, date, post) do
-              {:ok, entry} ->
-                conn
-                |> put_status(:created)
-                |> json(%{data: MealPlanJSON.render_entry(%{entry | post: post})})
+        case MealPlans.create_entry(user, date, post) do
+          {:ok, entry} ->
+            conn
+            |> put_status(:created)
+            |> json(%{data: MealPlanJSON.render_entry(%{entry | post: post})})
 
-              {:error, _} = error ->
-                error
-            end
-          rescue
-            Ecto.NoResultsError -> {:error, :not_found}
-            Ecto.Query.CastError -> {:error, :not_found}
-          end
-
-        :error ->
-          conn
-          |> put_status(:unprocessable_entity)
-          |> json(%{errors: [%{field: "date", message: "must be an ISO 8601 date (YYYY-MM-DD)"}]})
+          {:error, _} = error ->
+            error
+        end
+      rescue
+        Ecto.NoResultsError -> {:error, :not_found}
+        Ecto.Query.CastError -> {:error, :not_found}
       end
     end
   end
@@ -78,37 +67,26 @@ defmodule TraysSocialWeb.API.V1.MealPlanController do
   def grocery_list(conn, params) do
     user = conn.assigns.current_user
 
-    case parse_week_start(params["week_start"]) do
-      {:ok, week_start} ->
-        json(conn, %{
-          data: %{
-            week_start: Date.to_iso8601(week_start),
-            recipes: MealPlans.grocery_list(user.id, week_start)
-          }
-        })
-
-      :error ->
-        invalid_week_start(conn)
+    with {:ok, week_start} <- parse_week_start(params["week_start"]) do
+      json(conn, %{
+        data: %{
+          week_start: Date.to_iso8601(week_start),
+          recipes:
+            user.id
+            |> MealPlans.grocery_list(week_start)
+            |> MealPlanJSON.render_grocery_list()
+        }
+      })
     end
   end
 
   def update_check(conn, params) do
     user = conn.assigns.current_user
 
-    case {parse_week_start(params["week_start"]), params["checked"]} do
-      {{:ok, week_start}, checked} when is_boolean(checked) ->
-        case MealPlans.set_check(user.id, week_start, params["item_key"], checked) do
-          :ok -> json(conn, %{data: %{message: "check updated"}})
-          {:error, %Ecto.Changeset{}} = error -> error
-        end
-
-      {:error, _} ->
-        invalid_week_start(conn)
-
-      {_, _} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{errors: [%{field: "checked", message: "must be a boolean"}]})
+    with {:ok, week_start} <- parse_week_start(params["week_start"]),
+         {:ok, checked} <- parse_boolean(params["checked"], "checked"),
+         :ok <- MealPlans.set_check(user.id, week_start, params["item_key"], checked) do
+      json(conn, %{data: %{message: "check updated"}})
     end
   end
 
@@ -120,32 +98,27 @@ defmodule TraysSocialWeb.API.V1.MealPlanController do
     end
   end
 
-  # A missing week_start means "this week"; an unparseable one is a 422
-  # rendered inline (NotificationController.mark_read precedent) — no
-  # FallbackController clause. Always normalized to Monday so the response
-  # echoes the canonical week key.
+  # A missing week_start means "this week"; an unparseable one becomes
+  # {:error, {:invalid_date, "week_start"}} and is rendered as a 422 by
+  # FallbackController. Always normalized to Monday so the response echoes
+  # the canonical week key.
   defp parse_week_start(nil), do: {:ok, Date.beginning_of_week(Date.utc_today())}
 
   defp parse_week_start(value) do
-    with {:ok, date} <- parse_date(value) do
+    with {:ok, date} <- parse_date(value, "week_start") do
       {:ok, Date.beginning_of_week(date)}
     end
   end
 
-  defp parse_date(value) when is_binary(value) do
+  defp parse_date(value, field) when is_binary(value) do
     case Date.from_iso8601(value) do
       {:ok, date} -> {:ok, date}
-      {:error, _} -> :error
+      {:error, _} -> {:error, {:invalid_date, field}}
     end
   end
 
-  defp parse_date(_), do: :error
+  defp parse_date(_value, field), do: {:error, {:invalid_date, field}}
 
-  defp invalid_week_start(conn) do
-    conn
-    |> put_status(:unprocessable_entity)
-    |> json(%{
-      errors: [%{field: "week_start", message: "must be an ISO 8601 date (YYYY-MM-DD)"}]
-    })
-  end
+  defp parse_boolean(value, _field) when is_boolean(value), do: {:ok, value}
+  defp parse_boolean(_value, field), do: {:error, {:invalid_boolean, field}}
 end

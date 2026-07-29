@@ -67,8 +67,6 @@ defmodule TraysSocialWeb.UserAuth do
     end
   end
 
-  defp suspension_flash(_), do: "Your account has been suspended."
-
   @doc """
   Logs the user out.
 

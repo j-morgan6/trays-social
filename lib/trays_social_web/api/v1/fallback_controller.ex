@@ -44,6 +44,21 @@ defmodule TraysSocialWeb.API.V1.FallbackController do
     })
   end
 
+  # W173: query/body params that must parse before the action can run. Same
+  # body shape as the changeset clause above so clients see one validation
+  # contract regardless of whether the value failed parsing or validation.
+  def call(conn, {:error, {:invalid_date, field}}) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: [%{field: field, message: "must be an ISO 8601 date (YYYY-MM-DD)"}]})
+  end
+
+  def call(conn, {:error, {:invalid_boolean, field}}) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: [%{field: field, message: "must be a boolean"}]})
+  end
+
   # W166: writes refused between blocked user pairs.
   def call(conn, {:error, :blocked}) do
     conn

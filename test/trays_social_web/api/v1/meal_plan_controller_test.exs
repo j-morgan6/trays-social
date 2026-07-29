@@ -102,6 +102,15 @@ defmodule TraysSocialWeb.API.V1.MealPlanControllerTest do
       assert recipe_post_ids == [planned_a.id, planned_b.id]
       assert %{"item_key" => item_key, "name" => _, "checked" => false} = item
 
+      # The grocery list and the week view must render the post summary with
+      # the SAME key and the SAME thumbnailing — they diverged once
+      # (thumbnail vs thumbnail_url) because only the week view was asserted.
+      grocery_a = Enum.find(recipes, &(&1["post"]["id"] == planned_a.id))
+      grocery_b = Enum.find(recipes, &(&1["post"]["id"] == planned_b.id))
+      assert grocery_a["post"]["caption"] == "Pancakes"
+      assert grocery_a["post"]["thumbnail_url"] == "/uploads/pancakes_thumb.jpg"
+      assert grocery_b["post"]["thumbnail_url"] == nil
+
       # Check one item
       check_conn =
         put(conn, ~p"/api/v1/meal-plan/grocery-checks", %{

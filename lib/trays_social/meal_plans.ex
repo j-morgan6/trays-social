@@ -29,7 +29,6 @@ defmodule TraysSocial.MealPlans do
   alias TraysSocial.Posts.Post
   alias TraysSocial.Posts.PostPhoto
   alias TraysSocial.Repo
-  alias TraysSocial.Uploads.ImageProcessor
 
   @doc """
   Lists the user's entries for the week containing `week_start`, ordered by
@@ -86,9 +85,13 @@ defmodule TraysSocial.MealPlans do
   Derives the grocery checklist for the week containing `week_start`, one
   group per planned recipe:
 
-      [%{post: %{id: 1, caption: "...", thumbnail: "..." | nil},
+      [%{post: %{id: 1, caption: "...", photo_url: "..." | nil},
          items: [%{item_key: "1:2", name: "...", quantity: "...",
                    unit: "...", checked: false}]}]
+
+  This is the raw domain shape — `photo_url` is the stored original. Wire
+  formatting (thumbnailing, key naming) belongs to
+  `TraysSocialWeb.API.V1.JSON.MealPlanJSON.render_grocery_list/1`.
 
   Groups are ordered by post id, items by ingredient order then id. Posts
   planned on several days of the week appear once. Soft-deleted and
@@ -133,6 +136,14 @@ defmodule TraysSocial.MealPlans do
   the unique index), `checked: false` deletes whether or not a row exists.
   Returns `:ok`, or `{:error, %Ecto.Changeset{}}` when `item_key` is not a
   valid "post_id:ingredient_id" key.
+
+  Trade-off: only the SHAPE of `item_key` is validated, not that it resolves
+  to an ingredient of a post this user planned that week. `grocery_checks`
+  therefore has no FK to posts or ingredients and no pruning path, so rows
+  for un-planned entries or since-edited recipes accumulate. This is safe —
+  rows are user-scoped and `grocery_list/2` only surfaces keys that resolve
+  to real planned ingredients, so a stale row is invisible — but the table
+  grows unbounded. A periodic prune of weeks older than N is the follow-up.
   """
   def set_check(user_id, %Date{} = week_start, item_key, checked) when is_boolean(checked) do
     monday = Date.beginning_of_week(week_start)
@@ -180,7 +191,7 @@ defmodule TraysSocial.MealPlans do
       post: %{
         id: first.post_id,
         caption: first.caption,
-        thumbnail: ImageProcessor.thumb_url(first.photo_url)
+        photo_url: first.photo_url
       },
       items: Enum.map(rows, &grocery_item(&1, checked_keys))
     }

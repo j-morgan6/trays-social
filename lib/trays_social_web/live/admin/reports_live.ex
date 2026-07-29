@@ -306,6 +306,4 @@ defmodule TraysSocialWeb.Admin.ReportsLive do
       "until " <> Calendar.strftime(until, "%B %-d, %Y")
     end
   end
-
-  defp format_suspended_until(_), do: ""
 end
