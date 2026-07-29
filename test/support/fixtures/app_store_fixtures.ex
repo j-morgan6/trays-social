@@ -17,12 +17,18 @@ defmodule TraysSocial.AppStoreFixtures do
 
   Returns `%{root_der:, intermediate_der:, leaf_der:, leaf_jwk:}`.
   """
-  def cert_chain do
+  def cert_chain(opts \\ []) do
+    peer =
+      case Keyword.get(opts, :validity) do
+        nil -> [{:key, {:namedCurve, :secp256r1}}, {:digest, :sha256}]
+        validity -> [{:key, {:namedCurve, :secp256r1}}, {:digest, :sha256}, {:validity, validity}]
+      end
+
     data =
       :public_key.pkix_test_data(%{
         root: [{:key, {:namedCurve, :secp384r1}}, {:digest, :sha384}],
         intermediates: [[{:key, {:namedCurve, :secp384r1}}, {:digest, :sha384}]],
-        peer: [{:key, {:namedCurve, :secp256r1}}, {:digest, :sha256}]
+        peer: peer
       })
 
     # GOTCHA: cacerts has THREE entries and the root appears twice —
@@ -102,25 +108,37 @@ defmodule TraysSocial.AppStoreFixtures do
   is exercised.
   """
   def notification_claims(chain, type, opts \\ []) do
-    subtype = Keyword.get(opts, :subtype)
-    transaction_overrides = Keyword.get(opts, :transaction, %{})
     transaction_chain = Keyword.get(opts, :transaction_chain, chain)
 
-    signed_transaction =
-      sign_jws(transaction_chain, transaction_claims(transaction_overrides))
+    data =
+      %{
+        "bundleId" => Keyword.get(opts, :bundle_id, "com.trays.social"),
+        "environment" => Keyword.get(opts, :environment, "Sandbox")
+      }
+      |> maybe_put_transaction(transaction_chain, opts)
 
     %{
       "notificationType" => type,
-      "subtype" => subtype,
+      "subtype" => Keyword.get(opts, :subtype),
       "notificationUUID" => "uuid-#{System.unique_integer([:positive])}",
       "version" => "2.0",
       "signedDate" => System.system_time(:millisecond),
-      "data" => %{
-        "bundleId" => Keyword.get(opts, :bundle_id, "com.trays.social"),
-        "environment" => Keyword.get(opts, :environment, "Sandbox"),
-        "signedTransactionInfo" => signed_transaction
-      }
+      Keyword.get(opts, :envelope_key, "data") => data
     }
+  end
+
+  # Pass `transaction: :none` to model Apple's real TEST notification, whose
+  # data object carries NO signedTransactionInfo. The default fixture attaches
+  # one, which is more generous than Apple's actual payload — that gap once
+  # hid a bug where transaction-less notifications were answered 401.
+  defp maybe_put_transaction(data, chain, opts) do
+    case Keyword.get(opts, :transaction, %{}) do
+      :none ->
+        data
+
+      overrides ->
+        Map.put(data, "signedTransactionInfo", sign_jws(chain, transaction_claims(overrides)))
+    end
   end
 
   @doc """

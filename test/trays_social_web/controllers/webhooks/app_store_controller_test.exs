@@ -72,6 +72,40 @@ defmodule TraysSocialWeb.Webhooks.AppStoreControllerTest do
       assert reload(user).is_subscriber
     end
 
+    test "Apple's real TEST notification, which carries NO signedTransactionInfo", %{
+      conn: conn,
+      chain: chain,
+      user: user
+    } do
+      # App Store Connect fires this to validate the webhook URL. Its data
+      # object has no signedTransactionInfo at all — answering 401 here makes
+      # webhook validation fail and Apple retry for three days.
+      assert response(notify(conn, chain, "TEST", transaction: :none), 200)
+      refute reload(user).is_subscriber
+    end
+
+    test "a summary-shaped RENEWAL_EXTENSION payload", %{conn: conn, chain: chain, user: user} do
+      # Aggregate notifications carry `summary` instead of `data`.
+      assert response(
+               notify(conn, chain, "RENEWAL_EXTENSION",
+                 envelope_key: "summary",
+                 transaction: :none
+               ),
+               200
+             )
+
+      refute reload(user).is_subscriber
+    end
+
+    test "an actionable type arriving with no transaction is acked, not rejected", %{
+      conn: conn,
+      chain: chain,
+      user: user
+    } do
+      assert response(notify(conn, chain, "DID_RENEW", transaction: :none), 200)
+      refute reload(user).is_subscriber
+    end
+
     test "a transaction no user holds", %{conn: conn, chain: chain} do
       assert response(
                notify(conn, chain, "DID_RENEW",
@@ -93,6 +127,63 @@ defmodule TraysSocialWeb.Webhooks.AppStoreControllerTest do
     test "an environment we do not accept is acked", %{conn: conn, chain: chain, user: user} do
       assert response(notify(conn, chain, "DID_RENEW", environment: "Production"), 200)
       refute reload(user).is_subscriber
+    end
+  end
+
+  describe "replay and out-of-order delivery" do
+    test "a stale DID_RENEW whose transaction has already expired does not re-grant", %{
+      conn: conn,
+      chain: chain,
+      user: user
+    } do
+      # The attack: capture a validly-signed grant notification and replay it
+      # against the unauthenticated webhook after the subscription lapsed.
+      # Apple also documents out-of-order delivery, so this is not only an
+      # attacker scenario.
+      past = System.system_time(:millisecond) - 60_000
+
+      assert response(
+               notify(conn, chain, "DID_RENEW",
+                 transaction: %{"originalTransactionId" => @oti, "expiresDate" => past}
+               ),
+               200
+             )
+
+      refute reload(user).is_subscriber
+    end
+
+    test "a revoked transaction does not re-grant even on a SUBSCRIBED type", %{
+      conn: conn,
+      chain: chain,
+      user: user
+    } do
+      future = System.system_time(:millisecond) + 60_000
+
+      assert response(
+               notify(conn, chain, "SUBSCRIBED",
+                 transaction: %{
+                   "originalTransactionId" => @oti,
+                   "expiresDate" => future,
+                   "revocationDate" => System.system_time(:millisecond)
+                 }
+               ),
+               200
+             )
+
+      refute reload(user).is_subscriber
+    end
+
+    test "a genuinely active grant still works", %{conn: conn, chain: chain, user: user} do
+      future = System.system_time(:millisecond) + 60_000
+
+      assert response(
+               notify(conn, chain, "DID_RENEW",
+                 transaction: %{"originalTransactionId" => @oti, "expiresDate" => future}
+               ),
+               200
+             )
+
+      assert reload(user).is_subscriber
     end
   end
 

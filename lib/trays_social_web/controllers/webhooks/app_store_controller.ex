@@ -20,19 +20,30 @@ defmodule TraysSocialWeb.Webhooks.AppStoreController do
   #   400 -> structurally absent signedPayload
   #   200 -> everything Apple-signed, including unknown types, a bundle or
   #          environment that is not ours, and transactions we have no user for
+  # A signature failure is the ONLY thing that earns a rejection. Every other
+  # error is a semantic one on a payload Apple genuinely signed (a bundle or
+  # product that is not ours, an envelope shape we do not model, a
+  # notification type we take no action on) — those get acked, because a
+  # non-2xx makes Apple retry for three days.
+  @signature_failures [
+    :malformed_jws,
+    :invalid_certificate_chain,
+    :untrusted_certificate_chain,
+    :invalid_signature
+  ]
+
   def receive(conn, %{"signedPayload" => signed_payload}) when is_binary(signed_payload) do
     case AppStore.verify_notification(signed_payload) do
       {:ok, notification} ->
         handle(conn, notification)
 
-      # Apple-signed but not for us: ack so Apple stops retrying.
-      {:error, reason} when reason in [:bundle_id_mismatch, :environment_mismatch] ->
-        Logger.warning("app store webhook: ignoring notification (#{reason})")
-        send_resp(conn, 200, "")
-
-      {:error, reason} ->
+      {:error, reason} when reason in @signature_failures ->
         Logger.warning("app store webhook: rejected (#{reason})")
         send_resp(conn, 401, "")
+
+      {:error, reason} ->
+        Logger.warning("app store webhook: acking unactionable notification (#{reason})")
+        send_resp(conn, 200, "")
     end
   end
 
@@ -42,15 +53,16 @@ defmodule TraysSocialWeb.Webhooks.AppStoreController do
   end
 
   defp handle(conn, notification) do
-    action = AppStore.entitlement_for(notification.type, notification.subtype)
-
+    # The action was resolved during verification, from the signature-verified
+    # outer claims — recomputing it here would risk the two disagreeing.
+    #
     # Deliberately no dedupe table: set_subscriber/2 is idempotent, so Apple's
     # retries are harmless. The UUID is logged so duplicates stay visible.
     Logger.info(
-      "app store webhook: #{notification.type} -> #{action} (uuid=#{notification.uuid})"
+      "app store webhook: #{notification.type} -> #{notification.action} (uuid=#{notification.uuid})"
     )
 
-    apply_action(action, notification)
+    apply_action(notification.action, notification)
     send_resp(conn, 200, "")
   end
 

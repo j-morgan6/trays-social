@@ -63,26 +63,64 @@ defmodule TraysSocial.Monetization.AppStore do
   @spec verify_notification(binary(), keyword()) :: {:ok, notification()} | {:error, atom()}
   def verify_notification(signed_payload, opts \\ []) when is_binary(signed_payload) do
     with {:ok, claims} <- JWS.verify(signed_payload, opts),
-         {:ok, transaction} <- verify_notification_data(claims, opts) do
-      {:ok,
-       %{
-         type: claims["notificationType"],
-         subtype: claims["subtype"],
-         uuid: claims["notificationUUID"],
-         transaction: transaction
-       }}
+         {:ok, envelope} <- fetch_envelope(claims),
+         :ok <- check_bundle_id(envelope["bundleId"]),
+         :ok <- check_environment(envelope["environment"]) do
+      action = entitlement_for(claims["notificationType"], claims["subtype"])
+      build_notification(claims, envelope, action, opts)
     end
   end
 
-  # The nested signedTransactionInfo is signed separately from the envelope,
-  # so it gets its own full verification pass — an attacker holding a valid
-  # outer payload must not be able to smuggle an unsigned transaction inside.
-  defp verify_notification_data(claims, opts) do
-    with {:ok, data} <- fetch_data(claims),
-         :ok <- check_bundle_id(data["bundleId"]),
-         :ok <- check_environment(data["environment"]) do
-      verify_transaction(data["signedTransactionInfo"] || "", opts)
+  # Apple's envelope shape varies by notification type and NOT every type
+  # carries a transaction:
+  #   * `data` — the common case, usually with signedTransactionInfo
+  #   * `data` with NO signedTransactionInfo — e.g. the TEST notification that
+  #     App Store Connect fires to validate the webhook URL
+  #   * `summary` — aggregate notifications such as RENEWAL_EXTENSION
+  # All three are legitimately Apple-signed and must be acked, never rejected.
+  defp fetch_envelope(%{"data" => %{} = data}), do: {:ok, data}
+  defp fetch_envelope(%{"summary" => %{} = summary}), do: {:ok, summary}
+
+  defp fetch_envelope(_claims) do
+    Logger.warning("app store notification: payload has no data or summary object")
+    {:error, :malformed_notification}
+  end
+
+  # A type we take no action on needs no transaction — resolving the action
+  # from the (already signature-verified) outer claims FIRST is what keeps
+  # TEST and other transaction-less notifications on the 200 path.
+  defp build_notification(claims, _envelope, :ignore, _opts) do
+    {:ok, notification(claims, :ignore, nil)}
+  end
+
+  defp build_notification(claims, envelope, action, opts) do
+    case envelope["signedTransactionInfo"] do
+      # Nothing to verify and nothing to apply. Ack rather than reject: an
+      # absent transaction is not a forged one.
+      nil ->
+        {:ok, notification(claims, :ignore, nil)}
+
+      # Present means it MUST verify on its own — the nested transaction is
+      # signed separately, so an attacker holding a valid outer envelope must
+      # not be able to smuggle an unsigned transaction inside it.
+      signed when is_binary(signed) ->
+        with {:ok, transaction} <- verify_transaction(signed, opts) do
+          {:ok, notification(claims, action, transaction)}
+        end
+
+      _other ->
+        {:error, :malformed_notification}
     end
+  end
+
+  defp notification(claims, action, transaction) do
+    %{
+      type: claims["notificationType"],
+      subtype: claims["subtype"],
+      uuid: claims["notificationUUID"],
+      action: action,
+      transaction: transaction
+    }
   end
 
   @doc """
@@ -102,13 +140,6 @@ defmodule TraysSocial.Monetization.AppStore do
   def entitlement_for(type, _subtype) when type in @grant_types, do: :grant
   def entitlement_for(type, _subtype) when type in @revoke_types, do: :revoke
   def entitlement_for(_type, _subtype), do: :ignore
-
-  defp fetch_data(%{"data" => %{} = data}), do: {:ok, data}
-
-  defp fetch_data(_claims) do
-    Logger.warning("app store notification: payload has no data object")
-    {:error, :malformed_notification}
-  end
 
   defp check_bundle_id(bundle_id) do
     if bundle_id == expected_bundle_id() do

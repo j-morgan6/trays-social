@@ -51,13 +51,24 @@ defmodule TraysSocial.Monetization.Subscriptions do
   """
   @spec apply_notification(AppStore.transaction(), :grant | :revoke) ::
           {:ok, User.t()} | {:error, :user_not_found | Ecto.Changeset.t()}
-  def apply_notification(%{original_transaction_id: oti}, action)
+  def apply_notification(%{original_transaction_id: oti} = transaction, action)
       when action in [:grant, :revoke] do
     case Accounts.get_user_by_apple_original_transaction_id(oti) do
-      %User{} = user -> Accounts.set_subscriber(user, action == :grant)
+      %User{} = user -> Accounts.set_subscriber(user, grant?(transaction, action))
       nil -> {:error, :user_not_found}
     end
   end
+
+  # Replay / out-of-order guard. Entitlement is derived from the VERIFIED
+  # transaction's own expiry and revocation state, not from the notification
+  # type alone — otherwise a validly-signed but stale SUBSCRIBED/DID_RENEW,
+  # replayed against the unauthenticated webhook or simply delivered out of
+  # order (which Apple documents as possible), would resurrect an entitlement
+  # that has already lapsed.
+  #
+  # The revoke direction stays unconditional so it always fails closed.
+  defp grant?(transaction, :grant), do: transaction.active?
+  defp grant?(_transaction, :revoke), do: false
 
   # Two-layer collision handling. The check in apply_transaction/2 covers the
   # ordinary case; this constraint backstop covers the concurrent race, where

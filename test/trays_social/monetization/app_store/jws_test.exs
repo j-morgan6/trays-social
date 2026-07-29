@@ -63,6 +63,20 @@ defmodule TraysSocial.Monetization.AppStore.JWSTest do
       assert {:error, :invalid_certificate_chain} = verify(jws, chain)
     end
 
+    test "a chain whose leaf validity period has expired", %{chain: _chain} do
+      # Enumerated in the task's testing_strategy. The expiry check itself
+      # lives inside :public_key.pkix_path_validation/3; this pins that we
+      # actually delegate to it rather than skipping validity.
+      # pkix_test_data wants plain {Y, M, D} date tuples here, not full
+      # {date, time} datetimes.
+      expired = AppStoreFixtures.cert_chain(validity: {{2020, 1, 1}, {2021, 1, 1}})
+
+      jws = AppStoreFixtures.sign_jws(expired, AppStoreFixtures.transaction_claims())
+
+      assert {:error, :untrusted_certificate_chain} =
+               JWS.verify(jws, trust_anchors: [expired.root_der])
+    end
+
     test "an entirely self-signed x5c collapses to an empty path", %{chain: chain} do
       attacker = AppStoreFixtures.cert_chain()
 
