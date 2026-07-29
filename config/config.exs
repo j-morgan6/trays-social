@@ -62,6 +62,24 @@ config :trays_social, :features,
   web_ads: false,
   paid_tier: false
 
+# W174 StoreKit 2 / App Store Server Notifications V2.
+#
+# product_ids is the allowlist a verified transaction must match — a validly
+# Apple-signed subscription for some OTHER product must never grant Plus.
+# These MUST match the product identifiers created in the "Trays Plus"
+# subscription group in App Store Connect ($3.99/mo, $29.99/yr, 7-day trial).
+# Overridable in prod via APP_STORE_PRODUCT_IDS / APP_STORE_ENVIRONMENTS.
+config :trays_social, :app_store,
+  product_ids: ["trays.plus.monthly", "trays.plus.yearly"],
+  environments: ["Sandbox"]
+
+# W174: set explicitly. AppleAuth previously read this key with a hardcoded
+# "com.trays.social" default that no config file ever set, so the StoreKit
+# bundle-id check would have passed only by accident. Sign in with Apple and
+# StoreKit validate the same bundle id by definition — one key, not two, so
+# they cannot silently diverge.
+config :trays_social, :apple_bundle_id, "com.trays.social"
+
 # W159 web ad network wiring. Both values stay nil until the ad-network
 # account exists AND the router @csp_header is amended in a follow-up to
 # allow the network's origins — with nil script_url the AdSlot JS hook is a

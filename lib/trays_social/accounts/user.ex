@@ -18,6 +18,7 @@ defmodule TraysSocial.Accounts.User do
     field :muted_keywords, {:array, :string}, default: []
     field :is_admin, :boolean, default: false
     field :is_subscriber, :boolean, default: false
+    field :apple_original_transaction_id, :string
     field :seen_welcome_at, :utc_datetime
     field :suspended_until, :utc_datetime
 
@@ -68,6 +69,27 @@ defmodule TraysSocial.Accounts.User do
   """
   def subscriber_changeset(user, is_subscriber) when is_boolean(is_subscriber) do
     change(user, is_subscriber: is_subscriber)
+  end
+
+  @doc """
+  Server-side-only changeset stamping the verified StoreKit original
+  transaction id (W174).
+
+  Like `admin_changeset/2` and `subscriber_changeset/2`, this field is in no
+  `cast/3` list, so a crafted POST carrying
+  `apple_original_transaction_id` is silently dropped. It is set ONLY from a
+  JWS whose x5c certificate chain verified to the pinned Apple root — see
+  `TraysSocial.Monetization.AppStore.JWS`.
+
+  The `unique_constraint/2` is the race backstop for two accounts claiming
+  the same Apple subscription concurrently; the check-first path in
+  `TraysSocial.Monetization.Subscriptions` handles the ordinary case.
+  """
+  def apple_transaction_changeset(user, original_transaction_id)
+      when is_binary(original_transaction_id) do
+    user
+    |> change(apple_original_transaction_id: original_transaction_id)
+    |> unique_constraint(:apple_original_transaction_id)
   end
 
   @doc """

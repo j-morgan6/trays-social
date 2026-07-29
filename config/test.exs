@@ -35,6 +35,16 @@ config :trays_social, :disable_rate_limiting, true
 # Mock Apple token verification in tests
 config :trays_social, :apple_token_verifier, TraysSocial.Accounts.AppleAuthMock
 
+# W174: App Store product/environment allowlist for tests.
+#
+# NOTE :app_store_root_certs is deliberately NOT set here. Leaving it unset
+# means the default trust anchor stays the real pinned Apple root, so a test
+# that forgets to inject a generated chain via TraysSocial.AppStoreFixtures
+# fails closed instead of accidentally passing.
+config :trays_social, :app_store,
+  product_ids: ["trays.plus.monthly", "trays.plus.yearly"],
+  environments: ["Sandbox"]
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 

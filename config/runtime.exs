@@ -241,4 +241,38 @@ if config_env() == :prod do
   if services_id = System.get_env("APPLE_SERVICES_ID") do
     config :trays_social, :apple_services_id, services_id
   end
+
+  # W174: StoreKit 2 product allowlist + accepted store environments.
+  #
+  # "Sandbox" MUST stay in the default until the app clears App Review —
+  # reviewers' in-app purchases are Sandbox transactions even against the
+  # Production build, so a Production-only allowlist fails review. The
+  # tradeoff is real: while Sandbox is accepted, anyone with a sandbox tester
+  # account and our bundle id can grant themselves Plus for free. Narrow this
+  # to "Production" via APP_STORE_ENVIRONMENTS once the app has shipped.
+  #
+  # Non-raising, matching the RESEND_WEBHOOK_SIGNING_SECRET / APPLE_SERVICES_ID
+  # pattern above — a missing env var falls back to the documented default
+  # rather than blocking boot.
+  app_store_environments =
+    "APP_STORE_ENVIRONMENTS"
+    |> System.get_env("Production,Sandbox")
+    |> String.split(",", trim: true)
+
+  app_store_product_ids =
+    "APP_STORE_PRODUCT_IDS"
+    |> System.get_env("trays.plus.monthly,trays.plus.yearly")
+    |> String.split(",", trim: true)
+
+  config :trays_social, :app_store,
+    environments: app_store_environments,
+    product_ids: app_store_product_ids
+
+  if bundle_id = System.get_env("APPLE_BUNDLE_ID") do
+    config :trays_social, :apple_bundle_id, bundle_id
+  end
+
+  # NOTE: :app_store_root_certs gets NO env var by design. An operator-settable
+  # trust anchor would let one `fly secrets set` disable certificate pinning
+  # entirely. It is a test-only override, set via Application.put_env/3.
 end

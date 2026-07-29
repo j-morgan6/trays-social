@@ -104,6 +104,7 @@ defmodule TraysSocial.MixProject do
         Inspect.TraysSocial.Accounts.User,
         TraysSocial,
         TraysSocial.AccountsFixtures,
+        TraysSocial.AppStoreFixtures,
         TraysSocial.Application,
         TraysSocial.DataCase,
         TraysSocial.Mailer,

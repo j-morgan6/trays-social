@@ -225,6 +225,11 @@ defmodule TraysSocialWeb.Router do
   scope "/api/v1", TraysSocialWeb.API.V1, as: :api_v1 do
     pipe_through [:api, :api_auth, :api_require_confirmed, :api_rate_limit_write]
 
+    # W174: flips paid-tier entitlement from a signature-verified StoreKit
+    # transaction, so it sits behind the confirmed-user + write rate limit
+    # like every other Plus write.
+    post "/subscriptions/verify", SubscriptionController, :verify
+
     post "/uploads", UploadController, :create
     post "/posts", PostController, :create
     patch "/posts/:id", PostController, :update
@@ -323,6 +328,11 @@ defmodule TraysSocialWeb.Router do
     pipe_through :webhook
 
     post "/resend", ResendController, :receive
+
+    # W174: App Store Server Notifications V2. Apple posts here with no user
+    # auth; the signedPayload JWS is verified inside the controller before any
+    # database access.
+    post "/app-store", AppStoreController, :receive
   end
 
   # ErrorTracker dashboard — same admin gate as the /admin/reports scope.

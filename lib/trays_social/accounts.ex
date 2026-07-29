@@ -162,6 +162,29 @@ defmodule TraysSocial.Accounts do
   end
 
   @doc """
+  Stamps the verified StoreKit `originalTransactionId` on a user (W174).
+  Server-side only — set exclusively from a signature-verified transaction.
+  See `User.apple_transaction_changeset/2`.
+  """
+  def set_apple_original_transaction_id(%User{} = user, original_transaction_id)
+      when is_binary(original_transaction_id) do
+    user
+    |> User.apple_transaction_changeset(original_transaction_id)
+    |> Repo.update()
+  end
+
+  @doc """
+  Looks up the user holding a given verified StoreKit `originalTransactionId`.
+
+  App Store Server Notifications carry no user identity, so this is how a
+  webhook finds the account to grant or revoke (W174).
+  """
+  def get_user_by_apple_original_transaction_id(original_transaction_id)
+      when is_binary(original_transaction_id) do
+    Repo.get_by(User, apple_original_transaction_id: original_transaction_id)
+  end
+
+  @doc """
   Stamps `seen_welcome_at` so the user is not redirected to the
   onboarding welcome screen again. Idempotent — calling on a user who
   already has a stamp is a no-op.

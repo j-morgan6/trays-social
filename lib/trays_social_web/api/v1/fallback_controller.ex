@@ -44,6 +44,56 @@ defmodule TraysSocialWeb.API.V1.FallbackController do
     })
   end
 
+  # W174: every StoreKit verification failure collapses to ONE client-visible
+  # code. Telling a caller which stage failed (bad signature vs untrusted
+  # chain vs wrong bundle) is a free oracle for anyone probing the endpoint;
+  # the specific reason is logged in AppStore.JWS and never returned.
+  @invalid_transaction_reasons [
+    :invalid_jws,
+    :malformed_jws,
+    :invalid_certificate_chain,
+    :untrusted_certificate_chain,
+    :invalid_signature,
+    :malformed_transaction,
+    :malformed_notification,
+    :bundle_id_mismatch
+  ]
+
+  def call(conn, {:error, reason}) when reason in @invalid_transaction_reasons do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{
+      errors: [%{code: "invalid_transaction", message: "transaction could not be verified"}]
+    })
+  end
+
+  def call(conn, {:error, :unknown_product}) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: [%{code: "unknown_product", message: "unknown product"}]})
+  end
+
+  def call(conn, {:error, :environment_mismatch}) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: [%{code: "environment_mismatch", message: "unexpected store environment"}]})
+  end
+
+  # 409, not 422: a transaction bound to another account is a different
+  # condition from an invalid one and the client must not retry it.
+  def call(conn, {:error, :transaction_already_claimed}) do
+    conn
+    |> put_status(:conflict)
+    |> json(%{
+      errors: [
+        %{
+          code: "transaction_already_claimed",
+          message: "this subscription is already linked to another account"
+        }
+      ]
+    })
+  end
+
   # W173: query/body params that must parse before the action can run. Same
   # body shape as the changeset clause above so clients see one validation
   # contract regardless of whether the value failed parsing or validation.
