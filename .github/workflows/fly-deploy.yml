@@ -51,7 +51,7 @@ jobs:
     env:
       MIX_ENV: test
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "28.1.1"
@@ -81,7 +81,7 @@ jobs:
     needs: test
     concurrency: deploy-review
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1  # v1.6
       - run: flyctl deploy --remote-only --config fly.toml
         env:
@@ -94,7 +94,7 @@ jobs:
     concurrency: deploy-prod
     environment: production
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1  # v1.6
       - run: flyctl deploy --remote-only --config fly.prod.toml
         env:
