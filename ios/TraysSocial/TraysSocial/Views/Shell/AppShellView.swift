@@ -85,6 +85,9 @@ struct AppShellView: View {
             .navigationDestination(for: FollowListRoute.self) { route in
                 FollowListView(route: route)
             }
+            .navigationDestination(for: CollectionRoute.self) { route in
+                CollectionDetailView(route: route)
+            }
             .sheet(isPresented: $showCreatePost) {
                 CreatePostView()
             }

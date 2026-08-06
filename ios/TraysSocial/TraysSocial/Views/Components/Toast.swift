@@ -21,6 +21,13 @@ enum Toast {
     case deleteFailed
     case editFailed
     case actionFailed
+    // W177 collections. Distinct cases rather than five `.custom` callsites,
+    // so the rollback copy stays owned here like every other mutation's.
+    case collectionCreateFailed
+    case collectionRenameFailed
+    case collectionDeleteFailed
+    case collectionAddFailed
+    case collectionRemoveFailed
     case custom(String)
 
     var message: String {
@@ -34,6 +41,11 @@ enum Toast {
         case .deleteFailed: String(localized: "Couldn't delete. Try again.")
         case .editFailed: String(localized: "Couldn't save changes. Try again.")
         case .actionFailed: String(localized: "Couldn't complete that. Try again.")
+        case .collectionCreateFailed: String(localized: "Couldn't create that collection. Try again.")
+        case .collectionRenameFailed: String(localized: "Couldn't rename that collection. Try again.")
+        case .collectionDeleteFailed: String(localized: "Couldn't delete that collection. Try again.")
+        case .collectionAddFailed: String(localized: "Couldn't add to that collection. Try again.")
+        case .collectionRemoveFailed: String(localized: "Couldn't remove from that collection. Try again.")
         case let .custom(text): text
         }
     }

@@ -16,11 +16,21 @@ struct MyTrayView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(AppState.self) private var appState
     @State private var viewModel = MyTrayViewModel()
+    // W177. Owned here rather than on AppState so the shelf and the tray-card
+    // context menu share one instance without a per-account teardown to
+    // remember on logout.
+    @State private var collectionsVM = CollectionsViewModel()
+    @State private var formMode: CollectionFormMode?
+    @State private var pendingDelete: RecipeCollection?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                if viewModel.isEmpty, !viewModel.isLoading {
+                // W177: a user whose tray is empty but who still has collections
+                // must not be shown the dead-end empty state — their
+                // collections would be unreachable from anywhere in the app,
+                // including for deletion, which is never gated.
+                if viewModel.isEmpty, !viewModel.isLoading, !collectionsVM.hasCollections {
                     TrayEmptyView()
                         .frame(maxWidth: .infinity)
                         .padding(.top, 80)
@@ -29,6 +39,26 @@ struct MyTrayView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 4)
                         .padding(.bottom, 18)
+
+                    // W177: emits nothing when the user has no collections, so
+                    // the tray below is byte-identical to its pre-W177 layout.
+                    if collectionsVM.hasCollections {
+                        SectionHeader(
+                            label: String(localized: "Collections"),
+                            count: collectionsVM.collections.count,
+                            style: .editorial
+                        )
+                        .padding(.bottom, 8)
+                        CollectionShelf(
+                            collections: collectionsVM.collections,
+                            isPlus: appState.isPlus,
+                            onNewCollection: { formMode = .create },
+                            onRename: { formMode = .rename($0) },
+                            onRenameLocked: { collectionsVM.needsPaywall = true },
+                            onDelete: { pendingDelete = $0 }
+                        )
+                        .padding(.bottom, 24)
+                    }
 
                     if !viewModel.savedRecipes.isEmpty {
                         SectionHeader(
@@ -101,7 +131,10 @@ struct MyTrayView: View {
             }
         }
         .animation(.easeInOut(duration: 0.18), value: viewModel.isLoading)
-        .refreshable { await viewModel.refresh(currentUsername: appState.currentUser?.username) }
+        .refreshable {
+            await viewModel.refresh(currentUsername: appState.currentUser?.username)
+            await collectionsVM.refresh()
+        }
         .task {
             // D94: previously gated on viewModel.posts.isEmpty so the
             // first cold visit loaded. With the .onReceive bookmark
@@ -138,6 +171,11 @@ struct MyTrayView: View {
                 viewModel.restorePost(id: id)
             }
         }
+        .modifier(CollectionsSurface(
+            viewModel: collectionsVM,
+            formMode: $formMode,
+            pendingDelete: $pendingDelete
+        ))
     }
 
     private var populatedHeader: some View {
@@ -164,6 +202,14 @@ struct MyTrayView: View {
                     )
                 }
                 .buttonStyle(.borderless)
+                .contextMenu {
+                    AddToCollectionMenu(
+                        post: post,
+                        isPlus: appState.isPlus,
+                        viewModel: collectionsVM,
+                        onNewCollection: { formMode = .create }
+                    )
+                }
             }
         }
     }

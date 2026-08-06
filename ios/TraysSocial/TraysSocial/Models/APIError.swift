@@ -14,6 +14,13 @@ enum APIError: LocalizedError {
     /// machine-readable reason so callers can branch without a new case per
     /// endpoint. Falls back to `.serverError(409)` when the body doesn't decode.
     case conflict(code: String?, message: String)
+    /// 403 whose body carries `code: "subscription_required"` — the W172 Plus
+    /// gating on collections and meal-plan writes. Distinct from `.forbidden`
+    /// because a lapsed subscriber hitting a gated write should see the
+    /// paywall, not "You don't have permission to do that." A 403 without
+    /// that code (e.g. adding a post the user neither wrote nor saved) is a
+    /// genuine permission failure and must stay `.forbidden`.
+    case subscriptionRequired(message: String)
     case rateLimited
     case serverError(Int)
 
@@ -30,6 +37,7 @@ enum APIError: LocalizedError {
         case let .validationError(errors):
             errors.map { "\($0.field ?? ""): \($0.message)" }.joined(separator: "\n")
         case let .conflict(_, message): message
+        case let .subscriptionRequired(message): message
         case .rateLimited: "Too many requests. Please try again later."
         case let .serverError(code): "Server error (\(code)). Please try again."
         }

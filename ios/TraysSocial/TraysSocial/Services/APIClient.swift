@@ -244,12 +244,20 @@ actor APIClient {
     /// can route to the dedicated suspension flow (logout + persistent message
     /// on LoginView) instead of the generic "permission denied" message.
     private func forbiddenError(from data: Data) -> APIError {
-        guard let errorResponse = try? decoder.decode(ErrorResponse.self, from: data),
-              let suspended = errorResponse.errors.first(where: { $0.code == "suspended" })
-        else {
+        guard let errorResponse = try? decoder.decode(ErrorResponse.self, from: data) else {
             return .forbidden
         }
-        return .suspended(message: suspended.message, suspendedUntil: suspended.suspendedUntil)
+        if let suspended = errorResponse.errors.first(where: { $0.code == "suspended" }) {
+            return .suspended(message: suspended.message, suspendedUntil: suspended.suspendedUntil)
+        }
+        // W177: gated Trays Plus writes (collections, meal plans). Only those
+        // controllers emit this code; every other 403 — including the
+        // post-not-saved case on add-to-collection — still falls through to
+        // .forbidden, which SubscriptionBackend.from depends on.
+        if let gated = errorResponse.errors.first(where: { $0.code == "subscription_required" }) {
+            return .subscriptionRequired(message: gated.message)
+        }
+        return .forbidden
     }
 
     /// W175: the backend returns a structured body with a machine-readable
