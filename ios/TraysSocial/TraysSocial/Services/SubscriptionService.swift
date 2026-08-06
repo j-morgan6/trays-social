@@ -59,6 +59,12 @@ final class SubscriptionService {
     /// twice on a launch that follows a purchase.
     private var inFlightTransactions: Set<String> = []
 
+    /// Bumped by `handleSignOut()`. A verify already past its `await` would
+    /// otherwise write into the sets *after* sign-out cleared them, resurrecting
+    /// the previous account's dedupe state — the exact cross-account leak
+    /// `handleSignOut()` exists to prevent.
+    private var sessionGeneration = 0
+
     /// Internal (not private) so tests can inject fakes. Production code uses
     /// `.shared`; nothing else should construct this type.
     init(
@@ -97,16 +103,6 @@ final class SubscriptionService {
             case .alreadyInFlight: false
             }
         }
-
-        static func == (lhs: SyncOutcome, rhs: SyncOutcome) -> Bool {
-            switch (lhs, rhs) {
-            case (.verified, .verified), (.alreadyVerified, .alreadyVerified),
-                 (.alreadyInFlight, .alreadyInFlight):
-                true
-            default:
-                false
-            }
-        }
     }
 
     /// Verify one signed transaction server-side, then re-read server truth.
@@ -135,20 +131,27 @@ final class SubscriptionService {
             return .alreadyInFlight
         }
 
+        let generation = sessionGeneration
         inFlightTransactions.insert(jws)
         defer { inFlightTransactions.remove(jws) }
 
         do {
             let verification = try await backend.verify(jws: jws)
-            syncedTransactions.insert(jws)
+            // Only record if no sign-out happened while this was in flight —
+            // otherwise the next account inherits this transaction as "already
+            // verified" and would finish() something it never verified.
+            if generation == sessionGeneration {
+                syncedTransactions.insert(jws)
+            }
             await backend.refreshEntitlement()
             return .verified(verification)
         } catch {
             let mapped = SubscriptionError.from(error)
             // A transaction bound to another account will never succeed for this
             // one, so stop re-attempting it — but record it as REJECTED, never as
-            // synced, so subsequent deliveries keep throwing.
-            if mapped == .alreadyLinkedToAnotherAccount {
+            // synced, so subsequent deliveries keep throwing. Same generation
+            // guard: the rejection was scoped to the account that just signed out.
+            if mapped == .alreadyLinkedToAnotherAccount, generation == sessionGeneration {
                 rejectedTransactions.insert(jws)
             }
             throw mapped
@@ -164,6 +167,9 @@ final class SubscriptionService {
     func handleSignOut() {
         listenerTask?.cancel()
         listenerTask = nil
+        // Invalidate any verify still in flight so it cannot write back into the
+        // sets we are about to clear.
+        sessionGeneration += 1
         syncedTransactions.removeAll()
         rejectedTransactions.removeAll()
         inFlightTransactions.removeAll()

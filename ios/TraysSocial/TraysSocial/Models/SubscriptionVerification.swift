@@ -8,7 +8,11 @@ import Foundation
 /// writes entitlement state. That indirection is what makes graceful re-lock
 /// work — when a subscription lapses the server flips `is_subscriber` to false
 /// and the next `/auth/me` re-locks the UI, with no data deleted.
-struct SubscriptionVerification: Decodable, Sendable {
+/// `Equatable` so `SubscriptionService.SyncOutcome` gets synthesized equality
+/// that actually compares the `.verified` payload — a hand-written `==` there
+/// could only compare the case, which made payload assertions in tests silently
+/// vacuous.
+struct SubscriptionVerification: Decodable, Sendable, Equatable {
     let isSubscriber: Bool
     let productId: String?
     let environment: String?

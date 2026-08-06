@@ -26,6 +26,10 @@ private final class SpyBackend: SubscriptionBackend {
     /// Per-JWS overrides, so a restore can be driven with one transaction that
     /// fails and one that succeeds.
     var errorsByJWS: [String: Error] = [:]
+    /// Runs inside `verify`, i.e. while the call is in flight from the service's
+    /// point of view. Lets a test interleave a sign-out with a pending verify
+    /// deterministically, without real concurrency.
+    var onVerify: (() -> Void)?
     var verification = SubscriptionVerification(
         isSubscriber: true,
         productId: "trays.plus.monthly",
@@ -39,6 +43,7 @@ private final class SpyBackend: SubscriptionBackend {
 
     func verify(jws: String) async throws -> SubscriptionVerification {
         log.calls.append(.verify(jws))
+        onVerify?()
         if let specific = errorsByJWS[jws] {
             throw specific
         }
@@ -206,9 +211,14 @@ final class SubscriptionServiceTests: XCTestCase {
         XCTAssertTrue(outcome.isServerAccepted, "A previously accepted transaction is safe to finish")
     }
 
-    func test_undecodable409_isTerminalNotTransient() {
-        // An undecodable 409 body still means permanent conflict. Mapping it to
-        // .network would present it as a connection blip and invite a retry loop.
+    /// Named for what it actually asserts: the error MAPPING, not retry
+    /// behaviour. An undecodable 409 is not recorded in `rejectedTransactions`,
+    /// because `.couldNotVerify` also covers 422s like `environment_mismatch`
+    /// that are not necessarily permanent — suppressing retries for all of them
+    /// would be wrong.
+    func test_undecodable409_mapsToCouldNotVerify_notNetwork() {
+        // Mapping it to .network would present a permanent conflict as a
+        // connection blip and invite an endless retry loop.
         XCTAssertEqual(SubscriptionError.from(APIError.serverError(409)), .couldNotVerify)
         XCTAssertEqual(SubscriptionError.from(APIError.serverError(500)), .network)
     }
@@ -338,6 +348,26 @@ final class SubscriptionServiceTests: XCTestCase {
         // able to claim it after signing in.
         harness.service.handleSignOut()
         harness.backend.errorsByJWS = [:]
+        let outcome = try await harness.service.syncEntitlement(jws: "x.y.z")
+
+        XCTAssertEqual(outcome, .verified(harness.backend.verification))
+    }
+
+    /// A verify already past its `await` must not write back into the dedupe sets
+    /// after a sign-out cleared them — otherwise the next account inherits this
+    /// transaction as "already verified" and would finish() something it never
+    /// verified. Guarded by a session generation counter.
+    func test_signOutDuringInFlightVerify_doesNotRepopulateDedupe() async throws {
+        let harness = Harness()
+        let service = harness.service
+        harness.backend.onVerify = { service.handleSignOut() }
+
+        _ = try await harness.service.syncEntitlement(jws: "x.y.z")
+
+        // The in-flight verify completed, but the sign-out invalidated it, so the
+        // JWS was never recorded — a later sync re-verifies from scratch rather
+        // than short-circuiting to .alreadyVerified.
+        harness.backend.onVerify = nil
         let outcome = try await harness.service.syncEntitlement(jws: "x.y.z")
 
         XCTAssertEqual(outcome, .verified(harness.backend.verification))
