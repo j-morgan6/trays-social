@@ -215,38 +215,62 @@ actor APIClient {
             throw APIError.invalidResponse
         }
 
-        switch httpResponse.statusCode {
-        case 200 ... 201:
-            return try decoder.decode(T.self, from: data)
-        case 401:
-            throw APIError.unauthorized
-        case 403:
-            // Backend returns a structured body with code == "suspended" when
-            // an admin has suspended the user. Surface that as a distinct
-            // APIError so AppState can route to the dedicated suspension flow
-            // (logout + persistent message on LoginView) instead of the
-            // generic "permission denied" message.
-            if let errorResponse = try? decoder.decode(ErrorResponse.self, from: data),
-               let suspended = errorResponse.errors.first(where: { $0.code == "suspended" })
-            {
-                throw APIError.suspended(
-                    message: suspended.message,
-                    suspendedUntil: suspended.suspendedUntil
-                )
-            }
-            throw APIError.forbidden
-        case 404:
-            throw APIError.notFound
-        case 422:
-            if let errorResponse = try? decoder.decode(ErrorResponse.self, from: data) {
-                throw APIError.validationError(errorResponse.errors)
-            }
-            throw APIError.unprocessableEntity
-        case 429:
-            throw APIError.rateLimited
-        default:
-            throw APIError.serverError(httpResponse.statusCode)
+        guard (200 ... 201).contains(httpResponse.statusCode) else {
+            throw mapError(statusCode: httpResponse.statusCode, data: data)
         }
+
+        return try decoder.decode(T.self, from: data)
+    }
+
+    /// Maps a non-2xx status onto a typed `APIError`.
+    ///
+    /// Split out of `execute` (W175) so each status that needs to decode a
+    /// structured body gets its own small helper — inlining them all kept
+    /// tripping swiftlint's cyclomatic_complexity limit as statuses were added.
+    private func mapError(statusCode: Int, data: Data) -> APIError {
+        switch statusCode {
+        case 401: .unauthorized
+        case 403: forbiddenError(from: data)
+        case 404: .notFound
+        case 409: conflictError(from: data)
+        case 422: validationError(from: data)
+        case 429: .rateLimited
+        default: .serverError(statusCode)
+        }
+    }
+
+    /// Backend returns a structured body with code == "suspended" when an admin
+    /// has suspended the user. Surface that as a distinct APIError so AppState
+    /// can route to the dedicated suspension flow (logout + persistent message
+    /// on LoginView) instead of the generic "permission denied" message.
+    private func forbiddenError(from data: Data) -> APIError {
+        guard let errorResponse = try? decoder.decode(ErrorResponse.self, from: data),
+              let suspended = errorResponse.errors.first(where: { $0.code == "suspended" })
+        else {
+            return .forbidden
+        }
+        return .suspended(message: suspended.message, suspendedUntil: suspended.suspendedUntil)
+    }
+
+    /// W175: the backend returns a structured body with a machine-readable
+    /// `code` (currently only "transaction_already_claimed", when a
+    /// subscription's original_transaction_id is already bound to another
+    /// account). Without this, 409 fell through to `.serverError(409)` and the
+    /// code was discarded.
+    private func conflictError(from data: Data) -> APIError {
+        guard let errorResponse = try? decoder.decode(ErrorResponse.self, from: data),
+              let first = errorResponse.errors.first
+        else {
+            return .serverError(409)
+        }
+        return .conflict(code: first.code, message: first.message)
+    }
+
+    private func validationError(from data: Data) -> APIError {
+        guard let errorResponse = try? decoder.decode(ErrorResponse.self, from: data) else {
+            return .unprocessableEntity
+        }
+        return .validationError(errorResponse.errors)
     }
 }
 

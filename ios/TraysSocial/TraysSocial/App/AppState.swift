@@ -53,6 +53,15 @@ final class AppState {
         currentUser?.isEmailConfirmed ?? false
     }
 
+    /// W175: Trays Plus entitlement. Reads *server truth* only — the value comes
+    /// from `/auth/me`, which the server sets from a verified purchase. No code
+    /// path may unlock a paid feature from local StoreKit state; that is what
+    /// makes re-lock graceful (server flips it false on lapse, the next refresh
+    /// re-locks the UI, no data is deleted).
+    var isPlus: Bool {
+        currentUser?.hasActiveSubscription ?? false
+    }
+
     func refreshCurrentUser() async {
         guard isAuthenticated else { return }
         do {
@@ -171,6 +180,10 @@ final class AppState {
         // login starts on the root view. (D32.)
         navigationPath = NavigationPath()
 
+        // W175: drop per-account subscription state so the next account on this
+        // device can't inherit it (and re-binds its own transactions).
+        SubscriptionService.shared.handleSignOut()
+
         // D111: shared caches can hold authenticated responses and avatars —
         // clear them so the next account on this device never sees the
         // previous account's data.
@@ -208,6 +221,9 @@ final class AppState {
         currentUser = nil
         isAuthenticated = false
         navigationPath = NavigationPath()
+        // W175: token expiry followed by a login on a *different* account is the
+        // exact case that would otherwise reuse the previous account's dedupe set.
+        SubscriptionService.shared.handleSignOut()
     }
 
     /// Routes a suspended-response from any API call. Clears credentials like
@@ -228,6 +244,7 @@ final class AppState {
         currentUser = nil
         isAuthenticated = false
         navigationPath = NavigationPath()
+        SubscriptionService.shared.handleSignOut()
     }
 
     func clearSuspensionMessage() {

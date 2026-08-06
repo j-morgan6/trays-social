@@ -9,6 +9,11 @@ enum APIError: LocalizedError {
     case notFound
     case unprocessableEntity
     case validationError([FieldError])
+    /// 409. Added in W175 for `transaction_already_claimed` on
+    /// `/subscriptions/verify`, but kept generic — `code` carries the server's
+    /// machine-readable reason so callers can branch without a new case per
+    /// endpoint. Falls back to `.serverError(409)` when the body doesn't decode.
+    case conflict(code: String?, message: String)
     case rateLimited
     case serverError(Int)
 
@@ -24,6 +29,7 @@ enum APIError: LocalizedError {
         case .unprocessableEntity: "Invalid data."
         case let .validationError(errors):
             errors.map { "\($0.field ?? ""): \($0.message)" }.joined(separator: "\n")
+        case let .conflict(_, message): message
         case .rateLimited: "Too many requests. Please try again later."
         case let .serverError(code): "Server error (\(code)). Please try again."
         }

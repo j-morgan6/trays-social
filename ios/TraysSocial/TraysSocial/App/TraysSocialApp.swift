@@ -120,6 +120,20 @@ struct TraysSocialApp: App {
                 }
             }
             .environment(appState)
+            .task {
+                // W175: attach the StoreKit transaction listener at launch,
+                // unconditionally and regardless of auth state. Unlike push
+                // registration (deferred to AppShellView because it prompts and
+                // needs a bearer), Transaction.updates prompts nothing and does
+                // no I/O until something arrives — and a renewal that happens
+                // while the app is running is delivered exactly once, so a
+                // listener attached only after login would miss it. The listener
+                // body is auth-aware: a transaction arriving while signed out is
+                // logged and left UNFINISHED so StoreKit redelivers it, and the
+                // post-login drain in AppShellView binds it to the account.
+                SubscriptionService.shared.configure(appState: appState)
+                SubscriptionService.shared.startTransactionListener()
+            }
             .overlay(alignment: .top) {
                 // W113: app-root toast for surfaced errors. Sits above
                 // every screen; flows that present a sheet should keep
@@ -146,7 +160,9 @@ struct TraysSocialApp: App {
                 }
                 appLog.info("onContinueUserActivity received URL: host=\(url.host ?? "nil", privacy: .public) path=\(url.path, privacy: .public)")
 
-                if appState.handlePostDeepLink(url: url) { return }
+                if appState.handlePostDeepLink(url: url) {
+                    return
+                }
                 Task { await appState.handleConfirmationDeepLink(url: url) }
             }
         }

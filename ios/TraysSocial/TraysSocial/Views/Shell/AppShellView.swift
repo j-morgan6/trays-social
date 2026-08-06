@@ -103,6 +103,14 @@ struct AppShellView: View {
             // permission (first run) or silently re-register a possibly
             // rotated token / rebind it to a newly logged-in account.
             PushNotificationService.syncRegistration()
+
+            // W175: same "contextually after login" reasoning as push. The
+            // *listener* attaches at launch (renewals are delivered once), but
+            // the *drain* has to be here — it needs a bearer to bind an
+            // entitlement to an account. This is what picks up a purchase made
+            // while signed out, after a reinstall, or on a second device.
+            // Read path: failures log, never toast (D95).
+            await SubscriptionService.shared.syncCurrentEntitlements()
         }
     }
 

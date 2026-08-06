@@ -12,6 +12,13 @@ options:
   # in the generated project automatically. The OS-facing list of available
   # localizations is declared separately as CFBundleLocalizations in Info.plist.
   developmentLanguage: en
+  # W175: scheme-relative path prefix for StoreKitConfigurationFileReference.
+  # XcodeGen's default (../../) is workspace-oriented and resolves INSIDE the
+  # .xcodeproj bundle for a project-based setup; three levels are needed to
+  # reach TraysSocial.storekit next to project.yml. A wrong prefix fails
+  # SILENTLY - Xcode shows no StoreKit config and Product.products(for:)
+  # returns an empty array without throwing.
+  schemePathPrefix: "../../../"
 # Three build configurations. Beta is a release-type build (optimized,
 # distribution signing) that points at the review backend — it exists so
 # TestFlight builds can be exercised against review before prod is touched.
@@ -79,6 +86,20 @@ schemes:
       targets:
         TraysSocial: all
     run:
+      # W175: local StoreKit testing config, attached to the RUN action only.
+      # Deliberately not on `archive:` or `profile:`, and deliberately not on the
+      # Beta scheme — a distribution build that loaded this file could mint a
+      # Trays Plus entitlement locally. The file also lives OUTSIDE the target's
+      # `sources: - TraysSocial` folder so it never gets target membership and
+      # can never be bundled into an IPA.
+      #
+      # Note this config cannot produce a *successful* verify: Xcode signs local
+      # test transactions with its own root and stamps environment "Xcode", while
+      # the backend pins Apple's root and allowlists Production/Sandbox only. So
+      # a local purchase always returns 422 invalid_transaction. That is the
+      # expected result — it exercises the client path and the error copy. A real
+      # grant requires a Sandbox tester against App Store Connect products.
+      storeKitConfiguration: TraysSocial.storekit
       config: Debug
     archive:
       config: Release
