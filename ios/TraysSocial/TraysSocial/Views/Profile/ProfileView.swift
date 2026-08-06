@@ -240,28 +240,27 @@ private struct ProfileBody: View {
         return candidate.isEmpty ? String(localized: "Untitled") : candidate
     }
 
+    @ViewBuilder
     private var avatar: some View {
-        Group {
-            if let urlString = user.profilePhotoUrl, let imageURL = urlString.asBackendURL {
-                CachedAsyncImage(url: imageURL) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Circle().fill(Color(.systemGray4))
-                }
-                .frame(width: 84, height: 84)
-                .clipShape(Circle())
-                .overlay(
-                    Circle().inset(by: 0.5).stroke(borderColor, lineWidth: 1)
-                )
-                .id(imageURL)
-            } else {
-                Avi(
-                    initial: String(user.username.prefix(1)),
-                    size: 84,
-                    palette: avatarPalette,
-                    border: true
-                )
+        if let urlString = user.profilePhotoUrl, let imageURL = urlString.asBackendURL {
+            CachedAsyncImage(url: imageURL) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Circle().fill(Color(.systemGray4))
             }
+            .frame(width: 84, height: 84)
+            .clipShape(Circle())
+            .overlay(
+                Circle().inset(by: 0.5).stroke(borderColor, lineWidth: 1)
+            )
+            .id(imageURL)
+        } else {
+            Avi(
+                initial: String(user.username.prefix(1)),
+                size: 84,
+                palette: avatarPalette,
+                border: true
+            )
         }
     }
 
@@ -593,6 +592,12 @@ struct SettingsView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
+
+                // W176. Body lives in Views/Plus/PlusSettingsSection.swift:
+                // this file is already over swiftlint's file_length and
+                // SettingsView over type_body_length, and the section needs
+                // `import StoreKit` for the manage-subscriptions sheet.
+                PlusSettingsSection()
 
                 Section("Appearance") {
                     Picker("Mode", selection: $colorSchemePreference) {

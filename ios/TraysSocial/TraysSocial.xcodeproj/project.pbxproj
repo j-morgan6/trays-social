@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		037EBB9D239C5B6B3CB07599 /* ShellViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3485959BA73D55541343A210 /* ShellViewModelTests.swift */; };
+		0AF6F39F926476C216188244 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B374742FA53CB87413D63380 /* PaywallView.swift */; };
 		0C13A037F5A1114967B04181 /* SubscriptionBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39169C03238C752145A5077F /* SubscriptionBackend.swift */; };
 		132898736F0D7584573D28B5 /* BlockedUsersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8FC750231A2A97A1B99C5DB /* BlockedUsersView.swift */; };
 		1351BCEAF1CC233AC63F2F4F /* FeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33F33F1F8B303E2D7CAC14BB /* FeedbackView.swift */; };
@@ -21,6 +22,7 @@
 		2D793F74B6661FB1A13F5436 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 9D357F44CDB7CEA0D1DFCE84 /* Localizable.xcstrings */; };
 		2DD2D855653C3714EDB390FD /* DiscoveryInsert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 508FF1ACC28978541290D77F /* DiscoveryInsert.swift */; };
 		2E972D58F5CF06D31F5083E6 /* FollowListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24C1A60FF5002EDF0812FDC1 /* FollowListViewModel.swift */; };
+		2EA2353E1FEB43A5578DC30E /* PlusGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B924ECC2A1ABF951628ADCF7 /* PlusGate.swift */; };
 		3167BAA4515A05BC2B4E85EE /* CachedAsyncImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 273DE973567599653472EF43 /* CachedAsyncImage.swift */; };
 		3B8685A473157143FAFF33C1 /* SafariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6665080D2CCFA5AAD069E6F2 /* SafariView.swift */; };
 		3C7C412D8F860B6CAE76826F /* EditPostViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B202E8A51A43F891595B68DB /* EditPostViewModel.swift */; };
@@ -62,6 +64,7 @@
 		9386F8D54E75D69A50F8C1F9 /* EditorialEmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 043903A67A7F850D2B633753 /* EditorialEmptyState.swift */; };
 		9943152E1E4E6B2049563EAA /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B7815F88CA31767867F48D /* AuthViewModel.swift */; };
 		9B77AD5F34E163B43C0D4CDC /* PillBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18252654917F5129220567CE /* PillBar.swift */; };
+		9BEF583D99746D593BF0BC4A /* PlusSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = B857D3CD3E2417537BC3A420 /* PlusSettingsSection.swift */; };
 		9F4B2BB2DD63E2B1B1373704 /* String+BackendURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35EDA5485F0DD3EE87C9FF0F /* String+BackendURL.swift */; };
 		A11BE16C9576033B380F3B22 /* Avi.swift in Sources */ = {isa = PBXBuildFile; fileRef = 795F8E4EC5FAF2D1FC43DD6A /* Avi.swift */; };
 		A209F869B61E0A50FB993A8F /* BottomPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BD8AE7EBFB23F2853F03609 /* BottomPill.swift */; };
@@ -76,10 +79,13 @@
 		BAE221C8716562D3F5253854 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C95FC39F4695EA3AF4C37A5 /* PushNotificationService.swift */; };
 		BBFCB7DCBC1EEE0D5CDE0205 /* TabSegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D5A6AC4887DBFA2579C1ADB /* TabSegment.swift */; };
 		BD00C5D666CF7BEBDA198327 /* TraysSocialApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 257BD59C9143F329A0240F72 /* TraysSocialApp.swift */; };
+		BD6B2DD95010675F721BA37F /* PaywallViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34537AB626DA51B606C01A56 /* PaywallViewModel.swift */; };
 		BE727916AF64F4EA2D762814 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67DCD1E3A70C9F29DFD5035C /* KeychainService.swift */; };
 		BEDEF0BA0E159AC29AA6FD25 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB88CDBE65F5F63DB2CD860 /* APIClient.swift */; };
+		C1C58D1733F30215F2BE482A /* PaywallViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11BD5FE597E0FAC9D5C0D3A1 /* PaywallViewModelTests.swift */; };
 		C2AE627280A704249C268EF4 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45AD072C42CEDFF1299909E3 /* WelcomeView.swift */; };
 		C5722C1F0CCB7A506F798483 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBD01D0EB9310C72D911EC60 /* FeedView.swift */; };
+		D142A3B42E5AE5CA66B88F3E /* PaywallPlanCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD24A89A45273732235A0792 /* PaywallPlanCard.swift */; };
 		D7B58D50FFE71B87C36FA3FF /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15E25A27F96B53A311D1785A /* AppState.swift */; };
 		D90F0D76CEED859CAB44E7F8 /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8CD34AF05A68C62013A052 /* Toast.swift */; };
 		D9D83A18DCA43251859EFB14 /* PostViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC60D2B53505A6374F68AFBB /* PostViewModel.swift */; };
@@ -120,6 +126,7 @@
 		0F90F0E9C63303F4F5E19999 /* AppNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNotification.swift; sourceTree = "<group>"; };
 		100430FDF305D5E74355F4BC /* FindViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindViewModel.swift; sourceTree = "<group>"; };
 		1085B4995015DA8289680920 /* FeedCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedCardView.swift; sourceTree = "<group>"; };
+		11BD5FE597E0FAC9D5C0D3A1 /* PaywallViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallViewModelTests.swift; sourceTree = "<group>"; };
 		15E25A27F96B53A311D1785A /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		18252654917F5129220567CE /* PillBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillBar.swift; sourceTree = "<group>"; };
 		1A06A596F5AA8F5A05BA8A34 /* NotificationsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsViewModel.swift; sourceTree = "<group>"; };
@@ -133,6 +140,7 @@
 		2794FDA053B20C7D8D817632 /* InstrumentSerif-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Italic.ttf"; sourceTree = "<group>"; };
 		32D2EAB385C443516BBDD921 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		33F33F1F8B303E2D7CAC14BB /* FeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackView.swift; sourceTree = "<group>"; };
+		34537AB626DA51B606C01A56 /* PaywallViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallViewModel.swift; sourceTree = "<group>"; };
 		3485959BA73D55541343A210 /* ShellViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellViewModelTests.swift; sourceTree = "<group>"; };
 		3540592DA46CF395AEEAA5C0 /* CreatePostViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePostViewModel.swift; sourceTree = "<group>"; };
 		3587970859E9F845326FE543 /* TraysSocial.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TraysSocial.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -179,8 +187,11 @@
 		ACB88CDBE65F5F63DB2CD860 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		AD6371D18B317A41411954A1 /* MetricKitReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricKitReporter.swift; sourceTree = "<group>"; };
 		B202E8A51A43F891595B68DB /* EditPostViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditPostViewModel.swift; sourceTree = "<group>"; };
+		B374742FA53CB87413D63380 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		B4191F4AE9819C57781DB5E3 /* RecipeHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeHero.swift; sourceTree = "<group>"; };
 		B4E5B01CCE1E4D857C7BEFF2 /* MyTrayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTrayView.swift; sourceTree = "<group>"; };
+		B857D3CD3E2417537BC3A420 /* PlusSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlusSettingsSection.swift; sourceTree = "<group>"; };
+		B924ECC2A1ABF951628ADCF7 /* PlusGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlusGate.swift; sourceTree = "<group>"; };
 		BDB82B0D2D18AE1B278067DF /* SponsoredCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SponsoredCardView.swift; sourceTree = "<group>"; };
 		C02798B80F4F1F1C63150BF3 /* ProfileActionRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileActionRow.swift; sourceTree = "<group>"; };
 		C0CF540F6F0306A9E936193E /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
@@ -208,6 +219,7 @@
 		EFCBACB9950E161B3FC270D0 /* SectionHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionHeader.swift; sourceTree = "<group>"; };
 		F771FC0871724AD09DD6B5B6 /* SubscriptionVerification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionVerification.swift; sourceTree = "<group>"; };
 		F787999324C4BC8E61D01187 /* EditPostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditPostView.swift; sourceTree = "<group>"; };
+		FD24A89A45273732235A0792 /* PaywallPlanCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallPlanCard.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -247,6 +259,7 @@
 				24C1A60FF5002EDF0812FDC1 /* FollowListViewModel.swift */,
 				9AF1EA4D0A316329D1C02CB8 /* MyTrayViewModel.swift */,
 				1A06A596F5AA8F5A05BA8A34 /* NotificationsViewModel.swift */,
+				34537AB626DA51B606C01A56 /* PaywallViewModel.swift */,
 				DC60D2B53505A6374F68AFBB /* PostViewModel.swift */,
 				3893002E61AAB0716240E1B9 /* ProfileViewModel.swift */,
 			);
@@ -367,6 +380,7 @@
 				20B9D40D67D9A96013CC17F9 /* Find */,
 				7DE961F3F3F91474ED4892D2 /* MyTray */,
 				F399D6D879BD109A918EA46D /* Notifications */,
+				7AA21C46E3D8DE6037BD1F5C /* Plus */,
 				F9AB343194A1DB947AF3E2B9 /* Post */,
 				4034FAD552C97CAE58316AEF /* Profile */,
 				9A153D587956444D9CB4EB0F /* Settings */,
@@ -393,6 +407,17 @@
 				257BD59C9143F329A0240F72 /* TraysSocialApp.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		7AA21C46E3D8DE6037BD1F5C /* Plus */ = {
+			isa = PBXGroup;
+			children = (
+				FD24A89A45273732235A0792 /* PaywallPlanCard.swift */,
+				B374742FA53CB87413D63380 /* PaywallView.swift */,
+				B924ECC2A1ABF951628ADCF7 /* PlusGate.swift */,
+				B857D3CD3E2417537BC3A420 /* PlusSettingsSection.swift */,
+			);
+			path = Plus;
 			sourceTree = "<group>";
 		};
 		7DE961F3F3F91474ED4892D2 /* MyTray */ = {
@@ -539,6 +564,7 @@
 		FCE6F5F755E354E86D0BCEE5 /* Subscriptions */ = {
 			isa = PBXGroup;
 			children = (
+				11BD5FE597E0FAC9D5C0D3A1 /* PaywallViewModelTests.swift */,
 				856DF06453D39C005EBF4775 /* SubscriptionServiceTests.swift */,
 			);
 			path = Subscriptions;
@@ -655,6 +681,7 @@
 				23A7E3EFD563B189FE6F3B5F /* FeedItemDecodingTests.swift in Sources */,
 				E59FCAE4892645CC398A1E94 /* ImageLoaderTests.swift in Sources */,
 				A5DB464511C0C9AAE06E47EE /* OptimisticRollbackTests.swift in Sources */,
+				C1C58D1733F30215F2BE482A /* PaywallViewModelTests.swift in Sources */,
 				7911FCE388382AF25FD6D3B4 /* PlaceholderTest.swift in Sources */,
 				037EBB9D239C5B6B3CB07599 /* ShellViewModelTests.swift in Sources */,
 				892334F4875A4620B720B2A5 /* SubscriptionServiceTests.swift in Sources */,
@@ -713,8 +740,13 @@
 				EC345A008BE401F2EDD5421D /* MyTrayViewModel.swift in Sources */,
 				F72C0EFB417B4AF95EEB0B6F /* NotificationsView.swift in Sources */,
 				25B4DF17C0FF96F0E628CBCF /* NotificationsViewModel.swift in Sources */,
+				D142A3B42E5AE5CA66B88F3E /* PaywallPlanCard.swift in Sources */,
+				0AF6F39F926476C216188244 /* PaywallView.swift in Sources */,
+				BD6B2DD95010675F721BA37F /* PaywallViewModel.swift in Sources */,
 				79F0F06F5F5A4B986947B2F5 /* Photo.swift in Sources */,
 				9B77AD5F34E163B43C0D4CDC /* PillBar.swift in Sources */,
+				2EA2353E1FEB43A5578DC30E /* PlusGate.swift in Sources */,
+				9BEF583D99746D593BF0BC4A /* PlusSettingsSection.swift in Sources */,
 				7EB4D3772E068CBBDE1D244E /* Post.swift in Sources */,
 				E6F36149B52A5781300385E9 /* PostDetailView.swift in Sources */,
 				D9D83A18DCA43251859EFB14 /* PostViewModel.swift in Sources */,
@@ -766,7 +798,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 339;
+				CURRENT_PROJECT_VERSION = 341;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -787,7 +819,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 339;
+				CURRENT_PROJECT_VERSION = 341;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -948,7 +980,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 339;
+				CURRENT_PROJECT_VERSION = 341;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
