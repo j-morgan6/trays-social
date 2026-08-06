@@ -14,7 +14,28 @@ import SwiftUI
 ///    presents — the menu's content hierarchy is destroyed on dismiss. Keeping
 ///    them together in one named modifier makes that non-obvious rule hard to
 ///    accidentally undo.
+///
+/// Split into a presentation half and a sync half only to stay under
+/// swiftlint's function-body limit; both halves apply to the same root view.
 struct CollectionsSurface: ViewModifier {
+    let viewModel: CollectionsViewModel
+    @Binding var formMode: CollectionFormMode?
+    @Binding var pendingDelete: RecipeCollection?
+
+    func body(content: Content) -> some View {
+        content
+            .task { await viewModel.load() }
+            .modifier(CollectionPresentations(
+                viewModel: viewModel,
+                formMode: $formMode,
+                pendingDelete: $pendingDelete
+            ))
+            .modifier(CollectionItemCountSync(viewModel: viewModel))
+    }
+}
+
+/// The form sheet, the delete confirmation, and the paywall.
+private struct CollectionPresentations: ViewModifier {
     @Environment(AppState.self) private var appState
 
     let viewModel: CollectionsViewModel
@@ -23,20 +44,12 @@ struct CollectionsSurface: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .task { await viewModel.load() }
             .sheet(item: $formMode) { mode in
                 CollectionFormSheet(mode: mode, viewModel: viewModel)
             }
             .alert(
                 String(localized: "Delete collection"),
-                isPresented: Binding(
-                    get: { pendingDelete != nil },
-                    set: {
-                        if !$0 {
-                            pendingDelete = nil
-                        }
-                    }
-                ),
+                isPresented: deleteAlertBinding,
                 presenting: pendingDelete
             ) { collection in
                 Button(String(localized: "Cancel"), role: .cancel) {}
@@ -50,35 +63,59 @@ struct CollectionsSurface: ViewModifier {
             // mid-session; the ViewModel flips needsPaywall and the paywall
             // presents here, in context, rather than as an error toast.
             .plusPaywall(
-                isPresented: Binding(
-                    get: { viewModel.needsPaywall },
-                    set: { presented in
-                        viewModel.needsPaywall = presented
-                        // Closed without subscribing: `onUnlocked` will not run,
-                        // so a remembered add-intent would otherwise outlive the
-                        // interaction and be consumed by some later create.
-                        if !presented, !appState.isPlus {
-                            viewModel.cancelPendingAdd()
-                        }
-                    }
-                ),
+                isPresented: paywallBinding,
                 feature: .collections,
-                onUnlocked: {
-                    Task {
-                        await viewModel.refresh()
-                        // Finish what the user was doing before the paywall
-                        // interrupted them. A fresh subscriber has no
-                        // collections yet, so we open the create form and the
-                        // add lands once the collection exists.
-                        if viewModel.replayPendingAdd() {
-                            formMode = .create
-                        }
-                    }
-                }
+                onUnlocked: unlocked
             )
-            // My Tray never unmounts (the tab shell keeps all three alive), so
-            // `.task` does not re-fire when the user comes back from a
-            // collection. These two are what keep the shelf's counts honest.
+    }
+
+    private var deleteAlertBinding: Binding<Bool> {
+        Binding(
+            get: { pendingDelete != nil },
+            set: { presented in
+                if !presented {
+                    pendingDelete = nil
+                }
+            }
+        )
+    }
+
+    private var paywallBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.needsPaywall },
+            set: { presented in
+                viewModel.needsPaywall = presented
+                // Closed without subscribing: `onUnlocked` will not run, so a
+                // remembered add-intent would otherwise outlive the interaction
+                // and be consumed by some later, unrelated create.
+                if !presented, !appState.isPlus {
+                    viewModel.cancelPendingAdd()
+                }
+            }
+        )
+    }
+
+    /// Finish what the user was doing before the paywall interrupted them. A
+    /// fresh subscriber has no collections yet, so open the create form; the
+    /// add lands once the collection has a real id.
+    private func unlocked() {
+        Task {
+            await viewModel.refresh()
+            if viewModel.replayPendingAdd() {
+                formMode = .create
+            }
+        }
+    }
+}
+
+/// My Tray never unmounts (the tab shell keeps all three tabs alive), so
+/// `.task` does not re-fire when the user comes back from a collection. These
+/// two notifications are what keep the shelf's item counts honest.
+private struct CollectionItemCountSync: ViewModifier {
+    let viewModel: CollectionsViewModel
+
+    func body(content: Content) -> some View {
+        content
             .onReceive(NotificationCenter.default.publisher(for: .collectionItemRemoved)) { note in
                 if let id = note.userInfo?["collectionId"] as? Int {
                     viewModel.applyItemRemoved(collectionId: id)
