@@ -242,9 +242,25 @@ final class SubscriptionService {
         }
     }
 
+    /// What the App Store surfaced for this Apple ID, independent of whether the
+    /// server has caught up.
+    ///
+    /// Callers need this because `refreshEntitlement()` →
+    /// `AppState.refreshCurrentUser()` swallows transient errors: after a
+    /// successful restore, `isPlus == false` can mean either "this Apple ID owns
+    /// nothing" or "we could not confirm it just now". Those two deserve
+    /// opposite copy, and only this function can tell them apart.
+    enum RestoreOutcome: Equatable {
+        /// At least one active entitlement exists on this Apple ID.
+        case foundEntitlements
+        /// The Apple ID genuinely holds nothing for this app.
+        case noEntitlements
+    }
+
     /// User-initiated restore. `AppStore.sync()` prompts for App Store
     /// credentials, which is why the background drain below does not call it.
-    func restore() async throws {
+    @discardableResult
+    func restore() async throws -> RestoreOutcome {
         do {
             try await storeKit.syncWithAppStore()
         } catch {
@@ -256,7 +272,8 @@ final class SubscriptionService {
         // theirs, and the foreign one must not stop the legitimate one from
         // verifying.
         var firstFailure: Error?
-        for jws in await storeKit.currentEntitlementJWS() {
+        let entitlements = await storeKit.currentEntitlementJWS()
+        for jws in entitlements {
             do {
                 try await syncEntitlement(jws: jws)
             } catch {
@@ -275,6 +292,8 @@ final class SubscriptionService {
         if let firstFailure {
             throw firstFailure
         }
+
+        return entitlements.isEmpty ? .noEntitlements : .foundEntitlements
     }
 
     /// Post-login drain. Binds a purchase made while signed out, on a reinstall,

@@ -32,6 +32,7 @@
 		50AF905A47E1D05B55DA29F1 /* SectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFCBACB9950E161B3FC270D0 /* SectionHeader.swift */; };
 		510EBE5CC457756EF0AA0E0B /* LegalAcceptanceFooter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 688C26D6280C49F4C236681C /* LegalAcceptanceFooter.swift */; };
 		523899F9035B11F5A1E07D4C /* MutedKeywordsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634298CD755E9547B6A89A2F /* MutedKeywordsView.swift */; };
+		52F25B9F3CD9AF2D3C911FCB /* PlusGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118B2E6078A2E941F08A21B3 /* PlusGateTests.swift */; };
 		55C7A16C382A9779161B7EFA /* InstrumentSerif-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EB2385A26C8B753F42D5577B /* InstrumentSerif-Regular.ttf */; };
 		565598CBAAE4DDC41D9FC218 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 20087CB4CACF60BFAAB2212E /* Preview Assets.xcassets */; };
 		5F74A391EFDA598EFE838EF4 /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD609B9C746BF48DEA058E25 /* APIError.swift */; };
@@ -126,6 +127,7 @@
 		0F90F0E9C63303F4F5E19999 /* AppNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNotification.swift; sourceTree = "<group>"; };
 		100430FDF305D5E74355F4BC /* FindViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindViewModel.swift; sourceTree = "<group>"; };
 		1085B4995015DA8289680920 /* FeedCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedCardView.swift; sourceTree = "<group>"; };
+		118B2E6078A2E941F08A21B3 /* PlusGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlusGateTests.swift; sourceTree = "<group>"; };
 		11BD5FE597E0FAC9D5C0D3A1 /* PaywallViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallViewModelTests.swift; sourceTree = "<group>"; };
 		15E25A27F96B53A311D1785A /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		18252654917F5129220567CE /* PillBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillBar.swift; sourceTree = "<group>"; };
@@ -565,6 +567,7 @@
 			isa = PBXGroup;
 			children = (
 				11BD5FE597E0FAC9D5C0D3A1 /* PaywallViewModelTests.swift */,
+				118B2E6078A2E941F08A21B3 /* PlusGateTests.swift */,
 				856DF06453D39C005EBF4775 /* SubscriptionServiceTests.swift */,
 			);
 			path = Subscriptions;
@@ -683,6 +686,7 @@
 				A5DB464511C0C9AAE06E47EE /* OptimisticRollbackTests.swift in Sources */,
 				C1C58D1733F30215F2BE482A /* PaywallViewModelTests.swift in Sources */,
 				7911FCE388382AF25FD6D3B4 /* PlaceholderTest.swift in Sources */,
+				52F25B9F3CD9AF2D3C911FCB /* PlusGateTests.swift in Sources */,
 				037EBB9D239C5B6B3CB07599 /* ShellViewModelTests.swift in Sources */,
 				892334F4875A4620B720B2A5 /* SubscriptionServiceTests.swift in Sources */,
 			);
@@ -798,7 +802,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 341;
+				CURRENT_PROJECT_VERSION = 342;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -819,7 +823,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 341;
+				CURRENT_PROJECT_VERSION = 342;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -980,7 +984,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 341;
+				CURRENT_PROJECT_VERSION = 342;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

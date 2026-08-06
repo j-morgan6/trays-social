@@ -29,6 +29,21 @@ enum PlusFeature: Equatable, Sendable, CaseIterable {
     }
 }
 
+/// What a gate tap does. Extracted from the `Button` body so the single most
+/// product-critical decision in this feature is assertable without a
+/// view-testing dependency — the project has neither ViewInspector nor an
+/// XCUITest target, so a decision left inline in `body` is covered by nothing.
+enum PlusGateOutcome: Equatable {
+    case run
+    case presentPaywall
+
+    /// Entitlement is server truth (`AppState.isPlus`, sourced from `/auth/me`).
+    /// There is deliberately no local override.
+    static func decide(isPlus: Bool) -> PlusGateOutcome {
+        isPlus ? .run : .presentPaywall
+    }
+}
+
 /// Moment-of-need gate. Renders a real `Button`; runs `action` immediately when
 /// the user is entitled, otherwise presents the paywall in context.
 ///
@@ -66,9 +81,10 @@ struct PlusGate<Content: View>: View {
 
     var body: some View {
         Button {
-            if appState.isPlus {
+            switch PlusGateOutcome.decide(isPlus: appState.isPlus) {
+            case .run:
                 action()
-            } else {
+            case .presentPaywall:
                 showPaywall = true
             }
         } label: {

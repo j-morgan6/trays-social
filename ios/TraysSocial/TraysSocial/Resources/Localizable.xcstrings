@@ -1105,6 +1105,29 @@
         }
       }
     },
+    "We found your subscription but couldn't confirm it yet. Try again in a moment." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We found your subscription but couldn't confirm it yet. Try again in a moment."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encontramos tu suscripción, pero aún no pudimos confirmarla. Vuelve a intentarlo en un momento."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nous avons trouvé votre abonnement, mais nous n'avons pas encore pu le confirmer. Réessayez dans un instant."
+          }
+        }
+      }
+    },
     "Weekly meal planner" : {
       "extractionState" : "manual",
       "localizations" : {

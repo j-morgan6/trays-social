@@ -1,6 +1,20 @@
 import StoreKit
 import SwiftUI
 
+/// Which face the section shows. Extracted for the same reason as
+/// `PlusGateOutcome`: a branch living only inside `body` is untestable in a
+/// project with no view-test infrastructure.
+enum PlusSettingsState: Equatable {
+    /// Status row plus Apple's manage-subscriptions sheet.
+    case subscribed
+    /// The paywall entry point.
+    case notSubscribed
+
+    static func from(isPlus: Bool) -> PlusSettingsState {
+        isPlus ? .subscribed : .notSubscribed
+    }
+}
+
 /// The permanent "Trays Plus" home in Settings — the always-available entry
 /// point that makes the paywall reachable without ever nagging for it.
 ///
@@ -17,7 +31,7 @@ struct PlusSettingsSection: View {
 
     var body: some View {
         Section(String(localized: "Trays Plus")) {
-            if appState.isPlus {
+            if PlusSettingsState.from(isPlus: appState.isPlus) == .subscribed {
                 HStack {
                     Text(String(localized: "Status"))
                     Spacer()
@@ -25,6 +39,11 @@ struct PlusSettingsSection: View {
                     // is_subscriber — no plan name, no renewal date. Inventing
                     // either would be a lie, and Apple's own sheet shows the
                     // real values one tap away.
+                    //
+                    // DEFERRED (W176 completion notes): showing the actual plan
+                    // and renewal date needs /auth/me to expose the product id
+                    // and expiry the server already stores from the StoreKit
+                    // verification in W174. Until then this row stays binary.
                     Text(String(localized: "Active"))
                         .foregroundStyle(Theme.textSecondary)
                 }

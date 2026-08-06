@@ -85,9 +85,13 @@ struct PaywallView: View {
     // MARK: - Header
 
     // ART: this header is type-only, matching WelcomeView (which draws its
-    // wordmark from type and native shapes and ships no image assets). A Trays
-    // Plus lockup could replace the eyebrow if one is designed — see the task
-    // completion notes for the two open art slots.
+    // wordmark from type and native shapes and ships no image assets). Two slots
+    // are open if the user wants custom art, named here so they survive the task
+    // record:
+    //   [LOGO: Trays Plus lockup] — would replace the "TRAYS PLUS" eyebrow below.
+    //   [ICON: Plus badge]        — would sit on the selected PaywallPlanCard,
+    //                               which currently uses SF Symbols only.
+    // Neither blocks shipping; the screen is complete without them.
     private var header: some View {
         VStack(spacing: 8) {
             Text(String(localized: "TRAYS PLUS"))
@@ -205,14 +209,18 @@ struct PaywallView: View {
                 .foregroundStyle(Theme.text)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 4)
-            Button {
-                viewModel.dismissMessage()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.textSecondary)
+            // Only where dismissing actually does something. The waiting states
+            // clear themselves when server truth lands.
+            if viewModel.isStatusDismissible {
+                Button {
+                    viewModel.dismissMessage()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                .accessibilityLabel(String(localized: "Dismiss"))
             }
-            .accessibilityLabel(String(localized: "Dismiss"))
         }
         .padding(12)
         .background(Theme.surface)

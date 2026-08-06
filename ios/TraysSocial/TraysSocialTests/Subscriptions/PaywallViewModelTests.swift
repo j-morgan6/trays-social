@@ -20,6 +20,9 @@ private final class SpyPurchasing: PaywallPurchasing {
     var outcomeToReturn: SubscriptionService.PurchaseOutcome = .completed
     var purchaseError: Error?
     var restoreError: Error?
+    /// What the App Store surfaced. Defaults to "nothing", so a test that says
+    /// nothing about entitlements gets the empty-Apple-ID case.
+    var restoreOutcomeToReturn: SubscriptionService.RestoreOutcome = .noEntitlements
 
     /// Fires inside `purchase`/`restore`, before they return — the hook that
     /// simulates the server entitlement refresh landing. Same trick as
@@ -44,12 +47,13 @@ private final class SpyPurchasing: PaywallPurchasing {
         return outcomeToReturn
     }
 
-    func restore() async throws {
+    func restore() async throws -> SubscriptionService.RestoreOutcome {
         calls.append(.restore)
         onRestore?()
         if let restoreError {
             throw restoreError
         }
+        return restoreOutcomeToReturn
     }
 }
 
@@ -274,6 +278,7 @@ final class PaywallViewModelTests: XCTestCase {
     func test_restore_whenEntitlementFound_reachesUnlocked() async {
         let harness = Harness()
         await harness.viewModel.load()
+        harness.purchaser.restoreOutcomeToReturn = .foundEntitlements
         harness.purchaser.onRestore = { harness.grantEntitlement() }
 
         await harness.viewModel.restore(appState: harness.appState)
@@ -281,9 +286,32 @@ final class PaywallViewModelTests: XCTestCase {
         XCTAssertEqual(harness.viewModel.actionState, .unlocked)
     }
 
+    /// The false-negative guard. `SubscriptionService.restore()` calls
+    /// `refreshEntitlement()` unconditionally and `AppState.refreshCurrentUser()`
+    /// swallows transient errors, so a real subscriber on a flaky connection
+    /// finishes restore with `isPlus == false`. Telling them "no active
+    /// subscription found" would be a definitive statement about something we
+    /// failed to check.
+    func test_restore_whenEntitlementFoundButServerDidNotConfirm_doesNotClaimNothingToRestore() async {
+        let harness = Harness()
+        await harness.viewModel.load()
+        harness.purchaser.restoreOutcomeToReturn = .foundEntitlements
+
+        await harness.viewModel.restore(appState: harness.appState)
+
+        XCTAssertEqual(harness.viewModel.actionState, .restoreUnconfirmed)
+        XCTAssertNotEqual(harness.viewModel.actionState, .nothingToRestore)
+        XCTAssertNotEqual(
+            harness.viewModel.statusMessage,
+            String(localized: "No active subscription found for this Apple ID.")
+        )
+        XCTAssertFalse(harness.appState.isPlus, "an unconfirmed restore must never unlock")
+    }
+
     func test_restore_whenNothingFound_reportsNothingToRestore() async {
         let harness = Harness()
         await harness.viewModel.load()
+        harness.purchaser.restoreOutcomeToReturn = .noEntitlements
 
         await harness.viewModel.restore(appState: harness.appState)
 
@@ -320,6 +348,44 @@ final class PaywallViewModelTests: XCTestCase {
 
     // MARK: - Derived state
 
+    /// A charge has already been authorized; re-enabling Subscribe under
+    /// "Purchase complete. Finishing activation." invites a second one. Restore
+    /// stays enabled as the recovery path.
+    func test_canPurchase_isFalseWhileAwaitingServerTruth() async {
+        let harness = Harness()
+        await harness.viewModel.load()
+        harness.purchaser.outcomeToReturn = .completed
+
+        await harness.viewModel.purchaseSelected(appState: harness.appState)
+
+        XCTAssertEqual(harness.viewModel.actionState, .awaitingEntitlement)
+        XCTAssertFalse(harness.viewModel.canPurchase)
+    }
+
+    func test_canPurchase_isFalseWhilePendingApproval() async {
+        let harness = Harness()
+        await harness.viewModel.load()
+        harness.purchaser.outcomeToReturn = .pending
+
+        await harness.viewModel.purchaseSelected(appState: harness.appState)
+
+        XCTAssertEqual(harness.viewModel.actionState, .pendingApproval)
+        XCTAssertFalse(harness.viewModel.canPurchase)
+    }
+
+    func test_canPurchase_returnsAfterDismissingAnUnconfirmedRestore() async {
+        let harness = Harness()
+        await harness.viewModel.load()
+        harness.purchaser.restoreOutcomeToReturn = .foundEntitlements
+        await harness.viewModel.restore(appState: harness.appState)
+        XCTAssertFalse(harness.viewModel.canPurchase)
+
+        harness.viewModel.dismissMessage()
+
+        XCTAssertEqual(harness.viewModel.actionState, .idle)
+        XCTAssertTrue(harness.viewModel.canPurchase)
+    }
+
     func test_canPurchase_isFalseWhileNoPlanSelected() async {
         let harness = Harness(plans: [])
 
@@ -336,6 +402,35 @@ final class PaywallViewModelTests: XCTestCase {
         await harness.viewModel.load()
 
         XCTAssertEqual(harness.viewModel.primaryButtonTitle, String(localized: "Subscribe"))
+    }
+
+    /// The banner renders its X off `isStatusDismissible`, so the two must agree
+    /// or the user gets a control that does nothing — in the very states where
+    /// Subscribe is also disabled.
+    func test_isStatusDismissible_isFalseWhileWaitingOnServerTruth() async {
+        let harness = Harness()
+        await harness.viewModel.load()
+        harness.purchaser.outcomeToReturn = .completed
+
+        await harness.viewModel.purchaseSelected(appState: harness.appState)
+
+        XCTAssertEqual(harness.viewModel.actionState, .awaitingEntitlement)
+        XCTAssertFalse(harness.viewModel.isStatusDismissible)
+        XCTAssertNotNil(harness.viewModel.statusMessage)
+
+        harness.viewModel.dismissMessage()
+
+        XCTAssertEqual(harness.viewModel.actionState, .awaitingEntitlement, "a no-op X must not clear the wait")
+    }
+
+    func test_isStatusDismissible_isTrueForMessagesTheUserCanClear() async {
+        let harness = Harness()
+        await harness.viewModel.load()
+        harness.purchaser.restoreOutcomeToReturn = .noEntitlements
+
+        await harness.viewModel.restore(appState: harness.appState)
+
+        XCTAssertTrue(harness.viewModel.isStatusDismissible)
     }
 
     func test_dismissMessage_clearsFailureBackToIdle() async {

@@ -54,7 +54,9 @@ protocol PaywallPurchasing {
     /// and leaves the catalog empty rather than surfacing an error.
     func loadPlans() async -> [PlanOption]
     func purchase(planID: String) async throws -> SubscriptionService.PurchaseOutcome
-    func restore() async throws
+    /// Returns what the App Store actually surfaced, so the caller can tell
+    /// "you own nothing" apart from "we could not confirm it".
+    func restore() async throws -> SubscriptionService.RestoreOutcome
 }
 
 /// Production implementation — the only new type that touches `Product`.
@@ -85,7 +87,7 @@ final class LivePaywallPurchasing: PaywallPurchasing {
         return try await service.purchase(product)
     }
 
-    func restore() async throws {
+    func restore() async throws -> SubscriptionService.RestoreOutcome {
         try await service.restore()
     }
 
@@ -152,11 +154,25 @@ enum PaywallActionState: Equatable {
     case unlocked
     /// Restore succeeded but surfaced no entitlement — not an error.
     case nothingToRestore
+    /// Restore surfaced a real entitlement, but server truth has not flipped.
+    /// Kept distinct from `.nothingToRestore`: telling a paying subscriber they
+    /// own nothing because one refresh call failed is the worse of the two lies.
+    case restoreUnconfirmed
     case failed(message: String)
 
     var isBusy: Bool {
         switch self {
         case .purchasing, .restoring: true
+        default: false
+        }
+    }
+
+    /// The store side is settled and only the server has yet to agree. A second
+    /// purchase attempt here would risk charging someone who has already paid,
+    /// so the Subscribe button stays down and Restore is the way forward.
+    var isAwaitingServerTruth: Bool {
+        switch self {
+        case .awaitingEntitlement, .pendingApproval, .restoreUnconfirmed: true
         default: false
         }
     }
@@ -189,7 +205,7 @@ final class PaywallViewModel {
     }
 
     var canPurchase: Bool {
-        selectedPlan != nil && !actionState.isBusy
+        selectedPlan != nil && !actionState.isBusy && !actionState.isAwaitingServerTruth
     }
 
     var isUnlocked: Bool {
@@ -213,6 +229,8 @@ final class PaywallViewModel {
             String(localized: "Purchase complete. Finishing activation.")
         case .nothingToRestore:
             String(localized: "No active subscription found for this Apple ID.")
+        case .restoreUnconfirmed:
+            String(localized: "We found your subscription but couldn't confirm it yet. Try again in a moment.")
         case let .failed(message):
             message
         case .idle, .purchasing, .restoring, .unlocked:
@@ -273,24 +291,42 @@ final class PaywallViewModel {
 
     // MARK: - Restore
 
+    /// Three outcomes, not two. `SubscriptionService.restore()` calls
+    /// `refreshEntitlement()` unconditionally and `AppState.refreshCurrentUser()`
+    /// swallows transient errors, so `isPlus == false` after a successful restore
+    /// is ambiguous. Branching on what the App Store actually surfaced is what
+    /// stops a genuine subscriber with a flaky connection from being told,
+    /// definitively, that they own nothing.
     func restore(appState: AppState) async {
         guard !actionState.isBusy else { return }
         actionState = .restoring
         do {
-            try await purchasing.restore()
-            actionState = appState.isPlus ? .unlocked : .nothingToRestore
+            let outcome = try await purchasing.restore()
+            if appState.isPlus {
+                actionState = .unlocked
+            } else {
+                actionState = outcome == .foundEntitlements ? .restoreUnconfirmed : .nothingToRestore
+            }
         } catch {
             actionState = Self.failureState(for: error, context: "restore")
         }
     }
 
-    func dismissMessage() {
+    /// Whether the status banner's dismiss control should render at all. Must
+    /// stay in lockstep with the cases `dismissMessage()` handles: an X that
+    /// does nothing is worse than no X, and it is exactly what the user is left
+    /// staring at in `.awaitingEntitlement` / `.pendingApproval`, where the
+    /// Subscribe button is also down.
+    var isStatusDismissible: Bool {
         switch actionState {
-        case .failed, .nothingToRestore:
-            actionState = .idle
-        default:
-            break
+        case .failed, .nothingToRestore, .restoreUnconfirmed: true
+        default: false
         }
+    }
+
+    func dismissMessage() {
+        guard isStatusDismissible else { return }
+        actionState = .idle
     }
 
     // MARK: - Error mapping
