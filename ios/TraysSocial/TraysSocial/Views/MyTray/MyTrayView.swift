@@ -16,10 +16,12 @@ struct MyTrayView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(AppState.self) private var appState
     @State private var viewModel = MyTrayViewModel()
-    // W177. Owned here rather than on AppState so the shelf and the tray-card
-    // context menu share one instance without a per-account teardown to
-    // remember on logout.
+    /// W177. Owned here rather than on AppState so the shelf and the tray-card
+    /// context menu share one instance without a per-account teardown to
+    /// remember on logout.
     @State private var collectionsVM = CollectionsViewModel()
+    // W178. Owned by AppShellView so the pushed planner shares this instance.
+    @Environment(MealPlannerViewModel.self) private var plannerVM
     @State private var formMode: CollectionFormMode?
     @State private var pendingDelete: RecipeCollection?
 
@@ -30,7 +32,17 @@ struct MyTrayView: View {
                 // must not be shown the dead-end empty state — their
                 // collections would be unreachable from anywhere in the app,
                 // including for deletion, which is never gated.
-                if viewModel.isEmpty, !viewModel.isLoading, !collectionsVM.hasCollections {
+                // W178: a lapsed subscriber whose bookmarks are gone but who
+                // still has a plan hits the same dead end — extend the guard
+                // rather than replace it, so the W177 behaviour is unchanged.
+                // `!plannerVM.isLoadingWeek` and not `hasLoadedOnce`: gating on
+                // the latter would suppress the empty state forever whenever
+                // the probe cannot succeed. This only defers the decision while
+                // the probe is actually in flight, so a lapsed subscriber never
+                // sees the empty state flash before their plan lands.
+                if viewModel.isEmpty, !viewModel.isLoading, !collectionsVM.hasCollections,
+                   !plannerVM.hasAnyEntries, !plannerVM.isLoadingWeek
+                {
                     TrayEmptyView()
                         .frame(maxWidth: .infinity)
                         .padding(.top, 80)
@@ -39,6 +51,10 @@ struct MyTrayView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 4)
                         .padding(.bottom, 18)
+
+                    PlanYourWeekRow(viewModel: plannerVM)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
 
                     // W177: emits nothing when the user has no collections, so
                     // the tray below is byte-identical to its pre-W177 layout.
@@ -134,6 +150,9 @@ struct MyTrayView: View {
         .refreshable {
             await viewModel.refresh(currentUsername: appState.currentUser?.username)
             await collectionsVM.refresh()
+            // W178: the user's manual retry when the probe below failed. My
+            // Tray never unmounts, so `.task` will not re-fire on its own.
+            await plannerVM.loadIfNeeded()
         }
         .task {
             // D94: previously gated on viewModel.posts.isEmpty so the
@@ -145,6 +164,12 @@ struct MyTrayView: View {
             // current username so the user's own posts are merged in.
             await viewModel.load(currentUsername: appState.currentUser?.username)
         }
+        // W178: MUST live on the root, not inside PlanYourWeekRow. The empty-
+        // state guard above reads `plannerVM.hasAnyEntries`, and the row only
+        // renders in the branch that guard rejects — probing from inside it
+        // would make the guard permanently false and strand a lapsed
+        // subscriber's plan behind an empty state.
+        .task { await plannerVM.loadIfNeeded() }
         .onReceive(NotificationCenter.default.publisher(for: .postUpdated)) { notification in
             if let updated = notification.userInfo?["post"] as? Post {
                 #if DEBUG
@@ -223,16 +248,8 @@ struct MyTrayView: View {
         return keys[abs(post.id) % keys.count]
     }
 
-    /// Extracts a short title from the post caption — first sentence
-    /// up to a terminator, trimmed. Mirrors the existing legacy
-    /// savedTitle helper's logic so card titles stay consistent.
     private func gridTitle(for post: Post) -> String {
-        let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return String(localized: "Untitled") }
-        let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
-            .first?
-            .trimmingCharacters(in: .whitespaces) ?? raw
-        return candidate.isEmpty ? String(localized: "Untitled") : candidate
+        RecipeTitle.from(caption: post.caption)
     }
 }
 

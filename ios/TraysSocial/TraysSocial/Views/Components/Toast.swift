@@ -28,6 +28,10 @@ enum Toast {
     case collectionDeleteFailed
     case collectionAddFailed
     case collectionRemoveFailed
+    // W178 meal planner. Same rationale as the collections cases above.
+    case mealPlanAddFailed
+    case mealPlanRemoveFailed
+    case groceryCheckFailed
     case custom(String)
 
     var message: String {
@@ -46,6 +50,9 @@ enum Toast {
         case .collectionDeleteFailed: String(localized: "Couldn't delete that collection. Try again.")
         case .collectionAddFailed: String(localized: "Couldn't add to that collection. Try again.")
         case .collectionRemoveFailed: String(localized: "Couldn't remove from that collection. Try again.")
+        case .mealPlanAddFailed: String(localized: "Couldn't plan that recipe. Try again.")
+        case .mealPlanRemoveFailed: String(localized: "Couldn't remove that from your plan. Try again.")
+        case .groceryCheckFailed: String(localized: "Couldn't update that item. Try again.")
         case let .custom(text): text
         }
     }

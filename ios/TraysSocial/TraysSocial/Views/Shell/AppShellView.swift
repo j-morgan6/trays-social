@@ -18,6 +18,10 @@ struct AppShellView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var shell = ShellViewModel()
+    // W178. Owned by the shell, not by MyTrayView: the planner is a root-stack
+    // destination, so My Tray's @State is not reachable from it. One instance
+    // means the tray's entry row and the planner screen share a loaded week.
+    @State private var planner = MealPlannerViewModel()
     @State private var showCreatePost = false
 
     var body: some View {
@@ -88,12 +92,18 @@ struct AppShellView: View {
             .navigationDestination(for: CollectionRoute.self) { route in
                 CollectionDetailView(route: route)
             }
+            .navigationDestination(for: MealPlannerRoute.self) { _ in
+                MealPlannerView()
+            }
             .sheet(isPresented: $showCreatePost) {
                 CreatePostView()
             }
         }
         .tint(Theme.primary)
         .environment(shell)
+        // Outside the NavigationStack, like `shell`, so pushed destinations
+        // (MealPlannerView) can read it too.
+        .environment(planner)
         .task {
             // D72: refresh the bell's amber-dot signal on shell mount
             // so the user sees the right state before they open
