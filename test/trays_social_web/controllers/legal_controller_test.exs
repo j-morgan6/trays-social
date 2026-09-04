@@ -138,6 +138,50 @@ defmodule TraysSocialWeb.LegalControllerTest do
         assert body =~ phrase, "expected /terms body to contain #{inspect(phrase)}"
       end
     end
+
+    # W183: an auto-renewable subscription needs its billing terms discoverable
+    # from the document the paywall links to. Before v1.2 the only payment
+    # wording in the whole document was Apple's warranty boilerplate at 16.4.
+    test "covers the Trays Plus subscription and billing disclosures", %{conn: conn} do
+      conn = get(conn, ~p"/terms")
+      body = response(conn, 200)
+
+      required = [
+        "Trays Plus subscriptions and billing",
+        # Price and period. The App Store's displayed local price governs.
+        "US$3.99",
+        "US$29.99",
+        "displayed price is the price that governs",
+        # Auto-renewal and the cancellation deadline.
+        "renews automatically",
+        "at least 24 hours before the end of the current period",
+        # Trial, and what happens if it is not cancelled.
+        "7-day free trial",
+        # Cancellation route — Apple, not us.
+        "Cancel Subscription",
+        "account.apple.com",
+        # Refunds are Apple's, and we do not limit statutory rights.
+        "refunds are handled by Apple",
+        "reportaproblem.apple.com",
+        # Price-change notice.
+        "increase the price"
+      ]
+
+      for phrase <- required do
+        assert body =~ phrase, "expected /terms body to contain #{inspect(phrase)}"
+      end
+    end
+
+    test "does not promise an in-app cancellation control it does not have",
+         %{conn: conn} do
+      conn = get(conn, ~p"/terms")
+      body = response(conn, 200)
+
+      # Trays cannot cancel or refund on the user's behalf. The document has to
+      # say so, because the App Store is the only cancellation route.
+      assert body =~ "not inside the Trays app"
+      assert body =~ "We cannot issue, approve, or deny a refund"
+    end
   end
 
   describe "GET /community-guidelines" do

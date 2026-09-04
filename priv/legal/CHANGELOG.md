@@ -10,6 +10,33 @@ the document name (e.g. `## Community Guidelines v1.0 — …`). Entries
 that span multiple documents are unprefixed and the body lists which
 documents changed.
 
+## Terms of Service v1.2 — 2026-09-04
+
+Terms of Service only. Privacy Policy unchanged at v1.2, Community Guidelines
+unchanged at v1.0, FAQ unchanged at v1.1.
+
+**DRAFT PENDING LEGAL REVIEW** — the new section was drafted against primary
+sources by an agent, not by a lawyer. The sources checked, the regulatory
+context, and four open questions for a reviewer are in
+`docs/legal/w183-subscriptions-billing-review.md`.
+
+- Added §17 "Trays Plus subscriptions and billing" (17.1-17.9): what Plus is
+  and that it gates utility rather than recipe content; the two plans and
+  their prices, with the App Store's displayed local price stated as the
+  price that governs; auto-renewal and Apple's billing timing; the 7-day free
+  trial and its conversion; cancellation through Apple's subscription
+  settings, with an explicit statement that the Trays app cannot cancel or
+  modify a subscription; what survives when a subscription lapses; refunds
+  being Apple's to handle, without limiting non-waivable provincial or state
+  consumer rights; price and feature-change notice; and the Canada + US
+  territory limit
+- Renumbered "Changes to these Terms" §17 -> §18 and "Contact" §18 -> §19.
+  Nothing renumbered below §17 — §5, §6, §7 and §8 are cross-referenced from
+  the Community Guidelines and from within the Terms, and the Apple addendum
+  stays at §16
+- Before this change the only payment-related wording in the entire document
+  was Apple's warranty-refund boilerplate at §16.4
+
 ## FAQ v1.1 — 2026-09-04
 
 FAQ only. Privacy Policy unchanged at v1.2, Terms of Service unchanged at

@@ -1,6 +1,6 @@
 ---
-effective_date: 2026-05-11
-version: 1.1
+effective_date: 2026-09-04
+version: 1.2
 ---
 
 # Terms of Service
@@ -130,10 +130,59 @@ You represent and warrant that you are not located in a country subject to a U.S
 ### 16.9 Third-party beneficiary
 Apple and Apple's subsidiaries are third-party beneficiaries of these Terms and have the right to enforce these Terms against you.
 
-## 17. Changes to these Terms
+<!--
+  W183 DRAFT — REQUIRING HUMAN / LEGAL REVIEW BEFORE THIS DOCUMENT GOES LIVE.
+
+  This section was drafted by an agent against primary sources, not by a
+  lawyer. Every regulatory claim behind it, the sources actually checked, and
+  the four open questions a lawyer needs to answer are written up in
+  docs/legal/w183-subscriptions-billing-review.md. Do not treat this section
+  as reviewed until that memo is signed off. Delete this comment when it is.
+-->
+
+## 17. Trays Plus subscriptions and billing
+
+### 17.1 What Trays Plus is
+Trays is free to use, and the recipes on it are free to read, cook, save, and share. **Trays Plus** is an optional auto-renewable subscription that unlocks additional utility features: custom collections, the weekly meal planner, the automatic grocery checklist, and an ad-free experience. Trays Plus does not place any recipe or any part of the social feed behind a paywall.
+
+### 17.2 Price and billing period
+Trays Plus is offered on two plans:
+
+- **Monthly** — US$3.99, billed every month.
+- **Yearly** — US$29.99, billed every twelve months.
+
+Trays Plus is sold only as an in-app purchase through Apple's App Store. Apple displays the price applicable to your App Store country, in your local currency, in the purchase sheet before you confirm. **That displayed price is the price that governs your purchase**, and it prevails over the figures above if the two ever differ.
+
+### 17.3 Auto-renewal
+Trays Plus renews automatically for the same plan period unless you cancel it at least 24 hours before the end of the current period. Apple charges the payment method on your Apple Account no more than 24 hours before each new period begins. Your subscription is a transaction between you and Apple: we do not process, receive, or store your payment card or billing details. Apple tells us only whether your subscription is currently active and an identifier Apple assigns to it, which is what we use to unlock Plus on your account.
+
+### 17.4 Free trial
+Both plans are offered with a **7-day free trial**. If you do not cancel at least 24 hours before the trial ends, the trial converts automatically into a paid subscription at the price shown at sign-up, and Apple charges you at that point. Eligibility for a free trial is determined by Apple and is generally limited to once per Apple Account for the Trays Plus subscription group. Cancelling during the trial means you are not charged.
+
+### 17.5 How to cancel
+You cancel Trays Plus through Apple, in the same account you bought it from — not inside the Trays app, which has no ability to cancel or modify your subscription:
+
+- On your device: **Settings** app, tap your name, then **Subscriptions**, then **Trays Plus**, then **Cancel Subscription**; or
+- On the web: `account.apple.com`, under Subscriptions.
+
+Cancelling stops future renewals. It does not end the period you have already paid for — Plus features remain available until the end of that period.
+
+### 17.6 What happens when a subscription ends
+Nothing you created is deleted when Trays Plus lapses. Your collections and your planned weeks stay readable, and you can still check off and remove items from them. The Plus features simply stop accepting new additions until you subscribe again.
+
+### 17.7 Refunds
+Because Trays Plus is purchased through the App Store, **refunds are handled by Apple**, under the Apple Media Services Terms and Conditions, and not by us. Request a refund at `reportaproblem.apple.com`. We cannot issue, approve, or deny a refund for an App Store purchase. This does not limit any non-waivable refund or cancellation right you have under the consumer law of your province or state.
+
+### 17.8 Changes to price or to what Plus includes
+We may change the price of Trays Plus or the features it includes. If we increase the price of an existing subscription, Apple will notify you and, where Apple requires it, will ask for your consent before the increased price is charged; if you do not agree, your subscription will not renew at the new price. Where we make a material change to what Plus includes, we will give notice in the app or by email before it takes effect. You can cancel at any time under section 17.5.
+
+### 17.9 Where Trays Plus is offered
+Trays and Trays Plus are offered only in Canada and the United States. See section 2 for eligibility.
+
+## 18. Changes to these Terms
 
 We may update these Terms. Material changes will be notified in-app or by email. Continued use of the service after material changes means you accept them.
 
-## 18. Contact
+## 19. Contact
 
 - General questions: `support@trays.app`
