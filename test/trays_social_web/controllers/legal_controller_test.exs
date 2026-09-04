@@ -205,5 +205,44 @@ defmodule TraysSocialWeb.LegalControllerTest do
         assert body =~ phrase, "expected /faq body to contain #{inspect(phrase)}"
       end
     end
+
+    # W182: the FAQ shipped at v1.0 asserting there were no subscriptions and
+    # no advertising. Both became false — the Privacy Policy has described
+    # advertising since v1.2, and Trays Plus is a real subscription. These
+    # sentences must never come back.
+    test "no longer denies that subscriptions or advertising exist", %{conn: conn} do
+      conn = get(conn, ~p"/faq")
+      body = response(conn, 200)
+
+      for phrase <- ["no advertising", "no subscriptions", "no in-app purchases"] do
+        refute body =~ phrase, "/faq must not claim #{inspect(phrase)}"
+      end
+    end
+
+    test "answers the Trays Plus questions App Review expects", %{conn: conn} do
+      conn = get(conn, ~p"/faq")
+      body = response(conn, 200)
+
+      required = [
+        # What it is, and that it never gates recipe content.
+        "What is Trays Plus?",
+        "never gates recipes",
+        # Price and trial must match App Store Connect exactly.
+        "What does Trays Plus cost?",
+        "$3.99 per month",
+        "$29.99 per year",
+        "7-day free trial",
+        # Restore and cancel are both App Review requirements for an
+        # auto-renewable subscription.
+        "How do I restore a purchase?",
+        "Restore purchases",
+        "How do I cancel Trays Plus?",
+        "Subscriptions"
+      ]
+
+      for phrase <- required do
+        assert body =~ phrase, "expected /faq body to contain #{inspect(phrase)}"
+      end
+    end
   end
 end

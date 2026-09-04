@@ -1,7 +1,7 @@
 # Legal documents changelog
 
-Tracks material changes to the Privacy Policy, Terms of Service, and
-Community Guidelines. Effective dates in the corresponding
+Tracks material changes to the Privacy Policy, Terms of Service,
+Community Guidelines, and FAQ. Effective dates in the corresponding
 `priv/legal/*.md` frontmatter must match the latest entry below for
 each document.
 
@@ -9,6 +9,32 @@ each document.
 the document name (e.g. `## Community Guidelines v1.0 — …`). Entries
 that span multiple documents are unprefixed and the body lists which
 documents changed.
+
+## FAQ v1.1 — 2026-09-04
+
+FAQ only. Privacy Policy unchanged at v1.2, Terms of Service unchanged at
+v1.1, Community Guidelines unchanged at v1.0.
+
+- "Is it free?": replaced "There are no payments, no subscriptions, and no
+  in-app purchases" with an accurate answer — the app and its recipes stay
+  free, and Trays Plus is an optional subscription on top
+- "Do you have ads?": replaced "No. Trays has no advertising" with a
+  description of clearly labeled sponsored placements, where they can and
+  cannot appear, and the fact that they never reorder the feed. This answer
+  had contradicted the shipped Privacy Policy v1.2 (which has described
+  advertising and the `/privacy/ads-choices` opt-out since 2026-07-23)
+- Added "What is Trays Plus?" (custom collections, weekly meal planner,
+  automatic grocery list, ad-free) with an explicit statement that Plus
+  never gates recipe content
+- Added "What does Trays Plus cost?" — US$3.99/month, US$29.99/year, 7-day
+  free trial, with the App Store's displayed local-currency price as the
+  binding one
+- Added "How do I restore a purchase?" and "How do I cancel Trays Plus?",
+  the latter directing cancellation to Apple's subscription settings rather
+  than implying an in-app cancel control, and describing what survives when
+  a subscription lapses
+- "How do I delete my account?": noted that deleting an account does not
+  cancel a subscription
 
 ## Privacy Policy v1.2 — 2026-07-23
 
