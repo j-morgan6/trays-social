@@ -57,6 +57,110 @@ final class IngredientSearchTests: XCTestCase {
         XCTAssertEqual(chips.first?.count, IngredientChips.maxTermLength)
     }
 
+    // MARK: - View model
+
+    private struct Offline: Error {}
+
+    /// Records every chip set fetched; answers from `responses` in order
+    /// and throws once they run out.
+    @MainActor
+    private final class FakeFetch {
+        var calls: [[String]] = []
+        var responses: [IngredientSearchResults]
+
+        init(_ responses: [IngredientSearchResults]) {
+            self.responses = responses
+        }
+
+        func callAsFunction(_ chips: [String]) async throws -> IngredientSearchResults {
+            calls.append(chips)
+            guard !responses.isEmpty else { throw Offline() }
+            return responses.removeFirst()
+        }
+    }
+
+    /// Counts toast-bus posts. The observer block is @Sendable, so the
+    /// count lives behind a lock rather than in a captured var.
+    private final class ToastCounter: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value = 0
+
+        var count: Int {
+            lock.withLock { value }
+        }
+
+        func increment() {
+            lock.withLock { value += 1 }
+        }
+    }
+
+    private func results(_ ids: [Int]) throws -> IngredientSearchResults {
+        let rows = ids.map { #"{"post": \#(postJSON(id: $0)), "missing": [], "scope": "mine"}"# }
+        let json = #"{"everything": [\#(rows.joined(separator: ","))], "almost": []}"#
+        return try decoder.decode(IngredientSearchResults.self, from: Data(json.utf8))
+    }
+
+    private func makeViewModel(_ fake: FakeFetch, debounce: Duration = .zero) -> IngredientSearchViewModel {
+        let defaults = UserDefaults(suiteName: "IngredientSearchTests")!
+        defaults.removePersistentDomain(forName: "IngredientSearchTests")
+        return IngredientSearchViewModel(
+            preferences: SearchPreferences(defaults: defaults),
+            debounce: debounce,
+            fetch: { try await fake($0) }
+        )
+    }
+
+    func test_failedSearchKeepsLastResultsAndNeverToasts() async throws {
+        let fake = try FakeFetch([results([7])])
+        let viewModel = makeViewModel(fake)
+        let toasts = ToastCounter()
+        let observer = NotificationCenter.default.addObserver(
+            forName: .traysErrorOccurred, object: nil, queue: nil
+        ) { _ in toasts.increment() }
+        defer { NotificationCenter.default.removeObserver(observer) }
+
+        viewModel.addChip("chicken")
+        await viewModel.waitForSearch()
+        XCTAssertEqual(viewModel.results?.everything.map(\.id), [7])
+
+        viewModel.addChip("rice")
+        await viewModel.waitForSearch()
+
+        XCTAssertEqual(fake.calls, [["chicken"], ["chicken", "rice"]])
+        XCTAssertEqual(viewModel.results?.everything.map(\.id), [7])
+        XCTAssertFalse(viewModel.isSearching)
+        XCTAssertEqual(toasts.count, 0)
+    }
+
+    func test_newChipCancelsPendingDebouncedSearch() async throws {
+        let fake = try FakeFetch([results([1])])
+        let viewModel = makeViewModel(fake, debounce: .milliseconds(50))
+
+        viewModel.addChip("chicken")
+        viewModel.addChip("rice")
+        await viewModel.waitForSearch()
+
+        XCTAssertEqual(fake.calls, [["chicken", "rice"]])
+        XCTAssertEqual(viewModel.results?.everything.map(\.id), [1])
+    }
+
+    func test_resumeIfNeededRerunsASearchDroppedOnDisappear() async throws {
+        let fake = try FakeFetch([results([3])])
+        let viewModel = makeViewModel(fake, debounce: .milliseconds(50))
+
+        viewModel.addChip("eggs")
+        viewModel.cancelInFlight()
+        viewModel.resumeIfNeeded()
+        await viewModel.waitForSearch()
+
+        XCTAssertEqual(fake.calls, [["eggs"]])
+        XCTAssertEqual(viewModel.results?.everything.map(\.id), [3])
+
+        viewModel.resumeIfNeeded()
+        await viewModel.waitForSearch()
+        XCTAssertEqual(fake.calls.count, 1)
+    }
+
     func test_queryItemsUseBracketedHaveKey() {
         let items = IngredientChips.queryItems(for: ["chicken", "rice"])
         XCTAssertEqual(items.map(\.name), ["have[]", "have[]"])

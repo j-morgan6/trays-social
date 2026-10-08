@@ -34,6 +34,7 @@ struct IngredientSearchSection: View {
                 recentRow
             }
         }
+        .onAppear { viewModel.resumeIfNeeded() }
         .onDisappear { viewModel.cancelInFlight() }
     }
 
