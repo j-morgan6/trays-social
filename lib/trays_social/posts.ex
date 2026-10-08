@@ -15,6 +15,7 @@ defmodule TraysSocial.Posts do
   alias TraysSocial.Posts.Comment
   alias TraysSocial.Posts.CookingStep
   alias TraysSocial.Posts.Ingredient
+  alias TraysSocial.Posts.IngredientSearch
   alias TraysSocial.Posts.Post
   alias TraysSocial.Posts.PostLike
   alias TraysSocial.Posts.PostPhoto
@@ -282,6 +283,13 @@ defmodule TraysSocial.Posts do
 
     Repo.all(base)
   end
+
+  @doc """
+  "What I have" search. See `TraysSocial.Posts.IngredientSearch.search/3`.
+  """
+  defdelegate search_by_ingredients(viewer_id, terms, opts \\ []),
+    to: IngredientSearch,
+    as: :search
 
   defp sanitize_like(string) do
     string

@@ -776,6 +776,16 @@ defmodule TraysSocial.Accounts do
     |> Repo.all()
   end
 
+  @doc """
+  Returns the ids of every user `user_id` follows. Unordered.
+  """
+  def list_following_ids(user_id) do
+    Follow
+    |> where([f], f.follower_id == ^user_id)
+    |> select([f], f.followed_id)
+    |> Repo.all()
+  end
+
   # D109: keyset cursor on the FOLLOW row's (inserted_at, id) — the columns
   # the query orders by. The previous cursor filtered on the joined user's id,
   # an uncorrelated dimension, so pages skipped and repeated users.
