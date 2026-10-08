@@ -18,6 +18,10 @@ defmodule TraysSocial.Monetization do
     * `:web_ads`     — premium ad network on public web recipe pages (W159)
     * `:paid_tier`   — the ad-free + utility subscription (W160)
 
+  The same keyword list also carries `:recipe_first` (recipe-first navigation:
+  Home / My Tray / Search). It is not a monetization flag; read it through
+  `TraysSocial.Features`, never through this module.
+
   ## Entitlement
 
   `is_subscriber` is the account-level entitlement set server-side only via

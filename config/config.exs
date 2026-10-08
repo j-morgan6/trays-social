@@ -60,7 +60,11 @@ config :trays_social, :admin_emails, ["jsm10242000@gmail.com"]
 config :trays_social, :features,
   in_app_ads: false,
   web_ads: false,
-  paid_tier: false
+  paid_tier: false,
+  # Recipe-first navigation (Home / My Tray / Search, recipe-only posting).
+  # Not a monetization flag: read it through TraysSocial.Features. Flipped in
+  # prod via FEATURES_RECIPE_FIRST (config/runtime.exs).
+  recipe_first: false
 
 # W174 StoreKit 2 / App Store Server Notifications V2.
 #

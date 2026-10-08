@@ -53,7 +53,9 @@ if config_env() == :prod do
     Keyword.merge(features_default,
       in_app_ads: enable_feature.("FEATURES_IN_APP_ADS", features_default[:in_app_ads] || false),
       web_ads: enable_feature.("FEATURES_WEB_ADS", features_default[:web_ads] || false),
-      paid_tier: enable_feature.("FEATURES_PAID_TIER", features_default[:paid_tier] || false)
+      paid_tier: enable_feature.("FEATURES_PAID_TIER", features_default[:paid_tier] || false),
+      recipe_first:
+        enable_feature.("FEATURES_RECIPE_FIRST", features_default[:recipe_first] || false)
     )
 
   config :trays_social, :features, features

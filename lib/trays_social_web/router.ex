@@ -181,6 +181,9 @@ defmodule TraysSocialWeb.Router do
 
     delete "/auth/logout", AuthController, :logout
     get "/auth/me", AuthController, :me
+    # Recipe-first: server-controlled client flags the native app reads at
+    # launch. Authenticated on purpose -- the iOS shell exists only after sign-in.
+    get "/features", FeatureController, :index
     put "/auth/me", AuthController, :update_me
     delete "/auth/me", AuthController, :delete_me
     # W105: post-login opt-in to biometric. Authenticated with the current
