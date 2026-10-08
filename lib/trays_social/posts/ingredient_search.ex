@@ -16,6 +16,7 @@ defmodule TraysSocial.Posts.IngredientSearch do
   @max_terms 10
   @max_term_length 50
   @max_missing 3
+  @control_chars ~r/[\x00-\x1F\x7F]/
   @result_limit 50
   # Candidates are fetched newest first and ranked in Elixir. Revisit with a
   # SQL-side ranking if the catalog outgrows this window.
@@ -48,7 +49,7 @@ defmodule TraysSocial.Posts.IngredientSearch do
   @doc """
   Normalizes raw ingredient chips: lowercased, trimmed, whitespace collapsed,
   singularized and deduplicated. Accepts 1 to #{@max_terms} terms of at most
-  #{@max_term_length} characters each.
+  #{@max_term_length} characters each, valid UTF-8 with no control characters.
   """
   @spec normalize_terms(term()) :: {:ok, [String.t()]} | {:error, :invalid_ingredients}
   def normalize_terms(raw) when is_list(raw) do
@@ -67,8 +68,17 @@ defmodule TraysSocial.Posts.IngredientSearch do
   end
 
   defp valid_terms?(terms) do
-    terms != [] and length(terms) <= @max_terms and
-      Enum.all?(terms, &(String.length(&1) <= @max_term_length))
+    terms != [] and length(terms) <= @max_terms and Enum.all?(terms, &valid_term?/1)
+  end
+
+  # Postgres rejects NUL bytes and invalid UTF-8 in a text parameter with a
+  # raised Postgrex.Error, so such a chip must fail validation here (a 422)
+  # rather than reach the ILIKE query (a 500). Other control characters have no
+  # business in an ingredient name either; whitespace ones were already
+  # collapsed to spaces by squish/1.
+  defp valid_term?(term) do
+    String.valid?(term) and String.length(term) <= @max_term_length and
+      not String.match?(term, @control_chars)
   end
 
   defp normalize_term(term), do: term |> squish() |> singularize()

@@ -46,6 +46,18 @@ defmodule TraysSocial.Posts.IngredientSearchTest do
       assert {:error, :invalid_ingredients} = IngredientSearch.normalize_terms("chicken")
       assert {:error, :invalid_ingredients} = IngredientSearch.normalize_terms(nil)
     end
+
+    test "rejects NUL bytes, other control characters, and invalid UTF-8" do
+      assert {:error, :invalid_ingredients} = IngredientSearch.normalize_terms(["chick\0en"])
+      assert {:error, :invalid_ingredients} = IngredientSearch.normalize_terms(["rice\e"])
+
+      assert {:error, :invalid_ingredients} =
+               IngredientSearch.normalize_terms([<<"chick", 0xFF>>])
+    end
+
+    test "still accepts tabs and newlines, which collapse to spaces" do
+      assert {:ok, ["soy sauce"]} = IngredientSearch.normalize_terms(["soy\tsauce\n"])
+    end
   end
 
   describe "basic?/1" do

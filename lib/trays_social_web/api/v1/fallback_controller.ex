@@ -109,6 +109,18 @@ defmodule TraysSocialWeb.API.V1.FallbackController do
     |> json(%{errors: [%{field: field, message: "must be a boolean"}]})
   end
 
+  # Recipe-first "What I have": the ingredient chips failed
+  # IngredientSearch.normalize_terms/1 (missing, not a list, blank, more than
+  # 10 after dedupe, or a single term over 50 characters or carrying control
+  # characters). One message covers every case: accepted v1 imprecision, since
+  # a per-reason message would need a second error atom from normalize_terms/1.
+  # Same field/message shape as the parse-failure clauses above.
+  def call(conn, {:error, :invalid_ingredients}) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: [%{field: "have", message: "must include 1 to 10 ingredients"}]})
+  end
+
   # W166: writes refused between blocked user pairs.
   def call(conn, {:error, :blocked}) do
     conn

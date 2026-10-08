@@ -1,9 +1,15 @@
 defmodule TraysSocialWeb.API.V1.SearchController do
   use TraysSocialWeb, :controller
 
-  alias TraysSocial.Posts
   alias TraysSocial.Accounts
+  alias TraysSocial.Posts
+  alias TraysSocial.Posts.IngredientSearch
+  alias TraysSocialWeb.API.V1.JSON.IngredientSearchJSON
   alias TraysSocialWeb.API.V1.JSON.PostJSON
+
+  # index/2 always returns a conn, so the fallback only ever sees
+  # ingredients/2's {:error, :invalid_ingredients}.
+  action_fallback TraysSocialWeb.API.V1.FallbackController
 
   @max_query_length 100
   @max_tag_length 50
@@ -48,6 +54,31 @@ defmodule TraysSocialWeb.API.V1.SearchController do
       },
       cursor: encode_cursor(List.last(posts))
     })
+  end
+
+  # Recipe-first "What I have": GET /api/v1/search/ingredients?have[]=...
+  # Ranking, grouping and the result cap live in IngredientSearch; this action
+  # only validates the chips, supplies the viewer's block and follow sets, and
+  # renders. Invalid chips fall through to the FallbackController as a 422.
+  def ingredients(conn, params) do
+    user = conn.assigns.current_user
+
+    with {:ok, terms} <- IngredientSearch.normalize_terms(params["have"]) do
+      results =
+        Posts.search_by_ingredients(user.id, terms,
+          blocked_user_ids: Accounts.blocked_pair_ids(user.id),
+          following_ids: Accounts.list_following_ids(user.id)
+        )
+
+      post_ids = Enum.map(results.everything ++ results.almost, & &1.post.id)
+
+      render_opts = %{
+        liked_post_ids: Posts.liked_post_ids_for_user(user.id, post_ids),
+        bookmarked_post_ids: Posts.bookmarked_post_ids_for_user(user.id, post_ids)
+      }
+
+      json(conn, %{data: IngredientSearchJSON.render(results, render_opts)})
+    end
   end
 
   # D107: strict decode — malformed input degrades to page 1 instead of
