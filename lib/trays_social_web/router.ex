@@ -214,6 +214,10 @@ defmodule TraysSocialWeb.Router do
     post "/devices", DeviceController, :create
     delete "/devices/:token", DeviceController, :delete
 
+    # W189: passive "recently opened" write for Home's Jump back in. Read
+    # scope like /devices: it needs no email confirmation.
+    post "/posts/:id/open", PostController, :open
+
     get "/blocked-users", UserController, :list_blocked_users
     get "/muted-keywords", UserController, :muted_keywords
     put "/muted-keywords", UserController, :update_muted_keywords

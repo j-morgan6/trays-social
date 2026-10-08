@@ -75,6 +75,26 @@ defmodule TraysSocialWeb.API.V1.PostController do
     end
   end
 
+  @doc """
+  W189: records that the current user opened a recipe (Home's Jump back in).
+  404 for a missing, deleted, non-numeric or blocked post, so blocks are not
+  enumerable; the user always comes from the bearer token, never params.
+  """
+  def open(conn, %{"id" => id}) do
+    user = conn.assigns.current_user
+
+    with {:ok, post_id} <- parse_post_id(id),
+         %Posts.Post{} = post <- Posts.get_post(post_id),
+         false <- TraysSocial.Accounts.blocked_between?(user.id, post.user_id),
+         {:ok, _open} <- Posts.record_recipe_open(user.id, post.id) do
+      json(conn, %{data: %{opened: true}})
+    else
+      # Includes an FK error from a post deleted between the lookup and the
+      # insert: still a 404, as for any other post that is gone.
+      _ -> {:error, :not_found}
+    end
+  end
+
   def create(conn, params) do
     user = conn.assigns.current_user
     # D44: user_id is passed positionally to Posts.create_post; it is NOT
@@ -146,6 +166,17 @@ defmodule TraysSocialWeb.API.V1.PostController do
     rescue
       Ecto.NoResultsError -> {:error, :not_found}
       Ecto.Query.CastError -> {:error, :not_found}
+    end
+  end
+
+  @max_bigint 9_223_372_036_854_775_807
+
+  # A positive integer that fits a Postgres bigint; anything else would raise
+  # (cast or encode error) instead of returning 404.
+  defp parse_post_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int, ""} when int > 0 and int <= @max_bigint -> {:ok, int}
+      _ -> :error
     end
   end
 end

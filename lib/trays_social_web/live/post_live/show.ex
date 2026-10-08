@@ -47,7 +47,18 @@ defmodule TraysSocialWeb.PostLive.Show do
       |> assign(:show_ads, Monetization.web_ads_enabled?(viewer))
       |> stream(:comments, comments)
 
+    maybe_record_open(socket, viewer, post)
+
     {:ok, socket}
+  end
+
+  # W189: Home's Jump back in. Connected mount only, so the dead render does
+  # not count a second open; logged-out visits record nothing; and, as the API
+  # does, nothing is recorded across a block in either direction.
+  defp maybe_record_open(socket, viewer, post) do
+    if connected?(socket) && viewer && !Accounts.blocked_between?(viewer.id, post.user_id) do
+      Posts.record_recipe_open(viewer.id, post.id)
+    end
   end
 
   @impl true

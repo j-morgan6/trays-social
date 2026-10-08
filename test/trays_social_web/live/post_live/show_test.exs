@@ -428,4 +428,47 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
       refute html =~ "cook-timer-display"
     end
   end
+
+  describe "recipe opens" do
+    alias TraysSocial.Posts.RecipeOpen
+    alias TraysSocial.Repo
+
+    test "a logged-in viewer's visit records a recipe open", %{conn: conn} do
+      viewer = user_fixture()
+      post = post_fixture(user_id: user_fixture().id)
+
+      {:ok, _view, _html} = conn |> log_in_user(viewer) |> live(~p"/posts/#{post.id}")
+
+      assert Repo.get_by(RecipeOpen, user_id: viewer.id, post_id: post.id)
+    end
+
+    test "a logged-out visit records nothing", %{conn: conn} do
+      post = post_fixture(user_id: user_fixture().id)
+
+      {:ok, _view, _html} = live(conn, ~p"/posts/#{post.id}")
+
+      assert Repo.aggregate(RecipeOpen, :count) == 0
+    end
+
+    test "a visit across a block records nothing", %{conn: conn} do
+      viewer = user_fixture()
+      author = user_fixture()
+      post = post_fixture(user_id: author.id)
+      {:ok, _} = TraysSocial.Accounts.block_user(author.id, viewer.id)
+
+      {:ok, _view, _html} = conn |> log_in_user(viewer) |> live(~p"/posts/#{post.id}")
+
+      refute Repo.get_by(RecipeOpen, user_id: viewer.id, post_id: post.id)
+    end
+
+    test "the disconnected (dead) render does not record", %{conn: conn} do
+      viewer = user_fixture()
+      post = post_fixture(user_id: user_fixture().id)
+
+      conn = conn |> log_in_user(viewer) |> get(~p"/posts/#{post.id}")
+
+      assert html_response(conn, 200)
+      refute Repo.get_by(RecipeOpen, user_id: viewer.id, post_id: post.id)
+    end
+  end
 end

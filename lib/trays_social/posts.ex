@@ -20,6 +20,7 @@ defmodule TraysSocial.Posts do
   alias TraysSocial.Posts.PostLike
   alias TraysSocial.Posts.PostPhoto
   alias TraysSocial.Posts.PostTag
+  alias TraysSocial.Posts.RecipeOpen
   alias TraysSocial.Posts.Tool
 
   alias TraysSocial.Repo
@@ -918,5 +919,26 @@ defmodule TraysSocial.Posts do
     |> join(:inner, [b], p in Post, on: b.post_id == p.id)
     |> where([b, p], p.user_id == ^user_id)
     |> Repo.aggregate(:count)
+  end
+
+  ## Recipe opens
+
+  @doc """
+  Records that `user_id` opened `post_id` now. Repeat opens update
+  `last_opened_at` on the existing row instead of inserting another, so the
+  table holds one row per (user, recipe).
+
+  Callers pass the authenticated user's id and a post they have already
+  checked is visible to that user.
+  """
+  def record_recipe_open(user_id, post_id) do
+    now = DateTime.utc_now(:second)
+
+    %RecipeOpen{}
+    |> RecipeOpen.changeset(%{user_id: user_id, post_id: post_id, last_opened_at: now})
+    |> Repo.insert(
+      on_conflict: [set: [last_opened_at: now]],
+      conflict_target: [:user_id, :post_id]
+    )
   end
 end
