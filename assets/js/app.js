@@ -149,11 +149,44 @@ const AdSlot = {
   }
 }
 
+// SearchPrefs — remembers the Find page's search mode ("recipes" or "have")
+// and recently used ingredient chips per browser (W187). Storage can be
+// unavailable (private mode, blocked site data) or hold junk, so every access
+// is guarded and the page works without it; the server re-validates whatever
+// is pushed in restore-search-prefs.
+const SEARCH_MODE_KEY = "trays:search-mode"
+const RECENT_INGREDIENTS_KEY = "trays:recent-ingredients"
+
+const SearchPrefs = {
+  mounted() {
+    let mode = "recipes"
+    let recent = []
+    try {
+      const storedMode = localStorage.getItem(SEARCH_MODE_KEY)
+      if (storedMode === "recipes" || storedMode === "have") mode = storedMode
+      const parsed = JSON.parse(localStorage.getItem(RECENT_INGREDIENTS_KEY) || "[]")
+      if (Array.isArray(parsed)) recent = parsed.filter(x => typeof x === "string").slice(0, 10)
+    } catch (_e) {
+      // Storage unavailable or corrupt: keep the defaults.
+    }
+    this.pushEvent("restore-search-prefs", {mode, recent})
+
+    this.handleEvent("search-prefs", ({mode, recent}) => {
+      try {
+        localStorage.setItem(SEARCH_MODE_KEY, mode)
+        localStorage.setItem(RECENT_INGREDIENTS_KEY, JSON.stringify(recent))
+      } catch (_e) {
+        // Storage unavailable: preferences are simply not persisted.
+      }
+    })
+  }
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, LazyLoad, InfiniteScroll, CookTimer, AdSlot},
+  hooks: {...colocatedHooks, LazyLoad, InfiniteScroll, CookTimer, AdSlot, SearchPrefs},
 })
 
 // Show progress bar on live navigation and form submits
