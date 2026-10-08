@@ -157,8 +157,27 @@ const AdSlot = {
 const SEARCH_MODE_KEY = "trays:search-mode"
 const RECENT_INGREDIENTS_KEY = "trays:recent-ingredients"
 
+// The server only writes prefs back after it has received a restore, so a
+// LiveView that rejoined with fresh defaults cannot clobber what is stored.
 const SearchPrefs = {
   mounted() {
+    this.restore()
+
+    this.handleEvent("search-prefs", ({mode, recent}) => {
+      try {
+        localStorage.setItem(SEARCH_MODE_KEY, mode)
+        localStorage.setItem(RECENT_INGREDIENTS_KEY, JSON.stringify(recent))
+      } catch (_e) {
+        // Storage unavailable: preferences are simply not persisted.
+      }
+    })
+  },
+  // A rejoin (deploy, network blip, LiveView crash) remounts the server with
+  // defaults but keeps this hook alive, so mounted() does not run again.
+  reconnected() {
+    this.restore()
+  },
+  restore() {
     let mode = "recipes"
     let recent = []
     try {
@@ -170,15 +189,6 @@ const SearchPrefs = {
       // Storage unavailable or corrupt: keep the defaults.
     }
     this.pushEvent("restore-search-prefs", {mode, recent})
-
-    this.handleEvent("search-prefs", ({mode, recent}) => {
-      try {
-        localStorage.setItem(SEARCH_MODE_KEY, mode)
-        localStorage.setItem(RECENT_INGREDIENTS_KEY, JSON.stringify(recent))
-      } catch (_e) {
-        // Storage unavailable: preferences are simply not persisted.
-      }
-    })
   }
 }
 

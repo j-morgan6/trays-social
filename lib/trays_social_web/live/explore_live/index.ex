@@ -63,6 +63,7 @@ defmodule TraysSocialWeb.ExploreLive.Index do
     |> assign(:recent_ingredients, [])
     |> assign(:ingredient_results, nil)
     |> assign(:max_ingredient_chips, @max_ingredient_chips)
+    |> assign(:prefs_restored, false)
   end
 
   defp load_tag_sections do
@@ -139,14 +140,15 @@ defmodule TraysSocialWeb.ExploreLive.Index do
 
   def handle_event("remove-ingredient", _params, socket), do: {:noreply, socket}
 
-  # Sent by the SearchPrefs hook on mount with whatever localStorage held.
-  # Client-controlled: the mode is whitelisted and recent chips pass the same
-  # validation as a typed chip. It never touches the current chips.
+  # Sent by the SearchPrefs hook on mount and on every rejoin with whatever
+  # localStorage held. Client-controlled: the mode is whitelisted and recent
+  # chips pass the same validation as a typed chip. It never touches the
+  # current chips.
   def handle_event("restore-search-prefs", params, socket) do
     mode = if params["mode"] in @modes, do: params["mode"], else: "recipes"
     recent = sanitize_recent(params["recent"])
 
-    {:noreply, assign(socket, mode: mode, recent_ingredients: recent)}
+    {:noreply, assign(socket, mode: mode, recent_ingredients: recent, prefs_restored: true)}
   end
 
   defp refresh_results(socket) do
@@ -195,6 +197,10 @@ defmodule TraysSocialWeb.ExploreLive.Index do
         assign(socket, :ingredient_results, nil)
     end
   end
+
+  # Until the hook has sent what it stored, this socket's prefs are defaults
+  # (fresh mount or rejoin), and pushing them would overwrite the stored ones.
+  defp push_prefs(%{assigns: %{prefs_restored: false}} = socket), do: socket
 
   defp push_prefs(socket) do
     push_event(socket, "search-prefs", %{

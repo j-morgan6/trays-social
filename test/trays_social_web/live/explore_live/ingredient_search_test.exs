@@ -60,11 +60,23 @@ defmodule TraysSocialWeb.ExploreLive.IngredientSearchTest do
     end
 
     test "mode changes are pushed to the SearchPrefs hook", %{conn: conn} do
-      view = have_mode(conn)
-      assert_push_event(view, "search-prefs", %{mode: "have", recent: []})
+      {:ok, view, _html} = live(conn, ~p"/explore")
+      render_hook(view, "restore-search-prefs", %{"mode" => "recipes", "recent" => ["eggs"]})
+
+      render_click(view, "set-mode", %{"mode" => "have"})
+      assert_push_event(view, "search-prefs", %{mode: "have", recent: ["eggs"]})
 
       add(view, "rice")
-      assert_push_event(view, "search-prefs", %{mode: "have", recent: ["rice"]})
+      assert_push_event(view, "search-prefs", %{mode: "have", recent: ["rice", "eggs"]})
+    end
+
+    test "nothing is pushed before the hook has restored stored prefs", %{conn: conn} do
+      # A fresh mount or a rejoin starts from defaults; pushing those would
+      # overwrite what the browser stored before the hook sends it back.
+      view = have_mode(conn)
+      add(view, "rice")
+
+      refute_push_event(view, "search-prefs", %{})
     end
   end
 
