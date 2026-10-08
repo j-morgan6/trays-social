@@ -13,6 +13,8 @@ import SwiftUI
 struct FindView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var viewModel = FindViewModel()
+    @State private var ingredientVM = IngredientSearchViewModel()
+    @State private var mode: SearchMode = SearchPreferences().mode
 
     var body: some View {
         ScrollView {
@@ -22,16 +24,25 @@ struct FindView: View {
                     .padding(.top, 4)
                     .padding(.bottom, 14)
 
-                searchBar
+                SearchModeSwitch(mode: $mode)
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 22)
+                    .padding(.bottom, 14)
 
-                if viewModel.showSearchResults {
-                    resultsSection
+                if mode == .whatIHave {
+                    IngredientSearchSection(viewModel: ingredientVM)
                         .padding(.bottom, 24)
                 } else {
-                    trendingSection
-                        .padding(.bottom, 24)
+                    searchBar
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 22)
+
+                    if viewModel.showSearchResults {
+                        resultsSection
+                            .padding(.bottom, 24)
+                    } else {
+                        trendingSection
+                            .padding(.bottom, 24)
+                    }
                 }
             }
             .padding(.top, 116)
@@ -43,6 +54,9 @@ struct FindView: View {
             // ViewModel.search() debounces 300ms and cancels any in-flight
             // task, so firing on every keystroke is safe.
             viewModel.search()
+        }
+        .onChange(of: mode) { _, newMode in
+            SearchPreferences().mode = newMode
         }
         .task {
             await viewModel.loadTrending()
@@ -106,11 +120,15 @@ struct FindView: View {
                 .stroke(Theme.hairline(for: colorScheme), lineWidth: 1)
         )
     }
+}
 
+// MARK: - Results and trending
+
+private extension FindView {
     // MARK: - Search results
 
     @ViewBuilder
-    private var resultsSection: some View {
+    var resultsSection: some View {
         if viewModel.isSearching, viewModel.posts.isEmpty, viewModel.users.isEmpty {
             // Query in flight with nothing yet — mirror the trending skeleton.
             SkeletonFade {
@@ -142,7 +160,7 @@ struct FindView: View {
         }
     }
 
-    private var userResults: some View {
+    var userResults: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionHeader(label: String(localized: "Cooks"))
                 .padding(.horizontal, 20)
@@ -162,7 +180,7 @@ struct FindView: View {
         }
     }
 
-    private func userRow(_ user: User) -> some View {
+    func userRow(_ user: User) -> some View {
         HStack(spacing: 12) {
             avatar(for: user)
 
@@ -191,7 +209,7 @@ struct FindView: View {
         .padding(.vertical, 12)
     }
 
-    private func avatar(for user: User) -> some View {
+    func avatar(for user: User) -> some View {
         Circle()
             .fill(Theme.primary)
             .frame(width: 40, height: 40)
@@ -213,7 +231,7 @@ struct FindView: View {
             }
     }
 
-    private var postResults: some View {
+    var postResults: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(label: String(localized: "Recipes"))
                 .padding(.horizontal, 20)
@@ -238,7 +256,7 @@ struct FindView: View {
     }
 
     @ViewBuilder
-    private var trendingSection: some View {
+    var trendingSection: some View {
         if viewModel.isLoadingTrending {
             // W145: section header dropped from the loaded layout, so the
             // skeleton mirrors with just a 2-col grid of tiles.
@@ -269,7 +287,7 @@ struct FindView: View {
         }
     }
 
-    private var trendingGrid: some View {
+    var trendingGrid: some View {
         LazyVGrid(
             columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
             spacing: 10
@@ -294,12 +312,12 @@ struct FindView: View {
         }
     }
 
-    private func photoKey(for post: Post) -> FoodPalette.Key {
+    func photoKey(for post: Post) -> FoodPalette.Key {
         let keys = FoodPalette.Key.allCases
         return keys[abs(post.id) % keys.count]
     }
 
-    private func gridTitle(for post: Post) -> String {
+    func gridTitle(for post: Post) -> String {
         let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !raw.isEmpty else { return String(localized: "Untitled") }
         let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
