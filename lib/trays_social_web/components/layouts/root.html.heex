@@ -41,33 +41,36 @@
   <body class="bg-base-200">
     <%!-- Editorial header — matches the WebHeader from the design handoff:
          serif Trays wordmark in primary green, three-tab nav (Feed / Find /
-         My Tray) with a primary under-border on the active tab, search,
-         amber New recipe pill, notification bell with amber unread dot,
-         avatar dropdown. --%>
+         My Tray, or Home / Search / My Tray when recipe-first) with a primary
+         under-border on the active tab, search, amber New recipe pill,
+         notification bell with amber unread dot, avatar dropdown. --%>
     <% nav_tab = assigns[:current_tab] %>
+    <%!-- Recipe-first nav (Home / Search / My Tray) for signed-in users when
+         the flag is on. Guests always get the classic nav. --%>
+    <% recipe_nav = @current_scope && TraysSocial.Features.recipe_first?() %>
     <header class="sticky top-0 z-50 bg-base-100 border-b border-base-300">
       <div class="max-w-7xl mx-auto h-16 flex items-center px-6 md:px-8 gap-7">
         <.link href={~p"/"} class="font-serif-editorial text-primary text-[26px] leading-none">
           Trays
         </.link>
 
-        <%!-- Primary nav: Feed / Find / My Tray --%>
+        <%!-- Primary nav: Feed / Find / My Tray (Home / Search / My Tray when recipe-first) --%>
         <nav class="hidden md:flex gap-6 ml-2">
           <.link
-            href={~p"/feed"}
+            href={if recipe_nav, do: ~p"/home", else: ~p"/feed"}
             class={[
               "text-sm py-[22px] border-b-2 transition-colors",
-              if(nav_tab == :feed,
+              if(nav_tab in [:feed, :home],
                 do: "text-base-content font-semibold border-primary",
                 else:
                   "text-base-content/60 font-medium border-transparent hover:text-base-content"
               )
             ]}
           >
-            Feed
+            {if recipe_nav, do: "Home", else: "Feed"}
           </.link>
           <.link
-            href={~p"/explore"}
+            href={if recipe_nav, do: ~p"/search", else: ~p"/explore"}
             class={[
               "text-sm py-[22px] border-b-2 transition-colors",
               if(nav_tab == :explore,
@@ -77,7 +80,7 @@
               )
             ]}
           >
-            Find
+            {if recipe_nav, do: "Search", else: "Find"}
           </.link>
           <%= if @current_scope do %>
             <.link
@@ -98,10 +101,10 @@
 
         <div class="flex-1"></div>
 
-        <%!-- Quiet search field — links to Find. Mirrors the design's
-             always-visible search pill in the WebHeader. --%>
+        <%!-- Quiet search field — links to Find (Search when recipe-first).
+             Mirrors the design's always-visible search pill in the WebHeader. --%>
         <.link
-          href={~p"/explore"}
+          href={if recipe_nav, do: ~p"/search", else: ~p"/explore"}
           class="hidden md:inline-flex items-center gap-2 h-9 w-[320px] px-3.5 rounded-full bg-base-200 border border-base-300 text-base-content/60 text-xs hover:text-base-content transition-colors"
         >
           <.icon name="hero-magnifying-glass" class="size-4" />
@@ -201,23 +204,27 @@
     <%!-- Mobile Bottom Tab Bar --%>
     <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-base-100 border-t border-base-300">
       <div class="flex items-center justify-around h-16">
-        <%!-- Feed --%>
+        <%!-- Feed (Home when recipe-first) --%>
         <.link
-          navigate={~p"/feed"}
-          class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :feed, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}
+          navigate={if recipe_nav, do: ~p"/home", else: ~p"/feed"}
+          class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] in [:feed, :home], do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}
         >
           <span class="hero-home w-6 h-6"></span>
-          <span>Feed</span>
+          <span>{if recipe_nav, do: "Home", else: "Feed"}</span>
         </.link>
 
         <%= if @current_scope do %>
-          <%!-- Profile --%>
+          <% profile_icon = if recipe_nav, do: "hero-bookmark", else: "hero-user" %>
+          <%!-- Profile (My Tray when recipe-first; Profile stays in the
+               avatar menu) --%>
           <.link
-            navigate={~p"/@#{@current_scope.user.username}"}
-            class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :profile, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}
+            navigate={
+              if recipe_nav, do: ~p"/my-tray", else: ~p"/@#{@current_scope.user.username}"
+            }
+            class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == if(recipe_nav, do: :my_tray, else: :profile), do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}
           >
-            <span class="hero-user w-6 h-6"></span>
-            <span>Profile</span>
+            <span class={[profile_icon, "w-6 h-6"]}></span>
+            <span>{if recipe_nav, do: "My Tray", else: "Profile"}</span>
           </.link>
 
           <%!-- New Post (center-prominent) --%>
@@ -229,13 +236,13 @@
             <span>Post</span>
           </.link>
 
-          <%!-- Explore --%>
+          <%!-- Explore (Search when recipe-first) --%>
           <.link
-            navigate={~p"/explore"}
+            navigate={if recipe_nav, do: ~p"/search", else: ~p"/explore"}
             class={"flex flex-col items-center gap-0.5 px-4 py-2 text-xs font-medium transition-colors #{if assigns[:current_tab] == :explore, do: "text-primary", else: "text-base-content/50 hover:text-base-content"}"}
           >
             <span class="hero-magnifying-glass w-6 h-6"></span>
-            <span>Explore</span>
+            <span>{if recipe_nav, do: "Search", else: "Explore"}</span>
           </.link>
         <% else %>
           <%!-- Feed (guest placeholder) --%>

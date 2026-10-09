@@ -230,7 +230,13 @@ defmodule TraysSocialWeb.UserAuth do
     end
   end
 
-  defp signed_in_path(_conn), do: ~p"/feed"
+  @doc """
+  Where a signed-in user lands: `/home` when the recipe-first flag is on,
+  otherwise `/feed`. Both are fixed routes, never user input.
+  """
+  def signed_in_path(_conn) do
+    if TraysSocial.Features.recipe_first?(), do: ~p"/home", else: ~p"/feed"
+  end
 
   @doc """
   Plug for routes that require the user to be authenticated.

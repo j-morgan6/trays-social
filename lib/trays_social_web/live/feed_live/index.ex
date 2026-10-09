@@ -22,6 +22,11 @@ defmodule TraysSocialWeb.FeedLive.Index do
       needs_welcome?(socket) ->
         {:ok, push_navigate(socket, to: ~p"/welcome")}
 
+      # Recipe-first: Home replaces the Feed. Checked after the welcome
+      # bounce so unfinished cooks still get their one-time introduction.
+      TraysSocial.Features.recipe_first?() ->
+        {:ok, push_navigate(socket, to: ~p"/home")}
+
       connected?(socket) ->
         {:ok, mount_connected(socket)}
 

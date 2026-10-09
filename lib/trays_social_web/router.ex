@@ -389,6 +389,7 @@ defmodule TraysSocialWeb.Router do
     # page lives at "/" (W120); the personalized feed moved to "/feed".
     # /users/confirm/<token>, /privacy, /terms, /.well-known/*, and /api/*
     # remain publicly accessible (see scopes above and the api_v1_auth scope).
+    live "/home", HomeLive.Index, :index
     live "/feed", FeedLive.Index, :index
     live "/explore", ExploreLive.Index, :index
     live "/search", ExploreLive.Index, :search

@@ -1,0 +1,120 @@
+<div class="max-w-3xl mx-auto px-4 py-6 space-y-8">
+  <%= if @home do %>
+    <section :if={welcome?(@home)} id="home-welcome" class="space-y-3">
+      <h1 class="font-serif-editorial text-[32px]">Welcome to Trays</h1>
+      <div class="flex flex-wrap gap-3">
+        <.link navigate={~p"/posts/new"} class="btn btn-primary">Post your first recipe</.link>
+        <.link navigate={~p"/search"} class="btn">Find recipes in Search</.link>
+      </div>
+      <div :if={@home.suggested_cooks != []}>
+        <h2 class="text-xs font-bold uppercase tracking-wide text-base-content/60 mb-2">
+          Cooks to follow
+        </h2>
+        <div class="flex gap-4 overflow-x-auto">
+          <.link
+            :for={cook <- @home.suggested_cooks}
+            navigate={~p"/@#{cook.user.username}"}
+            class="flex flex-col items-center w-20 shrink-0"
+          >
+            <.user_avatar
+              username={cook.user.username}
+              photo_url={cook.user.profile_photo_url}
+              size="lg"
+            />
+            <span class="text-sm truncate max-w-full">{cook.user.username}</span>
+            <span class="text-xs text-base-content/60">{cook.recipe_count} recipes</span>
+          </.link>
+        </div>
+      </div>
+    </section>
+
+    <section :if={@home.jump_back_in != []} id="home-jump-back-in">
+      <h2 class="text-xs font-bold uppercase tracking-wide text-base-content/60 mb-2">
+        Jump back in
+      </h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <.link
+          :for={post <- @home.jump_back_in}
+          navigate={~p"/posts/#{post.id}"}
+          class="flex items-center gap-2 rounded-xl bg-base-100 p-2"
+        >
+          <img
+            src={TraysSocial.Uploads.ImageProcessor.thumb_url(post.photo_url)}
+            alt=""
+            class="h-10 w-10 shrink-0 rounded-lg object-cover bg-base-300"
+          />
+          <span class="text-sm font-semibold line-clamp-2">{post_title(post)}</span>
+        </.link>
+      </div>
+    </section>
+
+    <%!-- The web app has no planner page, so Tonight opens the recipe. --%>
+    <.link
+      :if={@home.tonight}
+      id="home-tonight"
+      navigate={~p"/posts/#{@home.tonight.post.id}"}
+      class="flex justify-between rounded-xl bg-base-100 p-3 font-semibold"
+    >
+      <span>Tonight: {post_title(@home.tonight.post)}</span>
+      <span aria-hidden="true">&rsaquo;</span>
+    </.link>
+
+    <section :if={@home.friends_trays != []} id="home-friends">
+      <div class="flex justify-between mb-2">
+        <h2 class="text-xs font-bold uppercase tracking-wide text-base-content/60">
+          Friends' trays
+        </h2>
+        <.link
+          navigate={~p"/@#{@current_scope.user.username}/following"}
+          class="text-sm text-primary"
+        >
+          See all
+        </.link>
+      </div>
+      <div class="flex gap-4 overflow-x-auto">
+        <.link
+          :for={friend <- @home.friends_trays}
+          navigate={~p"/@#{friend.user.username}"}
+          class="flex flex-col items-center w-20 shrink-0"
+        >
+          <.user_avatar
+            username={friend.user.username}
+            photo_url={friend.user.profile_photo_url}
+            size="lg"
+          />
+          <span class="text-sm truncate max-w-full">{friend.user.username}</span>
+        </.link>
+      </div>
+    </section>
+
+    <section :if={@home.friends_trays != []} id="home-new">
+      <h2 class="text-xs font-bold uppercase tracking-wide text-base-content/60 mb-2">
+        New from people you follow
+      </h2>
+      <div class="flex gap-3 overflow-x-auto">
+        <.link
+          :for={post <- @home.new_from_following}
+          navigate={~p"/posts/#{post.id}"}
+          class="w-36 shrink-0 rounded-xl overflow-hidden bg-base-100"
+        >
+          <img
+            src={TraysSocial.Uploads.ImageProcessor.thumb_url(post.photo_url)}
+            alt=""
+            class="aspect-[4/5] w-full object-cover bg-base-300"
+          />
+          <p class="p-2 text-sm font-semibold truncate">{post_title(post)}</p>
+        </.link>
+        <div
+          id="home-caught-up"
+          class="w-36 shrink-0 rounded-xl border border-dashed border-base-300 flex items-center justify-center text-sm text-base-content/60 text-center p-3"
+        >
+          {if @home.new_from_following == [],
+            do: "Nothing new this week",
+            else: "You're caught up"}
+        </div>
+      </div>
+    </section>
+  <% else %>
+    <.loading_skeleton type="card" />
+  <% end %>
+</div>
