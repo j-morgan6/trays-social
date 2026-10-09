@@ -391,6 +391,7 @@ defmodule TraysSocialWeb.Router do
     # remain publicly accessible (see scopes above and the api_v1_auth scope).
     live "/feed", FeedLive.Index, :index
     live "/explore", ExploreLive.Index, :index
+    live "/search", ExploreLive.Index, :search
     live "/@:username", ProfileLive.Show, :show
     live "/@:username/followers", FollowersLive.Show, :followers
     live "/@:username/following", FollowersLive.Show, :following

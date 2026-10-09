@@ -2,9 +2,12 @@ defmodule TraysSocialWeb.ExploreLive.Index do
   use TraysSocialWeb, :live_view
 
   alias TraysSocial.Accounts
+  alias TraysSocial.Features
   alias TraysSocial.Posts
+  alias TraysSocial.Posts.BrowseCategories
   alias TraysSocial.Posts.IngredientSearch
   alias TraysSocialWeb.ExploreLive.IngredientComponents
+  alias TraysSocialWeb.ExploreLive.RecipeFirstComponents
 
   on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
   on_mount {TraysSocialWeb.NotificationsHook, :mount_notifications}
@@ -28,8 +31,18 @@ defmodule TraysSocialWeb.ExploreLive.Index do
   @max_ingredient_chips 10
   @max_recent_ingredients 10
 
+  # With recipe_first on, /explore is retired in favour of /search (same
+  # LiveView, :search action).
   @impl true
   def mount(_params, _session, socket) do
+    if Features.recipe_first?() and socket.assigns.live_action == :index do
+      {:ok, push_navigate(socket, to: ~p"/search")}
+    else
+      mount_page(socket)
+    end
+  end
+
+  defp mount_page(socket) do
     if connected?(socket) do
       {:ok,
        socket
@@ -38,7 +51,8 @@ defmodule TraysSocialWeb.ExploreLive.Index do
        |> assign(:trending, Posts.list_trending_posts(10))
        |> assign(:recent, Posts.list_recent_posts(10))
        |> assign(:tag_sections, load_tag_sections())
-       |> assign(:results, [])}
+       |> assign(:results, [])
+       |> maybe_assign_most_saved()}
     else
       {:ok,
        socket
@@ -52,8 +66,10 @@ defmodule TraysSocialWeb.ExploreLive.Index do
   end
 
   defp assign_static(socket) do
+    recipe_first = Features.recipe_first?()
+
     socket
-    |> assign(:page_title, "Find")
+    |> assign(:page_title, if(recipe_first, do: "Search", else: "Find"))
     |> assign(:current_tab, :explore)
     |> assign(:query, "")
     |> assign(:active_chips, MapSet.new())
@@ -64,7 +80,24 @@ defmodule TraysSocialWeb.ExploreLive.Index do
     |> assign(:ingredient_results, nil)
     |> assign(:max_ingredient_chips, @max_ingredient_chips)
     |> assign(:prefs_restored, false)
+    |> assign(:recipe_first, recipe_first)
+    |> assign(:categories, BrowseCategories.list())
+    |> assign(:category, nil)
+    |> assign(:groups, nil)
+    |> assign(:most_saved, [])
   end
+
+  defp maybe_assign_most_saved(%{assigns: %{recipe_first: true}} = socket) do
+    user = socket.assigns.current_scope.user
+
+    assign(
+      socket,
+      :most_saved,
+      Posts.list_most_saved_posts(10, blocked_user_ids: Accounts.blocked_pair_ids(user.id))
+    )
+  end
+
+  defp maybe_assign_most_saved(socket), do: socket
 
   defp load_tag_sections do
     tags = Posts.list_top_tags(6)
@@ -76,6 +109,7 @@ defmodule TraysSocialWeb.ExploreLive.Index do
     {:noreply,
      socket
      |> assign(:query, q)
+     |> clear_category_if_typed(q)
      |> refresh_results()}
   end
 
@@ -99,8 +133,23 @@ defmodule TraysSocialWeb.ExploreLive.Index do
      socket
      |> assign(:query, "")
      |> assign(:active_chips, MapSet.new())
-     |> assign(:results, [])}
+     |> assign(:results, [])
+     |> assign(category: nil, groups: nil)}
   end
+
+  # Browse tile (recipe_first only). The key is only ever looked up in the
+  # fixed BrowseCategories list; an unknown or missing key is ignored.
+  def handle_event("select-category", %{"key" => key}, %{assigns: %{recipe_first: true}} = socket) do
+    case BrowseCategories.fetch(key) do
+      nil ->
+        {:noreply, socket}
+
+      category ->
+        {:noreply, socket |> assign(category: category.key, query: "") |> refresh_results()}
+    end
+  end
+
+  def handle_event("select-category", _params, socket), do: {:noreply, socket}
 
   def handle_event("set-mode", %{"mode" => mode}, socket) when mode in @modes do
     {:noreply, socket |> assign(:mode, mode) |> push_prefs()}
@@ -151,6 +200,32 @@ defmodule TraysSocialWeb.ExploreLive.Index do
     {:noreply, assign(socket, mode: mode, recent_ingredients: recent, prefs_restored: true)}
   end
 
+  defp clear_category_if_typed(socket, ""), do: socket
+  defp clear_category_if_typed(socket, _q), do: assign(socket, :category, nil)
+
+  # Recipe-first: grouped search (tray / following / everyone) driven by the
+  # typed query or the selected Browse tile; nil groups shows Browse.
+  defp refresh_results(%{assigns: %{recipe_first: true}} = socket) do
+    category = BrowseCategories.fetch(socket.assigns.category)
+    query = socket.assigns.query
+
+    if query == "" and is_nil(category) do
+      assign(socket, :groups, nil)
+    else
+      user = socket.assigns.current_scope.user
+
+      groups =
+        Posts.search_grouped(user.id, search_term(query, category),
+          following_ids: Accounts.list_following_ids(user.id),
+          blocked_user_ids: Accounts.blocked_pair_ids(user.id),
+          max_cooking_time: category && category.max_cooking_time,
+          tag: category && category.tag
+        )
+
+      assign(socket, :groups, groups)
+    end
+  end
+
   defp refresh_results(socket) do
     query = socket.assigns.query
     chips = socket.assigns.active_chips
@@ -165,6 +240,10 @@ defmodule TraysSocialWeb.ExploreLive.Index do
       assign(socket, :results, Posts.search_posts(query, opts))
     end
   end
+
+  defp search_term("", nil), do: ""
+  defp search_term("", category), do: category.q || ""
+  defp search_term(query, _category), do: query
 
   defp maybe_put(opts, _key, nil), do: opts
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
