@@ -125,7 +125,12 @@ struct PostDetailView: View {
         // owner) lives on the hero's floating controls — a toolbar menu
         // would be hidden by `.toolbar(.hidden, for: .navigationBar)` above.
         .task {
-            if let initialPost { viewModel.seed(post: initialPost) }
+            if let initialPost {
+                viewModel.seed(post: initialPost)
+            }
+            // Unstructured so popping the view does not cancel the POST and
+            // comments do not wait on it; recordOpen guards against re-runs.
+            Task { await viewModel.recordOpen(postId: postId) }
             await viewModel.loadPost(id: postId)
             await viewModel.loadComments(postId: postId)
         }
@@ -258,24 +263,23 @@ struct PostDetailView: View {
 
     // MARK: - Info helpers
 
+    @ViewBuilder
     private func avatarView(for user: PostUser) -> some View {
-        Group {
-            if let urlString = user.profilePhotoUrl, let url = urlString.asBackendURL {
-                CachedAsyncImage(url: url) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: { Color(.systemGray4) }
-                    .frame(width: 36, height: 36)
-                    .clipShape(Circle())
-            } else {
-                Circle()
-                    .fill(Theme.primary)
-                    .frame(width: 36, height: 36)
-                    .overlay(
-                        Text(String(user.username.prefix(1)).uppercased())
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.white)
-                    )
-            }
+        if let urlString = user.profilePhotoUrl, let url = urlString.asBackendURL {
+            CachedAsyncImage(url: url) { image in
+                image.resizable().scaledToFill()
+            } placeholder: { Color(.systemGray4) }
+                .frame(width: 36, height: 36)
+                .clipShape(Circle())
+        } else {
+            Circle()
+                .fill(Theme.primary)
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Text(String(user.username.prefix(1)).uppercased())
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                )
         }
     }
 
@@ -312,8 +316,12 @@ struct PostDetailView: View {
     private func formatCookTime(_ minutes: Int) -> String {
         let hours = minutes / 60
         let mins = minutes % 60
-        if hours == 0 { return String(localized: "\(mins) min") }
-        if mins == 0 { return String(localized: "\(hours) hr") }
+        if hours == 0 {
+            return String(localized: "\(mins) min")
+        }
+        if mins == 0 {
+            return String(localized: "\(hours) hr")
+        }
         return String(localized: "\(hours) hr \(mins) min")
     }
 
@@ -554,27 +562,26 @@ private struct CommentRow: View {
         .padding(.horizontal, 20)
     }
 
+    @ViewBuilder
     private var commentAvatar: some View {
-        Group {
-            if let url = comment.user.profilePhotoUrl, let imageURL = url.asBackendURL {
-                CachedAsyncImage(url: imageURL) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Circle().fill(Color(.systemGray4))
-                }
-                .frame(width: 28, height: 28)
-                .clipShape(Circle())
-                .id(imageURL)
-            } else {
-                Circle()
-                    .fill(Theme.primary)
-                    .frame(width: 28, height: 28)
-                    .overlay(
-                        Text(String(comment.user.username.prefix(1)).uppercased())
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.white)
-                    )
+        if let url = comment.user.profilePhotoUrl, let imageURL = url.asBackendURL {
+            CachedAsyncImage(url: imageURL) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Circle().fill(Color(.systemGray4))
             }
+            .frame(width: 28, height: 28)
+            .clipShape(Circle())
+            .id(imageURL)
+        } else {
+            Circle()
+                .fill(Theme.primary)
+                .frame(width: 28, height: 28)
+                .overlay(
+                    Text(String(comment.user.username.prefix(1)).uppercased())
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white)
+                )
         }
     }
 }
@@ -591,7 +598,9 @@ private struct PostUnavailableSurface: View {
     let onBack: () -> Void
 
     private var isNotFound: Bool {
-        if case .notFound = error as? APIError { return true }
+        if case .notFound = error as? APIError {
+            return true
+        }
         return false
     }
 

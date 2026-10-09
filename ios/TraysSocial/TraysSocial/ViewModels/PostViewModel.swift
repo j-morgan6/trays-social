@@ -55,7 +55,9 @@ final class PostViewModel {
         // silently — skipping isLoading=true prevents flashing the
         // skeleton over content that's already on screen.
         let hadPost = post != nil
-        if !hadPost { isLoading = true }
+        if !hadPost {
+            isLoading = true
+        }
         loadError = nil
         do {
             let response: DataResponse<Post> = try await APIClient.shared.get(path: "/posts/\(id)")
@@ -68,7 +70,9 @@ final class PostViewModel {
                 loadError = error
             }
         }
-        if !hadPost { isLoading = false }
+        if !hadPost {
+            isLoading = false
+        }
     }
 
     /// Pre-seed from the feed cache. Caller passes the Post that was
@@ -77,6 +81,20 @@ final class PostViewModel {
     func seed(post: Post) {
         guard self.post == nil else { return }
         self.post = post
+    }
+
+    private var didRecordOpen = false
+
+    /// Fire-and-forget "recipe opened" for Home's Jump back in. Once per
+    /// pushed detail view: `.task` re-runs when the view reappears.
+    func recordOpen(postId: Int) async {
+        guard !didRecordOpen else { return }
+        didRecordOpen = true
+        do {
+            _ = try await APIClient.shared.post(path: "/posts/\(postId)/open")
+        } catch {
+            Self.log.error("recordOpen failed: \(String(describing: error), privacy: .public)")
+        }
     }
 
     func loadComments(postId: Int) async {
