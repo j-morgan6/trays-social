@@ -202,6 +202,7 @@ defmodule TraysSocialWeb.Router do
     get "/search", SearchController, :index
     # Recipe-first "What I have": ranked recipes for the viewer's ingredient chips.
     get "/search/ingredients", SearchController, :ingredients
+    get "/search/browse", SearchController, :browse
 
     get "/notifications", NotificationController, :index
     post "/notifications/read", NotificationController, :mark_read

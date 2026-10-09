@@ -2,8 +2,11 @@ defmodule TraysSocialWeb.API.V1.SearchController do
   use TraysSocialWeb, :controller
 
   alias TraysSocial.Accounts
+  alias TraysSocial.Monetization
   alias TraysSocial.Posts
+  alias TraysSocial.Posts.BrowseCategories
   alias TraysSocial.Posts.IngredientSearch
+  alias TraysSocialWeb.API.V1.JSON.FeedItemJSON
   alias TraysSocialWeb.API.V1.JSON.IngredientSearchJSON
   alias TraysSocialWeb.API.V1.JSON.PostJSON
 
@@ -13,8 +16,40 @@ defmodule TraysSocialWeb.API.V1.SearchController do
 
   @max_query_length 100
   @max_tag_length 50
+  @group_preview 5
+  @page_size 20
 
+  # Recipe-first search. `grouped=true` returns the viewer's tray, people they
+  # follow and everyone else in one response; `group=...` pages one of those
+  # groups. Without either, the legacy response is returned unchanged.
   def index(conn, params) do
+    cond do
+      params["grouped"] == "true" -> grouped(conn, params)
+      params["group"] in ~w(tray following everyone) -> single_group(conn, params)
+      true -> legacy_index(conn, params)
+    end
+  end
+
+  # GET /api/v1/search/browse: the fixed Browse tiles plus the Most saved rail.
+  def browse(conn, _params) do
+    user = conn.assigns.current_user
+
+    posts =
+      Posts.list_most_saved_posts(@page_size,
+        blocked_user_ids: Accounts.blocked_pair_ids(user.id)
+      )
+
+    json(conn, %{
+      data: %{
+        categories: Enum.map(BrowseCategories.list(), &BrowseCategories.to_json/1),
+        most_saved: render_items(posts, render_opts(user, posts), user, true)
+      },
+      ad_config: Monetization.ad_config(user)
+    })
+  end
+
+  # Pre-recipe-first search. Kept byte-for-byte for older app builds.
+  defp legacy_index(conn, params) do
     user = conn.assigns.current_user
     query = sanitize(params["q"], @max_query_length) || ""
     max_cooking_time = parse_int(params["max_cooking_time"])
@@ -78,6 +113,109 @@ defmodule TraysSocialWeb.API.V1.SearchController do
       }
 
       json(conn, %{data: IngredientSearchJSON.render(results, render_opts)})
+    end
+  end
+
+  defp grouped(conn, params) do
+    user = conn.assigns.current_user
+    terms = search_terms(params)
+    blocked_ids = Accounts.blocked_pair_ids(user.id)
+
+    %{tray: tray, following: following, everyone: everyone} =
+      Posts.search_grouped(user.id, terms.query,
+        following_ids: Accounts.list_following_ids(user.id),
+        blocked_user_ids: blocked_ids,
+        max_cooking_time: terms.max_cooking_time,
+        tag: terms.tag,
+        preview_limit: @group_preview,
+        limit: @page_size
+      )
+
+    users =
+      if terms.tag || terms.max_cooking_time,
+        do: [],
+        else: Accounts.search_users(terms.query, limit: 10, blocked_user_ids: blocked_ids)
+
+    opts = render_opts(user, tray ++ following ++ everyone)
+
+    json(conn, %{
+      data: %{
+        users: Enum.map(users, &render_user/1),
+        tray: PostJSON.render_list(tray, opts),
+        following: PostJSON.render_list(following, opts),
+        everyone: render_items(everyone, opts, user, true)
+      },
+      cursor: encode_cursor(List.last(everyone)),
+      ad_config: Monetization.ad_config(user)
+    })
+  end
+
+  defp single_group(conn, params) do
+    user = conn.assigns.current_user
+    terms = search_terms(params)
+    {cursor_id, cursor_time} = decode_cursor(params["cursor"])
+
+    posts =
+      Posts.search_posts(
+        terms.query,
+        limit: @page_size,
+        group: search_group(params["group"], user.id),
+        cursor_id: cursor_id,
+        cursor_time: cursor_time,
+        max_cooking_time: terms.max_cooking_time,
+        tag: terms.tag,
+        blocked_user_ids: Accounts.blocked_pair_ids(user.id),
+        recipes_only: true
+      )
+
+    ads_allowed? = params["group"] == "everyone"
+
+    json(conn, %{
+      data: %{posts: render_items(posts, render_opts(user, posts), user, ads_allowed?)},
+      cursor: encode_cursor(List.last(posts)),
+      ad_config: Monetization.ad_config(user)
+    })
+  end
+
+  defp search_group("tray", user_id), do: {:tray, user_id}
+
+  defp search_group("following", user_id),
+    do: {:following, user_id, Accounts.list_following_ids(user_id)}
+
+  defp search_group("everyone", user_id),
+    do: {:everyone, user_id, Accounts.list_following_ids(user_id)}
+
+  # A `category` key is only looked up in the fixed BrowseCategories list; an
+  # unknown key yields nil and contributes nothing. Explicit params win over the
+  # category's saved query.
+  defp search_terms(params) do
+    category = BrowseCategories.fetch(params["category"]) || %{}
+
+    %{
+      query: sanitize(params["q"], @max_query_length) || category[:q] || "",
+      max_cooking_time: parse_int(params["max_cooking_time"]) || category[:max_cooking_time],
+      tag: sanitize(params["tag"], @max_tag_length) || category[:tag]
+    }
+  end
+
+  defp render_opts(user, posts) do
+    ids = Enum.map(posts, & &1.id)
+
+    %{
+      liked_post_ids: Posts.liked_post_ids_for_user(user.id, ids),
+      bookmarked_post_ids: Posts.bookmarked_post_ids_for_user(user.id, ids)
+    }
+  end
+
+  # Always FeedItem-shaped so clients decode one type; ads only where allowed
+  # (everyone and Most saved, never tray or following).
+  defp render_items(posts, opts, user, ads_allowed?) do
+    items = FeedItemJSON.render_list(posts, opts)
+
+    if ads_allowed? and Monetization.ads_enabled?(user) do
+      FeedItemJSON.interleave_ads(items, Monetization.ad_frequency(), "find")
+    else
+      items
     end
   end
 

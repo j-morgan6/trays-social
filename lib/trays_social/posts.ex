@@ -188,6 +188,59 @@ defmodule TraysSocial.Posts do
   end
 
   @doc """
+  Recipes with the most bookmarks created in the last 7 days. Tops up with the
+  most-liked recipes when fewer than `limit` were saved this week, so Search
+  never shows an empty rail on a quiet week. Opts: `:blocked_user_ids`.
+  """
+  def list_most_saved_posts(limit \\ 20, opts \\ []) do
+    blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
+    since = DateTime.add(DateTime.utc_now(), -7, :day)
+
+    saves =
+      from(b in TraysSocial.Posts.Bookmark,
+        where: b.inserted_at >= ^since,
+        group_by: b.post_id,
+        select: %{post_id: b.post_id, saves: count(b.id)}
+      )
+
+    top =
+      from(p in Post,
+        join: s in subquery(saves),
+        on: s.post_id == p.id,
+        where: is_nil(p.deleted_at) and is_nil(p.removed_at) and p.type == "recipe",
+        order_by: [desc: s.saves, desc: p.inserted_at, desc: p.id],
+        limit: ^limit
+      )
+      |> exclude_blocked_users(blocked_user_ids)
+      |> Repo.all()
+
+    filler = most_liked_recipes(limit - length(top), Enum.map(top, & &1.id), blocked_user_ids)
+
+    Repo.preload(top ++ filler, [
+      :user,
+      :ingredients,
+      :tools,
+      :cooking_steps,
+      :post_tags,
+      :post_photos
+    ])
+  end
+
+  defp most_liked_recipes(remaining, _exclude_ids, _blocked) when remaining <= 0, do: []
+
+  defp most_liked_recipes(remaining, exclude_ids, blocked_user_ids) do
+    from(p in Post,
+      where:
+        is_nil(p.deleted_at) and is_nil(p.removed_at) and p.type == "recipe" and
+          p.id not in ^exclude_ids,
+      order_by: [desc: p.like_count, desc: p.inserted_at, desc: p.id],
+      limit: ^remaining
+    )
+    |> exclude_blocked_users(blocked_user_ids)
+    |> Repo.all()
+  end
+
+  @doc """
   Returns the most recent posts, excluding soft deleted.
   """
   def list_recent_posts(limit \\ 10) do
@@ -287,7 +340,37 @@ defmodule TraysSocial.Posts do
         base
       end
 
-    Repo.all(base)
+    base
+    |> apply_recipe_first_opts(opts)
+    |> Repo.all()
+  end
+
+  @doc """
+  Recipe-first grouped search: previews of the viewer's tray and of people they
+  follow, plus the first page of everyone else. Recipes only. Opts:
+  `:following_ids`, `:blocked_user_ids`, `:max_cooking_time`, `:tag`,
+  `:preview_limit` (5), `:limit` (20).
+  """
+  def search_grouped(viewer_id, query, opts \\ []) do
+    following_ids = Keyword.get(opts, :following_ids, [])
+    preview = Keyword.get(opts, :preview_limit, 5)
+    page = Keyword.get(opts, :limit, 20)
+
+    common =
+      opts
+      |> Keyword.take([:max_cooking_time, :tag, :blocked_user_ids])
+      |> Keyword.put(:recipes_only, true)
+
+    %{
+      tray: search_posts(query, [limit: preview, group: {:tray, viewer_id}] ++ common),
+      following:
+        search_posts(
+          query,
+          [limit: preview, group: {:following, viewer_id, following_ids}] ++ common
+        ),
+      everyone:
+        search_posts(query, [limit: page, group: {:everyone, viewer_id, following_ids}] ++ common)
+    }
   end
 
   @doc """
@@ -302,6 +385,49 @@ defmodule TraysSocial.Posts do
     |> String.replace("\\", "\\\\")
     |> String.replace("%", "\\%")
     |> String.replace("_", "\\_")
+  end
+
+  # Recipe-first options for search_posts/2: `:recipes_only` and `:group`.
+  defp apply_recipe_first_opts(query, opts) do
+    query
+    |> only_recipes(Keyword.get(opts, :recipes_only, false))
+    |> apply_search_group(Keyword.get(opts, :group))
+  end
+
+  defp only_recipes(query, true), do: where(query, [p], p.type == "recipe")
+  defp only_recipes(query, _), do: query
+
+  # Recipe-first grouped search. Groups are disjoint: the viewer's tray (own or
+  # bookmarked) wins, then people they follow, then everyone else. The full
+  # Bookmark module name is used because its alias is declared further down.
+  defp apply_search_group(query, nil), do: query
+
+  defp apply_search_group(query, {:tray, viewer_id}) do
+    where(query, [p], p.user_id == ^viewer_id or exists(viewer_bookmark(viewer_id)))
+  end
+
+  defp apply_search_group(query, {:following, viewer_id, following_ids}) do
+    where(
+      query,
+      [p],
+      p.user_id in ^following_ids and p.user_id != ^viewer_id and
+        not exists(viewer_bookmark(viewer_id))
+    )
+  end
+
+  defp apply_search_group(query, {:everyone, viewer_id, following_ids}) do
+    where(
+      query,
+      [p],
+      p.user_id != ^viewer_id and p.user_id not in ^following_ids and
+        not exists(viewer_bookmark(viewer_id))
+    )
+  end
+
+  defp viewer_bookmark(viewer_id) do
+    from(b in TraysSocial.Posts.Bookmark,
+      where: b.post_id == parent_as(:post).id and b.user_id == ^viewer_id
+    )
   end
 
   @doc """
