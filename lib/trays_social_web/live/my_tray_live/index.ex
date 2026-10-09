@@ -20,31 +20,40 @@ defmodule TraysSocialWeb.MyTrayLive.Index do
   @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns.current_scope.user
+    recipe_first = TraysSocial.Features.recipe_first?()
 
     if connected?(socket) do
       bookmarks = Posts.list_bookmarks(user.id, limit: 40)
 
       {:ok,
        socket
-       |> assign_static()
+       |> assign_static(recipe_first)
        |> assign(:loading, false)
        |> assign(:bookmarks, bookmarks)
-       |> assign(:saved_count, length(bookmarks))}
+       |> assign(:saved_count, length(bookmarks))
+       |> assign(:my_recipes, my_recipes(recipe_first, user))}
     else
       {:ok,
        socket
-       |> assign_static()
+       |> assign_static(recipe_first)
        |> assign(:loading, true)
        |> assign(:bookmarks, [])
-       |> assign(:saved_count, 0)}
+       |> assign(:saved_count, 0)
+       |> assign(:my_recipes, [])}
     end
   end
 
-  defp assign_static(socket) do
+  defp assign_static(socket, recipe_first) do
     socket
     |> assign(:page_title, "My Tray")
     |> assign(:current_tab, :my_tray)
+    |> assign(:recipe_first, recipe_first)
   end
+
+  # Recipe-first: the signed-in cook's own recipes, listed above Saved.
+  # Legacy photo posts are left out; they stay reachable from the profile.
+  defp my_recipes(true, user), do: Posts.list_posts_by_user(user.id, limit: 40, filter: "recipes")
+  defp my_recipes(_recipe_first, _user), do: []
 
   # Derive a serif-friendly recipe title from a post's caption, matching
   # the convention used on Feed, Recipe Detail, Notifications, Find.

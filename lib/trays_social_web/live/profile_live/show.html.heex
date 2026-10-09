@@ -224,6 +224,7 @@
       </div>
     <% else %>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mt-6">
+        <% recipe_first = TraysSocial.Features.recipe_first?() %>
         <%= for post <- @posts do %>
           <% raw_caption = post.caption || "" %>
           <% post_title =
@@ -244,6 +245,14 @@
               alt={post_title}
               class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
             />
+            <%!-- Recipe-first: legacy photo-only posts are labelled. --%>
+            <span
+              :if={recipe_first and post.type != "recipe"}
+              data-legacy-photo-label
+              class="absolute top-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white"
+            >
+              Photo
+            </span>
             <%!-- Title overlay — serif, white-on-gradient at the bottom edge
                  (matches GridCard in shared.jsx). --%>
             <div class="absolute inset-x-0 bottom-0 pt-12 pb-3 px-3.5 bg-gradient-to-t from-black/70 to-transparent">

@@ -16,6 +16,11 @@ defmodule TraysSocialWeb.PostLive.New do
       |> assign(:page_title, "Create Post")
       |> assign(:current_tab, :new_post)
       |> assign(:post_type, nil)
+      |> assign(:recipe_first, TraysSocial.Features.recipe_first?())
+
+    # Recipe-first: skip the type picker and open straight on the recipe
+    # form. The picker code stays for flag-off.
+    socket = if socket.assigns.recipe_first, do: init_form(socket, "recipe"), else: socket
 
     {:ok, socket}
   end
@@ -42,10 +47,21 @@ defmodule TraysSocialWeb.PostLive.New do
 
   @impl true
   def handle_event("select-type", %{"type" => type}, socket) when type in ~w(recipe post) do
-    {:noreply, init_form(socket, type)}
+    # Recipe-first: the form was opened as a recipe in mount and no picker
+    # is rendered, so any select-type is stale or crafted. Ignoring it also
+    # avoids re-running allow_upload over active upload entries.
+    if socket.assigns.recipe_first do
+      {:noreply, socket}
+    else
+      {:noreply, init_form(socket, type)}
+    end
   end
 
   @impl true
+  def handle_event("back-to-picker", _, %{assigns: %{recipe_first: true}} = socket) do
+    {:noreply, socket}
+  end
+
   def handle_event("back-to-picker", _, socket) do
     socket =
       socket

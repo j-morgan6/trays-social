@@ -46,6 +46,36 @@
     </div>
   </div>
 
+  <%!-- Recipe-first: the cook's own recipes above a "Saved" heading.
+       Everything here is behind @recipe_first so flag-off output is
+       unchanged. --%>
+  <section :if={@recipe_first and @my_recipes != []} id="my-tray-recipes" class="mb-8">
+    <h2 class="text-xs font-bold uppercase tracking-wide text-base-content/60 mb-3">
+      My recipes
+    </h2>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <.link
+        :for={post <- @my_recipes}
+        navigate={~p"/posts/#{post.id}"}
+        class="block rounded-xl overflow-hidden bg-base-200"
+      >
+        <img
+          src={TraysSocial.Uploads.ImageProcessor.thumb_url(post.photo_url)}
+          alt={post_title(post)}
+          class="aspect-[4/5] w-full object-cover"
+        />
+        <p class="p-2 text-sm font-semibold truncate">{post_title(post)}</p>
+      </.link>
+    </div>
+  </section>
+  <h2
+    :if={@recipe_first}
+    id="my-tray-saved-heading"
+    class="text-xs font-bold uppercase tracking-wide text-base-content/60 mb-3"
+  >
+    Saved
+  </h2>
+
   <%!-- Saved recipes — 2-up on desktop, 1-up on mobile. Each tile uses
        the horizontal photo-left card style from the design. --%>
   <%= cond do %>
@@ -62,6 +92,10 @@
           </div>
         <% end %>
       </div>
+    <% @recipe_first and Enum.empty?(@bookmarks) and @my_recipes != [] -> %>
+      <p id="my-tray-saved-empty" class="text-sm text-base-content/60">
+        Nothing saved yet.
+      </p>
     <% Enum.empty?(@bookmarks) -> %>
       <div class="bg-base-100 border border-base-300 rounded-sm p-10 text-center">
         <p class="font-serif-editorial italic text-[18px] text-base-content/70 mb-2">
