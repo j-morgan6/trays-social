@@ -184,6 +184,8 @@ defmodule TraysSocialWeb.Router do
     # Recipe-first: server-controlled client flags the native app reads at
     # launch. Authenticated on purpose -- the iOS shell exists only after sign-in.
     get "/features", FeatureController, :index
+    # Recipe-first Home: every section in one request (client sends its local date).
+    get "/home", HomeController, :show
     put "/auth/me", AuthController, :update_me
     delete "/auth/me", AuthController, :delete_me
     # W105: post-login opt-in to biometric. Authenticated with the current
