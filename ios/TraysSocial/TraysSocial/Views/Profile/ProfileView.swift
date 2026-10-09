@@ -216,7 +216,8 @@ private struct ProfileBody: View {
                             GridCard(
                                 photoKey: photoKey(for: post),
                                 title: gridTitle(for: post),
-                                url: post.primaryPhotoURL?.asBackendURL
+                                url: post.primaryPhotoURL?.asBackendURL,
+                                badge: TraySections.photoBadge(for: post, recipeFirst: FeatureFlags.shared.recipeFirst)
                             )
                         }
                         .buttonStyle(.borderless)

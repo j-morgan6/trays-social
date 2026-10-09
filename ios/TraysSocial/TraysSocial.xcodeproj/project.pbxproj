@@ -125,8 +125,10 @@
 		BE1D67DED4BAF088FC7E5243 /* MealPlannerFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137073CB2D95336FEFE37E67 /* MealPlannerFixtures.swift */; };
 		BE727916AF64F4EA2D762814 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67DCD1E3A70C9F29DFD5035C /* KeychainService.swift */; };
 		BEDEF0BA0E159AC29AA6FD25 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB88CDBE65F5F63DB2CD860 /* APIClient.swift */; };
+		C00C0D11FA966D54BC8AC4D6 /* TraySections.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C10779B86B4059A19D6681F /* TraySections.swift */; };
 		C1C58D1733F30215F2BE482A /* PaywallViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11BD5FE597E0FAC9D5C0D3A1 /* PaywallViewModelTests.swift */; };
 		C2AE627280A704249C268EF4 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45AD072C42CEDFF1299909E3 /* WelcomeView.swift */; };
+		C3DB24FDACC61EC8F7BA6292 /* TraySectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A51B7F90E78D3DBBF57D6837 /* TraySectionsTests.swift */; };
 		C4A4B95F6F0438D9C257FA99 /* IngredientSearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 065BA87EBF1F1EB3EAE02615 /* IngredientSearchViewModel.swift */; };
 		C51CBCE1B75F3A8BAFE66D2C /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DB83D2CB0787CA6CC149B6F /* HomeView.swift */; };
 		C5722C1F0CCB7A506F798483 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBD01D0EB9310C72D911EC60 /* FeedView.swift */; };
@@ -257,6 +259,7 @@
 		805CBBD0E47A9827AB41CD7B /* MealPlannerSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlannerSurface.swift; sourceTree = "<group>"; };
 		856DF06453D39C005EBF4775 /* SubscriptionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionServiceTests.swift; sourceTree = "<group>"; };
 		88FA3AAE60B04DA0CD0184E5 /* SaveButtonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveButtonView.swift; sourceTree = "<group>"; };
+		8C10779B86B4059A19D6681F /* TraySections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraySections.swift; sourceTree = "<group>"; };
 		8D5A6AC4887DBFA2579C1ADB /* TabSegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabSegment.swift; sourceTree = "<group>"; };
 		8EFC61757F559A1D768B6A12 /* FeedItemDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedItemDecodingTests.swift; sourceTree = "<group>"; };
 		90B7815F88CA31767867F48D /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
@@ -271,6 +274,7 @@
 		9BA559F77D886E5984FC459D /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
 		9D357F44CDB7CEA0D1DFCE84 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		A142B76BEC102583F7094ED6 /* ImageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageLoader.swift; sourceTree = "<group>"; };
+		A51B7F90E78D3DBBF57D6837 /* TraySectionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraySectionsTests.swift; sourceTree = "<group>"; };
 		A60A44C1D9110E9019DA32AB /* Home.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Home.swift; sourceTree = "<group>"; };
 		A822F8FA8A92EFF3FCE1DE7D /* MealPlannerIntentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlannerIntentTests.swift; sourceTree = "<group>"; };
 		A88C0ADB221E4D697E86CA15 /* ReportSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportSheetView.swift; sourceTree = "<group>"; };
@@ -666,6 +670,7 @@
 				F745C2EE8EB5F6051FD1689B /* Home */,
 				0B2A37EC40E1A5551FF80405 /* Images */,
 				251CCA5342EF7149DE5806DB /* MealPlanner */,
+				DF45F9867673229923E09321 /* MyTray */,
 				F9E5D09062643D3463C844A9 /* Optimistic */,
 				E7FB6DBE215B31DA896A57FB /* Search */,
 				C048240B04E9F0F76BEAAEAD /* Shell */,
@@ -691,6 +696,14 @@
 				3485959BA73D55541343A210 /* ShellViewModelTests.swift */,
 			);
 			path = Shell;
+			sourceTree = "<group>";
+		};
+		DF45F9867673229923E09321 /* MyTray */ = {
+			isa = PBXGroup;
+			children = (
+				A51B7F90E78D3DBBF57D6837 /* TraySectionsTests.swift */,
+			);
+			path = MyTray;
 			sourceTree = "<group>";
 		};
 		E0C8A43FAAFCF91517B52F45 /* Shell */ = {
@@ -770,6 +783,7 @@
 				9765CFCFAD03DE9D27C0EA91 /* SearchResults.swift */,
 				EBE216BD0FF6A870BF24E68E /* ShellLayout.swift */,
 				F771FC0871724AD09DD6B5B6 /* SubscriptionVerification.swift */,
+				8C10779B86B4059A19D6681F /* TraySections.swift */,
 				CB5079D934DE75DD36A85EB1 /* User.swift */,
 			);
 			path = Models;
@@ -915,6 +929,7 @@
 				F854F68BA54AD9703C617236 /* ShellLayoutTests.swift in Sources */,
 				037EBB9D239C5B6B3CB07599 /* ShellViewModelTests.swift in Sources */,
 				892334F4875A4620B720B2A5 /* SubscriptionServiceTests.swift in Sources */,
+				C3DB24FDACC61EC8F7BA6292 /* TraySectionsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1041,6 +1056,7 @@
 				F2BF3A3ADB396931C925D745 /* Theme.swift in Sources */,
 				D90F0D76CEED859CAB44E7F8 /* Toast.swift in Sources */,
 				21ABF922770D16848BFDD32D /* TopPill.swift in Sources */,
+				C00C0D11FA966D54BC8AC4D6 /* TraySections.swift in Sources */,
 				BD00C5D666CF7BEBDA198327 /* TraysSocialApp.swift in Sources */,
 				DC9FFDCAB43C8DE2FD2A03B9 /* User.swift in Sources */,
 				4ED1313D6240155C2216987E /* UsernamePickerView.swift in Sources */,
@@ -1066,7 +1082,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 363;
+				CURRENT_PROJECT_VERSION = 364;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1087,7 +1103,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 363;
+				CURRENT_PROJECT_VERSION = 364;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1248,7 +1264,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 363;
+				CURRENT_PROJECT_VERSION = 364;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

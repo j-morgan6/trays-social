@@ -5,9 +5,10 @@ import SwiftUI
 ///
 /// Two states:
 /// - **populated** — 28pt bold "Your tray" + a muted count line, plus
-///   up to two `SectionHeader`-led 2-column `GridCard` grids ("Recipes"
-///   and "Saved posts"). A section with zero items hides entirely so
-///   the screen never shows a "Recipes · 0" header.
+///   up to two `SectionHeader`-led 2-column `GridCard` grids from
+///   `TraySections.make`: "My recipes" / "Saved" when recipe-first is on
+///   (W196), "Recipes" / "Saved posts" when it is off. A section with
+///   zero items hides entirely so the screen never shows a "· 0" header.
 /// - **empty** — a dashed amber-bordered container with an arrow icon,
 ///   title + body copy locked to the spec, and three amber chevrons
 ///   that animate twice then settle static (or stay static under
@@ -76,26 +77,17 @@ struct MyTrayView: View {
                         .padding(.bottom, 24)
                     }
 
-                    if !viewModel.savedRecipes.isEmpty {
-                        SectionHeader(
-                            label: String(localized: "Recipes"),
-                            count: viewModel.savedRecipes.count,
-                            style: .editorial
-                        )
-                        .padding(.bottom, 8)
-                        gridSection(viewModel.savedRecipes)
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 24)
-                    }
-
-                    if !viewModel.savedPosts.isEmpty {
-                        SectionHeader(
-                            label: String(localized: "Saved posts"),
-                            count: viewModel.savedPosts.count,
-                            style: .editorial
-                        )
-                        .padding(.bottom, 8)
-                        gridSection(viewModel.savedPosts)
+                    ForEach(
+                        TraySections.make(
+                            posts: viewModel.posts,
+                            currentUserId: appState.currentUser?.id,
+                            recipeFirst: FeatureFlags.shared.recipeFirst
+                        ),
+                        id: \.title
+                    ) { section in
+                        SectionHeader(label: section.title, count: section.posts.count, style: .editorial)
+                            .padding(.bottom, 8)
+                        gridSection(section.posts)
                             .padding(.horizontal, 16)
                             .padding(.bottom, 24)
                     }

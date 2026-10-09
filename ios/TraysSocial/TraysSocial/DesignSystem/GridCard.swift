@@ -9,6 +9,8 @@ struct GridCard: View {
     let photoKey: FoodPalette.Key
     let title: String
     var url: URL?
+    /// Optional top-leading pill (W196: "Photo" on legacy non-recipe posts).
+    var badge: String?
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -39,6 +41,17 @@ struct GridCard: View {
                 .padding(.bottom, 10)
         }
         .aspectRatio(1.0 / 1.1, contentMode: .fit)
+        .overlay(alignment: .topLeading) {
+            if let badge {
+                Text(badge)
+                    .font(.system(size: 11, weight: .semibold))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.black.opacity(0.55)))
+                    .foregroundStyle(Color.white)
+                    .padding(8)
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)

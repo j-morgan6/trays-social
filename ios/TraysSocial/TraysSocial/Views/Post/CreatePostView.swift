@@ -13,12 +13,7 @@ struct CreatePostView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     editorialHeading
 
-                    // Type picker — also swipe horizontally on the form to toggle
-                    Picker("Type", selection: $viewModel.postType) {
-                        Text("Recipe").tag(CreatePostViewModel.PostType.recipe)
-                        Text("Post").tag(CreatePostViewModel.PostType.post)
-                    }
-                    .pickerStyle(.segmented)
+                    typePicker
 
                     sectionLabel("PHOTOGRAPH")
 
@@ -133,20 +128,17 @@ struct CreatePostView: View {
                 .padding(16)
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 40)
-                        .onEnded { value in
-                            // Only act on clearly horizontal swipes and only when the keyboard is down,
-                            // to avoid destroying in-progress text or fighting keyboard gestures.
-                            guard !keyboardVisible else { return }
-                            let dx = value.translation.width
-                            let dy = value.translation.height
-                            guard abs(dx) > 60, abs(dx) > abs(dy) * 1.5 else { return }
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                viewModel.postType = dx < 0 ? .post : .recipe
-                            }
-                        }
+                        .onEnded(handleTypeSwipe)
                 )
             }
             .background(Theme.background)
+            // W196: recipe-first posts only recipes. `initial: true` covers
+            // appear; the change covers the flag flipping while Create is open.
+            .onChange(of: FeatureFlags.shared.recipeFirst, initial: true) { _, recipeFirst in
+                if recipeFirst {
+                    viewModel.postType = .recipe
+                }
+            }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
                 keyboardVisible = true
             }
@@ -358,6 +350,36 @@ struct CreatePostView: View {
                 .background(Theme.primary.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
+        }
+    }
+}
+
+// MARK: - Type selection (W196: hidden under recipe-first)
+
+private extension CreatePostView {
+    /// Type picker — also swipe horizontally on the form to toggle. Hidden
+    /// when recipe-first leaves a single type to choose.
+    @ViewBuilder var typePicker: some View {
+        if CreatePostViewModel.PostType.available(recipeFirst: FeatureFlags.shared.recipeFirst).count > 1 {
+            Picker("Type", selection: $viewModel.postType) {
+                Text("Recipe").tag(CreatePostViewModel.PostType.recipe)
+                Text("Post").tag(CreatePostViewModel.PostType.post)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    func handleTypeSwipe(_ value: DragGesture.Value) {
+        // Recipe-first has one type, so the swipe toggle does nothing.
+        guard !FeatureFlags.shared.recipeFirst else { return }
+        // Only act on clearly horizontal swipes and only when the keyboard is down,
+        // to avoid destroying in-progress text or fighting keyboard gestures.
+        guard !keyboardVisible else { return }
+        let dx = value.translation.width
+        let dy = value.translation.height
+        guard abs(dx) > 60, abs(dx) > abs(dy) * 1.5 else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            viewModel.postType = dx < 0 ? .post : .recipe
         }
     }
 }

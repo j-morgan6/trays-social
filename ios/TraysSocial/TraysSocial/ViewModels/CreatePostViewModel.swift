@@ -28,6 +28,11 @@ final class CreatePostViewModel {
 
     enum PostType: String, CaseIterable {
         case recipe, post
+
+        /// Recipe-first (W196) offers only recipes; the server rule is authoritative.
+        static func available(recipeFirst: Bool) -> [PostType] {
+            recipeFirst ? [.recipe] : [.recipe, .post]
+        }
     }
 
     struct IngredientEntry: Identifiable {
@@ -86,9 +91,15 @@ final class CreatePostViewModel {
 
     func publish() async -> Bool {
         // Auto-add any pending input before publishing
-        if !newIngredientName.isEmpty { addIngredient() }
-        if !newStepText.isEmpty { addStep() }
-        if !newToolName.isEmpty { addTool() }
+        if !newIngredientName.isEmpty {
+            addIngredient()
+        }
+        if !newStepText.isEmpty {
+            addStep()
+        }
+        if !newToolName.isEmpty {
+            addTool()
+        }
 
         guard let photoData else {
             errorMessage = "Please select a photo"
@@ -115,8 +126,12 @@ final class CreatePostViewModel {
             ]
 
             if postType == .recipe {
-                if let time = Int(cookingTimeMinutes) { params["cooking_time_minutes"] = time }
-                if let srv = Int(servings) { params["servings"] = srv }
+                if let time = Int(cookingTimeMinutes) {
+                    params["cooking_time_minutes"] = time
+                }
+                if let srv = Int(servings) {
+                    params["servings"] = srv
+                }
                 params["ingredients"] = ingredients.enumerated().map { i, ing -> [String: Any] in
                     ["name": ing.name, "quantity": ing.quantity, "unit": ing.unit, "order": i]
                 }
