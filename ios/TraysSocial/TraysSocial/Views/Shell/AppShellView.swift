@@ -95,6 +95,9 @@ struct AppShellView: View {
             .navigationDestination(for: MealPlannerRoute.self) { _ in
                 MealPlannerView()
             }
+            .navigationDestination(for: SearchGroupRoute.self) { route in
+                SearchGroupView(route: route)
+            }
             .sheet(isPresented: $showCreatePost) {
                 CreatePostView()
             }
