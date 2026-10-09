@@ -578,7 +578,22 @@ defmodule TraysSocial.Posts do
     # cannot rewrite the FK — Post.changeset's cast list excludes it.
     %Post{user_id: user_id}
     |> change_post(attrs)
+    |> enforce_recipe_only()
     |> Repo.insert()
+  end
+
+  @recipe_only_message "Posts need a recipe now. Update Trays to post."
+
+  # Recipe-first: new posts must be recipes. Enforced at creation only, not in
+  # Post.changeset/2, so legacy photo posts stay editable. Old app builds get
+  # the message through the API fallback's 422 changeset rendering.
+  defp enforce_recipe_only(changeset) do
+    if TraysSocial.Features.recipe_first?() and
+         Ecto.Changeset.get_field(changeset, :type) != "recipe" do
+      Ecto.Changeset.add_error(changeset, :type, @recipe_only_message)
+    else
+      changeset
+    end
   end
 
   @doc """
