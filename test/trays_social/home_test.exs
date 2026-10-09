@@ -163,6 +163,16 @@ defmodule TraysSocial.HomeTest do
       refute deleted.id in result
     end
 
+    test "new_from_following hides recipes matching a muted keyword", ctx do
+      muted = post_fixture(%{user_id: ctx.friend.id, caption: "Spicy Tofu Bowl"})
+      kept = post_fixture(%{user_id: ctx.friend.id, caption: "Lemon pasta"})
+      {:ok, _} = Accounts.set_muted_keywords(ctx.viewer, ["tofu"])
+
+      result = ids(Home.build(ctx.viewer).new_from_following)
+      assert result == [kept.id]
+      refute muted.id in result
+    end
+
     test "new_from_following caps at 20", ctx do
       for _ <- 1..21, do: post_fixture(%{user_id: ctx.friend.id})
       assert length(Home.build(ctx.viewer).new_from_following) == 20

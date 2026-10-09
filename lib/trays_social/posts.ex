@@ -95,13 +95,18 @@ defmodule TraysSocial.Posts do
     where(query, [p], p.user_id not in ^blocked_ids)
   end
 
-  defp exclude_muted_keywords(query, []), do: query
+  @doc """
+  Narrows a `Post` query (first binding) to posts whose caption matches none
+  of `keywords`. Shared by the Feed and the recipe-first Home's "New from
+  people you follow", which replaces it.
+  """
+  def exclude_muted_keywords(query, []), do: query
 
   # D108: two subtleties. (1) `not ilike(NULL, x)` is NULL under SQL
   # three-valued logic — without the is_nil branch, ONE muted keyword hid
   # every caption-less post. (2) keywords must be LIKE-escaped or a keyword
   # containing % mutes every captioned post.
-  defp exclude_muted_keywords(query, keywords) do
+  def exclude_muted_keywords(query, keywords) do
     Enum.reduce(keywords, query, fn keyword, q ->
       pattern = "%" <> sanitize_like(String.downcase(keyword)) <> "%"
       where(q, [p], is_nil(p.caption) or not ilike(p.caption, ^pattern))

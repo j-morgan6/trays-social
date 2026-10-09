@@ -14,6 +14,7 @@ defmodule TraysSocial.Home do
   alias TraysSocial.Accounts.Follow
   alias TraysSocial.Accounts.User
   alias TraysSocial.MealPlans
+  alias TraysSocial.Posts
   alias TraysSocial.Posts.Bookmark
   alias TraysSocial.Posts.Post
   alias TraysSocial.Posts.RecipeOpen
@@ -43,7 +44,7 @@ defmodule TraysSocial.Home do
       jump_back_in: jump_back_in(user_id, blocked_ids),
       tonight: tonight(user_id, today, blocked_ids),
       friends_trays: friends_trays(user_id, blocked_ids),
-      new_from_following: new_from_following(following_ids),
+      new_from_following: new_from_following(following_ids, user_id),
       suggested_cooks: suggested_cooks(following_ids, user_id, blocked_ids)
     }
   end
@@ -89,9 +90,13 @@ defmodule TraysSocial.Home do
   end
 
   defp friends_trays(user_id, blocked_ids) do
+    followed = from(f in Follow, where: f.follower_id == ^user_id, select: f.followed_id)
+
+    # Aggregate only the viewer's follows, not every author's recipes.
     latest =
       Post
       |> live_recipes()
+      |> where([p], p.user_id in subquery(followed))
       |> group_by([p], p.user_id)
       |> select([p], %{
         user_id: p.user_id,
@@ -116,15 +121,18 @@ defmodule TraysSocial.Home do
   end
 
   # Finite by design: no cursor, no pagination. following_ids already has
-  # blocked users subtracted (build/2).
-  defp new_from_following([]), do: []
+  # blocked users subtracted (build/2). Honours muted keywords like the Feed
+  # this row replaces.
+  defp new_from_following([], _user_id), do: []
 
-  defp new_from_following(following_ids) do
+  defp new_from_following(following_ids, user_id) do
     since = DateTime.utc_now() |> DateTime.add(-@new_window_days, :day)
+    muted_keywords = Accounts.get_muted_keywords(user_id)
 
     Post
     |> live_recipes()
     |> where([p], p.user_id in ^following_ids and p.inserted_at >= ^since)
+    |> Posts.exclude_muted_keywords(muted_keywords)
     |> order_by([p], desc: p.inserted_at, desc: p.id)
     |> limit(@new_limit)
     |> Repo.all()
