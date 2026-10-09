@@ -45,6 +45,8 @@ final class AppState {
         case feed = 0
         case myTray = 1
         case find = 2
+        case home = 3
+        case search = 4
     }
 
     var isValidatingToken = false

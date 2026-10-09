@@ -1,14 +1,16 @@
 import SwiftUI
 
 /// Top floating pill in the nav shell. Hosts the Trays wordmark, the
-/// three Feed / My Tray / Find tab segments, and the bell button with
-/// an unread indicator.
+/// three tab segments of `layout` (Feed / My Tray / Find, or Home /
+/// My Tray / Search when recipe-first), and the bell button with an
+/// unread indicator.
 ///
 /// Below the 380pt-width threshold (iPhone SE class devices in
 /// portrait), the wordmark hides so the three segments + bell still
 /// fit on a single row without truncating.
 struct TopPill: View {
     @Binding var selectedTray: AppState.TrayTab
+    var layout: ShellLayout = .classic
     var hasUnread: Bool = false
     var unreadCount: Int = 0
     var onBellTap: () -> Void
@@ -24,9 +26,9 @@ struct TopPill: View {
                         .padding(.leading, 4)
                         .padding(.trailing, 4)
                 }
-                tabSegment(for: .feed, label: "Feed")
-                tabSegment(for: .myTray, label: "My Tray")
-                tabSegment(for: .find, label: "Find")
+                ForEach(layout.tabs, id: \.self) { tray in
+                    tabSegment(for: tray, label: tray.label)
+                }
                 bellButton
             }
         }

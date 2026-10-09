@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// Replaces `MainView` as the user-visible nav shell once W129 wires it
-/// in. Hosts a `TabView(.page)` of Feed / My Tray / Find under two
-/// floating pills (`TopPill` + `BottomPill`) overlaid via `ZStack`.
+/// in. Hosts a `TabView(.page)` of Feed / My Tray / Find — or Home /
+/// My Tray / Search when `FeatureFlags.recipeFirst` is on (W195) — under
+/// two floating pills (`TopPill` + `BottomPill`) overlaid via `ZStack`.
 ///
 /// Pill visibility is owned by `ShellViewModel.pillsHidden`. When that
 /// flag flips, the pills transition off-screen via `.move(edge:)`
@@ -17,25 +18,32 @@ import SwiftUI
 struct AppShellView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @State private var shell = ShellViewModel()
     // W178. Owned by the shell, not by MyTrayView: the planner is a root-stack
     // destination, so My Tray's @State is not reachable from it. One instance
     // means the tray's entry row and the planner screen share a loaded week.
     @State private var planner = MealPlannerViewModel()
     @State private var showCreatePost = false
+    // W195: the opening tab is applied once per mount, never on re-render.
+    @State private var didApplyInitialTab = false
+    // W195: only a real return from the background refreshes the flags, not
+    // launch or an inactive blip (Control Center, notification shade).
+    @State private var wasBackgrounded = false
 
     var body: some View {
         @Bindable var state = appState
+        let layout = ShellLayout.decide(recipeFirst: FeatureFlags.shared.recipeFirst)
 
         NavigationStack(path: $state.navigationPath) {
             ZStack(alignment: .top) {
                 TabView(selection: $state.selectedTray) {
-                    FeedView()
-                        .tag(AppState.TrayTab.feed)
+                    leadingPage(for: layout)
+                    // Outside the layout switch so My Tray keeps its identity
+                    // (and its loaded state) when the flag flips mid-session.
                     MyTrayView()
                         .tag(AppState.TrayTab.myTray)
-                    FindView()
-                        .tag(AppState.TrayTab.find)
+                    trailingPage(for: layout)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .ignoresSafeArea(edges: .bottom)
@@ -44,6 +52,7 @@ struct AppShellView: View {
                     if !shell.pillsHidden {
                         TopPill(
                             selectedTray: $state.selectedTray,
+                            layout: layout,
                             hasUnread: appState.unreadNotificationCount > 0,
                             unreadCount: appState.unreadNotificationCount,
                             onBellTap: {
@@ -127,6 +136,70 @@ struct AppShellView: View {
             // while signed out, after a reinstall, or on a second device.
             // Read path: failures log, never toast (D95).
             await SubscriptionService.shared.syncCurrentEntitlements()
+        }
+        // W195: a separate .task so the launch calls above don't wait on the
+        // /features round trip. Paging TabView pages don't re-run .task, so
+        // the shell owns the refresh. Read path: failures log only (D95).
+        .task {
+            let before = ShellLayout.decide(recipeFirst: FeatureFlags.shared.recipeFirst)
+            await FeatureFlags.shared.refresh()
+            let after = ShellLayout.decide(recipeFirst: FeatureFlags.shared.recipeFirst)
+            let tab = after.tabAfterLaunchFetch(from: before, current: appState.selectedTray)
+            if tab != appState.selectedTray {
+                appState.selectedTray = tab
+            }
+        }
+        .onAppear {
+            guard !didApplyInitialTab else { return }
+            didApplyInitialTab = true
+            // Classic keeps today's behaviour: AppState already opens on My Tray,
+            // and a re-mount in the same process keeps the last tab.
+            let launchLayout = ShellLayout.decide(recipeFirst: FeatureFlags.shared.recipeFirst)
+            if launchLayout == .recipeFirst {
+                appState.selectedTray = launchLayout.initialTab
+            }
+        }
+        .onChange(of: FeatureFlags.shared.recipeFirst) { _, recipeFirst in
+            let newLayout = ShellLayout.decide(recipeFirst: recipeFirst)
+            appState.selectedTray = newLayout.normalize(appState.selectedTray)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .background:
+                wasBackgrounded = true
+            case .active where wasBackgrounded:
+                wasBackgrounded = false
+                Task { await FeatureFlags.shared.refresh() }
+            default:
+                break
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func leadingPage(for layout: ShellLayout) -> some View {
+        switch layout {
+        case .classic:
+            FeedView()
+                .tag(AppState.TrayTab.feed)
+        case .recipeFirst:
+            HomeView(
+                onCreateRecipe: { showCreatePost = true },
+                onOpenSearch: { appState.selectedTray = .search }
+            )
+            .tag(AppState.TrayTab.home)
+        }
+    }
+
+    @ViewBuilder
+    private func trailingPage(for layout: ShellLayout) -> some View {
+        switch layout {
+        case .classic:
+            FindView()
+                .tag(AppState.TrayTab.find)
+        case .recipeFirst:
+            SearchView()
+                .tag(AppState.TrayTab.search)
         }
     }
 
