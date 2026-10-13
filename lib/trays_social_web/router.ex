@@ -381,14 +381,34 @@ defmodule TraysSocialWeb.Router do
     post "/users/register", UserRegistrationController, :create
   end
 
+  # W203: signed in but not necessarily confirmed. These are the escape
+  # routes an unconfirmed user needs (the confirm-email page itself, and
+  # settings to fix a mistyped email), so they must stay OUTSIDE the
+  # :require_confirmed_user scope below or the gate would redirect-loop.
+  # Resend, confirm-by-token and log-out are in the public scope further down.
   scope "/", TraysSocialWeb do
     pipe_through [:browser, :require_authenticated_user]
+
+    get "/users/confirm-required", UserConfirmationController, :required
+
+    live "/users/settings", SettingsLive.Index, :index
+    put "/users/settings", UserSettingsController, :update
+    get "/users/settings/confirm-email/:token", UserSettingsController, :confirm_email
+  end
+
+  scope "/", TraysSocialWeb do
+    pipe_through [:browser, :require_authenticated_user, :require_confirmed_user]
 
     # Primary content surfaces — D60: gated to logged-in users so anonymous
     # visitors don't see other users' recipes/profiles. The public landing
     # page lives at "/" (W120); the personalized feed moved to "/feed".
     # /users/confirm/<token>, /privacy, /terms, /.well-known/*, and /api/*
     # remain publicly accessible (see scopes above and the api_v1_auth scope).
+    #
+    # W203: also gated on a confirmed email. The plug covers the first HTTP
+    # request; each LiveView here ALSO declares
+    # `on_mount {UserAuth, :require_confirmed_user}`, because live navigation
+    # between these routes never re-runs router plugs.
     live "/home", HomeLive.Index, :index
     live "/feed", FeedLive.Index, :index
     live "/explore", ExploreLive.Index, :index
@@ -400,11 +420,7 @@ defmodule TraysSocialWeb.Router do
     live "/welcome", WelcomeLive.Index, :index
     live "/posts/new", PostLive.New, :new
     live "/my-tray", MyTrayLive.Index, :index
-    live "/users/settings", SettingsLive.Index, :index
     live "/notifications", NotificationsLive.Index, :index
-
-    put "/users/settings", UserSettingsController, :update
-    get "/users/settings/confirm-email/:token", UserSettingsController, :confirm_email
   end
 
   scope "/", TraysSocialWeb do

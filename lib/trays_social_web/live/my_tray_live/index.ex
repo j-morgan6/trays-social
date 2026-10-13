@@ -15,6 +15,7 @@ defmodule TraysSocialWeb.MyTrayLive.Index do
   alias TraysSocial.Posts
 
   on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
+  on_mount {TraysSocialWeb.UserAuth, :require_confirmed_user}
   on_mount {TraysSocialWeb.NotificationsHook, :mount_notifications}
 
   @impl true

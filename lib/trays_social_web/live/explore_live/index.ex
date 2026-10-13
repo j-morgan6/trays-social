@@ -10,6 +10,7 @@ defmodule TraysSocialWeb.ExploreLive.Index do
   alias TraysSocialWeb.ExploreLive.RecipeFirstComponents
 
   on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
+  on_mount {TraysSocialWeb.UserAuth, :require_confirmed_user}
   on_mount {TraysSocialWeb.NotificationsHook, :mount_notifications}
 
   # Filter chips for the editorial Find screen. Only :quick is wired to

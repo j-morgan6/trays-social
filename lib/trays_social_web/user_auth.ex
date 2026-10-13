@@ -255,6 +255,11 @@ defmodule TraysSocialWeb.UserAuth do
 
   @doc """
   Plug for routes that require the user to have confirmed their email.
+
+  W203: unconfirmed users are sent to the confirm-email page, which lives
+  outside this plug (along with settings, resend, confirm and log-out), so
+  the redirect can never loop. It used to send them to /feed, which is now
+  itself gated.
   """
   def require_confirmed_user(conn, _opts) do
     user = conn.assigns.current_scope && conn.assigns.current_scope.user
@@ -263,8 +268,7 @@ defmodule TraysSocialWeb.UserAuth do
       conn
     else
       conn
-      |> Controller.put_flash(:error, "You must confirm your email to do that.")
-      |> Controller.redirect(to: ~p"/feed")
+      |> Controller.redirect(to: ~p"/users/confirm-required")
       |> halt()
     end
   end
@@ -282,6 +286,12 @@ defmodule TraysSocialWeb.UserAuth do
 
     * `:require_authenticated_user` - Requires the user to be authenticated,
       redirects to login page if not.
+    * `:require_confirmed_user` - Requires the signed-in user to have confirmed
+      their email, redirects to the confirm-email page if not. Must run after
+      `:require_authenticated_user`.
+    * `:redirect_unconfirmed_user` - For public LiveViews: anonymous and
+      confirmed visitors continue, a signed-in but unconfirmed user is
+      redirected to the confirm-email page.
     * `:mount_current_scope` - Mounts current_scope for LiveViews that can work
       with or without authentication.
   """
@@ -307,12 +317,19 @@ defmodule TraysSocialWeb.UserAuth do
     if user && user.confirmed_at do
       {:cont, socket}
     else
-      socket =
-        socket
-        |> LiveView.put_flash(:error, "You must confirm your email to do that.")
-        |> LiveView.redirect(to: ~p"/feed")
+      {:halt, LiveView.redirect(socket, to: ~p"/users/confirm-required")}
+    end
+  end
 
-      {:halt, socket}
+  def on_mount(:redirect_unconfirmed_user, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+
+    case socket.assigns.current_scope do
+      %{user: %User{confirmed_at: nil}} ->
+        {:halt, LiveView.redirect(socket, to: ~p"/users/confirm-required")}
+
+      _ ->
+        {:cont, socket}
     end
   end
 

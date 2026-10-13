@@ -301,6 +301,28 @@ defmodule TraysSocial.AccountsTest do
       refute Repo.get_by(UserToken, user_id: user.id)
     end
 
+    # W203: following the change-email link proves control of the new
+    # address, so an unconfirmed user leaves the confirm-email gate.
+    test "confirms an unconfirmed user", %{user: user, token: token} do
+      assert is_nil(user.confirmed_at)
+      assert {:ok, %{confirmed_at: %DateTime{}}} = Accounts.update_user_email(user, token)
+      assert %DateTime{} = Repo.get!(User, user.id).confirmed_at
+    end
+
+    test "keeps an existing confirmed_at" do
+      confirmed_at = DateTime.add(DateTime.utc_now(:second), -3, :day)
+      user = user_fixture() |> Ecto.Changeset.change(confirmed_at: confirmed_at) |> Repo.update!()
+      email = unique_user_email()
+
+      token =
+        extract_user_token(fn url ->
+          Accounts.deliver_user_update_email_instructions(%{user | email: email}, user.email, url)
+        end)
+
+      assert {:ok, %{confirmed_at: ^confirmed_at}} = Accounts.update_user_email(user, token)
+      assert Repo.get!(User, user.id).confirmed_at == confirmed_at
+    end
+
     test "does not update email with invalid token", %{user: user} do
       assert Accounts.update_user_email(user, "oops") ==
                {:error, :transaction_aborted}

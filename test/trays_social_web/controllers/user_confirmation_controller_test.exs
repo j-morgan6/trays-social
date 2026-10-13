@@ -26,7 +26,7 @@ defmodule TraysSocialWeb.UserConfirmationControllerTest do
 
       conn = conn |> log_in_user(user) |> post(~p"/users/confirmation/resend")
 
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/users/confirm-required"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "new confirmation link has been sent"
 
       assert_email_sent(fn email ->
@@ -46,7 +46,7 @@ defmodule TraysSocialWeb.UserConfirmationControllerTest do
           end)
         end)
 
-      assert redirected_to(conn) == ~p"/"
+      assert redirected_to(conn) == ~p"/users/confirm-required"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "couldn't send"
       refute Phoenix.Flash.get(conn.assigns.flash, :info)
     end
@@ -102,7 +102,7 @@ defmodule TraysSocialWeb.UserConfirmationControllerTest do
         |> log_in_user(user)
         |> post(~p"/users/confirmation/resend")
 
-      assert redirected_to(second) == ~p"/"
+      assert redirected_to(second) == ~p"/users/confirm-required"
 
       assert Phoenix.Flash.get(second.assigns.flash, :error) ==
                "Please wait before requesting another confirmation email."
@@ -111,13 +111,13 @@ defmodule TraysSocialWeb.UserConfirmationControllerTest do
     end
   end
 
-  describe "GET /users/confirm/:token clears the confirmation banner" do
-    @banner_text "Please confirm your email address to post"
-
-    test "following the emailed link removes the banner for that user" do
+  # W203: the old warning banner is gone; an unconfirmed user is gated to
+  # the confirm page instead, and confirming lifts the gate.
+  describe "GET /users/confirm/:token lifts the confirmation gate" do
+    test "following the emailed link lets the user into the app" do
       user = unconfirmed_user_fixture()
 
-      assert signed_in_page(user) =~ @banner_text
+      assert redirected_to(signed_in_get(user, ~p"/home")) == ~p"/users/confirm-required"
 
       token =
         extract_user_token(fn url_fun ->
@@ -128,21 +128,15 @@ defmodule TraysSocialWeb.UserConfirmationControllerTest do
 
       assert redirected_to(conn) == ~p"/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Email confirmed successfully."
-      refute signed_in_page(user) =~ @banner_text
+
+      assert html_response(signed_in_get(user, ~p"/home"), 200)
+
+      confirm_page = signed_in_get(user, ~p"/users/confirm-required")
+      assert redirected_to(confirm_page) == TraysSocialWeb.UserAuth.signed_in_path(confirm_page)
     end
   end
 
-  # The root layout (and so the banner) renders on whatever signed-in page
-  # "/" lands on (/feed, /home or /welcome, depending on the user), so
-  # follow the redirect chain to it.
-  defp signed_in_page(user, path \\ ~p"/", hops \\ 3) do
-    conn = build_conn() |> log_in_user(user) |> get(path)
-
-    case conn.status do
-      200 -> html_response(conn, 200)
-      302 when hops > 0 -> signed_in_page(user, redirected_to(conn), hops - 1)
-    end
-  end
+  defp signed_in_get(user, path), do: build_conn() |> log_in_user(user) |> get(path)
 
   defp with_failing_mailer(fun) do
     original = Application.get_env(:trays_social, TraysSocial.Mailer)

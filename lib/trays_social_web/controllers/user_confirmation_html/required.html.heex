@@ -1,0 +1,48 @@
+<%!-- W203: the confirm-email gate. Every logged-in page sends an
+     unconfirmed user here, and this page offers only the ways out:
+     resend the link, fix the address in settings, or log out. Copy
+     follows the iOS EmailVerificationGateView. Same editorial shell as
+     the rest of the auth flow; the root layout supplies the chrome. --%>
+
+<div id="confirm-required" class="max-w-[440px] mx-auto px-6 pt-12 md:pt-16 pb-16">
+  <div class="mb-8">
+    <div class="font-mono text-[11px] text-primary uppercase tracking-[0.18em] mb-3">
+      One last step
+    </div>
+    <h1 class="font-serif-editorial text-[44px] md:text-[52px] leading-none tracking-[-0.015em] text-base-content mb-3">
+      Verify your email
+    </h1>
+    <p class="text-[15px] text-base-content/70 leading-[1.55]">
+      We sent a verification link to <strong class="text-base-content">{@email}</strong>.
+      Open the link in that email, then come back here.
+    </p>
+  </div>
+
+  <div class="bg-base-100 border border-base-300 rounded-md p-7 md:p-8">
+    <.form for={%{}} id="resend-confirmation-form" action={~p"/users/confirmation/resend"}>
+      <.button phx-disable-with="Sending…" class="btn btn-primary w-full">
+        Resend verification email
+      </.button>
+    </.form>
+
+    <.link
+      id="confirm-required-change-email"
+      href={~p"/users/settings"}
+      class="btn btn-ghost border border-base-300 w-full mt-2"
+    >
+      Change email
+    </.link>
+
+    <p class="mt-6 pt-4 border-t border-base-300 text-[12px] text-base-content/60">
+      Wrong account?
+      <.link
+        id="confirm-required-log-out"
+        href={~p"/users/log-out"}
+        method="delete"
+        class="underline"
+      >
+        Log out
+      </.link>
+    </p>
+  </div>
+</div>

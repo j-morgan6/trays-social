@@ -7,7 +7,7 @@ defmodule TraysSocialWeb.PostLive.Show do
   alias TraysSocial.Monetization
   alias TraysSocial.Posts
 
-  on_mount {TraysSocialWeb.UserAuth, :mount_current_scope}
+  on_mount {TraysSocialWeb.UserAuth, :redirect_unconfirmed_user}
   on_mount {TraysSocialWeb.NotificationsHook, :mount_notifications}
 
   @impl true

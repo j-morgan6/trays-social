@@ -306,4 +306,93 @@ defmodule TraysSocialWeb.UserAuthTest do
       refute conn.status
     end
   end
+
+  # W203: the confirmed-email gate. Both the plug and the on_mount send an
+  # unconfirmed user to the confirm page, which is outside the gate.
+  describe "require_confirmed_user/2" do
+    test "redirects an unconfirmed user to the confirm page", %{conn: conn} do
+      conn =
+        conn
+        |> assign(:current_scope, Scope.for_user(unconfirmed_user_fixture()))
+        |> UserAuth.require_confirmed_user([])
+
+      assert conn.halted
+      assert redirected_to(conn) == ~p"/users/confirm-required"
+    end
+
+    test "redirects when there is no signed-in user", %{conn: conn} do
+      conn =
+        conn
+        |> assign(:current_scope, nil)
+        |> UserAuth.require_confirmed_user([])
+
+      assert conn.halted
+      assert redirected_to(conn) == ~p"/users/confirm-required"
+    end
+
+    test "lets a confirmed user through", %{conn: conn, user: user} do
+      conn =
+        conn
+        |> assign(:current_scope, Scope.for_user(user))
+        |> UserAuth.require_confirmed_user([])
+
+      refute conn.halted
+      refute conn.status
+    end
+  end
+
+  describe "on_mount :require_confirmed_user" do
+    test "halts an unconfirmed user with a redirect to the confirm page" do
+      session = session_for(unconfirmed_user_fixture())
+
+      assert {:halt, socket} =
+               UserAuth.on_mount(:require_confirmed_user, %{}, session, live_socket())
+
+      assert {:redirect, %{to: "/users/confirm-required"}} = socket.redirected
+    end
+
+    test "continues for a confirmed user", %{user: user} do
+      assert {:cont, socket} =
+               UserAuth.on_mount(:require_confirmed_user, %{}, session_for(user), live_socket())
+
+      assert socket.assigns.current_scope.user.id == user.id
+    end
+  end
+
+  describe "on_mount :redirect_unconfirmed_user" do
+    test "continues for a logged-out visitor" do
+      assert {:cont, socket} =
+               UserAuth.on_mount(:redirect_unconfirmed_user, %{}, %{}, live_socket())
+
+      assert is_nil(socket.assigns.current_scope)
+    end
+
+    test "continues for a confirmed user", %{user: user} do
+      assert {:cont, _socket} =
+               UserAuth.on_mount(
+                 :redirect_unconfirmed_user,
+                 %{},
+                 session_for(user),
+                 live_socket()
+               )
+    end
+
+    test "redirects an unconfirmed user to the confirm page" do
+      session = session_for(unconfirmed_user_fixture())
+
+      assert {:halt, socket} =
+               UserAuth.on_mount(:redirect_unconfirmed_user, %{}, session, live_socket())
+
+      assert {:redirect, %{to: "/users/confirm-required"}} = socket.redirected
+    end
+  end
+
+  defp session_for(user), do: %{"user_token" => Accounts.generate_user_session_token(user)}
+
+  defp live_socket do
+    %Phoenix.LiveView.Socket{
+      endpoint: TraysSocialWeb.Endpoint,
+      assigns: %{__changed__: %{}, flash: %{}}
+    }
+  end
 end

@@ -276,7 +276,11 @@ defmodule TraysSocial.Accounts do
     Repo.transact(fn ->
       with {:ok, query} <- UserToken.verify_change_email_token_query(token, context),
            %UserToken{sent_to: email} <- Repo.one(query),
-           {:ok, user} <- Repo.update(User.email_changeset(user, %{email: email})),
+           {:ok, user} <-
+             user
+             |> User.email_changeset(%{email: email})
+             |> confirm_if_unconfirmed()
+             |> Repo.update(),
            {_count, _result} <-
              Repo.delete_all(from(UserToken, where: [user_id: ^user.id, context: ^context])) do
         {:ok, user}
@@ -285,6 +289,20 @@ defmodule TraysSocial.Accounts do
       end
     end)
   end
+
+  # W203: the web app is gated on a confirmed email, and "Change email" is
+  # the way out for someone who mistyped their address at sign-up. The
+  # change link was mailed to the new address, so following it proves the
+  # user controls that address: confirm them rather than making them
+  # resend and click a second link. An existing confirmed_at is kept.
+  # Deliberately no maybe_grant_admin/1 here: the admin grant stays tied to
+  # confirming the address the account registered with, so an email change
+  # can never be the step that turns an account into an admin.
+  defp confirm_if_unconfirmed(%Ecto.Changeset{data: %User{confirmed_at: nil}} = changeset) do
+    Ecto.Changeset.put_change(changeset, :confirmed_at, DateTime.utc_now(:second))
+  end
+
+  defp confirm_if_unconfirmed(changeset), do: changeset
 
   @doc """
   Returns an `%Ecto.Changeset{}` for changing the user password.
