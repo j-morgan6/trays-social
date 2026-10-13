@@ -38,15 +38,15 @@ Run `scripts/fly-inventory-check.sh` to diff reality against this file.
 | `trays-social` | `trays-social-db.flycast:5432` | `trays_social` |
 | `trays-social-review` | `trays-social-review-pg.flycast:5432` | `trays_social_review` |
 
-### Managed Postgres — being retired
+### Managed Postgres — none
 
-| Cluster | Status |
-| --- | --- |
-| `nvwq9ozjv5403kl1` | **Drained 2026-09-17.** Was staging's database. Nothing points at it. Pending destroy |
-| `3x9jv02x5g4o6qp7` | **Never used by any app.** Pending destroy |
+**Both MPG clusters were destroyed on 2026-09-17** (`nvwq9ozjv5403kl1`, which
+had been staging's database, and `3x9jv02x5g4o6qp7`, which nothing ever used).
+They cost $42.16/mo each.
 
-Both are `basic` plan, 10 GB, yyz, **$42.16/mo each**. Neither serves anything
-as of 2026-09-17.
+This project uses **no Managed Postgres**. `scripts/fly-inventory-check.sh`
+treats any MPG cluster as a finding — if one appears, someone created it and it
+is billing $42.16/mo.
 
 ---
 
@@ -98,11 +98,13 @@ Billing audit of invoice `D4CTAHXM-0011` (Aug 2026, $102.94) found $84.32/mo —
   connections left on the old cluster.
 - Old cluster left running and untouched as the rollback path.
 
-Rollback (valid until `nvwq9ozjv5403kl1` is destroyed):
+Verified green in CI run `35290535562`: `mix test`, `deploy_review` (which ran
+`release_command = '/app/bin/migrate'` against the new database), and
+`deploy_prod` all succeeded.
 
-```sh
-fly secrets set DATABASE_URL="$(cat ~/trays-review-OLD-database-url.txt)" -a trays-social-review
-```
+Both MPG clusters were then destroyed. **The secret-swap rollback path is now
+closed** — the only remaining copy of the pre-migration staging data is the
+local dump at `~/trays-review-staging-backup.dump` (102 KB, 27 tables).
 
-**Still open:** destroy both MPG clusters once a staging deploy has gone green.
-Expected result: $102.94/mo → ~$20/mo.
+Result: **$102.94/mo → ~$21/mo** (~$985/yr). Remaining spend is prod web $6.57,
+prod db $2.24, staging web $6.57, staging db $2.24, and $3.42 of volumes.
