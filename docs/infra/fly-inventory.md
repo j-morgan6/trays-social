@@ -20,7 +20,7 @@ Run `scripts/fly-inventory-check.sh` to diff reality against this file.
 | `trays-social` | **production** web (trays.app) | 1 × shared-cpu-1x, 1 GB, yyz | `min_machines_running = 1` (W161 — deliberate, keeps it warm) |
 | `trays-social-review` | staging web (trays-social-review.fly.dev) | 1 × shared-cpu-1x, 1 GB, yyz | Backs iOS **Debug** and **TestFlight-beta** schemes — see `ios/TraysSocial/project.yml` |
 | `trays-social-db` | **production** database | 1 × shared-cpu-1x, 256 MB, yyz | Unmanaged `postgres-flex`. Database `trays_social` |
-| `trays-social-review-pg` | staging database | 1 × shared-cpu-1x, 256 MB, yyz | Unmanaged `postgres-flex:18.1`, `--autostart`. Database `trays_social_review` |
+| `trays-social-review-pg` | staging database | 1 × shared-cpu-1x, 512 MB, yyz | Unmanaged `postgres-flex:18.1`, `--autostart`. Database `trays_social_review` |
 
 ### Volumes
 
@@ -108,3 +108,19 @@ local dump at `~/trays-review-staging-backup.dump` (102 KB, 27 tables).
 
 Result: **$102.94/mo → ~$21/mo** (~$985/yr). Remaining spend is prod web $6.57,
 prod db $2.24, staging web $6.57, staging db $2.24, and $3.42 of volumes.
+
+### 2026-10-13 — staging database resized to 512 MB (W202)
+
+At 256 MB, `trays-social-review-pg` reset connections repeatedly while the
+recipe-first goal (G42) was being tested on review: its `vm` health check went
+critical and the app logged `DBConnection.ConnectionError tcp recv (idle):
+closed`, which crashed in-flight LiveViews and made Browse and What I have look
+broken. The prod database `trays-social-db` was not touched.
+
+- `fly machine update 841e0dcde30e18 --vm-memory 512 -a trays-social-review-pg`
+  (same machine and volume; about a minute of downtime).
+- Afterwards: `shared-cpu-1x:512MB`, all three health checks (`pg`, `role`,
+  `vm`) passing.
+- Adds roughly $2-3/mo to the staging database line above.
+- If resets return at 512 MB, check the idle/autostop settings before resizing
+  again.
