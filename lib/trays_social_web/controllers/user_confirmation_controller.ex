@@ -26,15 +26,8 @@ defmodule TraysSocialWeb.UserConfirmationController do
 
     case check_resend_rate_limit(conn, user) do
       :ok ->
-        if user && is_nil(user.confirmed_at) do
-          Accounts.deliver_user_confirmation_instructions(
-            user,
-            &url(~p"/users/confirm/#{&1}")
-          )
-        end
-
         conn
-        |> put_flash(:info, "If your email needs confirmation, a new link has been sent.")
+        |> send_confirmation(user)
         |> redirect(to: ~p"/")
 
       :rate_limited ->
@@ -42,6 +35,34 @@ defmodule TraysSocialWeb.UserConfirmationController do
         |> put_flash(:error, "Please wait before requesting another confirmation email.")
         |> redirect(to: ~p"/")
     end
+  end
+
+  # D115: the delivery result used to be ignored, so a mailer rejection
+  # (Resend error, unverified sender, network) showed the same success
+  # flash as a real send and the user was left waiting for nothing.
+  # UserNotifier already logs and reports the failure to ErrorTracker;
+  # this only tells the user. Logged-out callers keep the generic
+  # message so the endpoint reveals nothing about any account.
+  defp send_confirmation(conn, %{confirmed_at: nil} = user) do
+    case Accounts.deliver_user_confirmation_instructions(user, &url(~p"/users/confirm/#{&1}")) do
+      {:ok, _email} ->
+        put_flash(conn, :info, "A new confirmation link has been sent. Check your inbox.")
+
+      {:error, _reason} ->
+        put_flash(
+          conn,
+          :error,
+          "We couldn't send the confirmation email right now. Please try again in a few minutes."
+        )
+    end
+  end
+
+  defp send_confirmation(conn, %{confirmed_at: %DateTime{}}) do
+    put_flash(conn, :info, "Your email is already confirmed.")
+  end
+
+  defp send_confirmation(conn, nil) do
+    put_flash(conn, :info, "If your email needs confirmation, a new link has been sent.")
   end
 
   defp check_resend_rate_limit(conn, user) do
