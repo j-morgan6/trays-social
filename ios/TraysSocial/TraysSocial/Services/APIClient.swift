@@ -186,17 +186,37 @@ actor APIClient {
         return stripped.isEmpty ? "upload.jpg" : stripped
     }
 
-    // MARK: - Private
-
-    private func buildRequest(method: String, path: String, queryItems: [URLQueryItem]? = nil) throws -> URLRequest {
-        var components = URLComponents(string: baseURL + path)!
+    /// Builds the request URL from `baseURL + path` and optional query items.
+    ///
+    /// `URLComponents.queryItems` percent-encodes most reserved characters but
+    /// leaves a literal `+` untouched, and Plug decodes `+` in a query string as
+    /// a space — so "c++" would reach the server as "c  ". After URLComponents
+    /// has encoded everything else, any `+` left in the encoded query can only
+    /// have come from a query item name or value, so it is rewritten to `%2B`.
+    /// Spaces are already `%20` and a literal `%` is already `%25`, so this
+    /// cannot double-encode. Throws `APIError.invalidURL` rather than crashing
+    /// when `baseURL + path` does not parse. Pure and static so it can be unit
+    /// tested without the actor.
+    static func makeURL(baseURL: String, path: String, queryItems: [URLQueryItem]?) throws -> URL {
+        guard var components = URLComponents(string: baseURL + path) else {
+            throw APIError.invalidURL
+        }
         if let queryItems, !queryItems.isEmpty {
             components.queryItems = queryItems
+            components.percentEncodedQuery = components.percentEncodedQuery?
+                .replacingOccurrences(of: "+", with: "%2B")
         }
 
         guard let url = components.url else {
             throw APIError.invalidURL
         }
+        return url
+    }
+
+    // MARK: - Private
+
+    private func buildRequest(method: String, path: String, queryItems: [URLQueryItem]? = nil) throws -> URLRequest {
+        let url = try Self.makeURL(baseURL: baseURL, path: path, queryItems: queryItems)
 
         var request = URLRequest(url: url)
         request.httpMethod = method
