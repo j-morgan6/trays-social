@@ -8,6 +8,10 @@ defmodule TraysSocialWeb.HomeLive.IndexTest do
 
   alias TraysSocial.Accounts
 
+  # Placeholder text unique to the root layout's header search pill (the
+  # /explore page field reads "Search recipes, ingredients, cooks…").
+  @header_search "Search recipes, cooks, ingredients"
+
   setup %{conn: conn} do
     original = Application.get_env(:trays_social, :features, [])
     on_exit(fn -> Application.put_env(:trays_social, :features, original) end)
@@ -108,9 +112,9 @@ defmodule TraysSocialWeb.HomeLive.IndexTest do
       html = conn |> get(~p"/home") |> html_response(200)
 
       # Desktop and mobile each link Home, Search and My Tray; the header
-      # search pill is a third /search link.
+      # search pill is gone, so the Search tabs are the only /search links.
       assert count(html, ~s(href="/home")) == 2
-      assert count(html, ~s(href="/search")) == 3
+      assert count(html, ~s(href="/search")) == 2
       assert count(html, ~s(href="/my-tray")) == 2
       assert html =~ "<span>Home</span>"
       assert html =~ "<span>Search</span>"
@@ -140,8 +144,26 @@ defmodule TraysSocialWeb.HomeLive.IndexTest do
 
       assert html =~ ~s(href="/feed")
       assert html =~ ~s(href="/explore")
+      assert html =~ @header_search
       refute html =~ ~s(href="/home")
       refute html =~ ~s(href="/search")
+    end
+
+    test "flag on: header search box is not rendered", %{conn: conn, original: original} do
+      flag_on(original)
+      html = conn |> get(~p"/home") |> html_response(200)
+
+      refute html =~ @header_search
+      # The Search tab stays reachable on desktop and mobile.
+      assert count(html, ~s(href="/search")) == 2
+      assert html =~ "<span>Search</span>"
+    end
+
+    test "flag off: header search box still renders", %{conn: conn} do
+      html = conn |> get(~p"/home") |> html_response(200)
+
+      assert count(html, @header_search) == 1
+      assert html =~ ~r{href="/explore"[^>]*rounded-full}
     end
   end
 end

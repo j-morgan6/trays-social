@@ -42,8 +42,9 @@
     <%!-- Editorial header — matches the WebHeader from the design handoff:
          serif Trays wordmark in primary green, three-tab nav (Feed / Find /
          My Tray, or Home / Search / My Tray when recipe-first) with a primary
-         under-border on the active tab, search, amber New recipe pill,
-         notification bell with amber unread dot, avatar dropdown. --%>
+         under-border on the active tab, search pill (classic nav only),
+         amber New recipe pill, notification bell with amber unread dot,
+         avatar dropdown. --%>
     <% nav_tab = assigns[:current_tab] %>
     <%!-- Recipe-first nav (Home / Search / My Tray) for signed-in users when
          the flag is on. Guests always get the classic nav. --%>
@@ -101,15 +102,18 @@
 
         <div class="flex-1"></div>
 
-        <%!-- Quiet search field — links to Find (Search when recipe-first).
-             Mirrors the design's always-visible search pill in the WebHeader. --%>
-        <.link
-          href={if recipe_nav, do: ~p"/search", else: ~p"/explore"}
-          class="hidden md:inline-flex items-center gap-2 h-9 w-[320px] px-3.5 rounded-full bg-base-200 border border-base-300 text-base-content/60 text-xs hover:text-base-content transition-colors"
-        >
-          <.icon name="hero-magnifying-glass" class="size-4" />
-          <span>Search recipes, cooks, ingredients…</span>
-        </.link>
+        <%!-- Quiet search field — links to Find. Mirrors the design's
+             always-visible search pill in the WebHeader. Hidden in the
+             recipe-first nav, where the Search tab is the single entry point. --%>
+        <%= unless recipe_nav do %>
+          <.link
+            href={~p"/explore"}
+            class="hidden md:inline-flex items-center gap-2 h-9 w-[320px] px-3.5 rounded-full bg-base-200 border border-base-300 text-base-content/60 text-xs hover:text-base-content transition-colors"
+          >
+            <.icon name="hero-magnifying-glass" class="size-4" />
+            <span>Search recipes, cooks, ingredients…</span>
+          </.link>
+        <% end %>
 
         <%= if @current_scope do %>
           <%!-- Notifications bell with amber unread dot --%>
