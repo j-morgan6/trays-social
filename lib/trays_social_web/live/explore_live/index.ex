@@ -48,9 +48,7 @@ defmodule TraysSocialWeb.ExploreLive.Index do
        socket
        |> assign_static()
        |> assign(:loading, false)
-       |> assign(:trending, Posts.list_trending_posts(10))
-       |> assign(:recent, Posts.list_recent_posts(10))
-       |> assign(:tag_sections, load_tag_sections())
+       |> assign_classic_rails()
        |> assign(:results, [])
        |> maybe_assign_most_saved()}
     else
@@ -85,6 +83,21 @@ defmodule TraysSocialWeb.ExploreLive.Index do
     |> assign(:category, nil)
     |> assign(:groups, nil)
     |> assign(:most_saved, [])
+  end
+
+  # The recipe-first branch of the template never renders the classic
+  # trending / new / tag rails, so skip their queries there. The assigns are
+  # still set because the classic branch of the template reads them.
+  defp assign_classic_rails(%{assigns: %{recipe_first: true}} = socket) do
+    assign(socket, trending: [], recent: [], tag_sections: [])
+  end
+
+  defp assign_classic_rails(socket) do
+    assign(socket,
+      trending: Posts.list_trending_posts(10),
+      recent: Posts.list_recent_posts(10),
+      tag_sections: load_tag_sections()
+    )
   end
 
   defp maybe_assign_most_saved(%{assigns: %{recipe_first: true}} = socket) do

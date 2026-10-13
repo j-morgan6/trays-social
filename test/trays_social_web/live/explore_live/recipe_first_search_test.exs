@@ -7,6 +7,7 @@ defmodule TraysSocialWeb.ExploreLive.RecipeFirstSearchTest do
   import TraysSocial.PostsFixtures
 
   alias TraysSocial.Accounts
+  alias TraysSocial.Repo
 
   setup %{conn: conn} do
     original = Application.get_env(:trays_social, :features, [])
@@ -123,5 +124,82 @@ defmodule TraysSocialWeb.ExploreLive.RecipeFirstSearchTest do
     render_click(view, "select-category", %{"key" => "quick_dinners"})
     html = view |> element("form[phx-change=search]") |> render_change(%{"query" => "braise"})
     assert html =~ "Slow braise"
+  end
+
+  # A recent, liked, tagged post: each classic rail query (trending, recent,
+  # tag sections) returns it, so an empty assign can only mean the query was
+  # skipped.
+  defp classic_rail_post(user) do
+    %{user_id: user.id, caption: "Rail stew", post_tags: [%{tag: "stew"}]}
+    |> post_fixture()
+    |> Ecto.Changeset.change(%{like_count: 5})
+    |> Repo.update!()
+  end
+
+  test "flag on: classic trending, recent and tag rails are not loaded", %{
+    conn: conn,
+    viewer: viewer,
+    original: original
+  } do
+    flag_on(original)
+    classic_rail_post(viewer)
+
+    {:ok, view, html} = live(conn, ~p"/search")
+
+    assigns = :sys.get_state(view.pid).socket.assigns
+    assert assigns.trending == []
+    assert assigns.recent == []
+    assert assigns.tag_sections == []
+
+    # Browse still renders, so the empty rails did not break the page.
+    assert html =~ "Most saved this week"
+    assert html =~ "Rail stew"
+  end
+
+  test "flag off: /explore still renders trending and tag rails", %{conn: conn, viewer: viewer} do
+    classic_rail_post(viewer)
+
+    {:ok, view, html} = live(conn, ~p"/explore")
+
+    assert html =~ "Popular this week"
+    assert html =~ "New on Trays"
+    assert html =~ "Stew"
+    assert html =~ "Rail stew"
+
+    assigns = :sys.get_state(view.pid).socket.assigns
+    assert [%{caption: "Rail stew"}] = assigns.trending
+    assert [%{caption: "Rail stew"}] = assigns.recent
+    assert [{"stew", [%{caption: "Rail stew"}]}] = assigns.tag_sections
+  end
+
+  # The flag is read once at mount: flipping it under a connected socket must
+  # not switch the branch or the rail assigns until the next mount.
+  test "flag flipped while connected: each socket keeps its mount-time branch", %{
+    conn: conn,
+    viewer: viewer,
+    original: original
+  } do
+    classic_rail_post(viewer)
+
+    flag_on(original)
+    {:ok, search_view, _html} = live(conn, ~p"/search")
+    Application.put_env(:trays_social, :features, original)
+
+    html = render_click(search_view, "clear-search", %{})
+    assert html =~ "Quick dinners"
+    refute html =~ "Popular this week"
+    assigns = :sys.get_state(search_view.pid).socket.assigns
+    assert assigns.recipe_first
+    assert {assigns.trending, assigns.recent, assigns.tag_sections} == {[], [], []}
+
+    {:ok, explore_view, _html} = live(conn, ~p"/explore")
+    flag_on(original)
+
+    html = render_click(explore_view, "clear-search", %{})
+    assert html =~ "Popular this week"
+    refute html =~ "Quick dinners"
+    assigns = :sys.get_state(explore_view.pid).socket.assigns
+    refute assigns.recipe_first
+    assert [%{caption: "Rail stew"}] = assigns.trending
   end
 end
