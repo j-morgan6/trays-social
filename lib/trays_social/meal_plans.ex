@@ -30,6 +30,11 @@ defmodule TraysSocial.MealPlans do
   alias TraysSocial.Posts.PostPhoto
   alias TraysSocial.Repo
 
+  require Logger
+
+  # Fallback when config omits :grocery_checks — config/config.exs sets it.
+  @default_retention_weeks 8
+
   @doc """
   Lists the user's entries for the week containing `week_start`, ordered by
   date then id, each with its post (and the post's photos) preloaded.
@@ -139,11 +144,13 @@ defmodule TraysSocial.MealPlans do
 
   Trade-off: only the SHAPE of `item_key` is validated, not that it resolves
   to an ingredient of a post this user planned that week. `grocery_checks`
-  therefore has no FK to posts or ingredients and no pruning path, so rows
-  for un-planned entries or since-edited recipes accumulate. This is safe —
-  rows are user-scoped and `grocery_list/2` only surfaces keys that resolve
-  to real planned ingredients, so a stale row is invisible — but the table
-  grows unbounded. A periodic prune of weeks older than N is the follow-up.
+  therefore has no FK to posts or ingredients, so rows for un-planned entries
+  or since-edited recipes can go stale. This is safe — rows are user-scoped
+  and `grocery_list/2` only surfaces keys that resolve to real planned
+  ingredients, so a stale row is invisible. Growth is bounded by age rather
+  than by write-path validation: `prune_grocery_checks/1` (W181) deletes
+  every row whose `week_start` falls outside the configured retention window,
+  never touching the current or a future week.
   """
   def set_check(user_id, %Date{} = week_start, item_key, checked) when is_boolean(checked) do
     monday = Date.beginning_of_week(week_start)
@@ -171,6 +178,64 @@ defmodule TraysSocial.MealPlans do
 
       :ok
     end
+  end
+
+  @doc """
+  W181: deletes `grocery_checks` rows older than the retention window, so the
+  table (written on every checkbox tap) does not grow unbounded.
+
+  A global maintenance operation — it takes no user id and is exposed on no
+  API or web surface. Operators run it through
+  `TraysSocial.Release.prune_grocery_checks/0` (see docs/grocery-checks-prune.md).
+
+  The cutoff is canonical, like `week_start` itself: the Monday of the
+  current week minus `retention_weeks` whole weeks. Rows with
+  `week_start < cutoff` are deleted, so the current week's rows — and any
+  future week a user is planning ahead — are never removed, whatever the
+  retention setting. Running it twice is idempotent: the second run deletes
+  nothing.
+
+  Options (for tests and one-off operator runs; production reads config):
+
+    * `:retention_weeks` — whole weeks to keep before the current one.
+      Defaults to `config :trays_social, :grocery_checks, retention_weeks:`.
+      Must be a positive integer, otherwise raises `ArgumentError`.
+    * `:today` — the reference date. Defaults to `Date.utc_today/0`.
+
+  Returns `{:ok, deleted_count}` and logs the count at `:info`.
+  """
+  def prune_grocery_checks(opts \\ []) do
+    retention_weeks = Keyword.get_lazy(opts, :retention_weeks, &configured_retention_weeks/0)
+    today = Keyword.get_lazy(opts, :today, &Date.utc_today/0)
+
+    unless is_integer(retention_weeks) and retention_weeks >= 1 do
+      raise ArgumentError,
+            "grocery_checks retention_weeks must be a positive integer, got: " <>
+              inspect(retention_weeks)
+    end
+
+    cutoff =
+      today
+      |> Date.beginning_of_week()
+      |> Date.add(-7 * retention_weeks)
+
+    {deleted, _} =
+      GroceryCheck
+      |> where([gc], gc.week_start < ^cutoff)
+      |> Repo.delete_all()
+
+    Logger.info(
+      "grocery_checks prune: deleted=#{deleted} cutoff=#{cutoff} " <>
+        "retention_weeks=#{retention_weeks}"
+    )
+
+    {:ok, deleted}
+  end
+
+  defp configured_retention_weeks do
+    :trays_social
+    |> Application.get_env(:grocery_checks, [])
+    |> Keyword.get(:retention_weeks, @default_retention_weeks)
   end
 
   defp week_window(%Date{} = date) do

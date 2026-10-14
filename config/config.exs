@@ -93,6 +93,13 @@ config :trays_social, :web_ads,
   script_url: nil,
   site_id: nil
 
+# W181 grocery_checks retention. TraysSocial.MealPlans.prune_grocery_checks/1
+# deletes check rows whose week_start is more than retention_weeks whole weeks
+# before the current week's Monday. The current week (and any future week) is
+# never pruned. Run via TraysSocial.Release.prune_grocery_checks/0 — see
+# docs/grocery-checks-prune.md. Must be a positive integer.
+config :trays_social, :grocery_checks, retention_weeks: 8
+
 # Configure ErrorTracker — captures unhandled exceptions and persists them
 # to the trays_social Postgres database. Self-hosted, no third-party calls.
 config :error_tracker, repo: TraysSocial.Repo, otp_app: :trays_social

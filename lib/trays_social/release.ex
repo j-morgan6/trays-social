@@ -9,12 +9,16 @@ defmodule TraysSocial.Release do
       bin/trays_social eval "TraysSocial.Release.seed_demo()"
 
   See docs/demo-seed.md for the operator workflow.
+
+  W181: `prune_grocery_checks/0` deletes grocery_checks rows older than the
+  retention window. See docs/grocery-checks-prune.md.
   """
   import Ecto.Query
 
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.Follow
   alias TraysSocial.Accounts.User
+  alias TraysSocial.MealPlans
   alias TraysSocial.Notifications.Notification
   alias TraysSocial.Posts
 
@@ -214,6 +218,27 @@ defmodule TraysSocial.Release do
       "[purge_demo] OK — removed #{counts.posts} posts, #{counts.follows} follows, " <>
         "#{counts.notifications} notifications. Demo accounts kept for App Review login."
     )
+
+    :ok
+  end
+
+  @doc """
+  W181: deletes `grocery_checks` rows older than the configured retention
+  window (`config :trays_social, :grocery_checks, retention_weeks:`). The
+  current week is never pruned and a re-run is a harmless no-op. Callable
+  from a release shell via:
+
+      bin/trays_social eval "TraysSocial.Release.prune_grocery_checks()"
+
+  There is no in-app scheduler; see docs/grocery-checks-prune.md for running
+  it periodically.
+  """
+  def prune_grocery_checks do
+    load_app()
+    {:ok, _apps} = Application.ensure_all_started(:trays_social)
+
+    {:ok, deleted} = MealPlans.prune_grocery_checks()
+    IO.puts("[prune_grocery_checks] OK — deleted #{deleted} grocery_checks rows.")
 
     :ok
   end

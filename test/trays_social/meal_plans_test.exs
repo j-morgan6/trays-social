@@ -350,4 +350,153 @@ defmodule TraysSocial.MealPlansTest do
       assert Repo.all(GroceryCheck) == []
     end
   end
+
+  describe "prune_grocery_checks/1" do
+    # "Today" is the Wednesday of the fixed week, so the current week's
+    # Monday is @monday. With retention_weeks: 2 the cutoff is @monday - 14.
+    @today @wednesday
+
+    defp check_fixture(user, week_start, item_key \\ "1:2") do
+      :ok = MealPlans.set_check(user.id, week_start, item_key, true)
+    end
+
+    defp weeks_ago(n), do: Date.add(@monday, -7 * n)
+
+    defp remaining_week_starts do
+      GroceryCheck
+      |> Repo.all()
+      |> Enum.map(& &1.week_start)
+      |> Enum.sort(Date)
+    end
+
+    test "deletes rows older than the window and keeps rows inside it" do
+      user = user_fixture()
+      for n <- [0, 1, 2, 3, 5], do: check_fixture(user, weeks_ago(n))
+
+      assert {:ok, 2} = MealPlans.prune_grocery_checks(retention_weeks: 2, today: @today)
+
+      assert remaining_week_starts() == [weeks_ago(2), weeks_ago(1), @monday]
+    end
+
+    test "keeps a row exactly on the Monday cutoff boundary" do
+      user = user_fixture()
+      cutoff = weeks_ago(2)
+      check_fixture(user, cutoff)
+      # The day before the cutoff Monday normalizes to the previous week.
+      check_fixture(user, Date.add(cutoff, -1))
+
+      assert {:ok, 1} = MealPlans.prune_grocery_checks(retention_weeks: 2, today: @today)
+      assert remaining_week_starts() == [cutoff]
+    end
+
+    test "the cutoff does not depend on which day of the week today is" do
+      user = user_fixture()
+      check_fixture(user, weeks_ago(1))
+      check_fixture(user, weeks_ago(2))
+
+      for today <- [@monday, @wednesday, @sunday] do
+        assert {:ok, _} = MealPlans.prune_grocery_checks(retention_weeks: 1, today: today)
+        assert remaining_week_starts() == [weeks_ago(1)]
+      end
+    end
+
+    test "never deletes the current week's or a future week's rows" do
+      user = user_fixture()
+      check_fixture(user, @monday)
+      check_fixture(user, @sunday, "3:4")
+      check_fixture(user, Date.add(@monday, 7))
+      check_fixture(user, weeks_ago(1))
+
+      # The smallest legal window still spares this week and next.
+      assert {:ok, 0} = MealPlans.prune_grocery_checks(retention_weeks: 1, today: @sunday)
+
+      assert {:ok, 1} =
+               MealPlans.prune_grocery_checks(retention_weeks: 1, today: Date.add(@monday, 7))
+
+      assert remaining_week_starts() == [@monday, @monday, Date.add(@monday, 7)]
+    end
+
+    test "rejects a retention window that is not a positive integer" do
+      user = user_fixture()
+      check_fixture(user, @monday)
+
+      for bad <- [0, -1, 1.5, "8", nil] do
+        assert_raise ArgumentError, ~r/retention_weeks must be a positive integer/, fn ->
+          MealPlans.prune_grocery_checks(retention_weeks: bad, today: @today)
+        end
+      end
+
+      assert remaining_week_starts() == [@monday]
+    end
+
+    test "is a no-op on an empty table" do
+      assert {:ok, 0} = MealPlans.prune_grocery_checks(retention_weeks: 2, today: @today)
+    end
+
+    test "is a no-op when every row is inside the window" do
+      user = user_fixture()
+      check_fixture(user, @monday)
+      check_fixture(user, weeks_ago(1))
+
+      assert {:ok, 0} = MealPlans.prune_grocery_checks(retention_weeks: 2, today: @today)
+      assert length(Repo.all(GroceryCheck)) == 2
+    end
+
+    test "running it twice is idempotent" do
+      user = user_fixture()
+      check_fixture(user, weeks_ago(4))
+      check_fixture(user, @monday)
+
+      assert {:ok, 1} = MealPlans.prune_grocery_checks(retention_weeks: 2, today: @today)
+      assert {:ok, 0} = MealPlans.prune_grocery_checks(retention_weeks: 2, today: @today)
+      assert remaining_week_starts() == [@monday]
+    end
+
+    test "prunes every user's stale rows, including a user who planned nothing for weeks" do
+      active = user_fixture()
+      lapsed = user_fixture()
+
+      check_fixture(active, @monday)
+      check_fixture(active, weeks_ago(10))
+      for n <- [20, 30, 40], do: check_fixture(lapsed, weeks_ago(n))
+
+      assert {:ok, 4} = MealPlans.prune_grocery_checks(retention_weeks: 2, today: @today)
+      assert [%{user_id: user_id}] = Repo.all(GroceryCheck)
+      assert user_id == active.id
+    end
+
+    test "defaults retention_weeks to the configured value" do
+      configured = Application.get_env(:trays_social, :grocery_checks)[:retention_weeks]
+      assert is_integer(configured) and configured >= 1
+
+      user = user_fixture()
+      check_fixture(user, weeks_ago(configured))
+      check_fixture(user, weeks_ago(configured + 1))
+
+      assert {:ok, 1} = MealPlans.prune_grocery_checks(today: @today)
+      assert remaining_week_starts() == [weeks_ago(configured)]
+    end
+
+    test "a pruned past week's grocery list still renders, with everything unchecked" do
+      user = user_fixture()
+      post = post_fixture(%{user_id: user.id})
+      old_monday = weeks_ago(4)
+      entry_fixture(user, old_monday, post)
+      entry_fixture(user, @monday, post)
+
+      [%{items: [%{item_key: item_key}]}] = MealPlans.grocery_list(user.id, old_monday)
+      :ok = MealPlans.set_check(user.id, old_monday, item_key, true)
+      :ok = MealPlans.set_check(user.id, @monday, item_key, true)
+
+      assert {:ok, 1} = MealPlans.prune_grocery_checks(retention_weeks: 2, today: @today)
+
+      assert [%{post: %{id: post_id}, items: [%{item_key: ^item_key, checked: false}]}] =
+               MealPlans.grocery_list(user.id, old_monday)
+
+      assert post_id == post.id
+
+      # The current week's check survives the prune.
+      assert [%{items: [%{checked: true}]}] = MealPlans.grocery_list(user.id, @monday)
+    end
+  end
 end
