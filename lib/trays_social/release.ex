@@ -10,18 +10,22 @@ defmodule TraysSocial.Release do
 
   See docs/demo-seed.md for the operator workflow.
   """
-  @app :trays_social
-
   import Ecto.Query
 
   alias TraysSocial.Accounts
-  alias TraysSocial.Accounts.{Follow, User}
+  alias TraysSocial.Accounts.Follow
+  alias TraysSocial.Accounts.User
   alias TraysSocial.Notifications.Notification
   alias TraysSocial.Posts
 
-  alias TraysSocial.Posts.{Comment, Post, PostLike, PostPhoto}
+  alias TraysSocial.Posts.Comment
+  alias TraysSocial.Posts.Post
+  alias TraysSocial.Posts.PostLike
+  alias TraysSocial.Posts.PostPhoto
 
   alias TraysSocial.Repo
+
+  @app :trays_social
 
   # The demo cooks an Apple App Reviewer logs in with. Shared by seed_demo/0
   # and purge_demo/0 so the two operate on exactly the same set of accounts.
@@ -259,12 +263,12 @@ defmodule TraysSocial.Release do
   end
 
   defp reset_password(%User{} = user, password) do
-    {:ok, user} = Repo.update(User.password_changeset(user, %{password: password}))
+    {:ok, user} = user |> User.password_changeset(%{password: password}) |> Repo.update()
     user
   end
 
   defp ensure_confirmed(%User{confirmed_at: nil} = user) do
-    {:ok, user} = Repo.update(User.confirm_changeset(user))
+    {:ok, user} = user |> User.confirm_changeset() |> Repo.update()
     user
   end
 
@@ -299,12 +303,10 @@ defmodule TraysSocial.Release do
     if post.photo_url == photo_url do
       post
     else
-      {:ok, updated} = Repo.update(Ecto.Changeset.change(post, photo_url: photo_url))
+      {:ok, updated} = post |> Ecto.Changeset.change(photo_url: photo_url) |> Repo.update()
 
-      Repo.update_all(
-        from(pp in PostPhoto, where: pp.post_id == ^post.id and pp.position == 0),
-        set: [url: photo_url]
-      )
+      primary_photo = from(pp in PostPhoto, where: pp.post_id == ^post.id and pp.position == 0)
+      Repo.update_all(primary_photo, set: [url: photo_url])
 
       updated
     end
@@ -319,29 +321,19 @@ defmodule TraysSocial.Release do
       cooking_time_minutes: Map.get(data, :cooking_time_minutes),
       servings: Map.get(data, :servings),
       photo_url: data[:photo_url],
-      ingredients:
-        data[:ingredients]
-        |> List.wrap()
-        |> Enum.with_index()
-        |> Enum.map(fn {ingr, idx} -> Map.put(ingr, :order, idx) end),
-      cooking_steps:
-        data[:cooking_steps]
-        |> List.wrap()
-        |> Enum.with_index()
-        |> Enum.map(fn {step, idx} -> %{description: step, order: idx} end),
-      tools:
-        data[:tools]
-        |> List.wrap()
-        |> Enum.with_index()
-        |> Enum.map(fn {tool, idx} -> %{name: tool, order: idx} end),
+      ingredients: with_order(data[:ingredients], &Map.put(&1, :order, &2)),
+      cooking_steps: with_order(data[:cooking_steps], &%{description: &1, order: &2}),
+      tools: with_order(data[:tools], &%{name: &1, order: &2}),
       post_tags: data[:tags] |> List.wrap() |> Enum.map(&%{tag: &1}),
-      post_photos:
-        case data[:photo_url] do
-          url when is_binary(url) -> [%{url: url, position: 0}]
-          _ -> []
-        end
+      post_photos: demo_post_photos(data[:photo_url])
     }
   end
+
+  # Wraps `items` in a list and maps each element with its 0-based position.
+  defp with_order(items, fun), do: items |> List.wrap() |> Enum.with_index(fun)
+
+  defp demo_post_photos(url) when is_binary(url), do: [%{url: url, position: 0}]
+  defp demo_post_photos(_url), do: []
 
   # --- Follows / Likes / Comments ----------------------------------
 
@@ -352,20 +344,19 @@ defmodule TraysSocial.Release do
     end
   end
 
-  defp seed_cross_likes(users) do
-    [alice, ben, chloe] = users
-    alice_posts_loaded = posts_by_user(alice)
-    ben_posts_loaded = posts_by_user(ben)
-    chloe_posts_loaded = posts_by_user(chloe)
+  defp seed_cross_likes([_alice, _ben, _chloe] = users) do
+    posts_by_author = Map.new(users, &{&1.id, posts_by_user(&1)})
 
     # Each cook likes the first two posts of the other two cooks
     # = 12 distinct (user, post) pairs, satisfying the >= 10 AC.
-    Enum.each(Enum.take(ben_posts_loaded, 2), &ensure_like(alice, &1))
-    Enum.each(Enum.take(chloe_posts_loaded, 2), &ensure_like(alice, &1))
-    Enum.each(Enum.take(alice_posts_loaded, 2), &ensure_like(ben, &1))
-    Enum.each(Enum.take(chloe_posts_loaded, 2), &ensure_like(ben, &1))
-    Enum.each(Enum.take(alice_posts_loaded, 2), &ensure_like(chloe, &1))
-    Enum.each(Enum.take(ben_posts_loaded, 2), &ensure_like(chloe, &1))
+    for liker <- users, author <- users, liker.id != author.id do
+      posts_by_author
+      |> Map.fetch!(author.id)
+      |> Enum.take(2)
+      |> Enum.each(&ensure_like(liker, &1))
+    end
+
+    :ok
   end
 
   defp ensure_like(%User{} = user, %Post{} = post) do

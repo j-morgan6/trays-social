@@ -87,18 +87,7 @@ defmodule TraysSocialWeb.Admin.ReportsLive do
        |> reload_reports()
        |> put_flash(:info, suspension_confirmation(suspended_until))}
     else
-      :wrong_target ->
-        {:noreply, put_flash(socket, :error, "Suspend only applies to user-typed reports.")}
-
-      :self ->
-        {:noreply, put_flash(socket, :error, "You cannot suspend yourself.")}
-
-      :bad_date ->
-        {:noreply,
-         put_flash(socket, :error, "Couldn't parse that date — leave blank for indefinite.")}
-
-      nil ->
-        {:noreply, put_flash(socket, :error, "Target user no longer exists.")}
+      error -> {:noreply, suspend_error_flash(socket, error)}
     end
   end
 
@@ -123,6 +112,18 @@ defmodule TraysSocialWeb.Admin.ReportsLive do
       {:noreply, socket}
     end
   end
+
+  defp suspend_error_flash(socket, :wrong_target),
+    do: put_flash(socket, :error, "Suspend only applies to user-typed reports.")
+
+  defp suspend_error_flash(socket, :self),
+    do: put_flash(socket, :error, "You cannot suspend yourself.")
+
+  defp suspend_error_flash(socket, :bad_date),
+    do: put_flash(socket, :error, "Couldn't parse that date — leave blank for indefinite.")
+
+  defp suspend_error_flash(socket, nil),
+    do: put_flash(socket, :error, "Target user no longer exists.")
 
   defp target_kind(%{target_type: "user"}), do: :user_target
   defp target_kind(_), do: :wrong_target
@@ -258,7 +259,7 @@ defmodule TraysSocialWeb.Admin.ReportsLive do
               <% nil -> %>
                 <p class="text-xs text-base-content/60">Target user no longer exists.</p>
               <% %{} = target -> %>
-                <%= if User.is_suspended?(target) do %>
+                <%= if User.suspended?(target) do %>
                   <div class="flex items-center gap-3 text-sm">
                     <span>
                       <strong>@{target.username}</strong>

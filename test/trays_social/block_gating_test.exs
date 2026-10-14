@@ -10,8 +10,11 @@ defmodule TraysSocial.BlockGatingTest do
   import TraysSocial.AccountsFixtures
   import TraysSocial.PostsFixtures
 
-  alias TraysSocial.{Accounts, Notifications, Posts, Repo}
+  alias TraysSocial.Accounts
+  alias TraysSocial.Notifications
   alias TraysSocial.Notifications.Notification
+  alias TraysSocial.Posts
+  alias TraysSocial.Repo
 
   setup do
     blocker = user_fixture()
@@ -94,7 +97,7 @@ defmodule TraysSocial.BlockGatingTest do
       third = user_fixture()
       {:ok, _} = Accounts.block_user(third.id, blocker.id)
 
-      assert Enum.sort(Accounts.blocked_pair_ids(blocker.id)) ==
+      assert blocker.id |> Accounts.blocked_pair_ids() |> Enum.sort() ==
                Enum.sort([blocked.id, third.id])
     end
 

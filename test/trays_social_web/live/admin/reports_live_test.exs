@@ -58,7 +58,7 @@ defmodule TraysSocialWeb.Admin.ReportsLiveTest do
 
     view
     |> element(
-      "button[phx-click=\"resolve\"][phx-value-id=\"#{report.id}\"][phx-value-status=\"resolved\"]"
+      ~s(button[phx-click="resolve"][phx-value-id="#{report.id}"][phx-value-status="resolved"])
     )
     |> render_click()
 
@@ -167,7 +167,7 @@ defmodule TraysSocialWeb.Admin.ReportsLiveTest do
       |> live(~p"/admin/reports")
 
     view
-    |> element("button[phx-click=\"unsuspend_user\"][phx-value-id=\"#{report.id}\"]")
+    |> element(~s(button[phx-click="unsuspend_user"][phx-value-id="#{report.id}"]))
     |> render_click()
 
     reloaded_target = Accounts.get_user!(target.id)

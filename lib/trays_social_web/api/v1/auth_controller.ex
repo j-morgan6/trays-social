@@ -4,7 +4,8 @@ defmodule TraysSocialWeb.API.V1.AuthController do
   action_fallback TraysSocialWeb.API.V1.FallbackController
 
   alias TraysSocial.Accounts
-  alias TraysSocial.Accounts.{AppleAuth, User}
+  alias TraysSocial.Accounts.AppleAuth
+  alias TraysSocial.Accounts.User
   alias TraysSocialWeb.API.AuthPlug
 
   def register(conn, %{"email" => email, "username" => username, "password" => password} = params) do
@@ -46,7 +47,7 @@ defmodule TraysSocialWeb.API.V1.AuthController do
         {:error, :unauthorized}
 
       user ->
-        if User.is_suspended?(user) do
+        if User.suspended?(user) do
           AuthPlug.send_suspended(conn, user)
         else
           encoded_token = Accounts.generate_user_api_token(user)
@@ -99,7 +100,7 @@ defmodule TraysSocialWeb.API.V1.AuthController do
       when is_binary(refresh_token) and byte_size(refresh_token) > 0 do
     case Accounts.exchange_refresh_token(refresh_token) do
       {:ok, {user, api_bearer}} ->
-        if User.is_suspended?(user) do
+        if User.suspended?(user) do
           AuthPlug.send_suspended(conn, user)
         else
           json(conn, %{data: %{token: api_bearer, user: user_json(user)}})
@@ -121,60 +122,10 @@ defmodule TraysSocialWeb.API.V1.AuthController do
     expected_nonce_hash =
       :crypto.hash(:sha256, raw_nonce) |> Base.encode16(case: :lower)
 
-    with {:ok, claims} <-
-           AppleAuth.verify_token(identity_token, expected_nonce_hash: expected_nonce_hash) do
-      apple_id = claims["sub"]
-      # SECURITY: email is sourced ONLY from the verified JWT claim. Never trust
-      # params["email"] — a client could spoof any address (including an admin
-      # allowlist entry) alongside their own valid Apple token. On subsequent
-      # sign-ins Apple omits the email claim; that's fine because the existing
-      # user is looked up by apple_id and the stored email is never overwritten.
-      email = claims["email"]
-      username = params["username"]
-      # D66: age_confirmation is required for first-time Apple registrations
-      # (COPPA — applies to every registration path, not just password). Pass
-      # the raw value through (nil when absent → validate_required catches it;
-      # false → validate_acceptance catches it). Do NOT default to true; that
-      # would defeat the affirmative-attestation requirement.
-      age_confirmation = params["age_confirmation"]
+    case AppleAuth.verify_token(identity_token, expected_nonce_hash: expected_nonce_hash) do
+      {:ok, claims} ->
+        sign_in_apple_user(conn, claims, params)
 
-      attrs = %{apple_id: apple_id, email: email, age_confirmation: age_confirmation}
-      attrs = if username, do: Map.put(attrs, :username, username), else: attrs
-
-      case Accounts.find_or_create_apple_user(attrs) do
-        {:ok, user} ->
-          if User.is_suspended?(user) do
-            AuthPlug.send_suspended(conn, user)
-          else
-            # generate_user_api_token already returns the URL-safe base64 form
-            # that AuthPlug's verify_api_token_query/1 expects. Wrapping it in a
-            # second Base.encode64/1 here (the pre-D38 pattern) produces a token
-            # whose Base.url_decode64 either fails outright (on standard-base64
-            # `+`/`/`) or yields bytes whose SHA-256 doesn't match the stored
-            # hash — either way, every subsequent bearer call returns 401, which
-            # iOS surfaces as "Session expired. Please log in again." Mirror the
-            # login/2 + register/2 pattern: hand the client the encoded token
-            # straight from Accounts.
-            encoded_token = Accounts.generate_user_api_token(user)
-            needs_username = is_nil(user.username) or user.username == ""
-
-            status = if needs_username, do: :created, else: :ok
-
-            conn
-            |> put_status(status)
-            |> json(%{
-              data: %{
-                token: encoded_token,
-                user: user_json(user),
-                needs_username: needs_username
-              }
-            })
-          end
-
-        {:error, changeset} ->
-          {:error, changeset}
-      end
-    else
       {:error, :invalid_apple_token} ->
         {:error, :unauthorized}
 
@@ -197,6 +148,65 @@ defmodule TraysSocialWeb.API.V1.AuthController do
     conn
     |> put_status(:unprocessable_entity)
     |> json(%{errors: [%{message: "identity_token is required"}]})
+  end
+
+  defp sign_in_apple_user(conn, claims, params) do
+    attrs = apple_user_attrs(claims, params)
+
+    case Accounts.find_or_create_apple_user(attrs) do
+      {:ok, user} -> render_apple_session(conn, user)
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
+  defp apple_user_attrs(claims, params) do
+    apple_id = claims["sub"]
+    # SECURITY: email is sourced ONLY from the verified JWT claim. Never trust
+    # params["email"] — a client could spoof any address (including an admin
+    # allowlist entry) alongside their own valid Apple token. On subsequent
+    # sign-ins Apple omits the email claim; that's fine because the existing
+    # user is looked up by apple_id and the stored email is never overwritten.
+    email = claims["email"]
+    username = params["username"]
+    # D66: age_confirmation is required for first-time Apple registrations
+    # (COPPA — applies to every registration path, not just password). Pass
+    # the raw value through (nil when absent → validate_required catches it;
+    # false → validate_acceptance catches it). Do NOT default to true; that
+    # would defeat the affirmative-attestation requirement.
+    age_confirmation = params["age_confirmation"]
+
+    attrs = %{apple_id: apple_id, email: email, age_confirmation: age_confirmation}
+    if username, do: Map.put(attrs, :username, username), else: attrs
+  end
+
+  defp render_apple_session(conn, user) do
+    if User.suspended?(user) do
+      AuthPlug.send_suspended(conn, user)
+    else
+      # generate_user_api_token already returns the URL-safe base64 form
+      # that AuthPlug's verify_api_token_query/1 expects. Wrapping it in a
+      # second Base.encode64/1 here (the pre-D38 pattern) produces a token
+      # whose Base.url_decode64 either fails outright (on standard-base64
+      # `+`/`/`) or yields bytes whose SHA-256 doesn't match the stored
+      # hash — either way, every subsequent bearer call returns 401, which
+      # iOS surfaces as "Session expired. Please log in again." Mirror the
+      # login/2 + register/2 pattern: hand the client the encoded token
+      # straight from Accounts.
+      encoded_token = Accounts.generate_user_api_token(user)
+      needs_username = is_nil(user.username) or user.username == ""
+
+      status = if needs_username, do: :created, else: :ok
+
+      conn
+      |> put_status(status)
+      |> json(%{
+        data: %{
+          token: encoded_token,
+          user: user_json(user),
+          needs_username: needs_username
+        }
+      })
+    end
   end
 
   @doc """
@@ -225,7 +235,8 @@ defmodule TraysSocialWeb.API.V1.AuthController do
     user = conn.assigns.current_user
     needs_username = is_nil(user.username) or user.username == ""
 
-    json(conn, %{data: Map.merge(user_json(user), %{needs_username: needs_username})})
+    data = user |> user_json() |> Map.put(:needs_username, needs_username)
+    json(conn, %{data: data})
   end
 
   def update_me(conn, params) do

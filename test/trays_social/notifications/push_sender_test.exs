@@ -4,11 +4,10 @@ defmodule TraysSocial.Notifications.PushSenderTest do
   use TraysSocial.DataCase, async: false
 
   import ExUnit.CaptureLog
+  import TraysSocial.AccountsFixtures
 
   alias TraysSocial.Notifications
   alias TraysSocial.Notifications.PushSender
-
-  import TraysSocial.AccountsFixtures
 
   describe "send_push/4" do
     test "returns :ok when push is disabled (default)" do

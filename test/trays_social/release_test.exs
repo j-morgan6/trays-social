@@ -1,14 +1,17 @@
 defmodule TraysSocial.ReleaseTest do
   use TraysSocial.DataCase, async: true
 
-  alias TraysSocial.Accounts
-  alias TraysSocial.Accounts.{Follow, User}
-  alias TraysSocial.Notifications.Notification
-  alias TraysSocial.Posts.{Comment, Post, PostLike}
-  alias TraysSocial.Release
-
   import TraysSocial.AccountsFixtures, only: [user_fixture: 1]
   import TraysSocial.PostsFixtures, only: [post_fixture: 1]
+
+  alias TraysSocial.Accounts
+  alias TraysSocial.Accounts.Follow
+  alias TraysSocial.Accounts.User
+  alias TraysSocial.Notifications.Notification
+  alias TraysSocial.Posts.Comment
+  alias TraysSocial.Posts.Post
+  alias TraysSocial.Posts.PostLike
+  alias TraysSocial.Release
 
   # 12+ chars so register_user's password validation passes (matches the
   # DEMO_USER_PASSWORD minimum enforced by seed_demo/0).
@@ -79,7 +82,7 @@ defmodule TraysSocial.ReleaseTest do
       assert post
 
       # Simulate a stale/broken photo, then re-seed.
-      Repo.update!(Ecto.Changeset.change(post, photo_url: "https://example.com/broken.jpg"))
+      post |> Ecto.Changeset.change(photo_url: "https://example.com/broken.jpg") |> Repo.update!()
       assert :ok = Release.do_seed_demo(@password)
 
       refreshed = Repo.get_by(Post, user_id: alice.id, caption: caption)

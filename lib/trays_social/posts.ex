@@ -12,6 +12,7 @@ defmodule TraysSocial.Posts do
   alias TraysSocial.Accounts.Follow
   alias TraysSocial.Notifications
 
+  alias TraysSocial.Posts.Bookmark
   alias TraysSocial.Posts.Comment
   alias TraysSocial.Posts.CookingStep
   alias TraysSocial.Posts.Ingredient
@@ -42,19 +43,7 @@ defmodule TraysSocial.Posts do
     blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
     muted_keywords = Keyword.get(opts, :muted_keywords, [])
 
-    # W132: short-circuit the personalization gate. The previous
-    # implementation ran a full `SELECT COUNT(*)` against the follows
-    # table on every feed request — this only needs to know whether the
-    # user has at least 5 follows. `LIMIT 5` lets Postgres stop scanning
-    # as soon as it finds the fifth row, which on the indexed
-    # follower_id column is sub-millisecond regardless of how many
-    # thousands of follows the user has accumulated.
-    # Callers that already ran personalized_feed?/1 (e.g. the web feed's
-    # mount) can pass :personalized to skip the duplicate LIMIT-5 probe.
-    personalized =
-      Keyword.get_lazy(opts, :personalized, fn ->
-        for_user_id && personalized_feed?(for_user_id)
-      end)
+    personalized = resolve_personalized(opts, for_user_id)
 
     Post
     |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
@@ -66,6 +55,21 @@ defmodule TraysSocial.Posts do
     |> then(fn q -> if limit, do: limit(q, ^limit), else: q end)
     |> preload([:user, :ingredients, :tools, :cooking_steps, :post_tags, :post_photos])
     |> Repo.all()
+  end
+
+  # W132: short-circuit the personalization gate. The previous
+  # implementation ran a full `SELECT COUNT(*)` against the follows
+  # table on every feed request — this only needs to know whether the
+  # user has at least 5 follows. `LIMIT 5` lets Postgres stop scanning
+  # as soon as it finds the fifth row, which on the indexed
+  # follower_id column is sub-millisecond regardless of how many
+  # thousands of follows the user has accumulated.
+  # Callers that already ran personalized_feed?/1 (e.g. the web feed's
+  # mount) can pass :personalized to skip the duplicate LIMIT-5 probe.
+  defp resolve_personalized(opts, for_user_id) do
+    Keyword.get_lazy(opts, :personalized, fn ->
+      for_user_id && personalized_feed?(for_user_id)
+    end)
   end
 
   @doc """
@@ -159,11 +163,7 @@ defmodule TraysSocial.Posts do
         [p],
         is_nil(p.deleted_at) and is_nil(p.removed_at) and p.inserted_at >= ^seven_days_ago
       )
-      |> exclude_blocked_users(blocked_user_ids)
-      |> order_by([p], desc: p.like_count, desc: p.inserted_at)
-      |> limit(^limit)
-      |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
-      |> Repo.all()
+      |> rank_by_likes(blocked_user_ids, limit)
 
     if length(trending) >= limit do
       trending
@@ -177,14 +177,20 @@ defmodule TraysSocial.Posts do
           [p],
           is_nil(p.deleted_at) and is_nil(p.removed_at) and p.id not in ^trending_ids
         )
-        |> exclude_blocked_users(blocked_user_ids)
-        |> order_by([p], desc: p.like_count, desc: p.inserted_at)
-        |> limit(^remaining)
-        |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
-        |> Repo.all()
+        |> rank_by_likes(blocked_user_ids, remaining)
 
       trending ++ fallback
     end
+  end
+
+  # Shared tail of list_trending_posts/2's in-window and backfill queries.
+  defp rank_by_likes(query, blocked_user_ids, limit) do
+    query
+    |> exclude_blocked_users(blocked_user_ids)
+    |> order_by([p], desc: p.like_count, desc: p.inserted_at)
+    |> limit(^limit)
+    |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
+    |> Repo.all()
   end
 
   @doc """
@@ -197,7 +203,7 @@ defmodule TraysSocial.Posts do
     since = DateTime.add(DateTime.utc_now(), -7, :day)
 
     saves =
-      from(b in TraysSocial.Posts.Bookmark,
+      from(b in Bookmark,
         where: b.inserted_at >= ^since,
         group_by: b.post_id,
         select: %{post_id: b.post_id, saves: count(b.id)}
@@ -279,70 +285,70 @@ defmodule TraysSocial.Posts do
     cursor_id = Keyword.get(opts, :cursor_id)
     cursor_time = Keyword.get(opts, :cursor_time)
 
-    # D107: match ingredients/tags via EXISTS subqueries instead of joins +
-    # distinct. The previous shape applied distinct/2 in both the query and
-    # tag branches — combining them raised "only one distinct expression is
-    # allowed"; the tag branch's distinct also prepended `p.id ASC` to the
-    # ORDER BY, returning oldest-first. EXISTS keeps one row per post, so
-    # ordering and keyset cursors work like every other listing.
-    base =
-      from(p in Post, as: :post)
-      |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
-      |> exclude_blocked_users(blocked_user_ids)
-      |> cursor_where(cursor_id, cursor_time)
-      |> order_by([p], desc: p.inserted_at, desc: p.id)
-      |> limit(^limit)
-      |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
-
-    base =
-      if query_string && query_string != "" do
-        sanitized = "%#{sanitize_like(query_string)}%"
-
-        ingredient_match =
-          from(i in Ingredient,
-            where: i.post_id == parent_as(:post).id and ilike(i.name, ^sanitized)
-          )
-
-        tag_match =
-          from(pt in PostTag,
-            where: pt.post_id == parent_as(:post).id and ilike(pt.tag, ^sanitized)
-          )
-
-        where(
-          base,
-          [p],
-          ilike(p.caption, ^sanitized) or exists(ingredient_match) or exists(tag_match)
-        )
-      else
-        base
-      end
-
-    base =
-      if max_cooking_time do
-        where(
-          base,
-          [p],
-          not is_nil(p.cooking_time_minutes) and p.cooking_time_minutes <= ^max_cooking_time
-        )
-      else
-        base
-      end
-
-    base =
-      if tag && tag != "" do
-        tag_filter =
-          from(pt in PostTag,
-            where: pt.post_id == parent_as(:post).id and pt.tag == ^String.downcase(tag)
-          )
-
-        where(base, [p], exists(tag_filter))
-      else
-        base
-      end
-
-    base
+    from(p in Post, as: :post)
+    |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
+    |> exclude_blocked_users(blocked_user_ids)
+    |> cursor_where(cursor_id, cursor_time)
+    |> order_by([p], desc: p.inserted_at, desc: p.id)
+    |> limit(^limit)
+    |> preload([:user, :post_photos, :ingredients, :cooking_steps, :tools, :post_tags])
+    |> filter_search_text(query_string)
+    |> filter_max_cooking_time(max_cooking_time)
+    |> filter_search_tag(tag)
     |> apply_recipe_first_opts(opts)
     |> Repo.all()
+  end
+
+  # search_posts/2 filters. Each is a no-op for the same falsy/blank values the
+  # inline `if` blocks they replaced treated as "not given".
+  defp filter_search_text(query, query_string) when query_string in [nil, false, ""], do: query
+
+  # D107: match ingredients/tags via EXISTS subqueries instead of joins +
+  # distinct. The previous shape applied distinct/2 in both the query and
+  # tag branches — combining them raised "only one distinct expression is
+  # allowed"; the tag branch's distinct also prepended `p.id ASC` to the
+  # ORDER BY, returning oldest-first. EXISTS keeps one row per post, so
+  # ordering and keyset cursors work like every other listing.
+  defp filter_search_text(query, query_string) do
+    sanitized = "%#{sanitize_like(query_string)}%"
+
+    ingredient_match =
+      from(i in Ingredient,
+        where: i.post_id == parent_as(:post).id and ilike(i.name, ^sanitized)
+      )
+
+    tag_match =
+      from(pt in PostTag,
+        where: pt.post_id == parent_as(:post).id and ilike(pt.tag, ^sanitized)
+      )
+
+    where(
+      query,
+      [p],
+      ilike(p.caption, ^sanitized) or exists(ingredient_match) or exists(tag_match)
+    )
+  end
+
+  defp filter_max_cooking_time(query, max_cooking_time) when max_cooking_time in [nil, false],
+    do: query
+
+  defp filter_max_cooking_time(query, max_cooking_time) do
+    where(
+      query,
+      [p],
+      not is_nil(p.cooking_time_minutes) and p.cooking_time_minutes <= ^max_cooking_time
+    )
+  end
+
+  defp filter_search_tag(query, tag) when tag in [nil, false, ""], do: query
+
+  defp filter_search_tag(query, tag) do
+    tag_filter =
+      from(pt in PostTag,
+        where: pt.post_id == parent_as(:post).id and pt.tag == ^String.downcase(tag)
+      )
+
+    where(query, [p], exists(tag_filter))
   end
 
   @doc """
@@ -398,8 +404,7 @@ defmodule TraysSocial.Posts do
   defp only_recipes(query, _), do: query
 
   # Recipe-first grouped search. Groups are disjoint: the viewer's tray (own or
-  # bookmarked) wins, then people they follow, then everyone else. The full
-  # Bookmark module name is used because its alias is declared further down.
+  # bookmarked) wins, then people they follow, then everyone else.
   defp apply_search_group(query, nil), do: query
 
   defp apply_search_group(query, {:tray, viewer_id}) do
@@ -425,7 +430,7 @@ defmodule TraysSocial.Posts do
   end
 
   defp viewer_bookmark(viewer_id) do
-    from(b in TraysSocial.Posts.Bookmark,
+    from(b in Bookmark,
       where: b.post_id == parent_as(:post).id and b.user_id == ^viewer_id
     )
   end
@@ -652,7 +657,7 @@ defmodule TraysSocial.Posts do
         :ok
 
       %PostPhoto{} = photo ->
-        Repo.update!(Ecto.Changeset.change(photo, url: url))
+        photo |> Ecto.Changeset.change(url: url) |> Repo.update!()
 
       nil ->
         %PostPhoto{}
@@ -943,29 +948,10 @@ defmodule TraysSocial.Posts do
 
       Ecto.Multi.new()
       |> Ecto.Multi.run(:soft_delete, fn _repo, _changes ->
-        # D110: atomic guard — only the FIRST delete matches a row
-        # (deleted_at IS NULL), so a retried or concurrent delete cannot
-        # decrement comment_count a second time (it drifted negative).
-        case Comment
-             |> where([c], c.id == ^comment.id and is_nil(c.deleted_at))
-             |> Repo.update_all(set: [deleted_at: now]) do
-          {1, _} -> {:ok, :deleted}
-          {0, _} -> {:ok, :already_deleted}
-        end
+        soft_delete_comment(comment, now)
       end)
       |> Ecto.Multi.run(:count, fn _repo, %{soft_delete: result} ->
-        case result do
-          :already_deleted ->
-            {:ok, :skipped}
-
-          :deleted ->
-            {1, _} =
-              Post
-              |> where([p], p.id == ^comment.post_id)
-              |> Repo.update_all(inc: [comment_count: -1])
-
-            {:ok, :decremented}
-        end
+        decrement_comment_count(comment, result)
       end)
       |> Repo.transaction()
       |> case do
@@ -978,9 +964,30 @@ defmodule TraysSocial.Posts do
     end
   end
 
-  ## Bookmarks
+  # D110: atomic guard — only the FIRST delete matches a row
+  # (deleted_at IS NULL), so a retried or concurrent delete cannot
+  # decrement comment_count a second time (it drifted negative).
+  defp soft_delete_comment(%Comment{} = comment, now) do
+    case Comment
+         |> where([c], c.id == ^comment.id and is_nil(c.deleted_at))
+         |> Repo.update_all(set: [deleted_at: now]) do
+      {1, _} -> {:ok, :deleted}
+      {0, _} -> {:ok, :already_deleted}
+    end
+  end
 
-  alias TraysSocial.Posts.Bookmark
+  defp decrement_comment_count(_comment, :already_deleted), do: {:ok, :skipped}
+
+  defp decrement_comment_count(%Comment{} = comment, :deleted) do
+    {1, _} =
+      Post
+      |> where([p], p.id == ^comment.post_id)
+      |> Repo.update_all(inc: [comment_count: -1])
+
+    {:ok, :decremented}
+  end
+
+  ## Bookmarks
 
   @doc """
   Bookmarks a post for a user (saves to My Tray).

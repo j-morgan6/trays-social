@@ -104,14 +104,12 @@ defmodule TraysSocial.Accounts.AppleAuth do
   end
 
   defp peek_header(token) do
-    try do
-      %JOSE.JWS{fields: header} = JOSE.JWT.peek_protected(token)
-      {:ok, header}
-    rescue
-      e ->
-        Logger.warning("Apple JWT header peek failed: #{inspect(e)}")
-        {:error, :invalid_apple_token}
-    end
+    %JOSE.JWS{fields: header} = JOSE.JWT.peek_protected(token)
+    {:ok, header}
+  rescue
+    e ->
+      Logger.warning("Apple JWT header peek failed: #{inspect(e)}")
+      {:error, :invalid_apple_token}
   end
 
   defp find_jwk(keys, kid) when is_binary(kid) do
@@ -128,24 +126,22 @@ defmodule TraysSocial.Accounts.AppleAuth do
   defp find_jwk(_keys, _kid), do: {:error, :invalid_apple_token}
 
   defp verify_signature(jwk, token) do
-    try do
-      case JOSE.JWT.verify_strict(jwk, ["RS256"], token) do
-        {true, %JOSE.JWT{fields: claims}, _} ->
-          {:ok, claims}
+    case JOSE.JWT.verify_strict(jwk, ["RS256"], token) do
+      {true, %JOSE.JWT{fields: claims}, _} ->
+        {:ok, claims}
 
-        {false, _, _} ->
-          Logger.warning("Apple JWT signature verification returned false")
-          {:error, :invalid_apple_token}
+      {false, _, _} ->
+        Logger.warning("Apple JWT signature verification returned false")
+        {:error, :invalid_apple_token}
 
-        other ->
-          Logger.warning("Apple JWT verify_strict unexpected: #{inspect(other)}")
-          {:error, :invalid_apple_token}
-      end
-    rescue
-      e ->
-        Logger.warning("Apple JWT verify_strict raised: #{inspect(e)}")
+      other ->
+        Logger.warning("Apple JWT verify_strict unexpected: #{inspect(other)}")
         {:error, :invalid_apple_token}
     end
+  rescue
+    e ->
+      Logger.warning("Apple JWT verify_strict raised: #{inspect(e)}")
+      {:error, :invalid_apple_token}
   end
 
   defp validate_claims(claims, expected_audiences) do

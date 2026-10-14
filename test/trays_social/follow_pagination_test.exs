@@ -10,8 +10,9 @@ defmodule TraysSocial.FollowPaginationTest do
   import Ecto.Query
   import TraysSocial.AccountsFixtures
 
-  alias TraysSocial.{Accounts, Repo}
+  alias TraysSocial.Accounts
   alias TraysSocial.Accounts.Follow
+  alias TraysSocial.Repo
 
   defp stagger_follow(follower_id, followed_id, minutes_ago) do
     stamp = DateTime.utc_now(:second) |> DateTime.add(-minutes_ago * 60)

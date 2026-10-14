@@ -10,8 +10,9 @@ defmodule TraysSocial.SearchPostsTest do
   import TraysSocial.AccountsFixtures
   import TraysSocial.PostsFixtures
 
-  alias TraysSocial.{Posts, Repo}
+  alias TraysSocial.Posts
   alias TraysSocial.Posts.Post
+  alias TraysSocial.Repo
 
   defp tagged_post(user, caption, tag, minutes_ago) do
     post = post_fixture(user_id: user.id, caption: caption, post_tags: [%{tag: tag}])

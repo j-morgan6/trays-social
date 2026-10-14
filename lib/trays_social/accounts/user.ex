@@ -34,16 +34,16 @@ defmodule TraysSocial.Accounts.User do
   by `TraysSocial.Accounts.suspend_user/2` when no end date is supplied) for
   an indefinite suspension.
   """
-  def is_suspended?(%__MODULE__{suspended_until: nil}), do: false
+  def suspended?(%__MODULE__{suspended_until: nil}), do: false
 
-  def is_suspended?(%__MODULE__{suspended_until: %DateTime{} = suspended_until}) do
+  def suspended?(%__MODULE__{suspended_until: %DateTime{} = suspended_until}) do
     DateTime.after?(suspended_until, DateTime.utc_now())
   end
 
   # Defensive only — `nil` reaches here from `with` chains in UserAuth when
   # the session lookup fails. Anything else is a programming error and is
   # intentionally allowed to raise FunctionClauseError.
-  def is_suspended?(nil), do: false
+  def suspended?(nil), do: false
 
   @doc """
   Server-side-only changeset for granting/revoking admin status.

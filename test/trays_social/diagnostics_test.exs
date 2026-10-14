@@ -138,13 +138,13 @@ defmodule TraysSocial.DiagnosticsTest do
   end
 
   defp insert_payload(overrides \\ []) do
-    Diagnostics.store_payload(
-      Enum.into(overrides, %{
-        payload_type: "diagnostic",
-        payload: %{"crashDiagnostics" => []},
-        received_at: utc_now()
-      })
-    )
+    overrides
+    |> Enum.into(%{
+      payload_type: "diagnostic",
+      payload: %{"crashDiagnostics" => []},
+      received_at: utc_now()
+    })
+    |> Diagnostics.store_payload()
   end
 
   defp utc_now, do: DateTime.utc_now() |> DateTime.truncate(:second)

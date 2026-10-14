@@ -74,20 +74,23 @@ defmodule TraysSocialWeb.API.V1.SearchController do
         Accounts.search_users(query, limit: 10, blocked_user_ids: blocked_ids)
       end
 
+    json(conn, %{
+      data: %{
+        posts: render_legacy_posts(posts, user),
+        users: Enum.map(users, &render_user/1)
+      },
+      cursor: encode_cursor(List.last(posts))
+    })
+  end
+
+  defp render_legacy_posts(posts, user) do
     post_ids = Enum.map(posts, & &1.id)
     liked_post_ids = Posts.liked_post_ids_for_user(user.id, post_ids)
     bookmarked_post_ids = Posts.bookmarked_post_ids_for_user(user.id, post_ids)
 
-    json(conn, %{
-      data: %{
-        posts:
-          PostJSON.render_list(posts, %{
-            liked_post_ids: liked_post_ids,
-            bookmarked_post_ids: bookmarked_post_ids
-          }),
-        users: Enum.map(users, &render_user/1)
-      },
-      cursor: encode_cursor(List.last(posts))
+    PostJSON.render_list(posts, %{
+      liked_post_ids: liked_post_ids,
+      bookmarked_post_ids: bookmarked_post_ids
     })
   end
 

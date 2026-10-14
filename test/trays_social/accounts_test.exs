@@ -310,7 +310,7 @@ defmodule TraysSocial.AccountsTest do
     end
 
     test "keeps an existing confirmed_at" do
-      confirmed_at = DateTime.add(DateTime.utc_now(:second), -3, :day)
+      confirmed_at = :second |> DateTime.utc_now() |> DateTime.add(-3, :day)
       user = user_fixture() |> Ecto.Changeset.change(confirmed_at: confirmed_at) |> Repo.update!()
       email = unique_user_email()
 
@@ -884,7 +884,8 @@ defmodule TraysSocial.AccountsTest do
       # must not authenticate, because verify hashes the bearer before
       # lookup.
       _ = Accounts.generate_user_api_token(user)
-      stored = Repo.one(from t in UserToken, where: t.context == "api", select: t.token)
+      query = from(t in UserToken, where: t.context == "api", select: t.token)
+      stored = Repo.one(query)
       replay = Base.url_encode64(stored, padding: false)
 
       refute Accounts.get_user_by_api_token(replay)
@@ -913,10 +914,8 @@ defmodule TraysSocial.AccountsTest do
       sixty_one_days_ago =
         DateTime.utc_now() |> DateTime.add(-61, :day) |> DateTime.truncate(:second)
 
-      Repo.update_all(
-        from(t in UserToken, where: t.user_id == ^user.id and t.context == "api"),
-        set: [inserted_at: sixty_one_days_ago]
-      )
+      query = from(t in UserToken, where: t.user_id == ^user.id and t.context == "api")
+      Repo.update_all(query, set: [inserted_at: sixty_one_days_ago])
 
       refute Accounts.get_user_by_api_token(token)
     end
@@ -969,7 +968,7 @@ defmodule TraysSocial.AccountsTest do
     end
 
     test "exchange_refresh_token rejects an unknown token (well-formed bytes)" do
-      bogus = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+      bogus = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
       assert {:error, :invalid_refresh_token} = Accounts.exchange_refresh_token(bogus)
     end
 
@@ -981,10 +980,8 @@ defmodule TraysSocial.AccountsTest do
       sixty_one_days_ago =
         DateTime.utc_now() |> DateTime.add(-61, :day) |> DateTime.truncate(:second)
 
-      Repo.update_all(
-        from(t in UserToken, where: t.user_id == ^user.id and t.context == "refresh"),
-        set: [inserted_at: sixty_one_days_ago]
-      )
+      query = from(t in UserToken, where: t.user_id == ^user.id and t.context == "refresh")
+      Repo.update_all(query, set: [inserted_at: sixty_one_days_ago])
 
       assert {:error, :invalid_refresh_token} = Accounts.exchange_refresh_token(refresh)
     end
@@ -1018,23 +1015,23 @@ defmodule TraysSocial.AccountsTest do
     end
   end
 
-  describe "User.is_suspended?/1" do
+  describe "User.suspended?/1" do
     test "returns false when suspended_until is nil" do
-      refute User.is_suspended?(%User{suspended_until: nil})
+      refute User.suspended?(%User{suspended_until: nil})
     end
 
     test "returns false when suspended_until is in the past" do
       past = DateTime.utc_now() |> DateTime.add(-60, :second) |> DateTime.truncate(:second)
-      refute User.is_suspended?(%User{suspended_until: past})
+      refute User.suspended?(%User{suspended_until: past})
     end
 
     test "returns true when suspended_until is in the future" do
       future = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
-      assert User.is_suspended?(%User{suspended_until: future})
+      assert User.suspended?(%User{suspended_until: future})
     end
 
     test "returns true for the indefinite-suspension sentinel" do
-      assert User.is_suspended?(%User{suspended_until: ~U[9999-12-31 23:59:59Z]})
+      assert User.suspended?(%User{suspended_until: ~U[9999-12-31 23:59:59Z]})
     end
   end
 
@@ -1046,7 +1043,7 @@ defmodule TraysSocial.AccountsTest do
       {:ok, suspended} = Accounts.suspend_user(user, future)
 
       assert suspended.suspended_until == future
-      assert User.is_suspended?(suspended)
+      assert User.suspended?(suspended)
     end
 
     test "suspending with nil uses the indefinite sentinel" do
@@ -1055,7 +1052,7 @@ defmodule TraysSocial.AccountsTest do
       {:ok, suspended} = Accounts.suspend_user(user, nil)
 
       assert suspended.suspended_until == ~U[9999-12-31 23:59:59Z]
-      assert User.is_suspended?(suspended)
+      assert User.suspended?(suspended)
     end
 
     test "unsuspending clears suspended_until" do
@@ -1064,7 +1061,7 @@ defmodule TraysSocial.AccountsTest do
       {:ok, lifted} = Accounts.unsuspend_user(suspended)
 
       assert lifted.suspended_until == nil
-      refute User.is_suspended?(lifted)
+      refute User.suspended?(lifted)
     end
 
     test "suspension persists across reloads" do
@@ -1075,7 +1072,7 @@ defmodule TraysSocial.AccountsTest do
       reloaded = Accounts.get_user!(user.id)
 
       assert reloaded.suspended_until == future
-      assert User.is_suspended?(reloaded)
+      assert User.suspended?(reloaded)
     end
   end
 

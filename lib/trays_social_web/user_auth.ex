@@ -7,7 +7,8 @@ defmodule TraysSocialWeb.UserAuth do
   alias Phoenix.Controller
   alias Phoenix.LiveView
   alias TraysSocial.Accounts
-  alias TraysSocial.Accounts.{Scope, User}
+  alias TraysSocial.Accounts.Scope
+  alias TraysSocial.Accounts.User
 
   # Make the remember me cookie valid for 14 days. This should match
   # the session validity setting in UserToken.
@@ -42,7 +43,7 @@ defmodule TraysSocialWeb.UserAuth do
   or falls back to the `signed_in_path/1`.
   """
   def log_in_user(conn, user, params \\ %{}) do
-    if User.is_suspended?(user) do
+    if User.suspended?(user) do
       # Single chokepoint: every successful auth path (password, magic link,
       # Apple, anything future) eventually calls log_in_user. Refusing here
       # means new login surfaces can't accidentally bypass suspension.
@@ -94,7 +95,7 @@ defmodule TraysSocialWeb.UserAuth do
   def fetch_current_scope_for_user(conn, _opts) do
     with {token, conn} <- ensure_user_token(conn),
          {user, token_inserted_at} <- Accounts.get_user_by_session_token(token),
-         false <- User.is_suspended?(user) do
+         false <- User.suspended?(user) do
       conn
       |> assign(:current_scope, Scope.for_user(user))
       |> maybe_reissue_user_session_token(user, token_inserted_at)
@@ -346,7 +347,7 @@ defmodule TraysSocialWeb.UserAuth do
   defp scope_from_session(session) do
     with token when not is_nil(token) <- session["user_token"],
          {user, _token_inserted_at} <- Accounts.get_user_by_session_token(token),
-         false <- User.is_suspended?(user) do
+         false <- User.suspended?(user) do
       Scope.for_user(user)
     else
       _ -> nil

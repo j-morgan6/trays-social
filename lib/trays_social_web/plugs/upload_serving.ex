@@ -5,11 +5,11 @@ defmodule TraysSocialWeb.Plugs.UploadServing do
   In development, uploads are in priv/static/uploads (also served by Plug.Static).
   In production on Fly.io, uploads are on a persistent volume at UPLOAD_DIR.
   """
+  @behaviour Plug
+
   import Plug.Conn
 
   require Logger
-
-  @behaviour Plug
 
   def init(opts), do: opts
 

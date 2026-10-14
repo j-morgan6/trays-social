@@ -158,27 +158,46 @@ defmodule TraysSocialWeb.FeedLive.Index do
     current_user_id = current_user_id(socket)
     is_following = current_user_id && Accounts.has_follows?(current_user_id)
 
-    # W168: same block/mute filters as the API feed (feed_controller.ex),
-    # computed once per mount and reused by load_more and the realtime
-    # :new_post handler.
-    blocked_ids = (current_user_id && Accounts.blocked_pair_ids(current_user_id)) || []
-    muted_keywords = (current_user_id && Accounts.get_muted_keywords(current_user_id)) || []
-    personalized_feed = (current_user_id && Posts.personalized_feed?(current_user_id)) || false
+    filters = viewer_feed_filters(current_user_id)
 
     posts =
       Posts.list_posts(
         limit: @page_size,
         for_user_id: current_user_id,
-        blocked_user_ids: blocked_ids,
-        muted_keywords: muted_keywords,
-        personalized: personalized_feed
+        blocked_user_ids: filters.blocked_ids,
+        muted_keywords: filters.muted_keywords,
+        personalized: filters.personalized_feed
       )
-
-    liked_post_ids = fetch_liked_post_ids(socket, Enum.map(posts, & &1.id))
-    bookmarked_post_ids = fetch_bookmarked_post_ids(socket, Enum.map(posts, & &1.id))
 
     socket
     |> assign_base_feed_state()
+    |> assign_first_page(posts)
+    |> assign(:is_personalized, is_following || false)
+    |> assign(filters)
+    |> stream(:posts, posts)
+  end
+
+  # W168: same block/mute filters as the API feed (feed_controller.ex),
+  # computed once per mount and reused by load_more and the realtime
+  # :new_post handler.
+  defp viewer_feed_filters(current_user_id) do
+    blocked_ids = (current_user_id && Accounts.blocked_pair_ids(current_user_id)) || []
+    muted_keywords = (current_user_id && Accounts.get_muted_keywords(current_user_id)) || []
+    personalized_feed = (current_user_id && Posts.personalized_feed?(current_user_id)) || false
+
+    %{
+      blocked_ids: blocked_ids,
+      muted_keywords: muted_keywords,
+      personalized_feed: personalized_feed
+    }
+  end
+
+  defp assign_first_page(socket, posts) do
+    post_ids = Enum.map(posts, & &1.id)
+    liked_post_ids = fetch_liked_post_ids(socket, post_ids)
+    bookmarked_post_ids = fetch_bookmarked_post_ids(socket, post_ids)
+
+    socket
     |> assign(:loading, false)
     |> assign(:has_more, length(posts) == @page_size)
     |> assign(:no_posts, Enum.empty?(posts))
@@ -186,11 +205,6 @@ defmodule TraysSocialWeb.FeedLive.Index do
     |> assign(:liked_post_ids, liked_post_ids)
     |> assign(:bookmarked_post_ids, bookmarked_post_ids)
     |> assign(:posts_map, Map.new(posts, &{&1.id, &1}))
-    |> assign(:is_personalized, is_following || false)
-    |> assign(:blocked_ids, blocked_ids)
-    |> assign(:muted_keywords, muted_keywords)
-    |> assign(:personalized_feed, personalized_feed)
-    |> stream(:posts, posts)
   end
 
   defp mount_disconnected(socket) do
@@ -254,20 +268,26 @@ defmodule TraysSocialWeb.FeedLive.Index do
         personalized: socket.assigns.personalized_feed
       )
 
-    new_liked_ids = fetch_liked_post_ids(socket, Enum.map(posts, & &1.id))
-    liked_post_ids = MapSet.union(socket.assigns.liked_post_ids, new_liked_ids)
-
-    new_bookmarked_ids = fetch_bookmarked_post_ids(socket, Enum.map(posts, & &1.id))
-    bookmarked_post_ids = MapSet.union(socket.assigns.bookmarked_post_ids, new_bookmarked_ids)
-
     socket
     |> assign(:cursor, last_cursor(posts))
     |> assign(:has_more, length(posts) == @page_size)
     |> assign(:loading_more, false)
-    |> assign(:liked_post_ids, liked_post_ids)
-    |> assign(:bookmarked_post_ids, bookmarked_post_ids)
+    |> merge_viewer_post_ids(posts)
     |> update(:posts_map, &Map.merge(&1, Map.new(posts, fn p -> {p.id, p} end)))
     |> stream(:posts, posts, at: -1)
+  end
+
+  defp merge_viewer_post_ids(socket, posts) do
+    post_ids = Enum.map(posts, & &1.id)
+    new_liked_ids = fetch_liked_post_ids(socket, post_ids)
+    new_bookmarked_ids = fetch_bookmarked_post_ids(socket, post_ids)
+
+    socket
+    |> assign(:liked_post_ids, MapSet.union(socket.assigns.liked_post_ids, new_liked_ids))
+    |> assign(
+      :bookmarked_post_ids,
+      MapSet.union(socket.assigns.bookmarked_post_ids, new_bookmarked_ids)
+    )
   end
 
   defp update_photo_index(socket, post_id, delta) do

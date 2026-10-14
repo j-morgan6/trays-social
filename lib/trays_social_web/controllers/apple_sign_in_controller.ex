@@ -28,12 +28,12 @@ defmodule TraysSocialWeb.AppleSignInController do
 
   use TraysSocialWeb, :controller
 
-  require Logger
-
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.AppleAuth
   alias TraysSocialWeb.Endpoint
   alias TraysSocialWeb.UserAuth
+
+  require Logger
 
   @apple_authorize_url "https://appleid.apple.com/auth/authorize"
   @state_salt "apple sign in state"
@@ -83,64 +83,14 @@ defmodule TraysSocialWeb.AppleSignInController do
   """
   def callback(conn, %{"id_token" => id_token, "state" => state} = _params) do
     with :ok <- verify_state(state),
-         {:ok, services_id} <- fetch_services_id(),
-         {:ok, claims} <-
-           AppleAuth.verify_token(id_token, expected_audiences: [services_id]),
+         {:ok, claims} <- verify_id_token(id_token),
          apple_id when is_binary(apple_id) <- claims["sub"],
-         {:ok, user} <-
-           Accounts.find_or_create_apple_user(
-             %{apple_id: apple_id, email: claims["email"]},
-             # D66 scope note: the iOS API path enforces a 13+ age
-             # attestation (matching the password registration gate). The web
-             # services-redirect flow does not yet collect age confirmation
-             # before bouncing to Apple — adding a checkbox on /users/log-in
-             # and /users/register and round-tripping it through the signed
-             # state token is a separate follow-up. Until that ships, opt the
-             # web path out of the changeset validator explicitly rather than
-             # silently passing `age_confirmation: true`, which would defeat
-             # the affirmative-attestation requirement entirely.
-             validate_age: false
-           ) do
+         {:ok, user} <- find_or_create_web_apple_user(apple_id, claims) do
       conn
       |> put_flash(:info, "Welcome back!")
       |> UserAuth.log_in_user(user)
     else
-      {:error, :state_expired} ->
-        Logger.warning("Apple Sign In callback rejected: state token expired")
-        reject(conn, "Sign-in attempt expired. Please try again.")
-
-      {:error, :state_invalid} ->
-        Logger.warning(
-          "Apple Sign In callback rejected: state signature mismatch (possible replay or tampering)"
-        )
-
-        reject(conn, "Sign-in attempt could not be verified. Please try again.")
-
-      {:error, :missing_services_id} ->
-        Logger.error(
-          "Apple Sign In callback rejected: APPLE_SERVICES_ID not configured (cannot verify token aud)"
-        )
-
-        reject(conn, "Sign in with Apple is not available right now.")
-
-      {:error, :invalid_apple_token} ->
-        Logger.warning("Apple Sign In callback rejected: invalid identity_token")
-        reject(conn, "Sign in with Apple failed. Please try again.")
-
-      {:error, :apple_keys_unavailable} ->
-        Logger.error("Apple Sign In callback failed: Apple JWKs endpoint unavailable")
-        reject(conn, "Sign in with Apple is temporarily unavailable.")
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        Logger.error(
-          "Apple Sign In callback failed at find_or_create_apple_user: #{inspect(changeset.errors)}"
-        )
-
-        reject(conn, "We could not complete your sign-in. Please try again.")
-
-      nil ->
-        Logger.warning("Apple Sign In callback rejected: id_token missing required 'sub' claim")
-        reject(conn, "Sign in with Apple failed. Please try again.")
+      error -> reject_callback(conn, error)
     end
   end
 
@@ -150,6 +100,71 @@ defmodule TraysSocialWeb.AppleSignInController do
   end
 
   ## ---------- private ----------
+
+  defp verify_id_token(id_token) do
+    with {:ok, services_id} <- fetch_services_id(),
+         do: AppleAuth.verify_token(id_token, expected_audiences: [services_id])
+  end
+
+  defp find_or_create_web_apple_user(apple_id, claims) do
+    Accounts.find_or_create_apple_user(
+      %{apple_id: apple_id, email: claims["email"]},
+      # D66 scope note: the iOS API path enforces a 13+ age
+      # attestation (matching the password registration gate). The web
+      # services-redirect flow does not yet collect age confirmation
+      # before bouncing to Apple — adding a checkbox on /users/log-in
+      # and /users/register and round-tripping it through the signed
+      # state token is a separate follow-up. Until that ships, opt the
+      # web path out of the changeset validator explicitly rather than
+      # silently passing `age_confirmation: true`, which would defeat
+      # the affirmative-attestation requirement entirely.
+      validate_age: false
+    )
+  end
+
+  defp reject_callback(conn, {:error, :state_expired}) do
+    Logger.warning("Apple Sign In callback rejected: state token expired")
+    reject(conn, "Sign-in attempt expired. Please try again.")
+  end
+
+  defp reject_callback(conn, {:error, :state_invalid}) do
+    Logger.warning(
+      "Apple Sign In callback rejected: state signature mismatch (possible replay or tampering)"
+    )
+
+    reject(conn, "Sign-in attempt could not be verified. Please try again.")
+  end
+
+  defp reject_callback(conn, {:error, :missing_services_id}) do
+    Logger.error(
+      "Apple Sign In callback rejected: APPLE_SERVICES_ID not configured (cannot verify token aud)"
+    )
+
+    reject(conn, "Sign in with Apple is not available right now.")
+  end
+
+  defp reject_callback(conn, {:error, :invalid_apple_token}) do
+    Logger.warning("Apple Sign In callback rejected: invalid identity_token")
+    reject(conn, "Sign in with Apple failed. Please try again.")
+  end
+
+  defp reject_callback(conn, {:error, :apple_keys_unavailable}) do
+    Logger.error("Apple Sign In callback failed: Apple JWKs endpoint unavailable")
+    reject(conn, "Sign in with Apple is temporarily unavailable.")
+  end
+
+  defp reject_callback(conn, {:error, %Ecto.Changeset{} = changeset}) do
+    Logger.error(
+      "Apple Sign In callback failed at find_or_create_apple_user: #{inspect(changeset.errors)}"
+    )
+
+    reject(conn, "We could not complete your sign-in. Please try again.")
+  end
+
+  defp reject_callback(conn, nil) do
+    Logger.warning("Apple Sign In callback rejected: id_token missing required 'sub' claim")
+    reject(conn, "Sign in with Apple failed. Please try again.")
+  end
 
   defp authorize_url(services_id, state) do
     callback_url = url(~p"/auth/apple/callback")

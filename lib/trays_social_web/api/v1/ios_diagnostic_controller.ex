@@ -40,25 +40,15 @@ defmodule TraysSocialWeb.API.V1.IosDiagnosticController do
 
   use TraysSocialWeb, :controller
 
-  require Logger
-
   alias TraysSocial.Diagnostics
+
+  require Logger
 
   action_fallback TraysSocialWeb.API.V1.FallbackController
 
   def create(conn, %{"payload_type" => payload_type, "payload" => payload} = params)
       when is_map(payload) do
-    user = conn.assigns[:current_user]
-
-    attrs = %{
-      user_id: user && user.id,
-      payload_type: payload_type,
-      payload: payload,
-      app_version: params["app_version"],
-      os_version: params["os_version"],
-      device_model: params["device_model"],
-      received_at: DateTime.utc_now() |> DateTime.truncate(:second)
-    }
+    attrs = diagnostic_attrs(conn.assigns[:current_user], payload_type, payload, params)
 
     case Diagnostics.store_payload(attrs) do
       {:ok, record} ->
@@ -89,6 +79,18 @@ defmodule TraysSocialWeb.API.V1.IosDiagnosticController do
         %{field: "payload", message: "is required and must be an object"}
       ]
     })
+  end
+
+  defp diagnostic_attrs(user, payload_type, payload, params) do
+    %{
+      user_id: user && user.id,
+      payload_type: payload_type,
+      payload: payload,
+      app_version: params["app_version"],
+      os_version: params["os_version"],
+      device_model: params["device_model"],
+      received_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    }
   end
 
   defp changeset_errors(changeset) do

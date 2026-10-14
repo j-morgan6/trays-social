@@ -3,6 +3,8 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
 
   import TraysSocial.AccountsFixtures
 
+  alias TraysSocialWeb.API.V1.AuthController
+
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
@@ -224,7 +226,7 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
     end
 
     test "returns 401 for an unknown refresh token", %{conn: conn} do
-      bogus = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+      bogus = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
 
       conn =
         conn
@@ -288,7 +290,7 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
         Phoenix.ConnTest.build_conn()
         |> Plug.Conn.put_req_header("accept", "application/json")
 
-      conn = TraysSocialWeb.API.V1.AuthController.logout(conn, %{})
+      conn = AuthController.logout(conn, %{})
       assert %{"data" => %{"message" => "logged out"}} = json_response(conn, 200)
     end
 
@@ -298,7 +300,7 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
         |> Plug.Conn.put_req_header("accept", "application/json")
         |> Plug.Conn.put_req_header("authorization", "Basic dXNlcjpwYXNz")
 
-      conn = TraysSocialWeb.API.V1.AuthController.logout(conn, %{})
+      conn = AuthController.logout(conn, %{})
       assert %{"data" => %{"message" => "logged out"}} = json_response(conn, 200)
     end
 
@@ -308,7 +310,7 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
         |> Plug.Conn.put_req_header("accept", "application/json")
         |> Plug.Conn.put_req_header("authorization", "Bearer not-valid-base64-!!!")
 
-      conn = TraysSocialWeb.API.V1.AuthController.logout(conn, %{})
+      conn = AuthController.logout(conn, %{})
       assert %{"data" => %{"message" => "logged out"}} = json_response(conn, 200)
     end
   end

@@ -588,11 +588,8 @@ defmodule TraysSocial.PostsTest do
 
       eight_days_ago = DateTime.utc_now() |> DateTime.add(-8, :day) |> DateTime.truncate(:second)
 
-      {2, _} =
-        Repo.update_all(
-          from(p in TraysSocial.Posts.Post, where: p.id in ^[old_one.id, old_two.id]),
-          set: [inserted_at: eight_days_ago]
-        )
+      old_query = from(p in TraysSocial.Posts.Post, where: p.id in ^[old_one.id, old_two.id])
+      {2, _} = Repo.update_all(old_query, set: [inserted_at: eight_days_ago])
 
       # One fresh post in the window
       fresh = post_fixture(%{user_id: user.id, caption: "Fresh"})
@@ -1004,7 +1001,7 @@ defmodule TraysSocial.PostsTest do
       # Retry with the stale struct (as an iOS timeout-retry would) and with
       # a freshly fetched soft-deleted row — neither may decrement again.
       assert {:ok, _} = Posts.delete_comment(comment, commenter)
-      assert {:ok, _} = Posts.delete_comment(Posts.get_comment!(comment.id), commenter)
+      assert {:ok, _} = comment.id |> Posts.get_comment!() |> Posts.delete_comment(commenter)
 
       assert Posts.get_post!(post.id).comment_count == 0
     end

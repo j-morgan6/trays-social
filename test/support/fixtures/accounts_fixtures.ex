@@ -7,7 +7,8 @@ defmodule TraysSocial.AccountsFixtures do
   import Ecto.Query
 
   alias TraysSocial.Accounts
-  alias TraysSocial.Accounts.{Scope, User}
+  alias TraysSocial.Accounts.Scope
+  alias TraysSocial.Accounts.User
   alias TraysSocial.Repo
 
   def unique_user_email, do: "user#{System.unique_integer([:positive])}@example.com"

@@ -80,7 +80,7 @@ defmodule TraysSocialWeb.Admin.FeedbackLiveTest do
       conn |> log_in_user(admin) |> live(~p"/admin/feedback/#{sub.id}")
 
     view
-    |> element("button[phx-click=\"mark_triaged\"][phx-value-id=\"#{sub.id}\"]")
+    |> element(~s(button[phx-click="mark_triaged"][phx-value-id="#{sub.id}"]))
     |> render_click()
 
     reloaded = Feedback.get_submission!(sub.id)
@@ -95,7 +95,7 @@ defmodule TraysSocialWeb.Admin.FeedbackLiveTest do
       conn |> log_in_user(admin) |> live(~p"/admin/feedback/#{sub.id}")
 
     view
-    |> element("button[phx-click=\"mark_resolved\"][phx-value-id=\"#{sub.id}\"]")
+    |> element(~s(button[phx-click="mark_resolved"][phx-value-id="#{sub.id}"]))
     |> render_click()
 
     reloaded = Feedback.get_submission!(sub.id)

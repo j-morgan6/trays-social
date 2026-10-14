@@ -118,35 +118,38 @@ defmodule TraysSocial.Uploads.Photo do
     ]
 
     for {suffix, size} <- variants do
-      variant_name = "#{base}#{suffix}#{ext}"
-      variant_local = Path.join(System.tmp_dir!(), variant_name)
+      store_s3_variant(local_path, "#{base}#{suffix}#{ext}", size, bucket)
+    end
+  end
 
-      try do
-        File.cp!(local_path, variant_local)
+  defp store_s3_variant(local_path, variant_name, size, bucket) do
+    variant_local = Path.join(System.tmp_dir!(), variant_name)
 
-        if String.contains?(size, "x") and not String.ends_with?(size, "x") do
-          Mogrify.open(variant_local)
-          |> Mogrify.resize_to_fill(size)
-          |> Mogrify.save(in_place: true)
-        else
-          Mogrify.open(variant_local) |> Mogrify.resize(size) |> Mogrify.save(in_place: true)
-        end
+    try do
+      File.cp!(local_path, variant_local)
 
-        if File.exists?(variant_local) do
-          content = File.read!(variant_local)
-          content_type = MIME.from_path(variant_name)
-
-          ExAws.S3.put_object(bucket, variant_name, content,
-            content_type: content_type,
-            acl: :public_read
-          )
-          |> ExAws.request()
-        end
-      rescue
-        _ -> :ok
-      after
-        File.rm(variant_local)
+      if String.contains?(size, "x") and not String.ends_with?(size, "x") do
+        Mogrify.open(variant_local)
+        |> Mogrify.resize_to_fill(size)
+        |> Mogrify.save(in_place: true)
+      else
+        Mogrify.open(variant_local) |> Mogrify.resize(size) |> Mogrify.save(in_place: true)
       end
+
+      if File.exists?(variant_local) do
+        content = File.read!(variant_local)
+        content_type = MIME.from_path(variant_name)
+
+        ExAws.S3.put_object(bucket, variant_name, content,
+          content_type: content_type,
+          acl: :public_read
+        )
+        |> ExAws.request()
+      end
+    rescue
+      _ -> :ok
+    after
+      File.rm(variant_local)
     end
   end
 

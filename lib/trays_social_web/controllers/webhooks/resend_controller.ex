@@ -14,9 +14,9 @@ defmodule TraysSocialWeb.Webhooks.ResendController do
 
   use TraysSocialWeb, :controller
 
-  require Logger
-
   alias TraysSocial.Email
+
+  require Logger
 
   # 5-minute window — events older than this are rejected to limit replay
   # attacks. Matches Svix's default.
@@ -41,52 +41,62 @@ defmodule TraysSocialWeb.Webhooks.ResendController do
 
       send_resp(conn, 200, "")
     else
-      {:error, :missing_signing_secret} ->
-        # Logger.error already fired inside verify_signature/2; 401 to the
-        # caller so they retry once the operator sets the secret.
-        send_resp(conn, 401, "")
-
-      {:error, :missing_signature_headers} ->
-        Logger.warning("resend webhook rejected: missing signature headers")
-        send_resp(conn, 401, "")
-
-      {:error, :invalid_signature} ->
-        Logger.warning(
-          "resend webhook rejected: signature verification failed svix_id=#{header_one(conn, "svix-id")}"
-        )
-
-        send_resp(conn, 401, "")
-
-      {:error, :timestamp_skew} ->
-        Logger.warning(
-          "resend webhook rejected: timestamp outside ±#{@max_timestamp_skew_seconds}s window"
-        )
-
-        send_resp(conn, 401, "")
-
-      {:error, :no_raw_body} ->
-        # Hit when the endpoint pipeline parsed JSON before we could read
-        # the raw body. Indicates a router-config mistake (the :webhook
-        # pipeline must skip the JSON parser); fail loudly so it doesn't
-        # silently accept unsigned events.
-        Logger.error(
-          "resend webhook: raw body unavailable — router pipeline is parsing JSON before the controller"
-        )
-
-        send_resp(conn, 500, "")
-
-      {:error, :invalid_payload} ->
-        Logger.warning("resend webhook rejected: payload missing required fields")
-        send_resp(conn, 422, "")
-
-      {:error, %Jason.DecodeError{}} ->
-        Logger.warning("resend webhook rejected: body is not valid JSON")
-        send_resp(conn, 422, "")
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        Logger.error("resend webhook event upsert failed: #{inspect(changeset.errors)}")
-        send_resp(conn, 500, "")
+      error -> reject_event(conn, error)
     end
+  end
+
+  defp reject_event(conn, {:error, :missing_signing_secret}) do
+    # Logger.error already fired inside verify_signature/2; 401 to the
+    # caller so they retry once the operator sets the secret.
+    send_resp(conn, 401, "")
+  end
+
+  defp reject_event(conn, {:error, :missing_signature_headers}) do
+    Logger.warning("resend webhook rejected: missing signature headers")
+    send_resp(conn, 401, "")
+  end
+
+  defp reject_event(conn, {:error, :invalid_signature}) do
+    Logger.warning(
+      "resend webhook rejected: signature verification failed svix_id=#{header_one(conn, "svix-id")}"
+    )
+
+    send_resp(conn, 401, "")
+  end
+
+  defp reject_event(conn, {:error, :timestamp_skew}) do
+    Logger.warning(
+      "resend webhook rejected: timestamp outside ±#{@max_timestamp_skew_seconds}s window"
+    )
+
+    send_resp(conn, 401, "")
+  end
+
+  defp reject_event(conn, {:error, :no_raw_body}) do
+    # Hit when the endpoint pipeline parsed JSON before we could read
+    # the raw body. Indicates a router-config mistake (the :webhook
+    # pipeline must skip the JSON parser); fail loudly so it doesn't
+    # silently accept unsigned events.
+    Logger.error(
+      "resend webhook: raw body unavailable — router pipeline is parsing JSON before the controller"
+    )
+
+    send_resp(conn, 500, "")
+  end
+
+  defp reject_event(conn, {:error, :invalid_payload}) do
+    Logger.warning("resend webhook rejected: payload missing required fields")
+    send_resp(conn, 422, "")
+  end
+
+  defp reject_event(conn, {:error, %Jason.DecodeError{}}) do
+    Logger.warning("resend webhook rejected: body is not valid JSON")
+    send_resp(conn, 422, "")
+  end
+
+  defp reject_event(conn, {:error, %Ecto.Changeset{} = changeset}) do
+    Logger.error("resend webhook event upsert failed: #{inspect(changeset.errors)}")
+    send_resp(conn, 500, "")
   end
 
   ## ---------- private ----------
@@ -124,22 +134,25 @@ defmodule TraysSocialWeb.Webhooks.ResendController do
          :ok <- check_timestamp_skew(svix_timestamp) do
       payload_to_sign = "#{svix_id}.#{svix_timestamp}.#{raw_body}"
       expected = compute_signature(secret, payload_to_sign)
-
-      # svix-signature header may carry multiple signatures separated by
-      # spaces, each prefixed with a version label (e.g. "v1,<base64>").
-      # Constant-time compare against each.
-      signatures =
-        svix_signature
-        |> String.split(" ", trim: true)
-        |> Enum.map(&strip_version_prefix/1)
-
-      if Enum.any?(signatures, fn sig -> constant_time_equal?(sig, expected) end) do
-        :ok
-      else
-        {:error, :invalid_signature}
-      end
+      match_signature(svix_signature, expected)
     else
       _ -> {:error, :missing_signature_headers}
+    end
+  end
+
+  # svix-signature header may carry multiple signatures separated by
+  # spaces, each prefixed with a version label (e.g. "v1,<base64>").
+  # Constant-time compare against each.
+  defp match_signature(svix_signature, expected) do
+    signatures =
+      svix_signature
+      |> String.split(" ", trim: true)
+      |> Enum.map(&strip_version_prefix/1)
+
+    if Enum.any?(signatures, fn sig -> constant_time_equal?(sig, expected) end) do
+      :ok
+    else
+      {:error, :invalid_signature}
     end
   end
 
@@ -186,6 +199,12 @@ defmodule TraysSocialWeb.Webhooks.ResendController do
 
   defp extract_event_attrs(%{"type" => event_type, "data" => data} = payload)
        when is_binary(event_type) and is_map(data) do
+    build_event_attrs(payload, event_type, data)
+  end
+
+  defp extract_event_attrs(_), do: {:error, :invalid_payload}
+
+  defp build_event_attrs(payload, event_type, data) do
     with email_id when is_binary(email_id) <- data["email_id"] || data["id"],
          recipient when is_binary(recipient) <- extract_recipient(data),
          event_id when is_binary(event_id) <- payload["id"] || data["id"] do
@@ -201,8 +220,6 @@ defmodule TraysSocialWeb.Webhooks.ResendController do
       _ -> {:error, :invalid_payload}
     end
   end
-
-  defp extract_event_attrs(_), do: {:error, :invalid_payload}
 
   defp extract_recipient(%{"to" => [first | _]}) when is_binary(first), do: first
   defp extract_recipient(%{"to" => to}) when is_binary(to), do: to

@@ -88,7 +88,7 @@ defmodule TraysSocialWeb.API.V1.JSON.FeedItemJSONTest do
     end
 
     test "inserts one ad after the first freq posts when the page spills over" do
-      result = FeedItemJSON.interleave_ads(post_items(3), 2)
+      result = 3 |> post_items() |> FeedItemJSON.interleave_ads(2)
 
       assert types(result) == ["post", "post", "ad", "post"]
       ad = Enum.at(result, 2)
@@ -96,7 +96,7 @@ defmodule TraysSocialWeb.API.V1.JSON.FeedItemJSONTest do
     end
 
     test "inserts multiple ads with incrementing slot indices, none trailing" do
-      result = FeedItemJSON.interleave_ads(post_items(5), 2)
+      result = 5 |> post_items() |> FeedItemJSON.interleave_ads(2)
 
       assert types(result) == ["post", "post", "ad", "post", "post", "ad", "post"]
       assert Enum.at(result, 2).ad.slot == 0
@@ -110,7 +110,7 @@ defmodule TraysSocialWeb.API.V1.JSON.FeedItemJSONTest do
     end
 
     test "stamps the given placement on ad payloads (W158)" do
-      result = FeedItemJSON.interleave_ads(post_items(9), 8, "find")
+      result = 9 |> post_items() |> FeedItemJSON.interleave_ads(8, "find")
 
       assert types(result) == List.duplicate("post", 8) ++ ["ad", "post"]
       assert Enum.at(result, 8) == %{type: "ad", ad: %{slot: 0, placement: "find"}}

@@ -43,23 +43,12 @@ defmodule TraysSocialWeb.FollowersLive.Show do
   defp assign_for(socket, user, tab) do
     viewer = socket.assigns.current_scope && socket.assigns.current_scope.user
 
-    cooks =
-      case tab do
-        :followers -> Accounts.list_followers(user.id, limit: 40)
-        :following -> Accounts.list_following(user.id, limit: 40)
-      end
-      |> Enum.map(& &1.user)
+    cooks = list_cooks(user, tab)
 
     follower_count = Accounts.get_follower_count(user.id)
     following_count = Accounts.get_following_count(user.id)
 
-    # D109: one batched query instead of a following?/2 exists-check per row.
-    following_ids =
-      if viewer do
-        Accounts.following_ids_among(viewer.id, Enum.map(cooks, & &1.id))
-      else
-        MapSet.new()
-      end
+    following_ids = viewer_following_ids(viewer, cooks)
 
     socket
     |> assign(:page_title, "@#{user.username} · #{Phoenix.Naming.humanize(tab)}")
@@ -72,6 +61,20 @@ defmodule TraysSocialWeb.FollowersLive.Show do
     |> assign(:following_count, following_count)
     |> assign(:following_ids, following_ids)
     |> assign(:viewer_id, viewer && viewer.id)
+  end
+
+  defp list_cooks(user, :followers),
+    do: user.id |> Accounts.list_followers(limit: 40) |> Enum.map(& &1.user)
+
+  defp list_cooks(user, :following),
+    do: user.id |> Accounts.list_following(limit: 40) |> Enum.map(& &1.user)
+
+  defp viewer_following_ids(viewer, _cooks) when viewer in [nil, false], do: MapSet.new()
+
+  # D109: one batched query instead of a following?/2 exists-check per row.
+  defp viewer_following_ids(viewer, cooks) do
+    cook_ids = Enum.map(cooks, & &1.id)
+    Accounts.following_ids_among(viewer.id, cook_ids)
   end
 
   # Filter the loaded cooks by username or bio (case-insensitive substring).

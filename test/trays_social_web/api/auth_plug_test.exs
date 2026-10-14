@@ -1,9 +1,9 @@
 defmodule TraysSocialWeb.API.AuthPlugTest do
   use TraysSocialWeb.ConnCase, async: true
 
-  alias TraysSocialWeb.API.AuthPlug
-
   import TraysSocial.AccountsFixtures
+
+  alias TraysSocialWeb.API.AuthPlug
 
   setup %{conn: conn} do
     conn = put_req_header(conn, "accept", "application/json")
@@ -44,7 +44,7 @@ defmodule TraysSocialWeb.API.AuthPlugTest do
 
     test "returns 401 for invalid token", %{conn: conn} do
       # Valid URL-safe base64 of 32 random bytes that doesn't match any stored hash.
-      bogus = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+      bogus = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
 
       conn =
         conn

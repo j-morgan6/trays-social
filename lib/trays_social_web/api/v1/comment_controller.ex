@@ -3,7 +3,8 @@ defmodule TraysSocialWeb.API.V1.CommentController do
 
   action_fallback TraysSocialWeb.API.V1.FallbackController
 
-  alias TraysSocial.{Accounts, Posts}
+  alias TraysSocial.Accounts
+  alias TraysSocial.Posts
   alias TraysSocialWeb.API.V1.JSON.CommentJSON
 
   @page_size 20

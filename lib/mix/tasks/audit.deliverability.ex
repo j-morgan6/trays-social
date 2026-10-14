@@ -1,4 +1,6 @@
 defmodule Mix.Tasks.Audit.Deliverability do
+  @shortdoc "Audit DNS records for email deliverability (SPF/DKIM/DMARC/Apple)"
+
   @moduledoc """
   Audits DNS records required for email deliverability against the
   configured sender domain.
@@ -27,25 +29,11 @@ defmodule Mix.Tasks.Audit.Deliverability do
 
   use Mix.Task
 
-  @shortdoc "Audit DNS records for email deliverability (SPF/DKIM/DMARC/Apple)"
-
   @impl true
   def run(args) do
     {opts, _} = OptionParser.parse!(args, strict: [domain: :string])
 
-    domain =
-      Keyword.get_lazy(opts, :domain, fn ->
-        case System.get_env("MAILER_FROM_EMAIL") do
-          email when is_binary(email) ->
-            case String.split(email, "@", parts: 2) do
-              [_, d] -> d
-              _ -> "trays.app"
-            end
-
-          _ ->
-            "trays.app"
-        end
-      end)
+    domain = Keyword.get_lazy(opts, :domain, &default_domain/0)
 
     Mix.shell().info("Auditing deliverability for #{domain}\n")
 
@@ -58,7 +46,23 @@ defmodule Mix.Tasks.Audit.Deliverability do
     ]
 
     Enum.each(results, &print_result/1)
+    report_summary(results)
+  end
 
+  defp default_domain do
+    case System.get_env("MAILER_FROM_EMAIL") do
+      email when is_binary(email) ->
+        case String.split(email, "@", parts: 2) do
+          [_, d] -> d
+          _ -> "trays.app"
+        end
+
+      _ ->
+        "trays.app"
+    end
+  end
+
+  defp report_summary(results) do
     passes = Enum.count(results, fn {_, _, status, _} -> status == :pass end)
     fails = length(results) - passes
 
@@ -149,14 +153,18 @@ defmodule Mix.Tasks.Audit.Deliverability do
   ## ---------- helpers ----------
 
   defp lookup_txt(name) do
-    :inet_res.lookup(to_charlist(name), :in, :txt)
-    |> Enum.map(fn parts -> parts |> Enum.map(&to_string/1) |> Enum.join("") end)
+    name
+    |> to_charlist()
+    |> :inet_res.lookup(:in, :txt)
+    |> Enum.map(fn parts -> Enum.map_join(parts, "", &to_string/1) end)
   rescue
     _ -> []
   end
 
   defp lookup_mx(name) do
-    :inet_res.lookup(to_charlist(name), :in, :mx)
+    name
+    |> to_charlist()
+    |> :inet_res.lookup(:in, :mx)
   rescue
     _ -> []
   end

@@ -1,10 +1,10 @@
 defmodule TraysSocial.Accounts.UserNotifier do
   import Swoosh.Email
 
-  require Logger
-
   alias TraysSocial.Accounts.User
   alias TraysSocial.Mailer
+
+  require Logger
 
   # Brand color (Modern Kitchen primary green). Used for the CTA button background.
   @primary_color "#1B5E20"
@@ -102,8 +102,10 @@ defmodule TraysSocial.Accounts.UserNotifier do
           "email delivery failed: recipient=#{recipient} subject=#{inspect(subject)} reason=#{inspect(reason)}"
         )
 
+        exception = RuntimeError.exception("email_delivery_failed")
+
         ErrorTracker.report(
-          RuntimeError.exception("email_delivery_failed"),
+          exception,
           [],
           %{
             recipient: recipient,

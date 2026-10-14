@@ -8,6 +8,7 @@ defmodule TraysSocial.Accounts do
 
   alias TraysSocial.Accounts.Follow
   alias TraysSocial.Accounts.User
+  alias TraysSocial.Accounts.UserBlock
   alias TraysSocial.Accounts.UserNotifier
   alias TraysSocial.Accounts.UserToken
 
@@ -211,18 +212,27 @@ defmodule TraysSocial.Accounts do
   # Callers: register_user/1 (no-op until confirmation lands) and
   # confirm_user_by_token/1 (where the grant actually happens).
   defp maybe_grant_admin({:ok, %User{} = user}) do
-    cond do
-      not is_nil(user.apple_id) -> {:ok, user}
-      is_nil(user.hashed_password) -> {:ok, user}
-      is_nil(user.confirmed_at) -> {:ok, user}
-      not is_binary(user.email) -> {:ok, user}
-      apple_relay_email?(user.email) -> {:ok, user}
-      String.downcase(user.email) in admin_emails() -> set_admin(user, true)
-      true -> {:ok, user}
-    end
+    if admin_ineligible?(user), do: {:ok, user}, else: grant_admin_if_allowlisted(user)
   end
 
   defp maybe_grant_admin(other), do: other
+
+  # Conditions 1-4 above, checked in order. Returns true when ANY rules the
+  # user out, so the allowlist (condition 5) is only consulted afterwards.
+  defp admin_ineligible?(%User{} = user) do
+    cond do
+      not is_nil(user.apple_id) -> true
+      is_nil(user.hashed_password) -> true
+      is_nil(user.confirmed_at) -> true
+      not is_binary(user.email) -> true
+      apple_relay_email?(user.email) -> true
+      true -> false
+    end
+  end
+
+  defp grant_admin_if_allowlisted(%User{} = user) do
+    if String.downcase(user.email) in admin_emails(), do: set_admin(user, true), else: {:ok, user}
+  end
 
   defp apple_relay_email?(email) when is_binary(email) do
     email |> String.downcase() |> String.ends_with?("@privaterelay.appleid.com")
@@ -839,8 +849,6 @@ defmodule TraysSocial.Accounts do
 
   # --- Blocking ---
 
-  alias TraysSocial.Accounts.UserBlock
-
   def block_user(blocker_id, blocked_id) do
     result =
       %UserBlock{}
@@ -926,7 +934,7 @@ defmodule TraysSocial.Accounts do
 
   # Sentinel datetime used when an admin suspends a user without specifying
   # an end date. A far-future timestamp is preferred over a separate nullable
-  # "indefinite" flag because it keeps `is_suspended?/1` a single comparison.
+  # "indefinite" flag because it keeps `suspended?/1` a single comparison.
   @indefinite_suspension_sentinel ~U[9999-12-31 23:59:59Z]
 
   @doc """
@@ -946,7 +954,7 @@ defmodule TraysSocial.Accounts do
   def suspend_user(%User{} = user, %DateTime{} = suspended_until) do
     # Revoke every token (session, api, refresh) so an exfiltrated bearer
     # can't be re-armed when the suspension lifts. The request-time
-    # User.is_suspended? checks already make the tokens powerless while the
+    # User.suspended? checks already make the tokens powerless while the
     # row is set, but without this delete the tokens become valid again on
     # unsuspend. Matches the pattern in update_user_and_delete_all_tokens/1.
     result =
@@ -956,7 +964,8 @@ defmodule TraysSocial.Accounts do
 
     case result do
       {:ok, _updated} ->
-        Repo.delete_all(from t in UserToken, where: t.user_id == ^user.id)
+        user_tokens = from(t in UserToken, where: t.user_id == ^user.id)
+        Repo.delete_all(user_tokens)
         result
 
       other ->

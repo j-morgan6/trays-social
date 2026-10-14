@@ -32,30 +32,16 @@ defmodule TraysSocialWeb.API.V1.FeedbackController do
 
   use TraysSocialWeb, :controller
 
-  require Logger
-
   alias TraysSocial.Feedback
 
-  def create(conn, %{"body" => body} = params) when is_binary(body) do
-    user = conn.assigns.current_user
+  require Logger
 
-    attrs = %{
-      user_id: user.id,
-      subject: params["subject"],
-      body: body,
-      app_version: params["app_version"],
-      os_version: params["os_version"],
-      device_model: params["device_model"]
-    }
+  def create(conn, %{"body" => body} = params) when is_binary(body) do
+    attrs = feedback_attrs(conn.assigns.current_user, body, params)
 
     case Feedback.submit(attrs) do
       {:ok, record} ->
-        Logger.info(
-          "feedback submitted: id=#{record.id} user_id=#{record.user_id} " <>
-            "subject_len=#{String.length(record.subject || "")} " <>
-            "body_len=#{String.length(record.body)} " <>
-            "app=#{record.app_version} os=#{record.os_version}"
-        )
+        log_submission(record)
 
         conn
         |> put_status(:created)
@@ -72,6 +58,26 @@ defmodule TraysSocialWeb.API.V1.FeedbackController do
     conn
     |> put_status(:unprocessable_entity)
     |> json(%{errors: [%{field: "body", message: "is required"}]})
+  end
+
+  defp feedback_attrs(user, body, params) do
+    %{
+      user_id: user.id,
+      subject: params["subject"],
+      body: body,
+      app_version: params["app_version"],
+      os_version: params["os_version"],
+      device_model: params["device_model"]
+    }
+  end
+
+  defp log_submission(record) do
+    Logger.info(
+      "feedback submitted: id=#{record.id} user_id=#{record.user_id} " <>
+        "subject_len=#{String.length(record.subject || "")} " <>
+        "body_len=#{String.length(record.body)} " <>
+        "app=#{record.app_version} os=#{record.os_version}"
+    )
   end
 
   defp changeset_errors(changeset) do

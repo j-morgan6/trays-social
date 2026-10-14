@@ -17,7 +17,7 @@ defmodule TraysSocialWeb.API.AuthPlug do
   def call(conn, _opts) do
     with {:ok, token} <- get_bearer_token(conn),
          user when not is_nil(user) <- lookup_user_with_retry(token) do
-      if User.is_suspended?(user) do
+      if User.suspended?(user) do
         send_suspended(conn, user)
       else
         assign(conn, :current_user, user)

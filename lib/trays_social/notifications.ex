@@ -1,5 +1,6 @@
 defmodule TraysSocial.Notifications do
   import Ecto.Query, warn: false
+  alias TraysSocial.Notifications.DeviceToken
   alias TraysSocial.Notifications.Notification
   alias TraysSocial.Notifications.PushSender
   alias TraysSocial.Repo
@@ -176,8 +177,6 @@ defmodule TraysSocial.Notifications do
   defp push_body_for(_), do: "You have a new notification"
 
   ## Device Tokens
-
-  alias TraysSocial.Notifications.DeviceToken
 
   @doc """
   Registers a device token for push notifications.

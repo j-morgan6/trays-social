@@ -150,7 +150,7 @@ defmodule TraysSocial.Home do
     |> live_recipes()
     |> join(:inner, [p], u in User, on: u.id == p.user_id)
     |> where([p, u], p.inserted_at >= ^since and p.user_id != ^user_id)
-    # Matches User.is_suspended?/1: suspended while suspended_until is in the future.
+    # Matches User.suspended?/1: suspended while suspended_until is in the future.
     |> where([p, u], is_nil(u.suspended_until) or u.suspended_until <= ^now)
     |> exclude_authors(blocked_ids)
     |> group_by([p, u], u.id)

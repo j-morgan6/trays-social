@@ -14,33 +14,18 @@ defmodule TraysSocialWeb.PostLive.Show do
   def mount(%{"id" => id}, _session, socket) do
     post = Posts.get_post!(id)
 
-    viewer =
-      case socket.assigns[:current_scope] do
-        %{user: user} -> user
-        _ -> nil
-      end
+    viewer = current_viewer(socket)
 
-    blocked_user_ids = if viewer, do: Accounts.blocked_user_ids(viewer.id), else: []
+    blocked_user_ids = blocked_ids_for(viewer)
     comments = Posts.list_comments(post.id, blocked_user_ids: blocked_user_ids)
-
-    liked = viewer && Posts.liked_by?(post.id, viewer.id)
-    bookmarked = viewer && Posts.bookmarked?(viewer.id, post.id)
-
-    is_following =
-      cond do
-        viewer == nil -> false
-        viewer.id == post.user_id -> false
-        true -> Accounts.following?(viewer.id, post.user_id)
-      end
+    relationship = viewer_relationship(viewer, post)
 
     socket =
       socket
       |> assign(:page_title, "Post")
       |> assign(:post, post)
       |> assign(:photo_index, 0)
-      |> assign(:liked, liked || false)
-      |> assign(:bookmarked, bookmarked || false)
-      |> assign(:is_following, is_following)
+      |> assign(relationship)
       |> assign(:checked_ingredient_ids, MapSet.new())
       |> assign(:cooking_started_at, nil)
       |> assign(:comment_body, "")
@@ -50,6 +35,31 @@ defmodule TraysSocialWeb.PostLive.Show do
     maybe_record_open(socket, viewer, post)
 
     {:ok, socket}
+  end
+
+  defp current_viewer(socket) do
+    case socket.assigns[:current_scope] do
+      %{user: user} -> user
+      _ -> nil
+    end
+  end
+
+  defp blocked_ids_for(nil), do: []
+  defp blocked_ids_for(viewer), do: Accounts.blocked_user_ids(viewer.id)
+
+  # The viewer's liked / bookmarked / following state for `post`; all false
+  # for a logged-out visit.
+  defp viewer_relationship(nil, _post),
+    do: %{liked: false, bookmarked: false, is_following: false}
+
+  defp viewer_relationship(viewer, post) do
+    liked = Posts.liked_by?(post.id, viewer.id) || false
+    bookmarked = Posts.bookmarked?(viewer.id, post.id) || false
+
+    is_following =
+      if viewer.id == post.user_id, do: false, else: Accounts.following?(viewer.id, post.user_id)
+
+    %{liked: liked, bookmarked: bookmarked, is_following: is_following}
   end
 
   # W189: Home's Jump back in. Connected mount only, so the dead render does
