@@ -10,11 +10,17 @@ import SwiftUI
 /// rows section over a "Recipes" `GridCard` grid. Trending data flows
 /// from the `FindViewModel.trendingItems` pipeline when the field is
 /// empty (posts interleaved with sponsored tiles, W158).
+///
+/// One search box (W205): return turns the typed text into an ingredient
+/// chip. One term (typed or a single chip) is handed to
+/// `FindViewModel.searchText`; two or more ingredients show
+/// `IngredientMatchResults` instead. `IngredientSearchViewModel.route`
+/// makes that call.
 struct FindView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var viewModel = FindViewModel()
     @State private var ingredientVM = IngredientSearchViewModel()
-    @State private var mode: SearchMode = SearchPreferences().mode
+    @FocusState private var fieldFocused: Bool
 
     var body: some View {
         ScrollView {
@@ -24,25 +30,21 @@ struct FindView: View {
                     .padding(.top, 4)
                     .padding(.bottom, 14)
 
-                SearchModeSwitch(mode: $mode)
+                searchBar
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 14)
+                    .padding(.bottom, 12)
+                IngredientChipBar(viewModel: ingredientVM)
+                    .padding(.bottom, 10)
 
-                if mode == .whatIHave {
-                    IngredientSearchSection(viewModel: ingredientVM)
+                if ingredientVM.isMatchingIngredients {
+                    IngredientMatchResults(viewModel: ingredientVM)
+                        .padding(.bottom, 24)
+                } else if viewModel.showSearchResults {
+                    resultsSection
                         .padding(.bottom, 24)
                 } else {
-                    searchBar
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 22)
-
-                    if viewModel.showSearchResults {
-                        resultsSection
-                            .padding(.bottom, 24)
-                    } else {
-                        trendingSection
-                            .padding(.bottom, 24)
-                    }
+                    trendingSection
+                        .padding(.bottom, 24)
                 }
             }
             .padding(.top, 116)
@@ -55,9 +57,9 @@ struct FindView: View {
             // task, so firing on every keystroke is safe.
             viewModel.search()
         }
-        .onChange(of: mode) { _, newMode in
-            SearchPreferences().mode = newMode
-        }
+        .onChange(of: ingredientVM.draft) { ingredientVM.draftChanged() }
+        .onChange(of: ingredientVM.searchTerm) { _, term in viewModel.searchText = term }
+        .onAppear { ingredientVM.resumeIfNeeded() }
         .task {
             await viewModel.loadTrending()
         }
@@ -68,6 +70,7 @@ struct FindView: View {
         }
         .onDisappear {
             viewModel.cancelInFlight()
+            ingredientVM.cancelInFlight()
         }
     }
 
@@ -86,7 +89,7 @@ struct FindView: View {
 
             TextField(
                 "",
-                text: $viewModel.searchText,
+                text: $ingredientVM.draft,
                 prompt: Text("Search recipes, ingredients, cooks…")
                     .foregroundStyle(Theme.subtle(for: colorScheme))
             )
@@ -94,11 +97,18 @@ struct FindView: View {
             .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
-            .submitLabel(.search)
+            .submitLabel(.return)
+            .focused($fieldFocused)
+            // Return adds the text as a chip and keeps the keyboard up for the next one.
+            .onSubmit {
+                ingredientVM.submitDraft()
+                fieldFocused = true
+            }
             .accessibilityLabel("Search recipes, ingredients, cooks")
 
-            if !viewModel.searchText.isEmpty {
+            if !ingredientVM.draft.isEmpty || !ingredientVM.chips.isEmpty {
                 Button {
+                    ingredientVM.clear()
                     viewModel.clearSearch()
                 } label: {
                     Image(systemName: "xmark.circle.fill")

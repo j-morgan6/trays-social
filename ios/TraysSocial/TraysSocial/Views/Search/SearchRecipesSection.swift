@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Recipes mode body: Browse tiles and Most saved before typing; grouped
+/// Normal-search body: Browse tiles and Most saved before typing; grouped
 /// results (Cooks, In your tray, From people you follow, Everyone) after.
 ///
-/// Like `IngredientSearchSection`, the section pads its own content rather
+/// Like `IngredientMatchResults`, the section pads its own content rather
 /// than taking outer padding, because `SectionHeader` carries a built-in
 /// 20pt inset. Sponsored tiles render only in the FeedItem-shaped lists
 /// (Everyone and Most saved); the tray and following groups are plain posts.

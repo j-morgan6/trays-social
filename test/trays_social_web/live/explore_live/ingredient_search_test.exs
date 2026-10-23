@@ -17,63 +17,47 @@ defmodule TraysSocialWeb.ExploreLive.IngredientSearchTest do
     post_fixture(%{user_id: user.id, caption: caption, ingredients: ingredients})
   end
 
-  defp have_mode(conn) do
+  defp explore(conn) do
     {:ok, view, _html} = live(conn, ~p"/explore")
-    render_click(view, "set-mode", %{"mode" => "have"})
     view
   end
 
   defp add(view, text), do: render_submit(view, "add-ingredient", %{"ingredient" => text})
 
-  describe "mode switch" do
-    test "switching to What I have shows the ingredient input", %{conn: conn} do
+  describe "single search box" do
+    test "there is no Recipes / What I have switch", %{conn: conn} do
       {:ok, view, html} = live(conn, ~p"/explore")
 
-      assert html =~ "Recipes"
-      assert html =~ "What I have"
+      refute html =~ "What I have"
+      refute has_element?(view, "[aria-label='Search mode']")
       refute has_element?(view, "#ingredient-form")
-
-      html = render_click(view, "set-mode", %{"mode" => "have"})
-
-      assert has_element?(view, "#ingredient-form input[aria-label='Add an ingredient']")
-      assert html =~ "in your kitchen"
-      refute html =~ "Search recipes"
+      assert has_element?(view, "#search-form input[name='query']")
     end
 
-    test "switching back to Recipes restores the existing search", %{conn: conn} do
-      view = have_mode(conn)
+    test "Enter turns the typed text into a chip and empties the box", %{conn: conn} do
+      view = explore(conn)
+      view |> form("#search-form", %{"query" => "Rice"}) |> render_change()
+      assert has_element?(view, "#search-input-0[value='Rice']")
 
-      html = render_click(view, "set-mode", %{"mode" => "recipes"})
+      view |> form("#search-form", %{"query" => "Rice"}) |> render_submit()
 
-      assert html =~ "Search recipes"
-      refute has_element?(view, "#ingredient-form")
+      assert has_element?(view, "button[aria-label='Remove rice']")
+      assert has_element?(view, "#search-input-1[value='']")
+      assert render(view) =~ "Add two or more"
     end
 
-    test "an unknown mode is ignored", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/explore")
-
-      render_click(view, "set-mode", %{"mode" => "admin"})
-      html = render_click(view, "set-mode", %{})
-
-      assert html =~ "Search recipes"
-      refute has_element?(view, "#ingredient-form")
-    end
-
-    test "mode changes are pushed to the SearchPrefs hook", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/explore")
-      render_hook(view, "restore-search-prefs", %{"mode" => "recipes", "recent" => ["eggs"]})
-
-      render_click(view, "set-mode", %{"mode" => "have"})
-      assert_push_event(view, "search-prefs", %{mode: "have", recent: ["eggs"]})
+    test "new chips are pushed to the SearchPrefs hook", %{conn: conn} do
+      view = explore(conn)
+      render_hook(view, "restore-search-prefs", %{"recent" => ["eggs"]})
 
       add(view, "rice")
-      assert_push_event(view, "search-prefs", %{mode: "have", recent: ["rice", "eggs"]})
+      assert_push_event(view, "search-prefs", %{recent: ["rice", "eggs"]})
     end
 
     test "nothing is pushed before the hook has restored stored prefs", %{conn: conn} do
       # A fresh mount or a rejoin starts from defaults; pushing those would
       # overwrite what the browser stored before the hook sends it back.
-      view = have_mode(conn)
+      view = explore(conn)
       add(view, "rice")
 
       refute_push_event(view, "search-prefs", %{})
@@ -86,7 +70,7 @@ defmodule TraysSocialWeb.ExploreLive.IngredientSearchTest do
       recipe(viewer, "Lemon rice", ["rice", "lemon"])
       recipe(cook, "Chicken adobo", ["rice", "soy sauce"])
 
-      view = have_mode(conn)
+      view = explore(conn)
       add(view, "Rice")
       html = add(view, "lemon")
 
@@ -97,22 +81,30 @@ defmodule TraysSocialWeb.ExploreLive.IngredientSearchTest do
       assert html =~ "missing: soy sauce"
     end
 
-    test "removing the last chip clears results", %{conn: conn, viewer: viewer} do
-      recipe(viewer, "Lemon rice", ["rice"])
+    test "removing chips steps back to normal search, then to nothing", %{
+      conn: conn,
+      viewer: viewer
+    } do
+      recipe(viewer, "Lemon rice", ["rice", "lemon"])
 
-      view = have_mode(conn)
-      assert add(view, "rice") =~ "You have everything"
+      view = explore(conn)
+      add(view, "rice")
+      assert add(view, "lemon") =~ "You have everything"
+
+      html = render_click(view, "remove-ingredient", %{"ingredient" => "lemon"})
+
+      refute html =~ "You have everything"
+      assert html =~ "1 recipe for you"
 
       html = render_click(view, "remove-ingredient", %{"ingredient" => "rice"})
 
-      refute html =~ "You have everything"
-      refute html =~ "Lemon rice"
-      refute has_element?(view, "button[aria-label='Remove rice']")
-      assert html =~ "in your kitchen"
+      refute html =~ "1 recipe for you"
+      assert html =~ "Popular this week"
+      refute has_element?(view, "button[aria-label^='Remove']")
     end
 
     test "an eleventh chip is ignored", %{conn: conn} do
-      view = have_mode(conn)
+      view = explore(conn)
       for i <- 1..11, do: add(view, "item#{i}")
 
       assert has_element?(view, "button[aria-label='Remove item10']")
@@ -121,7 +113,7 @@ defmodule TraysSocialWeb.ExploreLive.IngredientSearchTest do
     end
 
     test "duplicate chips are collapsed case-insensitively", %{conn: conn} do
-      view = have_mode(conn)
+      view = explore(conn)
       add(view, "Rice")
       html = add(view, "  rice ")
 
@@ -129,7 +121,7 @@ defmodule TraysSocialWeb.ExploreLive.IngredientSearchTest do
     end
 
     test "invalid add-ingredient payloads add no chip", %{conn: conn} do
-      view = have_mode(conn)
+      view = explore(conn)
 
       render_submit(view, "add-ingredient", %{"ingredient" => ["x"]})
       render_submit(view, "add-ingredient", %{})
@@ -141,7 +133,7 @@ defmodule TraysSocialWeb.ExploreLive.IngredientSearchTest do
     end
 
     test "a junk remove-ingredient payload is ignored", %{conn: conn} do
-      view = have_mode(conn)
+      view = explore(conn)
       add(view, "rice")
 
       render_click(view, "remove-ingredient", %{"ingredient" => %{"a" => 1}})
@@ -151,40 +143,68 @@ defmodule TraysSocialWeb.ExploreLive.IngredientSearchTest do
 
     test "recipes by blocked cooks are excluded", %{conn: conn, viewer: viewer} do
       cook = user_fixture()
-      recipe(cook, "Blocked fried rice", ["rice"])
+      recipe(cook, "Blocked fried rice", ["rice", "egg"])
       {:ok, _} = Accounts.block_user(viewer.id, cook.id)
 
-      view = have_mode(conn)
-      html = add(view, "rice")
+      view = explore(conn)
+      add(view, "rice")
+      html = add(view, "egg")
 
       refute html =~ "Blocked fried rice"
       assert html =~ "No matches yet"
     end
   end
 
+  describe "blocked cooks on the normal search" do
+    # One term on the classic page goes to Posts.search_posts, which must get
+    # the viewer's block pairs like the grouped and ingredient searches do.
+    test "a single chip or typed term never shows a blocked cook's recipe", %{
+      conn: conn,
+      viewer: viewer
+    } do
+      cook = user_fixture()
+      recipe(cook, "Blocked rice bowl", ["rice"])
+      recipe(user_fixture(), "Open rice bowl", ["rice"])
+      {:ok, _} = Accounts.block_user(cook.id, viewer.id)
+
+      view = explore(conn)
+      html = view |> form("#search-form", %{"query" => "rice"}) |> render_change()
+
+      assert html =~ "Open rice bowl"
+      refute html =~ "Blocked rice bowl"
+
+      html = view |> form("#search-form", %{"query" => "rice"}) |> render_submit()
+
+      assert has_element?(view, "button[aria-label='Remove rice']")
+      assert html =~ "Open rice bowl"
+      refute html =~ "Blocked rice bowl"
+    end
+  end
+
   describe "restore-search-prefs" do
-    test "restore-search-prefs reopens the remembered mode", %{conn: conn} do
+    test "restore-search-prefs shows recently used chips", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/explore")
 
       html = render_hook(view, "restore-search-prefs", %{"mode" => "have", "recent" => ["eggs"]})
 
-      assert has_element?(view, "#ingredient-form")
+      assert has_element?(view, "#search-form")
       assert has_element?(view, "button[phx-value-ingredient='eggs']")
       assert html =~ "Recently used"
     end
 
     test "a recent chip can be re-added with one click", %{conn: conn, viewer: viewer} do
-      recipe(viewer, "Scrambled eggs", ["egg"])
+      recipe(viewer, "Scrambled eggs", ["egg", "butter"])
       {:ok, view, _html} = live(conn, ~p"/explore")
-      render_hook(view, "restore-search-prefs", %{"mode" => "have", "recent" => ["eggs"]})
+      render_hook(view, "restore-search-prefs", %{"recent" => ["eggs", "butter"]})
 
-      html = view |> element("button[phx-value-ingredient='eggs']") |> render_click()
+      view |> element("button[phx-value-ingredient='eggs']") |> render_click()
+      html = view |> element("button[phx-value-ingredient='butter']") |> render_click()
 
       assert has_element?(view, "button[aria-label='Remove eggs']")
       assert html =~ "Scrambled eggs"
     end
 
-    test "junk mode and recent values fall back safely", %{conn: conn} do
+    test "junk and legacy mode values fall back safely", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/explore")
 
       html =
@@ -219,7 +239,7 @@ defmodule TraysSocialWeb.ExploreLive.IngredientSearchTest do
     end
 
     test "restoring does not wipe the current chips", %{conn: conn} do
-      view = have_mode(conn)
+      view = explore(conn)
       add(view, "rice")
 
       render_hook(view, "restore-search-prefs", %{"mode" => "have", "recent" => []})

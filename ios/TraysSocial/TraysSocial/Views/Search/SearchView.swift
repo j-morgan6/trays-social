@@ -1,19 +1,20 @@
 import SwiftUI
 
-/// Recipe-first Search tab: Recipes / What I have, remembering the last mode.
+/// Recipe-first Search tab with one search box (W205).
 ///
-/// Recipes mode shows Browse tiles and Most saved before typing, then grouped
-/// results with "See all" (`SearchRecipesSection`). What I have reuses
-/// `IngredientSearchSection` unchanged. Not wired into the shell yet; the
-/// recipe-first shell adds it as a tab.
+/// Return turns the typed text into an ingredient chip. Browse tiles and Most
+/// saved show before typing; one term (typed or a single chip) shows grouped
+/// results with "See all" (`SearchRecipesSection`); two or more ingredients
+/// show "You have everything" / "Almost there" (`IngredientMatchResults`).
+/// `IngredientSearchViewModel.route` makes that call.
 ///
 /// Laid out like `FindView`: each child pads itself, because the sections
 /// carry `SectionHeader`'s built-in inset and outer padding would double it.
 struct SearchView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @State private var mode: SearchMode = SearchPreferences().mode
     @State private var recipes = SearchViewModel()
     @State private var ingredients = IngredientSearchViewModel()
+    @FocusState private var fieldFocused: Bool
 
     var body: some View {
         ScrollView {
@@ -26,18 +27,17 @@ struct SearchView: View {
                     .padding(.top, 4)
                     .padding(.bottom, 14)
 
-                SearchModeSwitch(mode: $mode)
+                searchField
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 14)
+                    .padding(.bottom, 12)
+                IngredientChipBar(viewModel: ingredients)
+                    .padding(.bottom, 10)
 
-                if mode == .recipes {
-                    searchField
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 22)
-                    SearchRecipesSection(viewModel: recipes)
+                if ingredients.isMatchingIngredients {
+                    IngredientMatchResults(viewModel: ingredients)
                         .padding(.bottom, 24)
                 } else {
-                    IngredientSearchSection(viewModel: ingredients)
+                    SearchRecipesSection(viewModel: recipes)
                         .padding(.bottom, 24)
                 }
             }
@@ -46,12 +46,23 @@ struct SearchView: View {
         }
         .task { await recipes.loadBrowseIfNeeded() }
         .refreshable { await recipes.loadBrowse() }
-        .onChange(of: mode) { _, newMode in SearchPreferences().mode = newMode }
-        // The view model debounces 300ms and cancels any in-flight search,
+        // Both view models debounce 300ms and cancel any in-flight search,
         // so firing on every keystroke is safe.
+        .onChange(of: ingredients.draft) { ingredients.draftChanged() }
+        .onChange(of: ingredients.searchTerm) { _, term in recipes.searchText = term }
         .onChange(of: recipes.searchText) { recipes.textChanged() }
-        .onAppear { recipes.resumeIfNeeded() }
-        .onDisappear { recipes.cancelInFlight() }
+        .onAppear {
+            recipes.resumeIfNeeded()
+            ingredients.resumeIfNeeded()
+        }
+        .onDisappear {
+            recipes.cancelInFlight()
+            ingredients.cancelInFlight()
+        }
+    }
+
+    private var showsClear: Bool {
+        recipes.showsResults || !ingredients.chips.isEmpty || !ingredients.draft.isEmpty
     }
 
     private var searchField: some View {
@@ -61,17 +72,26 @@ struct SearchView: View {
                 .foregroundStyle(Theme.subtle(for: colorScheme))
             TextField(
                 "",
-                text: $recipes.searchText,
-                prompt: Text("Search recipes, dishes, cooks…").foregroundStyle(Theme.subtle(for: colorScheme))
+                text: $ingredients.draft,
+                prompt: Text("Search recipes, ingredients, cooks…").foregroundStyle(Theme.subtle(for: colorScheme))
             )
             .font(.system(size: 14.5))
             .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
-            .submitLabel(.search)
-            .accessibilityLabel(Text("Search recipes, dishes, cooks"))
-            if recipes.showsResults {
-                Button { recipes.clear() } label: {
+            .submitLabel(.return)
+            .focused($fieldFocused)
+            // Return adds the text as a chip and keeps the keyboard up for the next one.
+            .onSubmit {
+                ingredients.submitDraft()
+                fieldFocused = true
+            }
+            .accessibilityLabel(Text("Search recipes, ingredients, cooks"))
+            if showsClear {
+                Button {
+                    ingredients.clear()
+                    recipes.clear()
+                } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 16, weight: .regular))
                         .foregroundStyle(Theme.subtle(for: colorScheme))

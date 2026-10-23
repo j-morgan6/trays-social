@@ -4,130 +4,101 @@
      grid. Empty state (no query, no chips) shows the existing
      Trending / New / by-tag discovery, restyled. --%>
 
-<% has_query = @query != "" %>
 <% has_chips = MapSet.size(@active_chips) > 0 %>
-<% is_searching = has_query or has_chips or not is_nil(@category) %>
+<% is_searching = @search_route != :idle or has_chips or not is_nil(@category) %>
+<% matching_ingredients = match?({:ingredients, _}, @search_route) %>
 
-<%!-- SearchPrefs (assets/js/app.js) restores the remembered mode and
-     recently used ingredient chips from localStorage on mount, and stores
-     them again whenever the server pushes "search-prefs". --%>
+<%!-- One search box (W205): Enter turns the typed text into an ingredient
+     chip. One term searches normally; two or more switch the results to
+     "You have everything" / "Almost there". SearchPrefs (assets/js/app.js)
+     restores recently used ingredient chips from localStorage on mount, and
+     stores them again whenever the server pushes "search-prefs". --%>
 <div id="search-prefs" phx-hook="SearchPrefs">
-  <div class="max-w-[1280px] mx-auto px-6 md:px-12 pt-6">
-    <div role="group" aria-label="Search mode" class="inline-flex rounded-xl bg-base-200 p-1">
-      <button
-        type="button"
-        phx-click="set-mode"
-        phx-value-mode="recipes"
-        aria-pressed={to_string(@mode == "recipes")}
-        class={[
-          "px-4 py-2 rounded-lg text-sm transition-colors",
-          if(@mode == "recipes",
-            do: "bg-base-100 text-base-content font-semibold",
-            else: "text-base-content/60 hover:text-base-content"
-          )
-        ]}
+  <%!-- Sticky search + chips bar --%>
+  <div class="sticky top-16 z-10 bg-base-100 border-b border-base-300">
+    <div class="max-w-[1280px] mx-auto px-6 md:px-12 pt-6 pb-4">
+      <.form
+        for={%{}}
+        as={:search}
+        id="search-form"
+        phx-change="search"
+        phx-submit="submit-search"
+        class="mb-3.5"
       >
-        Recipes
-      </button>
-      <button
-        type="button"
-        phx-click="set-mode"
-        phx-value-mode="have"
-        aria-pressed={to_string(@mode == "have")}
-        class={[
-          "px-4 py-2 rounded-lg text-sm transition-colors",
-          if(@mode == "have",
-            do: "bg-base-100 text-base-content font-semibold",
-            else: "text-base-content/60 hover:text-base-content"
-          )
-        ]}
-      >
-        What I have
-      </button>
-    </div>
-  </div>
-
-  <%= if @mode == "have" do %>
-    <main class="max-w-[1280px] mx-auto px-6 md:px-12 pt-6 pb-12">
-      <div class="max-w-2xl">
-        <IngredientComponents.ingredient_panel
-          chips={@ingredient_chips}
-          recent={@recent_ingredients}
-          results={@ingredient_results}
-          max_chips={@max_ingredient_chips}
-        />
-      </div>
-    </main>
-  <% else %>
-    <%!-- Sticky search + chips bar --%>
-    <div class="sticky top-16 z-10 bg-base-100 border-b border-base-300">
-      <div class="max-w-[1280px] mx-auto px-6 md:px-12 pt-6 pb-4">
-        <.form
-          for={%{}}
-          as={:search}
-          phx-change="search"
-          phx-submit="search"
-          class="mb-3.5"
-        >
-          <div class="h-14 rounded-full bg-base-200 border border-base-300 flex items-center px-5 gap-3.5 focus-within:border-primary transition-colors">
-            <.icon name="hero-magnifying-glass" class="size-5 text-base-content/60 shrink-0" />
-            <input
-              type="text"
-              name="query"
-              value={@query}
-              placeholder="Search recipes, ingredients, cooks…"
-              autocomplete="off"
-              class="flex-1 bg-transparent border-0 outline-none text-[17px] text-base-content placeholder:text-base-content/40"
-              phx-debounce="200"
-            />
-            <%= if is_searching do %>
-              <span
-                :if={!@recipe_first}
-                class="font-mono text-[11px] text-base-content/60 uppercase tracking-[0.1em]"
-              >
-                {length(@results)} {if length(@results) == 1, do: "match", else: "matches"}
-              </span>
-              <button
-                type="button"
-                phx-click="clear-search"
-                class="text-base-content/50 hover:text-base-content transition-colors"
-                aria-label="Clear search"
-              >
-                <.icon name="hero-x-mark" class="size-5" />
-              </button>
-            <% end %>
-          </div>
-        </.form>
-
-        <%!-- recipe_first replaces the filter chips with Browse tiles. --%>
-        <div :if={!@recipe_first} class="flex flex-wrap gap-2">
-          <%= for chip <- @chips do %>
-            <% on = MapSet.member?(@active_chips, chip.id) %>
+        <div class="h-14 rounded-full bg-base-200 border border-base-300 flex items-center px-5 gap-3.5 focus-within:border-primary transition-colors">
+          <.icon name="hero-magnifying-glass" class="size-5 text-base-content/60 shrink-0" />
+          <%!-- The id changes with the chip count so a submitted term
+                 remounts an empty, focused input. --%>
+          <input
+            id={"search-input-#{length(@ingredient_chips)}"}
+            type="text"
+            name="query"
+            value={@query}
+            aria-label="Search recipes, ingredients, cooks"
+            phx-mounted={@ingredient_chips != [] && JS.focus()}
+            placeholder="Search recipes, ingredients, cooks…"
+            autocomplete="off"
+            class="flex-1 bg-transparent border-0 outline-none text-[17px] text-base-content placeholder:text-base-content/40"
+            phx-debounce="200"
+          />
+          <%= if is_searching do %>
+            <span
+              :if={!@recipe_first and !matching_ingredients}
+              class="font-mono text-[11px] text-base-content/60 uppercase tracking-[0.1em]"
+            >
+              {length(@results)} {if length(@results) == 1, do: "match", else: "matches"}
+            </span>
             <button
               type="button"
-              phx-click="toggle-chip"
-              phx-value-id={chip.id}
-              class={[
-                "inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[13px] transition-colors",
-                if(on,
-                  do: "bg-primary text-primary-content border border-primary",
-                  else:
-                    "bg-base-100 text-base-content border border-base-300 hover:border-base-content/30"
-                )
-              ]}
+              phx-click="clear-search"
+              class="text-base-content/50 hover:text-base-content transition-colors"
+              aria-label="Clear search"
             >
-              <.icon name={chip.icon} class="size-3" />
-              {chip.label}
-              <%= if on do %>
-                <.icon name="hero-x-mark" class="size-3 opacity-70 -mr-1" />
-              <% end %>
+              <.icon name="hero-x-mark" class="size-5" />
             </button>
           <% end %>
         </div>
+      </.form>
+
+      <IngredientComponents.chip_bar
+        chips={@ingredient_chips}
+        recent={@recent_ingredients}
+        typing={@query != ""}
+        max_chips={@max_ingredient_chips}
+      />
+
+      <%!-- recipe_first replaces the filter chips with Browse tiles. --%>
+      <div :if={!@recipe_first} class="flex flex-wrap gap-2">
+        <%= for chip <- @chips do %>
+          <% on = MapSet.member?(@active_chips, chip.id) %>
+          <button
+            type="button"
+            phx-click="toggle-chip"
+            phx-value-id={chip.id}
+            class={[
+              "inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[13px] transition-colors",
+              if(on,
+                do: "bg-primary text-primary-content border border-primary",
+                else:
+                  "bg-base-100 text-base-content border border-base-300 hover:border-base-content/30"
+              )
+            ]}
+          >
+            <.icon name={chip.icon} class="size-3" />
+            {chip.label}
+            <%= if on do %>
+              <.icon name="hero-x-mark" class="size-3 opacity-70 -mr-1" />
+            <% end %>
+          </button>
+        <% end %>
       </div>
     </div>
+  </div>
 
-    <main class="max-w-[1280px] mx-auto px-6 md:px-12 pt-8 pb-12">
+  <main class="max-w-[1280px] mx-auto px-6 md:px-12 pt-8 pb-12">
+    <%= if matching_ingredients do %>
+      <IngredientComponents.ingredient_results results={@ingredient_results} />
+    <% else %>
       <%= if @recipe_first do %>
         <%= if @groups do %>
           <RecipeFirstComponents.grouped_results groups={@groups} />
@@ -290,6 +261,6 @@
             <% end %>
         <% end %>
       <% end %>
-    </main>
-  <% end %>
+    <% end %>
+  </main>
 </div>

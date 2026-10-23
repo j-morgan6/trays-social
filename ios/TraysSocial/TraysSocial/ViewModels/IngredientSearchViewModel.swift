@@ -1,9 +1,11 @@
 import OSLog
 import SwiftUI
 
-/// "What I have" search: a row of ingredient chips, debounced against
-/// `GET /search/ingredients?have[]=...`. Read failures are silent (D95):
-/// the last results stay on screen and the error is logged only.
+/// The single search box's text and ingredient chips (W205). `route` decides
+/// what the box searches: one term goes to the normal search (the owning
+/// view hands `searchTerm` to its recipes view model); two or more run here,
+/// debounced against `GET /search/ingredients?have[]=...`. Read failures are
+/// silent (D95): the last results stay on screen and the error is logged only.
 @MainActor
 @Observable
 final class IngredientSearchViewModel {
@@ -34,6 +36,7 @@ final class IngredientSearchViewModel {
         self.preferences = preferences
         self.debounce = debounce
         self.fetch = fetch
+        preferences.removeLegacyMode()
         recentIngredients = preferences.recentIngredients
     }
 
@@ -49,6 +52,28 @@ final class IngredientSearchViewModel {
         chips.count < IngredientChips.maxCount
     }
 
+    var route: UnifiedSearch.Route {
+        UnifiedSearch.route(chips: chips, text: draft)
+    }
+
+    /// The single term for the normal search, or "" when the route is idle
+    /// or matching ingredients.
+    var searchTerm: String {
+        if case let .term(term) = route {
+            term
+        } else {
+            ""
+        }
+    }
+
+    var isMatchingIngredients: Bool {
+        if case .ingredients = route {
+            true
+        } else {
+            false
+        }
+    }
+
     /// Recently used chips that are not already in the row.
     var suggestions: [String] {
         recentIngredients.filter { !chips.contains($0) }
@@ -61,14 +86,29 @@ final class IngredientSearchViewModel {
 
     func addChip(_ raw: String) {
         let updated = IngredientChips.adding(raw, to: chips)
-        guard updated != chips else { return }
+        guard updated != chips, let chip = updated.last else { return }
         chips = updated
+        preferences.recordRecent([chip])
+        recentIngredients = preferences.recentIngredients
         search()
     }
 
     func removeChip(_ chip: String) {
         chips.removeAll { $0 == chip }
         search()
+    }
+
+    /// Called on every keystroke; the debounce makes that safe.
+    func draftChanged() {
+        search()
+    }
+
+    func clear() {
+        cancelInFlight()
+        chips = []
+        draft = ""
+        results = nil
+        lastCompletedQuery = []
     }
 
     func cancelInFlight() {
@@ -80,7 +120,7 @@ final class IngredientSearchViewModel {
     /// Re-runs a search that `cancelInFlight()` dropped (the section
     /// disappeared mid-debounce or mid-request), so chips and results agree.
     func resumeIfNeeded() {
-        guard searchTask == nil, !chips.isEmpty, chips != lastCompletedQuery else { return }
+        guard searchTask == nil, case let .ingredients(terms) = route, terms != lastCompletedQuery else { return }
         search()
     }
 
@@ -91,13 +131,13 @@ final class IngredientSearchViewModel {
 
     private func search() {
         searchTask?.cancel()
-        guard !chips.isEmpty else {
+        guard case let .ingredients(query) = route else {
             searchTask = nil
             results = nil
+            lastCompletedQuery = []
             isSearching = false
             return
         }
-        let query = chips
         searchTask = Task {
             try? await Task.sleep(for: debounce)
             guard !Task.isCancelled else { return }
@@ -112,10 +152,8 @@ final class IngredientSearchViewModel {
                 guard !Task.isCancelled else { return }
                 results = found
                 lastCompletedQuery = query
-                preferences.recordRecent(query)
-                recentIngredients = preferences.recentIngredients
             } catch is CancellationError {
-                // ok: a newer chip edit cancelled this request; its own
+                // ok: a newer chip or keystroke cancelled this request; its own
                 // debounced search takes over.
             } catch {
                 // D95: read-path failures stay silent; keep the last results.

@@ -120,13 +120,14 @@ final class IngredientSearchTests: XCTestCase {
         defer { NotificationCenter.default.removeObserver(observer) }
 
         viewModel.addChip("chicken")
+        viewModel.addChip("rice")
         await viewModel.waitForSearch()
         XCTAssertEqual(viewModel.results?.everything.map(\.id), [7])
 
-        viewModel.addChip("rice")
+        viewModel.addChip("egg")
         await viewModel.waitForSearch()
 
-        XCTAssertEqual(fake.calls, [["chicken"], ["chicken", "rice"]])
+        XCTAssertEqual(fake.calls, [["chicken", "rice"], ["chicken", "rice", "egg"]])
         XCTAssertEqual(viewModel.results?.everything.map(\.id), [7])
         XCTAssertFalse(viewModel.isSearching)
         XCTAssertEqual(toasts.count, 0)
@@ -138,9 +139,10 @@ final class IngredientSearchTests: XCTestCase {
 
         viewModel.addChip("chicken")
         viewModel.addChip("rice")
+        viewModel.addChip("egg")
         await viewModel.waitForSearch()
 
-        XCTAssertEqual(fake.calls, [["chicken", "rice"]])
+        XCTAssertEqual(fake.calls, [["chicken", "rice", "egg"]])
         XCTAssertEqual(viewModel.results?.everything.map(\.id), [1])
     }
 
@@ -149,11 +151,12 @@ final class IngredientSearchTests: XCTestCase {
         let viewModel = makeViewModel(fake, debounce: .milliseconds(50))
 
         viewModel.addChip("eggs")
+        viewModel.addChip("rice")
         viewModel.cancelInFlight()
         viewModel.resumeIfNeeded()
         await viewModel.waitForSearch()
 
-        XCTAssertEqual(fake.calls, [["eggs"]])
+        XCTAssertEqual(fake.calls, [["eggs", "rice"]])
         XCTAssertEqual(viewModel.results?.everything.map(\.id), [3])
 
         viewModel.resumeIfNeeded()

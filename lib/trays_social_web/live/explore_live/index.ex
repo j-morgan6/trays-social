@@ -25,10 +25,11 @@ defmodule TraysSocialWeb.ExploreLive.Index do
     %{id: :following, label: "By cooks I follow", icon: "hero-user-group"}
   ]
 
-  # "What I have" mode. Ingredient chips and recently used chips live under
-  # ingredient_* names because :chips (filter chips above) and :recent (the
-  # "New on Trays" rail) are already taken.
-  @modes ~w(recipes have)
+  # One search box (W205). Pressing Enter turns the typed text into an
+  # ingredient chip; one term (chip or typed text) runs the normal search, two
+  # or more switch to ingredient matching. Ingredient chips and recently used
+  # chips live under ingredient_* names because :chips (filter chips above)
+  # and :recent (the "New on Trays" rail) are already taken.
   @max_ingredient_chips 10
   @max_recent_ingredients 10
 
@@ -73,7 +74,7 @@ defmodule TraysSocialWeb.ExploreLive.Index do
     |> assign(:query, "")
     |> assign(:active_chips, MapSet.new())
     |> assign(:chips, @chips)
-    |> assign(:mode, "recipes")
+    |> assign(:search_route, :idle)
     |> assign(:ingredient_chips, [])
     |> assign(:recent_ingredients, [])
     |> assign(:ingredient_results, nil)
@@ -124,8 +125,18 @@ defmodule TraysSocialWeb.ExploreLive.Index do
      socket
      |> assign(:query, q)
      |> clear_category_if_typed(q)
-     |> refresh_results()}
+     |> refresh()}
   end
+
+  # Enter in the search box: the typed text becomes an ingredient chip.
+  def handle_event("submit-search", %{"query" => q}, socket) do
+    case add_chip(socket, q) do
+      {:ok, socket} -> {:noreply, socket |> assign(:query, "") |> refresh()}
+      :error -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("submit-search", _params, socket), do: {:noreply, socket}
 
   def handle_event("toggle-chip", %{"id" => id}, socket) do
     id_atom = String.to_existing_atom(id)
@@ -139,7 +150,7 @@ defmodule TraysSocialWeb.ExploreLive.Index do
     {:noreply,
      socket
      |> assign(:active_chips, new_active)
-     |> refresh_results()}
+     |> refresh()}
   end
 
   def handle_event("clear-search", _params, socket) do
@@ -147,8 +158,9 @@ defmodule TraysSocialWeb.ExploreLive.Index do
      socket
      |> assign(:query, "")
      |> assign(:active_chips, MapSet.new())
-     |> assign(:results, [])
-     |> assign(category: nil, groups: nil)}
+     |> assign(:ingredient_chips, [])
+     |> assign(category: nil)
+     |> refresh()}
   end
 
   # Browse tile (recipe_first only). The key is only ever looked up in the
@@ -159,34 +171,20 @@ defmodule TraysSocialWeb.ExploreLive.Index do
         {:noreply, socket}
 
       category ->
-        {:noreply, socket |> assign(category: category.key, query: "") |> refresh_results()}
+        {:noreply,
+         socket
+         |> assign(category: category.key, query: "", ingredient_chips: [])
+         |> refresh()}
     end
   end
 
   def handle_event("select-category", _params, socket), do: {:noreply, socket}
 
-  def handle_event("set-mode", %{"mode" => mode}, socket) when mode in @modes do
-    {:noreply, socket |> assign(:mode, mode) |> push_prefs()}
-  end
-
-  def handle_event("set-mode", _params, socket), do: {:noreply, socket}
-
+  # "Recently used" chips add a chip directly, without touching the box.
   def handle_event("add-ingredient", %{"ingredient" => raw}, socket) do
-    chips = socket.assigns.ingredient_chips
-
-    case clean_chip(raw) do
-      {:ok, chip} when length(chips) < @max_ingredient_chips ->
-        if chip in chips do
-          {:noreply, socket}
-        else
-          {:noreply,
-           socket
-           |> assign(:ingredient_chips, chips ++ [chip])
-           |> refresh_ingredient_results()}
-        end
-
-      _ ->
-        {:noreply, socket}
+    case add_chip(socket, raw) do
+      {:ok, socket} -> {:noreply, refresh(socket)}
+      :error -> {:noreply, socket}
     end
   end
 
@@ -198,30 +196,85 @@ defmodule TraysSocialWeb.ExploreLive.Index do
     {:noreply,
      socket
      |> assign(:ingredient_chips, chips)
-     |> refresh_ingredient_results()}
+     |> refresh()}
   end
 
   def handle_event("remove-ingredient", _params, socket), do: {:noreply, socket}
 
   # Sent by the SearchPrefs hook on mount and on every rejoin with whatever
-  # localStorage held. Client-controlled: the mode is whitelisted and recent
-  # chips pass the same validation as a typed chip. It never touches the
-  # current chips.
+  # localStorage held. Client-controlled: recent chips pass the same
+  # validation as a typed chip. It never touches the current chips.
   def handle_event("restore-search-prefs", params, socket) do
-    mode = if params["mode"] in @modes, do: params["mode"], else: "recipes"
     recent = sanitize_recent(params["recent"])
 
-    {:noreply, assign(socket, mode: mode, recent_ingredients: recent, prefs_restored: true)}
+    {:noreply, assign(socket, recent_ingredients: recent, prefs_restored: true)}
+  end
+
+  # Adds a valid, new chip while there is room and records it as recently
+  # used. Adding a chip replaces any selected Browse tile.
+  defp add_chip(socket, raw) do
+    chips = socket.assigns.ingredient_chips
+
+    with {:ok, chip} <- clean_chip(raw),
+         true <- length(chips) < @max_ingredient_chips,
+         false <- chip in chips do
+      recent =
+        [chip | socket.assigns.recent_ingredients]
+        |> Enum.uniq()
+        |> Enum.take(@max_recent_ingredients)
+
+      {:ok,
+       socket
+       |> assign(ingredient_chips: chips ++ [chip], recent_ingredients: recent, category: nil)
+       |> push_prefs()}
+    else
+      _ -> :error
+    end
   end
 
   defp clear_category_if_typed(socket, ""), do: socket
   defp clear_category_if_typed(socket, _q), do: assign(socket, :category, nil)
 
+  defp refresh(socket) do
+    route = search_route(socket.assigns.ingredient_chips, socket.assigns.query)
+    socket = assign(socket, :search_route, route)
+
+    case route do
+      {:ingredients, terms} ->
+        socket |> assign(groups: nil, results: []) |> refresh_ingredient_results(terms)
+
+      {:term, term} ->
+        socket |> assign(:ingredient_results, nil) |> refresh_results(term)
+
+      :idle ->
+        socket |> assign(:ingredient_results, nil) |> refresh_results("")
+    end
+  end
+
+  # The search terms are the chips plus the typed text, unless the text
+  # repeats a chip or the chip row is already full. No terms leaves the page
+  # idle (Browse), one term searches normally, and two or more match recipes
+  # by ingredient.
+  defp search_route(chips, query) do
+    typed = String.trim(query)
+
+    terms =
+      if typed == "" or String.downcase(typed) in chips or
+           length(chips) >= @max_ingredient_chips,
+         do: chips,
+         else: chips ++ [typed]
+
+    case terms do
+      [] -> :idle
+      [term] -> {:term, term}
+      terms -> {:ingredients, terms}
+    end
+  end
+
   # Recipe-first: grouped search (tray / following / everyone) driven by the
-  # typed query or the selected Browse tile; nil groups shows Browse.
-  defp refresh_results(%{assigns: %{recipe_first: true}} = socket) do
+  # search term or the selected Browse tile; nil groups shows Browse.
+  defp refresh_results(%{assigns: %{recipe_first: true}} = socket, query) do
     category = BrowseCategories.fetch(socket.assigns.category)
-    query = socket.assigns.query
 
     if query == "" and is_nil(category) do
       assign(socket, :groups, nil)
@@ -240,15 +293,16 @@ defmodule TraysSocialWeb.ExploreLive.Index do
     end
   end
 
-  defp refresh_results(socket) do
-    query = socket.assigns.query
+  defp refresh_results(socket, query) do
     chips = socket.assigns.active_chips
 
     if query == "" and MapSet.size(chips) == 0 do
       assign(socket, :results, [])
     else
+      user = socket.assigns.current_scope.user
+
       opts =
-        []
+        [blocked_user_ids: Accounts.blocked_pair_ids(user.id)]
         |> maybe_put(:max_cooking_time, if(MapSet.member?(chips, :quick), do: 30))
 
       assign(socket, :results, Posts.search_posts(query, opts))
@@ -262,14 +316,10 @@ defmodule TraysSocialWeb.ExploreLive.Index do
   defp maybe_put(opts, _key, nil), do: opts
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
 
-  defp refresh_ingredient_results(%{assigns: %{ingredient_chips: []}} = socket) do
-    assign(socket, :ingredient_results, nil)
-  end
-
-  defp refresh_ingredient_results(socket) do
+  defp refresh_ingredient_results(socket, terms) do
     user = socket.assigns.current_scope.user
 
-    case IngredientSearch.normalize_terms(socket.assigns.ingredient_chips) do
+    case IngredientSearch.normalize_terms(terms) do
       {:ok, terms} ->
         results =
           Posts.search_by_ingredients(user.id, terms,
@@ -277,14 +327,7 @@ defmodule TraysSocialWeb.ExploreLive.Index do
             following_ids: Accounts.list_following_ids(user.id)
           )
 
-        recent =
-          (socket.assigns.ingredient_chips ++ socket.assigns.recent_ingredients)
-          |> Enum.uniq()
-          |> Enum.take(@max_recent_ingredients)
-
-        socket
-        |> assign(ingredient_results: results, recent_ingredients: recent)
-        |> push_prefs()
+        assign(socket, :ingredient_results, results)
 
       {:error, :invalid_ingredients} ->
         assign(socket, :ingredient_results, nil)
@@ -296,10 +339,7 @@ defmodule TraysSocialWeb.ExploreLive.Index do
   defp push_prefs(%{assigns: %{prefs_restored: false}} = socket), do: socket
 
   defp push_prefs(socket) do
-    push_event(socket, "search-prefs", %{
-      mode: socket.assigns.mode,
-      recent: socket.assigns.recent_ingredients
-    })
+    push_event(socket, "search-prefs", %{recent: socket.assigns.recent_ingredients})
   end
 
   # A chip is kept as typed (trimmed, lowercased) but must pass the same rules

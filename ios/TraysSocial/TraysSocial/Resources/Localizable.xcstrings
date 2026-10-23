@@ -5730,6 +5730,29 @@
         }
       }
     },
+    "Press return to add an ingredient. Add two or more to see what you can make." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press return to add an ingredient. Add two or more to see what you can make."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pulsa Intro para añadir un ingrediente. Añade dos o más para ver qué puedes preparar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appuyez sur Entrée pour ajouter un ingrédient. Ajoutez-en deux ou plus pour voir ce que vous pouvez préparer."
+          }
+        }
+      }
+    },
     "Previous" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8929,75 +8952,6 @@
         }
       }
     },
-    "Add an ingredient" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add an ingredient"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Añade un ingrediente"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajoutez un ingrédient"
-          }
-        }
-      }
-    },
-    "Add an ingredient…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add an ingredient…"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Añade un ingrediente…"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajoutez un ingrédient…"
-          }
-        }
-      }
-    },
-    "Add what's in your kitchen to see what you can make." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add what's in your kitchen to see what you can make."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Añade lo que tienes en tu cocina para ver qué puedes preparar."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajoutez ce que vous avez en cuisine pour voir ce que vous pouvez préparer."
-          }
-        }
-      }
-    },
     "Almost there" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9113,29 +9067,6 @@
         }
       }
     },
-    "Search mode" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search mode"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Modo de búsqueda"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mode de recherche"
-          }
-        }
-      }
-    },
     "Up to 10 ingredients" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9155,29 +9086,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Jusqu'à 10 ingrédients"
-          }
-        }
-      }
-    },
-    "What I have" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What I have"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lo que tengo"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ce que j'ai"
           }
         }
       }
@@ -9592,52 +9500,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pas encore de résultats."
-          }
-        }
-      }
-    },
-    "Search recipes, dishes, cooks…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search recipes, dishes, cooks…"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Busca recetas, platos, cocineros…"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recherchez des recettes, des plats, des cuisiniers…"
-          }
-        }
-      }
-    },
-    "Search recipes, dishes, cooks" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search recipes, dishes, cooks"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Busca recetas, platos, cocineros"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recherchez des recettes, des plats, des cuisiniers"
           }
         }
       }

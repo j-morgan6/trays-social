@@ -16,13 +16,17 @@ final class SearchPreferencesTests: XCTestCase {
         super.tearDown()
     }
 
-    func test_modeDefaultsToRecipes() {
-        XCTAssertEqual(SearchPreferences(defaults: defaults).mode, .recipes)
-    }
+    /// W205 removed the Recipes / What I have switch; its stored mode is
+    /// dropped and recently used chips survive.
+    func test_removeLegacyModeKeepsRecentIngredients() {
+        defaults.set("whatIHave", forKey: SearchPreferences.legacyModeKey)
+        let prefs = SearchPreferences(defaults: defaults)
+        prefs.recordRecent(["eggs"])
 
-    func test_modePersists() {
-        SearchPreferences(defaults: defaults).mode = .whatIHave
-        XCTAssertEqual(SearchPreferences(defaults: defaults).mode, .whatIHave)
+        prefs.removeLegacyMode()
+
+        XCTAssertNil(defaults.object(forKey: SearchPreferences.legacyModeKey))
+        XCTAssertEqual(prefs.recentIngredients, ["eggs"])
     }
 
     func test_recentIngredientsAreMostRecentFirstUniqueAndCapped() {

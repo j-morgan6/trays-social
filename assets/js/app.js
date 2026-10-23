@@ -149,13 +149,13 @@ const AdSlot = {
   }
 }
 
-// SearchPrefs — remembers the Find page's search mode ("recipes" or "have")
-// and recently used ingredient chips per browser (W187). Storage can be
-// unavailable (private mode, blocked site data) or hold junk, so every access
-// is guarded and the page works without it; the server re-validates whatever
-// is pushed in restore-search-prefs.
-const SEARCH_MODE_KEY = "trays:search-mode"
+// SearchPrefs — remembers recently used ingredient chips for the search box
+// per browser (W187). Storage can be unavailable (private mode, blocked site
+// data) or hold junk, so every access is guarded and the page works without
+// it; the server re-validates whatever is pushed in restore-search-prefs.
 const RECENT_INGREDIENTS_KEY = "trays:recent-ingredients"
+// W205 removed the Recipes / What I have switch; drop its stored mode.
+const LEGACY_SEARCH_MODE_KEY = "trays:search-mode"
 
 // The server only writes prefs back after it has received a restore, so a
 // LiveView that rejoined with fresh defaults cannot clobber what is stored.
@@ -163,9 +163,8 @@ const SearchPrefs = {
   mounted() {
     this.restore()
 
-    this.handleEvent("search-prefs", ({mode, recent}) => {
+    this.handleEvent("search-prefs", ({recent}) => {
       try {
-        localStorage.setItem(SEARCH_MODE_KEY, mode)
         localStorage.setItem(RECENT_INGREDIENTS_KEY, JSON.stringify(recent))
       } catch (_e) {
         // Storage unavailable: preferences are simply not persisted.
@@ -178,17 +177,15 @@ const SearchPrefs = {
     this.restore()
   },
   restore() {
-    let mode = "recipes"
     let recent = []
     try {
-      const storedMode = localStorage.getItem(SEARCH_MODE_KEY)
-      if (storedMode === "recipes" || storedMode === "have") mode = storedMode
+      localStorage.removeItem(LEGACY_SEARCH_MODE_KEY)
       const parsed = JSON.parse(localStorage.getItem(RECENT_INGREDIENTS_KEY) || "[]")
       if (Array.isArray(parsed)) recent = parsed.filter(x => typeof x === "string").slice(0, 10)
     } catch (_e) {
       // Storage unavailable or corrupt: keep the defaults.
     }
-    this.pushEvent("restore-search-prefs", {mode, recent})
+    this.pushEvent("restore-search-prefs", {recent})
   }
 }
 

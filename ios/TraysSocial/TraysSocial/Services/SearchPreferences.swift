@@ -1,15 +1,11 @@
 import Foundation
 
-enum SearchMode: String, CaseIterable, Sendable {
-    case recipes
-    case whatIHave
-}
-
-/// Per-device search conveniences: the last mode used and recently used
-/// ingredient chips. Plain UserDefaults, like `apnsDeviceToken`; nothing here
-/// is account data, so it survives sign-out on purpose.
+/// Per-device search conveniences: recently used ingredient chips. Plain
+/// UserDefaults, like `apnsDeviceToken`; nothing here is account data, so it
+/// survives sign-out on purpose.
 struct SearchPreferences {
-    static let modeKey = "search.mode"
+    /// W205 removed the Recipes / What I have switch that this key remembered.
+    static let legacyModeKey = "search.mode"
     static let recentIngredientsKey = "search.recentIngredients"
     static let maxRecent = 10
 
@@ -19,9 +15,9 @@ struct SearchPreferences {
         self.defaults = defaults
     }
 
-    var mode: SearchMode {
-        get { defaults.string(forKey: Self.modeKey).flatMap(SearchMode.init(rawValue:)) ?? .recipes }
-        nonmutating set { defaults.set(newValue.rawValue, forKey: Self.modeKey) }
+    /// Drops the stored mode left behind by builds before W205.
+    func removeLegacyMode() {
+        defaults.removeObject(forKey: Self.legacyModeKey)
     }
 
     var recentIngredients: [String] {

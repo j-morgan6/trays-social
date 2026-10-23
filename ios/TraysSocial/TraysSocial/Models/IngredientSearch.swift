@@ -41,3 +41,29 @@ enum IngredientChips {
         chips.map { URLQueryItem(name: "have[]", value: $0) }
     }
 }
+
+/// One search box (W205): the ingredient chips plus the typed text are the
+/// search terms. No terms shows Browse, one term runs the normal search, and
+/// two or more switch to ingredient matching. Typed text that repeats a chip,
+/// or arrives once the chip row is full, does not add a term. Pure so it can
+/// be unit tested; mirrors `search_route/2` in the web Search LiveView.
+enum UnifiedSearch {
+    enum Route: Equatable, Sendable {
+        case idle
+        case term(String)
+        case ingredients([String])
+    }
+
+    static func route(chips: [String], text: String) -> Route {
+        let typed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var terms = chips
+        if !typed.isEmpty, !chips.contains(typed.lowercased()), chips.count < IngredientChips.maxCount {
+            terms.append(typed)
+        }
+        switch terms.count {
+        case 0: return .idle
+        case 1: return .term(terms[0])
+        default: return .ingredients(terms)
+        }
+    }
+}
