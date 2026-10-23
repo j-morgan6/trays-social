@@ -638,6 +638,33 @@ defmodule TraysSocial.PostsTest do
 
       assert Posts.list_recent_posts() == []
     end
+
+    test "list_recent_posts excludes blocked_user_ids" do
+      blocked = user_fixture()
+      visible = user_fixture()
+      post_fixture(%{user_id: blocked.id, caption: "Blocked"})
+      post_fixture(%{user_id: visible.id, caption: "Visible"})
+
+      recent = Posts.list_recent_posts(10, blocked_user_ids: [blocked.id])
+
+      assert Enum.map(recent, & &1.caption) == ["Visible"]
+    end
+
+    test "list_recent_posts returns nothing when every recent post is from a blocked user" do
+      blocked = user_fixture()
+      post_fixture(%{user_id: blocked.id, caption: "Blocked"})
+
+      assert Posts.list_recent_posts(10, blocked_user_ids: [blocked.id]) == []
+    end
+
+    test "list_recent_posts without opts returns all users' posts" do
+      post_fixture(%{user_id: user_fixture().id, caption: "First"})
+      post_fixture(%{user_id: user_fixture().id, caption: "Second"})
+
+      captions = Posts.list_recent_posts(10) |> Enum.map(& &1.caption) |> Enum.sort()
+
+      assert captions == ["First", "Second"]
+    end
   end
 
   describe "list_top_tags/1" do
@@ -722,6 +749,41 @@ defmodule TraysSocial.PostsTest do
 
       result = Posts.list_posts_by_tags(["stale"])
       assert result == []
+    end
+
+    test "list_posts_by_tags excludes blocked_user_ids and drops tags left empty" do
+      blocked = user_fixture()
+      visible = user_fixture()
+
+      for i <- 1..2 do
+        post_fixture(%{
+          user_id: visible.id,
+          caption: "Visible #{i}",
+          post_tags: [%{tag: "pasta"}]
+        })
+      end
+
+      yesterday = DateTime.utc_now() |> DateTime.add(-1, :day) |> DateTime.truncate(:second)
+
+      visible_posts = from(p in Post, where: p.user_id == ^visible.id)
+      Repo.update_all(visible_posts, set: [inserted_at: yesterday])
+
+      # Newer than the visible posts, so they would fill the per-tag cap of 2
+      # if the block filter ran after the cap instead of before it.
+      for i <- 1..2 do
+        post_fixture(%{
+          user_id: blocked.id,
+          caption: "Blocked #{i}",
+          post_tags: [%{tag: "pasta"}]
+        })
+      end
+
+      post_fixture(%{user_id: blocked.id, caption: "Blocked soup", post_tags: [%{tag: "soup"}]})
+
+      result = Posts.list_posts_by_tags(["pasta", "soup"], 2, blocked_user_ids: [blocked.id])
+
+      assert [{"pasta", posts}] = result
+      assert posts |> Enum.map(& &1.caption) |> Enum.sort() == ["Visible 1", "Visible 2"]
     end
   end
 

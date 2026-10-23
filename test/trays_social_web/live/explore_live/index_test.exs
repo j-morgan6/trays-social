@@ -5,6 +5,8 @@ defmodule TraysSocialWeb.ExploreLive.IndexTest do
   import TraysSocial.PostsFixtures
   import TraysSocial.AccountsFixtures
 
+  alias TraysSocial.Accounts
+
   describe "Explore page" do
     # /explore requires authentication (D60). Setup logs in a viewer so
     # rendering tests below continue to exercise the page.
@@ -66,6 +68,57 @@ defmodule TraysSocialWeb.ExploreLive.IndexTest do
       assert html =~ "New on Trays"
       assert html =~ user.username
     end
+  end
+
+  describe "blocked users on the classic rails (D118)" do
+    setup %{conn: conn} do
+      viewer = user_fixture()
+      %{conn: log_in_user(conn, viewer), viewer: viewer}
+    end
+
+    test "classic rails hide posts from a blocked user", %{conn: conn, viewer: viewer} do
+      blocked = rail_cook("Hidden lentil stew")
+      rail_cook("Open tomato soup")
+      {:ok, _} = Accounts.block_user(viewer.id, blocked.id)
+
+      assert_rails_show_only(conn, "Open tomato soup", "Hidden lentil stew")
+    end
+
+    test "classic rails hide posts from a user who blocked the viewer", %{
+      conn: conn,
+      viewer: viewer
+    } do
+      blocker = rail_cook("Hidden lentil stew")
+      rail_cook("Open tomato soup")
+      {:ok, _} = Accounts.block_user(blocker.id, viewer.id)
+
+      assert_rails_show_only(conn, "Open tomato soup", "Hidden lentil stew")
+    end
+  end
+
+  # A cook with one liked, tagged post, so the post qualifies for all three
+  # classic rails: Popular this week, New on Trays and the "Pasta" tag rail.
+  # Distinct captions keep the assertions exact; fixture usernames (userN)
+  # can be substrings of each other.
+  defp rail_cook(caption) do
+    cook = user_fixture()
+
+    post_fixture(user_id: cook.id, caption: caption, post_tags: [%{tag: "pasta"}])
+    |> Ecto.Changeset.change(%{like_count: 5})
+    |> TraysSocial.Repo.update!()
+
+    cook
+  end
+
+  defp assert_rails_show_only(conn, visible_title, hidden_title) do
+    {:ok, view, _html} = live(conn, ~p"/explore")
+    html = render(view)
+
+    assert html =~ "Popular this week"
+    assert html =~ "New on Trays"
+    assert html =~ "Pasta"
+    assert html =~ visible_title
+    refute html =~ hidden_title
   end
 
   describe "Authentication (D60)" do

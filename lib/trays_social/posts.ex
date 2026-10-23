@@ -247,11 +247,14 @@ defmodule TraysSocial.Posts do
   end
 
   @doc """
-  Returns the most recent posts, excluding soft deleted.
+  Returns the most recent posts, excluding soft deleted. Opts: `:blocked_user_ids`.
   """
-  def list_recent_posts(limit \\ 10) do
+  def list_recent_posts(limit \\ 10, opts \\ []) do
+    blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
+
     Post
     |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
+    |> exclude_blocked_users(blocked_user_ids)
     |> order_by([p], desc: p.inserted_at)
     |> limit(^limit)
     |> preload([:user, :post_photos])
@@ -438,12 +441,15 @@ defmodule TraysSocial.Posts do
   @doc """
   Returns posts grouped by tag. Loads all posts for the given tags in one query,
   groups in Elixir, limiting to posts_per_tag per tag.
-  Returns a list of {tag, posts} tuples in the same order as tags.
+  Returns a list of {tag, posts} tuples in the same order as tags; tags with no
+  visible posts are dropped. Opts: `:blocked_user_ids`.
   """
-  def list_posts_by_tags(tags, posts_per_tag \\ 8) do
+  def list_posts_by_tags(tags, posts_per_tag \\ 8, opts \\ []) do
+    blocked_user_ids = Keyword.get(opts, :blocked_user_ids, [])
+
     tag_post_ids =
       tags
-      |> fetch_tag_post_rows()
+      |> fetch_tag_post_rows(blocked_user_ids)
       |> collect_post_ids_per_tag(posts_per_tag)
 
     posts_by_id = fetch_posts_by_ids(tag_post_ids)
@@ -453,10 +459,13 @@ defmodule TraysSocial.Posts do
     |> Enum.reject(fn {_tag, posts} -> Enum.empty?(posts) end)
   end
 
-  defp fetch_tag_post_rows(tags) do
+  # The block filter runs here, before collect_post_ids_per_tag caps each tag,
+  # so a tag still fills up to posts_per_tag with visible posts.
+  defp fetch_tag_post_rows(tags, blocked_user_ids) do
     Post
     |> join(:inner, [p], pt in PostTag, on: pt.post_id == p.id and pt.tag in ^tags)
     |> where([p], is_nil(p.deleted_at) and is_nil(p.removed_at))
+    |> exclude_blocked_users(blocked_user_ids)
     |> order_by([p, pt], asc: pt.tag, desc: p.inserted_at)
     |> select([p, pt], {pt.tag, p.id})
     |> Repo.all()

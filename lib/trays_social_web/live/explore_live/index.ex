@@ -95,10 +95,12 @@ defmodule TraysSocialWeb.ExploreLive.Index do
   end
 
   defp assign_classic_rails(socket) do
+    opts = [blocked_user_ids: Accounts.blocked_pair_ids(socket.assigns.current_scope.user.id)]
+
     assign(socket,
-      trending: Posts.list_trending_posts(10),
-      recent: Posts.list_recent_posts(10),
-      tag_sections: load_tag_sections()
+      trending: Posts.list_trending_posts(10, opts),
+      recent: Posts.list_recent_posts(10, opts),
+      tag_sections: load_tag_sections(opts)
     )
   end
 
@@ -114,9 +116,9 @@ defmodule TraysSocialWeb.ExploreLive.Index do
 
   defp maybe_assign_most_saved(socket), do: socket
 
-  defp load_tag_sections do
+  defp load_tag_sections(opts) do
     tags = Posts.list_top_tags(6)
-    Posts.list_posts_by_tags(tags, 8)
+    Posts.list_posts_by_tags(tags, 8, opts)
   end
 
   @impl true
