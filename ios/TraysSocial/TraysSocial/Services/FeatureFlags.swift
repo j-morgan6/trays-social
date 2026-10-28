@@ -38,21 +38,33 @@ final class FeatureFlags {
     private static let log = Logger(subsystem: "com.trays.social", category: "features")
 
     private let defaults: UserDefaults
+    /// W213. Whether this binary's privacy manifest declares purchase data.
+    private let purchaseDataDeclared: Bool
     private(set) var recipeFirst: Bool
     /// W209. Mirrors the server's `FEATURES_PAID_TIER`. Off hides every Plus
     /// entry point; it is never an access control (the server still enforces
     /// the entitlement on every gated endpoint).
+    ///
+    /// W213. Also off, whatever the server says, in a build whose bundled
+    /// PrivacyInfo.xcprivacy does not declare Purchase History: Plus sends App
+    /// Store transactions to the server, so turning the flag on must not make
+    /// an installed build's privacy declaration false. Every Plus surface and
+    /// the StoreKit entitlement sync (D119) read this value.
     private(set) var paidTier: Bool
 
-    init(defaults: UserDefaults = .standard) {
+    init(
+        defaults: UserDefaults = .standard,
+        purchaseDataDeclared: Bool = PrivacyDeclaration.bundleDeclaresPurchaseHistory()
+    ) {
         self.defaults = defaults
+        self.purchaseDataDeclared = purchaseDataDeclared
         recipeFirst = defaults.bool(forKey: Self.recipeFirstKey)
-        paidTier = defaults.bool(forKey: Self.paidTierKey)
+        paidTier = purchaseDataDeclared && defaults.bool(forKey: Self.paidTierKey)
     }
 
     func apply(_ payload: FeaturesPayload) {
         recipeFirst = payload.recipeFirst
-        paidTier = payload.paidTier
+        paidTier = purchaseDataDeclared && payload.paidTier
         defaults.set(payload.recipeFirst, forKey: Self.recipeFirstKey)
         defaults.set(payload.paidTier, forKey: Self.paidTierKey)
     }
@@ -65,6 +77,29 @@ final class FeatureFlags {
         } catch {
             Self.log.error("features refresh failed: \(String(describing: error), privacy: .public)")
         }
+    }
+}
+
+/// W213. Reads the bundled privacy manifest. The Plus release adds Purchase
+/// History to PrivacyInfo.xcprivacy, which lifts the `paidTier` guard above
+/// with no other code change.
+enum PrivacyDeclaration {
+    static let purchaseHistoryType = "NSPrivacyCollectedDataTypePurchaseHistory"
+
+    /// False for a missing or unreadable manifest: when in doubt, Plus stays off.
+    static func declaresPurchaseHistory(manifest data: Data?) -> Bool {
+        guard let data,
+              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
+              let root = plist as? [String: Any],
+              let types = root["NSPrivacyCollectedDataTypes"] as? [[String: Any]]
+        else { return false }
+        return types.contains { $0["NSPrivacyCollectedDataType"] as? String == purchaseHistoryType }
+    }
+
+    static func bundleDeclaresPurchaseHistory(_ bundle: Bundle = .main) -> Bool {
+        let data = bundle.url(forResource: "PrivacyInfo", withExtension: "xcprivacy")
+            .flatMap { try? Data(contentsOf: $0) }
+        return declaresPurchaseHistory(manifest: data)
     }
 }
 

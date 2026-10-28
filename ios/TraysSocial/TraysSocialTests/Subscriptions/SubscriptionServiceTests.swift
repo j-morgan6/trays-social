@@ -564,7 +564,8 @@ extension SubscriptionServiceTests {
 
     func test_flagFlipToOnSyncsPendingEntitlementsOnNextDrain() async throws {
         let defaults = try freshDefaults("SubscriptionServiceTests.flagFlip")
-        let flags = FeatureFlags(defaults: defaults)
+        // A build whose manifest declares purchase data (the Plus release).
+        let flags = FeatureFlags(defaults: defaults, purchaseDataDeclared: true)
         let harness = Harness(flags: flags)
         harness.storeKit.jwsToReturn = ["a.b.c"]
         let finished = FinishSpy()
@@ -580,6 +581,25 @@ extension SubscriptionServiceTests {
 
         XCTAssertEqual(harness.log.calls, [.verify("a.b.c"), .refresh])
         XCTAssertEqual(finished.count, 0, "The drain binds; it never finishes")
+    }
+
+    /// W213. This build's bundled manifest declares no purchase data, so the
+    /// server turning paid_tier on must not start sending App Store
+    /// transactions: the drain and the listener stay silent and unfinished.
+    func test_paidTierOnSendsNothingFromABuildThatDeclaresNoPurchaseData() async throws {
+        let defaults = try freshDefaults("SubscriptionServiceTests.undeclared")
+        let flags = FeatureFlags(defaults: defaults)
+        flags.apply(FeaturesPayload(recipeFirst: false, paidTier: true))
+        let harness = Harness(flags: flags)
+        harness.storeKit.jwsToReturn = ["a.b.c"]
+        let finished = FinishSpy()
+
+        await harness.service.syncCurrentEntitlements()
+        await harness.service.handleVerifiedUpdate(jws: "a.b.c") { finished.count += 1 }
+
+        XCTAssertFalse(flags.paidTier)
+        XCTAssertEqual(harness.log.calls, [])
+        XCTAssertEqual(finished.count, 0)
     }
 
     /// A wiped suite per test, as in FeatureFlagsTests: a never-fetched

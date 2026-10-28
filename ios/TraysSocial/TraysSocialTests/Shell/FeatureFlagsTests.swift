@@ -13,6 +13,12 @@ final class FeatureFlagsTests: XCTestCase {
         return defaults
     }
 
+    /// W213. Flags for a build whose manifest declares purchase data (the
+    /// Plus release), so the paid_tier tests exercise the server flag alone.
+    private func plusBuildFlags(_ defaults: UserDefaults) -> FeatureFlags {
+        FeatureFlags(defaults: defaults, purchaseDataDeclared: true)
+    }
+
     func test_neverFetchedMeansClassicShell() {
         XCTAssertFalse(FeatureFlags(defaults: freshDefaults()).recipeFirst)
         XCTAssertEqual(ShellLayout.decide(recipeFirst: FeatureFlags(defaults: freshDefaults()).recipeFirst), .classic)
@@ -50,18 +56,18 @@ final class FeatureFlagsTests: XCTestCase {
 
     func test_paidTierPersistsAcrossLaunches() {
         let defaults = freshDefaults()
-        let flags = FeatureFlags(defaults: defaults)
+        let flags = plusBuildFlags(defaults)
         flags.apply(FeaturesPayload(recipeFirst: true, paidTier: true))
         XCTAssertTrue(flags.paidTier)
         // A later launch whose fetch fails keeps the cached value, and the two
         // flags are cached independently.
-        let relaunched = FeatureFlags(defaults: defaults)
+        let relaunched = plusBuildFlags(defaults)
         XCTAssertTrue(relaunched.paidTier)
         XCTAssertTrue(relaunched.recipeFirst)
 
         flags.apply(FeaturesPayload(recipeFirst: true, paidTier: false))
-        XCTAssertFalse(FeatureFlags(defaults: defaults).paidTier)
-        XCTAssertTrue(FeatureFlags(defaults: defaults).recipeFirst)
+        XCTAssertFalse(plusBuildFlags(defaults).paidTier)
+        XCTAssertTrue(plusBuildFlags(defaults).recipeFirst)
         defaults.removePersistentDomain(forName: suite)
     }
 
@@ -118,7 +124,7 @@ final class FeatureFlagsTests: XCTestCase {
     /// view-test infrastructure here, so it stays on the manual tests.
     func test_midSessionFlipOffHidesPlusAndRestoresEmptyState() {
         let defaults = freshDefaults()
-        let flags = FeatureFlags(defaults: defaults)
+        let flags = plusBuildFlags(defaults)
         flags.apply(FeaturesPayload(recipeFirst: false, paidTier: true))
         XCTAssertFalse(PlusVisibility.showsTrayEmptyState(
             paidTier: flags.paidTier, trayIsEmpty: true,
@@ -132,6 +138,48 @@ final class FeatureFlagsTests: XCTestCase {
             hasCollections: true, hasAnyEntries: true, isLoadingWeek: false
         ))
         defaults.removePersistentDomain(forName: suite)
+    }
+
+    // MARK: - W213 purchase-data guard
+
+    /// The server flag alone cannot turn Plus on in a build whose privacy
+    /// manifest declares no purchase data, either live or from the cache.
+    func test_paidTierStaysOffWhenPurchaseDataIsUndeclared() {
+        let defaults = freshDefaults()
+        let flags = FeatureFlags(defaults: defaults, purchaseDataDeclared: false)
+        flags.apply(FeaturesPayload(recipeFirst: true, paidTier: true))
+        XCTAssertFalse(flags.paidTier)
+        XCTAssertTrue(flags.recipeFirst)
+        XCTAssertFalse(FeatureFlags(defaults: defaults, purchaseDataDeclared: false).paidTier)
+        // The server value is still cached, so the Plus build turns on at once.
+        XCTAssertTrue(plusBuildFlags(defaults).paidTier)
+        defaults.removePersistentDomain(forName: suite)
+    }
+
+    /// 1.1.0 ships without Purchase History in its manifest (launch plan
+    /// 4.5 adds it), so the default flags keep Plus off for this build.
+    func test_thisBuildDeclaresNoPurchaseDataSoPlusStaysOff() {
+        XCTAssertFalse(PrivacyDeclaration.bundleDeclaresPurchaseHistory())
+        let flags = FeatureFlags(defaults: freshDefaults())
+        flags.apply(FeaturesPayload(recipeFirst: true, paidTier: true))
+        XCTAssertFalse(flags.paidTier)
+    }
+
+    func test_declaresPurchaseHistoryReadsTheManifestDataTypes() throws {
+        func manifest(_ types: [String]) throws -> Data {
+            let entries = types.map { ["NSPrivacyCollectedDataType": $0] }
+            return try PropertyListSerialization.data(
+                fromPropertyList: ["NSPrivacyCollectedDataTypes": entries], format: .xml, options: 0
+            )
+        }
+        XCTAssertTrue(try PrivacyDeclaration.declaresPurchaseHistory(manifest: manifest([
+            "NSPrivacyCollectedDataTypeEmailAddress", PrivacyDeclaration.purchaseHistoryType,
+        ])))
+        XCTAssertFalse(try PrivacyDeclaration.declaresPurchaseHistory(manifest: manifest([
+            "NSPrivacyCollectedDataTypeEmailAddress",
+        ])))
+        XCTAssertFalse(PrivacyDeclaration.declaresPurchaseHistory(manifest: nil))
+        XCTAssertFalse(PrivacyDeclaration.declaresPurchaseHistory(manifest: Data("not a plist".utf8)))
     }
 
     private func decode(_ json: String) throws -> DataResponse<FeaturesPayload> {
