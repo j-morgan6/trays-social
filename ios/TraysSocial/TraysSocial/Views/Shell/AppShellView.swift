@@ -163,6 +163,14 @@ struct AppShellView: View {
             let newLayout = ShellLayout.decide(recipeFirst: recipeFirst)
             appState.selectedTray = newLayout.normalize(appState.selectedTray)
         }
+        // D119: the mount-time drain skips while paid_tier is off, and on a
+        // first launch it can run before /features answers. When the flag
+        // turns on, drain again so entitlements left unfinished while Plus was
+        // hidden bind this session rather than on the next launch.
+        .onChange(of: FeatureFlags.shared.paidTier) { _, paidTier in
+            guard paidTier else { return }
+            Task { await SubscriptionService.shared.syncCurrentEntitlements() }
+        }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .background:

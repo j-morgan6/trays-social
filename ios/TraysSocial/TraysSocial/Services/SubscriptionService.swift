@@ -36,6 +36,15 @@ final class SubscriptionService {
 
     private let backend: any SubscriptionBackend
     private let storeKit: any StoreKitSyncing
+    /// D119. Whether Trays Plus is live (`FeatureFlags.paidTier`). While it is
+    /// off, neither background path sends a signed transaction to the server,
+    /// so a build whose privacy manifest declares no purchase data sends none.
+    /// Read on every call rather than captured once, so a flip to on takes
+    /// effect on the next drain without rebuilding the service.
+    private let paidTierEnabled: @MainActor () -> Bool
+    /// Whether a bearer exists. Injectable only so tests can drive the drain
+    /// without writing to the real Keychain.
+    private let isSignedIn: @MainActor () -> Bool
     private var listenerTask: Task<Void, Never>?
 
     /// Signed transactions the SERVER ACCEPTED this session. StoreKit redelivers
@@ -69,10 +78,14 @@ final class SubscriptionService {
     /// `.shared`; nothing else should construct this type.
     init(
         backend: any SubscriptionBackend = LiveSubscriptionBackend(),
-        storeKit: any StoreKitSyncing = LiveStoreKitSyncing()
+        storeKit: any StoreKitSyncing = LiveStoreKitSyncing(),
+        paidTierEnabled: @escaping @MainActor () -> Bool = { FeatureFlags.shared.paidTier },
+        isSignedIn: @escaping @MainActor () -> Bool = { KeychainService.getToken() != nil }
     ) {
         self.backend = backend
         self.storeKit = storeKit
+        self.paidTierEnabled = paidTierEnabled
+        self.isSignedIn = isSignedIn
     }
 
     /// Hands the live backend the AppState it needs for `/auth/me` refreshes.
@@ -301,7 +314,15 @@ final class SubscriptionService {
     ///
     /// Read path: every failure is logged, never toasted (D95).
     func syncCurrentEntitlements() async {
-        guard KeychainService.getToken() != nil else { return }
+        guard isSignedIn() else { return }
+
+        // D119: Plus is hidden, so send nothing. The entitlements stay in
+        // currentEntitlements, and the first drain after paid_tier turns on
+        // binds them.
+        guard paidTierEnabled() else {
+            storeLog.notice("Entitlement drain skipped while paid tier is off")
+            return
+        }
 
         for jws in await storeKit.currentEntitlementJWS() {
             do {
@@ -331,20 +352,37 @@ final class SubscriptionService {
             return
         }
 
+        // jwsRepresentation is on the VerificationResult envelope.
+        await handleVerifiedUpdate(jws: update.jwsRepresentation) {
+            await transaction.finish()
+        }
+    }
+
+    /// The StoreKit-free half of `handle(_:)`, split out because tests cannot
+    /// construct a `VerificationResult<Transaction>`. `finish` is called only
+    /// when the server is known to have accepted the transaction.
+    func handleVerifiedUpdate(jws: String, finish: () async -> Void) async {
         // Signed out: do NOT verify and do NOT finish. Leaving it unfinished is
         // exactly what makes it recoverable — StoreKit redelivers on next launch,
         // and it stays in currentEntitlements for the post-login drain.
-        guard KeychainService.getToken() != nil else {
+        guard isSignedIn() else {
             storeLog.notice("Transaction arrived while signed out; left unfinished for redelivery")
             return
         }
 
+        // D119: same treatment while Plus is hidden. Nothing leaves the device,
+        // and the unfinished transaction is redelivered and drained once
+        // paid_tier is on.
+        guard paidTierEnabled() else {
+            storeLog.notice("Transaction arrived while paid tier is off; left unfinished for redelivery")
+            return
+        }
+
         do {
-            // jwsRepresentation is on the VerificationResult envelope.
-            let outcome = try await syncEntitlement(jws: update.jwsRepresentation)
+            let outcome = try await syncEntitlement(jws: jws)
             // Only finish once the server is known to have accepted it.
             guard outcome.isServerAccepted else { return }
-            await transaction.finish()
+            await finish()
         } catch {
             // Background sync is a read path — log, never toast (D95).
             storeLog.error("Transaction sync failed: \(error.localizedDescription, privacy: .public)")

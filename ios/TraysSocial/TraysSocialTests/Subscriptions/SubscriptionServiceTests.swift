@@ -79,22 +79,71 @@ private final class SpyStoreKit: StoreKitSyncing {
     }
 }
 
+/// D119: the two gates the background paths read, held by reference so a test
+/// can flip them between calls on an existing service.
+@MainActor
+private final class Gates {
+    var paidTier: Bool
+    var signedIn: Bool
+
+    init(paidTier: Bool, signedIn: Bool) {
+        self.paidTier = paidTier
+        self.signedIn = signedIn
+    }
+}
+
 @MainActor
 private struct Harness {
     let service: SubscriptionService
     let backend: SpyBackend
     let storeKit: SpyStoreKit
     let log: CallLog
+    let gates: Gates
 
-    init() {
+    /// Defaults to paid tier on and signed in, so the pre-D119 tests exercise
+    /// the same paths they always did.
+    init(paidTier: Bool = true, signedIn: Bool = true) {
         let log = CallLog()
         let backend = SpyBackend(log: log)
         let storeKit = SpyStoreKit(log: log)
+        let gates = Gates(paidTier: paidTier, signedIn: signedIn)
         self.log = log
         self.backend = backend
         self.storeKit = storeKit
-        service = SubscriptionService(backend: backend, storeKit: storeKit)
+        self.gates = gates
+        service = SubscriptionService(
+            backend: backend,
+            storeKit: storeKit,
+            paidTierEnabled: { gates.paidTier },
+            isSignedIn: { gates.signedIn }
+        )
     }
+
+    /// Wired to a real `FeatureFlags` instead of a stub, so the never-fetched
+    /// default is the one production reads.
+    init(flags: FeatureFlags) {
+        let log = CallLog()
+        let backend = SpyBackend(log: log)
+        let storeKit = SpyStoreKit(log: log)
+        let gates = Gates(paidTier: false, signedIn: true)
+        self.log = log
+        self.backend = backend
+        self.storeKit = storeKit
+        self.gates = gates
+        service = SubscriptionService(
+            backend: backend,
+            storeKit: storeKit,
+            paidTierEnabled: { flags.paidTier },
+            isSignedIn: { gates.signedIn }
+        )
+    }
+}
+
+/// Counts `finish()` calls on the listener path, standing in for
+/// `Transaction.finish()`, which tests cannot construct.
+@MainActor
+private final class FinishSpy {
+    var count = 0
 }
 
 /// W175: coverage for the Trays Plus purchase/entitlement plumbing.
@@ -419,5 +468,125 @@ final class SubscriptionServiceTests: XCTestCase {
             isAdmin: nil,
             isSubscriber: isSubscriber
         )
+    }
+}
+
+/// D119. An extension rather than more of the class body, so the class stays
+/// inside swiftlint's type_body_length.
+extension SubscriptionServiceTests {
+    // MARK: - D119: no purchase data leaves the device while paid_tier is off
+
+    func test_drainSkipsServerSyncWhenPaidTierOff() async {
+        let harness = Harness(paidTier: false)
+        harness.storeKit.jwsToReturn = ["a.b.c", "d.e.f"]
+
+        await harness.service.syncCurrentEntitlements()
+
+        // No verify means no /subscriptions/verify request, and no refresh.
+        XCTAssertEqual(harness.log.calls, [])
+    }
+
+    func test_drainSyncsWhenPaidTierOn() async {
+        let harness = Harness(paidTier: true)
+        harness.storeKit.jwsToReturn = ["a.b.c", "d.e.f"]
+
+        await harness.service.syncCurrentEntitlements()
+
+        XCTAssertEqual(harness.log.calls, [
+            .verify("a.b.c"), .refresh,
+            .verify("d.e.f"), .refresh,
+        ])
+    }
+
+    func test_drainSkipsWhenSignedOut_evenWithPaidTierOn() async {
+        let harness = Harness(paidTier: true, signedIn: false)
+        harness.storeKit.jwsToReturn = ["a.b.c"]
+
+        await harness.service.syncCurrentEntitlements()
+
+        XCTAssertEqual(harness.log.calls, [])
+    }
+
+    func test_listenerLeavesTransactionUnfinishedWhenPaidTierOff() async {
+        let harness = Harness(paidTier: false)
+        let finished = FinishSpy()
+
+        await harness.service.handleVerifiedUpdate(jws: "a.b.c") { finished.count += 1 }
+
+        // Not sent and not finished: StoreKit keeps it and redelivers it.
+        XCTAssertEqual(harness.log.calls, [])
+        XCTAssertEqual(finished.count, 0)
+    }
+
+    func test_listenerLeavesTransactionUnfinishedWhenSignedOutAndPaidTierOff() async {
+        let harness = Harness(paidTier: false, signedIn: false)
+        let finished = FinishSpy()
+
+        await harness.service.handleVerifiedUpdate(jws: "a.b.c") { finished.count += 1 }
+
+        XCTAssertEqual(harness.log.calls, [])
+        XCTAssertEqual(finished.count, 0)
+    }
+
+    func test_listenerVerifiesThenFinishesWhenPaidTierOn() async {
+        let harness = Harness(paidTier: true)
+        let finished = FinishSpy()
+
+        await harness.service.handleVerifiedUpdate(jws: "a.b.c") { finished.count += 1 }
+
+        XCTAssertEqual(harness.log.calls, [.verify("a.b.c"), .refresh])
+        XCTAssertEqual(finished.count, 1)
+    }
+
+    func test_listenerDoesNotFinishWhenServerRejectsWithPaidTierOn() async {
+        let harness = Harness(paidTier: true)
+        harness.backend.errorToThrow = APIError.unprocessableEntity
+        let finished = FinishSpy()
+
+        await harness.service.handleVerifiedUpdate(jws: "a.b.c") { finished.count += 1 }
+
+        XCTAssertEqual(harness.log.calls, [.verify("a.b.c")])
+        XCTAssertEqual(finished.count, 0)
+    }
+
+    func test_neverFetchedFlagsMeansNoSync() async throws {
+        let defaults = try freshDefaults("SubscriptionServiceTests.neverFetched")
+        let harness = Harness(flags: FeatureFlags(defaults: defaults))
+        harness.storeKit.jwsToReturn = ["a.b.c"]
+        let finished = FinishSpy()
+
+        await harness.service.syncCurrentEntitlements()
+        await harness.service.handleVerifiedUpdate(jws: "a.b.c") { finished.count += 1 }
+
+        XCTAssertEqual(harness.log.calls, [])
+        XCTAssertEqual(finished.count, 0)
+    }
+
+    func test_flagFlipToOnSyncsPendingEntitlementsOnNextDrain() async throws {
+        let defaults = try freshDefaults("SubscriptionServiceTests.flagFlip")
+        let flags = FeatureFlags(defaults: defaults)
+        let harness = Harness(flags: flags)
+        harness.storeKit.jwsToReturn = ["a.b.c"]
+        let finished = FinishSpy()
+
+        // Delivered while Plus is hidden: left unfinished, so it stays in
+        // currentEntitlements.
+        await harness.service.handleVerifiedUpdate(jws: "a.b.c") { finished.count += 1 }
+        await harness.service.syncCurrentEntitlements()
+        XCTAssertEqual(harness.log.calls, [])
+
+        flags.apply(FeaturesPayload(recipeFirst: false, paidTier: true))
+        await harness.service.syncCurrentEntitlements()
+
+        XCTAssertEqual(harness.log.calls, [.verify("a.b.c"), .refresh])
+        XCTAssertEqual(finished.count, 0, "The drain binds; it never finishes")
+    }
+
+    /// A wiped suite per test, as in FeatureFlagsTests: a never-fetched
+    /// device reads `paidTier` from empty defaults.
+    private func freshDefaults(_ suite: String) throws -> UserDefaults {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        return defaults
     }
 }
