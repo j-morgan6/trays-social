@@ -74,3 +74,11 @@ build/
 
 # App Review demo credentials live here in plaintext (per Apple) — keep local, do not commit.
 docs/app-review-notes.md
+
+# Local scratch: tmp/ holds SQL dumps with user data, never commit it
+tmp/
+
+# Stride hook temp artifacts (see the Stride plugin README); .stride-env-cache is listed above
+.stride-changed-files.json
+.stride-diff-upload-state
+.stride-dirty-baseline
