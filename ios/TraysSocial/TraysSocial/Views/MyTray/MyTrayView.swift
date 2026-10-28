@@ -41,9 +41,15 @@ struct MyTrayView: View {
                 // the probe cannot succeed. This only defers the decision while
                 // the probe is actually in flight, so a lapsed subscriber never
                 // sees the empty state flash before their plan lands.
-                if viewModel.isEmpty, !viewModel.isLoading, !collectionsVM.hasCollections,
-                   !plannerVM.hasAnyEntries, !plannerVM.isLoadingWeek
-                {
+                // W209: with Plus hidden, its state no longer holds the empty
+                // state back (PlusVisibility.showsTrayEmptyState).
+                if PlusVisibility.showsTrayEmptyState(
+                    paidTier: FeatureFlags.shared.paidTier,
+                    trayIsEmpty: viewModel.isEmpty && !viewModel.isLoading,
+                    hasCollections: collectionsVM.hasCollections,
+                    hasAnyEntries: plannerVM.hasAnyEntries,
+                    isLoadingWeek: plannerVM.isLoadingWeek
+                ) {
                     TrayEmptyView()
                         .frame(maxWidth: .infinity)
                         .padding(.top, 80)
@@ -53,13 +59,15 @@ struct MyTrayView: View {
                         .padding(.top, 4)
                         .padding(.bottom, 18)
 
-                    PlanYourWeekRow(viewModel: plannerVM)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
+                    if showsPlus {
+                        PlanYourWeekRow(viewModel: plannerVM)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 20)
+                    }
 
                     // W177: emits nothing when the user has no collections, so
                     // the tray below is byte-identical to its pre-W177 layout.
-                    if collectionsVM.hasCollections {
+                    if showsPlus, collectionsVM.hasCollections {
                         SectionHeader(
                             label: String(localized: "Collections"),
                             count: collectionsVM.collections.count,
@@ -141,10 +149,13 @@ struct MyTrayView: View {
         .animation(.easeInOut(duration: 0.18), value: viewModel.isLoading)
         .refreshable {
             await viewModel.refresh(currentUsername: appState.currentUser?.username)
-            await collectionsVM.refresh()
-            // W178: the user's manual retry when the probe below failed. My
-            // Tray never unmounts, so `.task` will not re-fire on its own.
-            await plannerVM.loadIfNeeded()
+            // W209: no gated Plus calls while Plus is hidden.
+            if showsPlus {
+                await collectionsVM.refresh()
+                // W178: the user's manual retry when the probe below failed. My
+                // Tray never unmounts, so `.task` will not re-fire on its own.
+                await plannerVM.loadIfNeeded()
+            }
         }
         .task {
             // D94: previously gated on viewModel.posts.isEmpty so the
@@ -161,7 +172,11 @@ struct MyTrayView: View {
         // renders in the branch that guard rejects — probing from inside it
         // would make the guard permanently false and strand a lapsed
         // subscriber's plan behind an empty state.
-        .task { await plannerVM.loadIfNeeded() }
+        // W209: keyed on the flag so the launch fetch turning Plus on loads it.
+        .task(id: showsPlus) {
+            guard showsPlus else { return }
+            await plannerVM.loadIfNeeded()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .postUpdated)) { notification in
             if let updated = notification.userInfo?["post"] as? Post {
                 #if DEBUG
@@ -190,9 +205,14 @@ struct MyTrayView: View {
         }
         .modifier(CollectionsSurface(
             viewModel: collectionsVM,
+            loadsCollections: showsPlus,
             formMode: $formMode,
             pendingDelete: $pendingDelete
         ))
+    }
+
+    private var showsPlus: Bool {
+        PlusVisibility.showsPlus(paidTier: FeatureFlags.shared.paidTier)
     }
 
     private var populatedHeader: some View {
@@ -219,14 +239,13 @@ struct MyTrayView: View {
                     )
                 }
                 .buttonStyle(.borderless)
-                .contextMenu {
-                    AddToCollectionMenu(
-                        post: post,
-                        isPlus: appState.isPlus,
-                        viewModel: collectionsVM,
-                        onNewCollection: { formMode = .create }
-                    )
-                }
+                .modifier(AddToCollectionContextMenu(
+                    isVisible: showsPlus,
+                    post: post,
+                    isPlus: appState.isPlus,
+                    viewModel: collectionsVM,
+                    onNewCollection: { formMode = .create }
+                ))
             }
         }
     }

@@ -17,14 +17,22 @@ import SwiftUI
 ///
 /// Split into a presentation half and a sync half only to stay under
 /// swiftlint's function-body limit; both halves apply to the same root view.
+///
+/// W209: `loadsCollections` is false while Trays Plus is hidden, so no
+/// `GET /collections` fires. The presentations stay mounted either way.
 struct CollectionsSurface: ViewModifier {
     let viewModel: CollectionsViewModel
+    let loadsCollections: Bool
     @Binding var formMode: CollectionFormMode?
     @Binding var pendingDelete: RecipeCollection?
 
     func body(content: Content) -> some View {
         content
-            .task { await viewModel.load() }
+            .task(id: loadsCollections) {
+                if loadsCollections {
+                    await viewModel.load()
+                }
+            }
             .modifier(CollectionPresentations(
                 viewModel: viewModel,
                 formMode: $formMode,

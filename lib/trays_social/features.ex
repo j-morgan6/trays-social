@@ -17,7 +17,12 @@ defmodule TraysSocial.Features do
 
   Only non-sensitive product flags belong here: the map is sent to every
   signed-in client.
+
+  `paid_tier` mirrors `FEATURES_PAID_TIER` so the app can hide every Trays
+  Plus entry point while the paid tier is off. It is a visibility hint only:
+  the collection and meal-plan endpoints still enforce the entitlement.
   """
-  @spec client_flags() :: %{recipe_first: boolean()}
-  def client_flags, do: %{recipe_first: recipe_first?()}
+  @spec client_flags() :: %{recipe_first: boolean(), paid_tier: boolean()}
+  def client_flags,
+    do: %{recipe_first: recipe_first?(), paid_tier: Monetization.paid_tier_enabled?()}
 end

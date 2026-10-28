@@ -44,7 +44,8 @@ struct HomeView: View {
         if !payload.jumpBackIn.isEmpty {
             jumpBackIn(payload.jumpBackIn)
         }
-        if let tonight = payload.tonight {
+        // W209: the strip opens the Plus planner, so it hides with Plus.
+        if PlusVisibility.showsPlus(paidTier: FeatureFlags.shared.paidTier), let tonight = payload.tonight {
             tonightStrip(tonight)
         }
         if !payload.friendsTrays.isEmpty {

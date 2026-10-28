@@ -598,7 +598,10 @@ struct SettingsView: View {
                 // this file is already over swiftlint's file_length and
                 // SettingsView over type_body_length, and the section needs
                 // `import StoreKit` for the manage-subscriptions sheet.
-                PlusSettingsSection()
+                // W209: hidden while the server's paid_tier flag is off.
+                if PlusVisibility.showsPlus(paidTier: FeatureFlags.shared.paidTier) {
+                    PlusSettingsSection()
+                }
 
                 Section("Appearance") {
                     Picker("Mode", selection: $colorSchemePreference) {

@@ -57,3 +57,29 @@ struct AddToCollectionMenu: View {
         }
     }
 }
+
+/// W209. Attaches the Add to collection long-press menu only while Trays Plus
+/// is visible. A conditional modifier rather than an `if` inside
+/// `.contextMenu {}`, so a hidden menu leaves no empty long-press behind.
+struct AddToCollectionContextMenu: ViewModifier {
+    let isVisible: Bool
+    let post: Post
+    let isPlus: Bool
+    let viewModel: CollectionsViewModel
+    let onNewCollection: () -> Void
+
+    func body(content: Content) -> some View {
+        if isVisible {
+            content.contextMenu {
+                AddToCollectionMenu(
+                    post: post,
+                    isPlus: isPlus,
+                    viewModel: viewModel,
+                    onNewCollection: onNewCollection
+                )
+            }
+        } else {
+            content
+        }
+    }
+}

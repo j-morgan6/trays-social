@@ -22,9 +22,31 @@ defmodule TraysSocialWeb.API.V1.FeatureControllerTest do
              conn |> get(~p"/api/v1/features") |> json_response(200)
   end
 
-  test "returns only the client flags", %{conn: conn} do
+  test "reports paid_tier off by default", %{conn: conn, original: original} do
+    Application.put_env(:trays_social, :features, Keyword.delete(original, :paid_tier))
+
+    assert %{"data" => %{"paid_tier" => false}} =
+             conn |> get(~p"/api/v1/features") |> json_response(200)
+  end
+
+  test "reports paid_tier on when the :paid_tier flag is true", %{conn: conn, original: original} do
+    Application.put_env(:trays_social, :features, Keyword.put(original, :paid_tier, true))
+
+    assert %{"data" => %{"paid_tier" => true}} =
+             conn |> get(~p"/api/v1/features") |> json_response(200)
+  end
+
+  test "paid_tier stays off for any value other than the literal true",
+       %{conn: conn, original: original} do
+    Application.put_env(:trays_social, :features, Keyword.put(original, :paid_tier, "true"))
+
+    assert %{"data" => %{"paid_tier" => false}} =
+             conn |> get(~p"/api/v1/features") |> json_response(200)
+  end
+
+  test "returns only the client flags (keys are paid_tier and recipe_first)", %{conn: conn} do
     assert %{"data" => data} = conn |> get(~p"/api/v1/features") |> json_response(200)
-    assert Map.keys(data) == ["recipe_first"]
+    assert data |> Map.keys() |> Enum.sort() == ["paid_tier", "recipe_first"]
   end
 
   test "401 without a token" do
