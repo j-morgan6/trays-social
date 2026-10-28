@@ -130,16 +130,6 @@ You represent and warrant that you are not located in a country subject to a U.S
 ### 16.9 Third-party beneficiary
 Apple and Apple's subsidiaries are third-party beneficiaries of these Terms and have the right to enforce these Terms against you.
 
-<!--
-  W183 DRAFT — REQUIRING HUMAN / LEGAL REVIEW BEFORE THIS DOCUMENT GOES LIVE.
-
-  This section was drafted by an agent against primary sources, not by a
-  lawyer. Every regulatory claim behind it, the sources actually checked, and
-  the four open questions a lawyer needs to answer are written up in
-  docs/legal/w183-subscriptions-billing-review.md. Do not treat this section
-  as reviewed until that memo is signed off. Delete this comment when it is.
--->
-
 ## 17. Trays Plus subscriptions and billing
 
 ### 17.1 What Trays Plus is

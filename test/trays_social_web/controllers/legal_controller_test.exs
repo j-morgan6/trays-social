@@ -182,6 +182,19 @@ defmodule TraysSocialWeb.LegalControllerTest do
       assert body =~ "not inside the Trays app"
       assert body =~ "We cannot issue, approve, or deny a refund"
     end
+
+    # W210: Earmark passes HTML comments through to the served page, so an
+    # internal note in terms.md is readable by anyone who views the page
+    # source. Section 17 stays visible; the W183 draft note above it must not.
+    test "serves section 17 without the internal W183 draft note", %{conn: conn} do
+      conn = get(conn, ~p"/terms")
+      body = response(conn, 200)
+
+      assert body =~ "Trays Plus subscriptions and billing"
+      refute body =~ "W183 DRAFT", "/terms must not serve the W183 draft note"
+      refute body =~ "LEGAL REVIEW BEFORE THIS DOCUMENT GOES LIVE"
+      refute body =~ "<!--", "/terms must not serve internal HTML comments from terms.md"
+    end
   end
 
   describe "GET /community-guidelines" do
