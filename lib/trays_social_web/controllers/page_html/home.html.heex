@@ -106,7 +106,10 @@
 
   <%!-- Trays Plus — optional subscription. Utility only: this section must
        never imply recipes or the feed are gated. Prices are US App Store
-       prices; the App Store shows local currency at purchase. --%>
+       prices; the App Store shows local currency at purchase.
+       @paid_tier (W211, Monetization.paid_tier_enabled?/0) gates the prices
+       and trial: until Plus can be bought, the section says it is coming in a
+       future update and names no price. --%>
   <section class="max-w-[1000px] mx-auto pb-16 md:pb-24">
     <div class="border border-base-300 rounded-md bg-base-100 p-6 md:p-10">
       <div class="font-mono text-[11px] text-primary uppercase tracking-[0.18em] mb-4">
@@ -117,9 +120,14 @@
       </h2>
       <p class="text-[15px] md:text-[16px] text-base-content/75 leading-[1.6] max-w-[620px] mb-8">
         Every recipe on Trays is free to read, cook, and save — that never
-        changes, and nothing you post is ever put behind a paywall. Trays Plus
-        is an optional subscription for the kitchen tools we build around the
-        free app.
+        changes, and nothing you post is ever put behind a paywall.
+        <%= if @paid_tier do %>
+          Trays Plus is an optional subscription for the kitchen tools we build
+          around the free app.
+        <% else %>
+          Trays Plus will be an optional subscription for the kitchen tools we
+          build around the free app.
+        <% end %>
       </p>
 
       <ul class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 mb-8 list-none pl-0">
@@ -140,16 +148,28 @@
       </ul>
 
       <div class="border-t border-base-300 pt-6">
-        <p class="text-[15px] text-base-content leading-[1.55]">
-          <span class="font-semibold">$3.99 per month or $29.99 per year</span>
-          in the United States, with a 7-day free trial on both.
-        </p>
-        <p class="mt-2 text-[13px] text-base-content/60 leading-[1.55] max-w-[620px]">
-          Trays Plus is sold through the App Store. The price in your local
-          currency is shown before you confirm, and that is what you pay.
-          Subscriptions renew automatically until cancelled, and you cancel any
-          time in your Apple subscription settings.
-        </p>
+        <%= if @paid_tier do %>
+          <p class="text-[15px] text-base-content leading-[1.55]">
+            <span class="font-semibold">$3.99 per month or $29.99 per year</span>
+            in the United States, with a 7-day free trial on both.
+          </p>
+          <p class="mt-2 text-[13px] text-base-content/60 leading-[1.55] max-w-[620px]">
+            Trays Plus is sold through the App Store. The price in your local
+            currency is shown before you confirm, and that is what you pay.
+            Subscriptions renew automatically until cancelled, and you cancel any
+            time in your Apple subscription settings.
+          </p>
+        <% else %>
+          <p class="text-[15px] text-base-content leading-[1.55]">
+            <span class="font-semibold">Trays Plus is coming in a future update.</span>
+            It is not available to buy yet.
+          </p>
+          <p class="mt-2 text-[13px] text-base-content/60 leading-[1.55] max-w-[620px]">
+            Everything on Trays is free to use today. When Plus arrives, it will
+            be offered in the iOS app, and the price is shown there before you
+            decide.
+          </p>
+        <% end %>
         <nav class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-base-content/60">
           <.link href={~p"/terms"} class="underline hover:text-base-content transition-colors">
             Terms of Service

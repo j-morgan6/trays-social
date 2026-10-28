@@ -1,6 +1,6 @@
 ---
-effective_date: 2026-09-04
-version: 1.1
+effective_date: 2026-10-28
+version: 1.2
 ---
 
 # Frequently Asked Questions
@@ -26,10 +26,11 @@ professional or a food blogger. Trays is rated 13+.
 ## Is it free?
 
 Yes. Posting recipes, following cooks, reading your feed, searching, and saving
-to your tray are all free, and recipes are never put behind a paywall. There is
-one optional subscription, **Trays Plus**, which adds kitchen tools on top of the
-free app — see [What is Trays Plus?](#what-is-trays-plus) below. You never have
-to subscribe to use Trays.
+to your tray are all free, and recipes are never put behind a paywall. We plan
+one optional subscription, **Trays Plus**, which will add kitchen tools on top
+of the free app. It is not available to buy yet — see
+[What is Trays Plus?](#what-is-trays-plus) below. You will never have to
+subscribe to use Trays.
 
 ## Do you have ads?
 
@@ -41,14 +42,16 @@ newest first. On the website, sponsored placements may appear on public recipe
 pages, as described in our [Privacy Policy](/privacy).
 
 We do not use advertising cookies or ad tracking, and there is no App Tracking
-Transparency prompt. Trays Plus removes sponsored placements from the app.
+Transparency prompt. Once it is available, Trays Plus will remove sponsored
+placements from the app.
 
 <a id="what-is-trays-plus"></a>
 
 ## What is Trays Plus?
 
-Trays Plus is an optional subscription that bundles the kitchen tools we build
-around the free app:
+Trays Plus is an optional subscription coming in a future update of the iOS
+app. It is not available to buy yet. When it arrives, it will bundle the kitchen
+tools we build around the free app:
 
 - **Custom collections** — organize your saved recipes onto your own shelves.
 - **Weekly meal planner** — plan a week of meals from recipes you have saved.
@@ -61,25 +64,26 @@ save, and share whether or not you subscribe.
 
 ## What does Trays Plus cost?
 
-In the United States, Trays Plus is $3.99 per month or $29.99 per year. Both
-plans start with a 7-day free trial, and you are not charged if you cancel
-before the trial ends. Trays Plus is sold through the App Store, so the exact
-price in your local currency is shown before you confirm the purchase — that
-displayed price is what you pay. Subscriptions renew automatically until you
-cancel.
+Nothing yet: Trays Plus is not available to buy, so there is nothing to pay
+today. When it launches, it will be sold through the App Store, and the exact
+price in your local currency — and whether a free trial is included — will be
+shown before you confirm the purchase. That displayed price is what you pay.
+Subscriptions will renew automatically until you cancel. We will update this
+answer with the price when Plus launches.
 
 ## How do I restore a purchase?
 
-If you reinstall Trays or sign in on a new device, open **Settings**, choose
-**Trays Plus**, and tap **Restore purchases**. Your subscription belongs to the
-Apple ID that bought it, so restoring works on any device signed in to that
-Apple ID.
+Once Trays Plus is available, if you reinstall Trays or sign in on a new
+device, open **Settings**, choose **Trays Plus**, and tap **Restore purchases**.
+Your subscription belongs to the Apple ID that bought it, so restoring works on
+any device signed in to that Apple ID.
 
 ## How do I cancel Trays Plus?
 
-Cancel through Apple, not inside Trays: open the iOS **Settings** app, tap your
-name, then **Subscriptions**, then **Trays Plus**, then **Cancel Subscription**.
-Cancelling during the free trial means you are not charged.
+Once Trays Plus is available, you will cancel through Apple, not inside Trays:
+open the iOS **Settings** app, tap your name, then **Subscriptions**, then
+**Trays Plus**, then **Cancel Subscription**. If a free trial is offered,
+cancelling during it means you are not charged.
 
 When a subscription ends, nothing you made is deleted. Your collections and
 planned weeks stay readable, and you can still tick off and remove items — the

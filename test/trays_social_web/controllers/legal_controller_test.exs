@@ -263,6 +263,21 @@ defmodule TraysSocialWeb.LegalControllerTest do
       end
     end
 
+    # W211: Plus ships in a later iOS release and nothing can be bought today.
+    # The FAQ is compiled at build time, so it cannot follow the runtime
+    # paid_tier flag; it must say plainly that Plus is not for sale yet.
+    test "FAQ says Trays Plus is not available to buy yet", %{conn: conn} do
+      conn = get(conn, ~p"/faq")
+      body = response(conn, 200)
+
+      assert body =~ "It is not available to buy yet."
+      assert body =~ "Trays Plus is not available to buy"
+
+      for phrase <- ["$3.99", "$29.99", "7-day free trial", "per month"] do
+        refute body =~ phrase, "/faq must not advertise #{inspect(phrase)} before Plus launches"
+      end
+    end
+
     test "answers the Trays Plus questions App Review expects", %{conn: conn} do
       conn = get(conn, ~p"/faq")
       body = response(conn, 200)
@@ -271,11 +286,8 @@ defmodule TraysSocialWeb.LegalControllerTest do
         # What it is, and that it never gates recipe content.
         "What is Trays Plus?",
         "never gates recipes",
-        # Price and trial must match App Store Connect exactly.
+        # W211: Plus is not on sale yet, so the cost answer names no price.
         "What does Trays Plus cost?",
-        "$3.99 per month",
-        "$29.99 per year",
-        "7-day free trial",
         # Restore and cancel are both App Review requirements for an
         # auto-renewable subscription.
         "How do I restore a purchase?",

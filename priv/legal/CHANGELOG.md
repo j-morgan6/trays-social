@@ -10,6 +10,24 @@ the document name (e.g. `## Community Guidelines v1.0 — …`). Entries
 that span multiple documents are unprefixed and the body lists which
 documents changed.
 
+## FAQ v1.2 — 2026-10-28
+
+FAQ only. Privacy Policy unchanged at v1.2, Terms of Service unchanged at
+v1.2, Community Guidelines unchanged at v1.0.
+
+- Trays Plus is not on sale yet (it ships in a later iOS release), so the
+  FAQ no longer reads as if it can be bought today (W211)
+- "What does Trays Plus cost?": removed the US$3.99/month and US$29.99/year
+  prices and the 7-day trial; the answer now says Plus is not available to buy
+  yet and that the App Store shows the price before purchase. The price
+  returns when Plus launches
+- "Is it free?", "Do you have ads?" and "What is Trays Plus?": Plus is
+  described as coming in a future update rather than as a current subscription
+- "How do I restore a purchase?" and "How do I cancel Trays Plus?": prefixed
+  with "Once Trays Plus is available"; the steps are unchanged
+- Terms of Service §17 is unchanged and still describes the subscription terms
+  that will apply at launch
+
 ## Terms of Service v1.2 — 2026-09-04
 
 Terms of Service only. Privacy Policy unchanged at v1.2, Community Guidelines

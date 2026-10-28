@@ -1,19 +1,25 @@
 defmodule TraysSocialWeb.PageController do
   use TraysSocialWeb, :controller
 
+  alias TraysSocial.Monetization
+
   # Public marketing landing page (W120). Authenticated visitors are sent
   # straight to their signed-in home (/feed, or /home when recipe_first is
   # on) so the root URL behaves like the app home for logged-in users while
   # remaining a public landing page for everyone else.
   # current_scope is populated (nil-or-struct) by :fetch_current_scope_for_user
   # in the :browser pipeline.
+  #
+  # paid_tier (W211) decides whether the Trays Plus section shows prices and
+  # the trial. It stays off until Plus can actually be bought, so the site
+  # never advertises a price for something that is not for sale.
   def home(conn, _params) do
     case conn.assigns[:current_scope] do
       %{user: %{}} ->
         redirect(conn, to: TraysSocialWeb.UserAuth.signed_in_path(conn))
 
       _ ->
-        render(conn, :home)
+        render(conn, :home, paid_tier: Monetization.paid_tier_enabled?())
     end
   end
 end
