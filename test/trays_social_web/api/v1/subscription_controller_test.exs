@@ -1,5 +1,6 @@
 defmodule TraysSocialWeb.API.V1.SubscriptionControllerTest do
-  # async: false — these tests swap the global :app_store_root_certs anchor.
+  # async: false — these tests swap the global :app_store_root_certs anchor
+  # and toggle the global :features config (:paid_tier, W216).
   use TraysSocialWeb.ConnCase, async: false
 
   import TraysSocial.AccountsFixtures
@@ -11,6 +12,21 @@ defmodule TraysSocialWeb.API.V1.SubscriptionControllerTest do
 
   setup do
     %{chain: AppStoreFixtures.with_trust_anchor(AppStoreFixtures.cert_chain())}
+  end
+
+  # W216: verify refuses while :paid_tier is off, and the config default is
+  # off, so every test runs with the flag on unless its describe turns it off.
+  # The prior config is restored on exit.
+  setup do
+    original = Application.get_env(:trays_social, :features, [])
+    on_exit(fn -> Application.put_env(:trays_social, :features, original) end)
+    put_paid_tier(true)
+    :ok
+  end
+
+  defp put_paid_tier(value) do
+    features = Application.get_env(:trays_social, :features, [])
+    Application.put_env(:trays_social, :features, Keyword.put(features, :paid_tier, value))
   end
 
   defp post_verify(conn, jws) do
@@ -163,6 +179,55 @@ defmodule TraysSocialWeb.API.V1.SubscriptionControllerTest do
       refute reload(user).is_subscriber
       assert is_nil(reload(user).apple_original_transaction_id)
       assert reload(other).is_subscriber
+    end
+  end
+
+  describe "while the paid tier is off" do
+    setup do
+      put_paid_tier(false)
+      :ok
+    end
+
+    @paid_tier_disabled %{
+      "errors" => [%{"code" => "paid_tier_disabled", "message" => "Trays Plus is not available"}]
+    }
+
+    test "returns 403 paid_tier_disabled and leaves is_subscriber unchanged when the flag is off",
+         %{conn: conn, user: user, chain: chain} do
+      # A transaction that WOULD grant with the flag on (see the first test).
+      jws = signed(chain, %{"originalTransactionId" => "2000000012345678"})
+
+      assert json_response(post_verify(conn, jws), 403) == @paid_tier_disabled
+
+      reloaded = reload(user)
+      refute reloaded.is_subscriber
+      assert is_nil(reloaded.apple_original_transaction_id)
+    end
+
+    test "does not re-lock an existing subscriber", %{conn: conn, user: user, chain: chain} do
+      {:ok, _} = Accounts.set_subscriber(user, true)
+      past = System.system_time(:millisecond) - 60_000
+
+      assert json_response(post_verify(conn, signed(chain, %{"expiresDate" => past})), 403) ==
+               @paid_tier_disabled
+
+      assert reload(user).is_subscriber
+    end
+
+    test "refuses before parsing, so a malformed body is 403 rather than 422", %{conn: conn} do
+      for body <- [%{"jws" => "not.a.jws"}, %{"jws" => %{"a" => 1}}, %{}] do
+        conn = post(conn, ~p"/api/v1/subscriptions/verify", body)
+        assert json_response(conn, 403) == @paid_tier_disabled
+      end
+    end
+
+    test "still requires a bearer token", %{chain: chain} do
+      conn =
+        build_conn()
+        |> put_req_header("accept", "application/json")
+        |> post(~p"/api/v1/subscriptions/verify", %{"jws" => signed(chain)})
+
+      assert json_response(conn, 401)
     end
   end
 

@@ -1611,6 +1611,29 @@
         }
       }
     },
+    "Trays Plus is not available yet." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trays Plus is not available yet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trays Plus aún no está disponible."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trays Plus n'est pas encore disponible."
+          }
+        }
+      }
+    },
     "Waiting for approval. Trays Plus unlocks as soon as it's approved." : {
       "extractionState" : "manual",
       "localizations" : {

@@ -133,6 +133,10 @@ enum SubscriptionError: LocalizedError, Equatable {
     case notSignedIn
     /// Transport failure, rate limit, or 5xx — all retryable.
     case network
+    /// W216: Trays Plus is off (`paid_tier`). Thrown by `purchase` and
+    /// `restore` before StoreKit or the backend is touched, and mapped from
+    /// the server's 403 `paid_tier_disabled`.
+    case unavailable
 
     var errorDescription: String? {
         switch self {
@@ -146,6 +150,8 @@ enum SubscriptionError: LocalizedError, Equatable {
             String(localized: "Sign in to activate Trays Plus.")
         case .network:
             String(localized: "Couldn't reach Trays. Check your connection and try again.")
+        case .unavailable:
+            String(localized: "Trays Plus is not available yet.")
         }
     }
 
@@ -168,6 +174,8 @@ enum SubscriptionError: LocalizedError, Equatable {
             // this it would fall through to .network and be presented as a
             // transient connection problem, inviting an endless retry loop.
             return .couldNotVerify
+        case .paidTierDisabled:
+            return .unavailable
         case .forbidden:
             return .emailNotConfirmed
         case .unauthorized, .suspended:

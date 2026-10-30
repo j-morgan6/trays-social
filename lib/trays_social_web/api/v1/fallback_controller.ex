@@ -44,6 +44,16 @@ defmodule TraysSocialWeb.API.V1.FallbackController do
     })
   end
 
+  # W216: /subscriptions/verify while the :paid_tier flag is off. One code and
+  # a generic message only: never the flag name, the environment, or why (the
+  # W174 single-code rule). The iOS APIClient maps this code to its own case so
+  # the paywall says "not available yet" rather than "confirm your email".
+  def call(conn, {:error, :paid_tier_disabled}) do
+    conn
+    |> put_status(:forbidden)
+    |> json(%{errors: [%{code: "paid_tier_disabled", message: "Trays Plus is not available"}]})
+  end
+
   # W174: every StoreKit verification failure collapses to ONE client-visible
   # code. Telling a caller which stage failed (bad signature vs untrusted
   # chain vs wrong bundle) is a free oracle for anyone probing the endpoint;

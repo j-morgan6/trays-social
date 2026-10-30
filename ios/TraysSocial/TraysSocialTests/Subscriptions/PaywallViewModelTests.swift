@@ -336,6 +336,32 @@ final class PaywallViewModelTests: XCTestCase {
         XCTAssertNotEqual(harness.viewModel.statusMessage, SubscriptionError.network.errorDescription)
     }
 
+    /// W216: the service refuses while paid_tier is off. The paywall says so in
+    /// plain words, inline, and the message can be dismissed.
+    func test_unavailableErrorShowsNotAvailableYetMessage() async {
+        let harness = Harness()
+        await harness.viewModel.load()
+        harness.purchaser.purchaseError = SubscriptionError.unavailable
+
+        await harness.viewModel.purchaseSelected(appState: harness.appState)
+
+        XCTAssertEqual(harness.viewModel.statusMessage, "Trays Plus is not available yet.")
+        XCTAssertEqual(harness.viewModel.statusMessage, SubscriptionError.unavailable.errorDescription)
+        XCTAssertFalse(harness.viewModel.isUnlocked)
+        XCTAssertTrue(harness.viewModel.isStatusDismissible)
+    }
+
+    func test_restore_whenUnavailable_showsNotAvailableYetMessage() async {
+        let harness = Harness()
+        await harness.viewModel.load()
+        harness.purchaser.restoreError = SubscriptionError.unavailable
+
+        await harness.viewModel.restore(appState: harness.appState)
+
+        XCTAssertEqual(harness.viewModel.statusMessage, "Trays Plus is not available yet.")
+        XCTAssertFalse(harness.viewModel.isUnlocked)
+    }
+
     func test_restore_whenStoreThrows_showsMappedCopy() async {
         let harness = Harness()
         await harness.viewModel.load()

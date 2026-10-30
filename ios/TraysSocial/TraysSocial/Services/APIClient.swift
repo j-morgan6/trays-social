@@ -247,7 +247,9 @@ actor APIClient {
     /// Split out of `execute` (W175) so each status that needs to decode a
     /// structured body gets its own small helper — inlining them all kept
     /// tripping swiftlint's cyclomatic_complexity limit as statuses were added.
-    private func mapError(statusCode: Int, data: Data) -> APIError {
+    /// Internal rather than private (W216) so tests can decode the server's
+    /// exact error bodies through the real mapping.
+    func mapError(statusCode: Int, data: Data) -> APIError {
         switch statusCode {
         case 401: .unauthorized
         case 403: forbiddenError(from: data)
@@ -276,6 +278,10 @@ actor APIClient {
         // .forbidden, which SubscriptionBackend.from depends on.
         if let gated = errorResponse.errors.first(where: { $0.code == "subscription_required" }) {
             return .subscriptionRequired(message: gated.message)
+        }
+        // W216: verify refused because the server's paid tier is off.
+        if errorResponse.errors.contains(where: { $0.code == "paid_tier_disabled" }) {
+            return .paidTierDisabled
         }
         return .forbidden
     }

@@ -21,6 +21,11 @@ enum APIError: LocalizedError {
     /// that code (e.g. adding a post the user neither wrote nor saved) is a
     /// genuine permission failure and must stay `.forbidden`.
     case subscriptionRequired(message: String)
+    /// 403 whose body carries `code: "paid_tier_disabled"` — W216, returned by
+    /// `/subscriptions/verify` while the server's paid tier is off. Distinct
+    /// from `.forbidden` because `SubscriptionError.from` maps `.forbidden` to
+    /// "confirm your email", which is the wrong thing to tell this user.
+    case paidTierDisabled
     case rateLimited
     case serverError(Int)
 
@@ -38,6 +43,7 @@ enum APIError: LocalizedError {
             errors.map { "\($0.field ?? ""): \($0.message)" }.joined(separator: "\n")
         case let .conflict(_, message): message
         case let .subscriptionRequired(message): message
+        case .paidTierDisabled: "Trays Plus is not available yet."
         case .rateLimited: "Too many requests. Please try again later."
         case let .serverError(code): "Server error (\(code)). Please try again."
         }

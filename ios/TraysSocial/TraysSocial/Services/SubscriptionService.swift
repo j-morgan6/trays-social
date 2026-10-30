@@ -226,7 +226,15 @@ final class SubscriptionService {
     /// a thrown error — this is a write path.
     @discardableResult
     func purchase(_ product: Product) async throws -> PurchaseOutcome {
-        let result = try await product.purchase()
+        try await purchase(using: { try await product.purchase() })
+    }
+
+    /// StoreKit-free core of `purchase(_:)` (tests cannot build a `Product`). W216: refuses
+    /// on the injected D119 flag before any `await`, so no sheet opens and nothing is sent.
+    @discardableResult
+    func purchase(using buy: () async throws -> Product.PurchaseResult) async throws -> PurchaseOutcome {
+        guard paidTierEnabled() else { throw SubscriptionError.unavailable }
+        let result = try await buy()
 
         switch result {
         case let .success(verification):
@@ -274,6 +282,7 @@ final class SubscriptionService {
     /// credentials, which is why the background drain below does not call it.
     @discardableResult
     func restore() async throws -> RestoreOutcome {
+        guard paidTierEnabled() else { throw SubscriptionError.unavailable } // W216: before the sync prompt
         do {
             try await storeKit.syncWithAppStore()
         } catch {

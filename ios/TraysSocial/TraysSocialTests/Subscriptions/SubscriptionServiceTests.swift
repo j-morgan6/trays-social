@@ -1,3 +1,4 @@
+import StoreKit
 @testable import TraysSocial
 import XCTest
 
@@ -62,6 +63,9 @@ private final class SpyStoreKit: StoreKitSyncing {
     let log: CallLog
     var syncError: Error?
     var jwsToReturn: [String] = []
+    /// W216: counted separately rather than as a `CallLog` case, so the
+    /// existing call-sequence assertions are unchanged.
+    var entitlementReads = 0
 
     init(log: CallLog) {
         self.log = log
@@ -75,7 +79,8 @@ private final class SpyStoreKit: StoreKitSyncing {
     }
 
     func currentEntitlementJWS() async -> [String] {
-        jwsToReturn
+        entitlementReads += 1
+        return jwsToReturn
     }
 }
 
@@ -608,5 +613,133 @@ extension SubscriptionServiceTests {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defaults.removePersistentDomain(forName: suite)
         return defaults
+    }
+}
+
+/// W216. Stands in for `product.purchase()`, which tests cannot call because
+/// `Product` cannot be constructed outside the StoreKit runtime.
+@MainActor
+private final class PurchaseSpy {
+    var calls = 0
+    var result: Product.PurchaseResult = .userCancelled
+
+    func buy() async throws -> Product.PurchaseResult {
+        calls += 1
+        return result
+    }
+}
+
+/// W216. The user-initiated paths refuse while paid_tier is off, so a route
+/// that still reaches the paywall cannot buy or send purchase data.
+extension SubscriptionServiceTests {
+    // MARK: - W216: purchase and restore refuse while paid_tier is off
+
+    func test_purchaseThrowsUnavailableWhenPaidTierOff() async {
+        let harness = Harness(paidTier: false)
+        let spy = PurchaseSpy()
+
+        do {
+            try await harness.service.purchase(using: spy.buy)
+            XCTFail("Expected purchase to throw")
+        } catch {
+            XCTAssertEqual(error as? SubscriptionError, .unavailable)
+        }
+
+        // No StoreKit purchase sheet, no verify, no refresh.
+        XCTAssertEqual(spy.calls, 0)
+        XCTAssertEqual(harness.log.calls, [])
+    }
+
+    func test_restoreThrowsUnavailableWhenPaidTierOff() async {
+        let harness = Harness(paidTier: false)
+        harness.storeKit.jwsToReturn = ["a.b.c"]
+
+        do {
+            try await harness.service.restore()
+            XCTFail("Expected restore to throw")
+        } catch {
+            XCTAssertEqual(error as? SubscriptionError, .unavailable)
+        }
+
+        // No AppStore.sync, no entitlement read, no verify, no refresh.
+        XCTAssertEqual(harness.log.calls, [])
+        XCTAssertEqual(harness.storeKit.entitlementReads, 0)
+    }
+
+    func test_purchaseAndRestoreUnchangedWhenPaidTierOn() async throws {
+        let harness = Harness(paidTier: true)
+        let spy = PurchaseSpy()
+
+        let cancelled = try await harness.service.purchase(using: spy.buy)
+        spy.result = .pending
+        let pending = try await harness.service.purchase(using: spy.buy)
+
+        XCTAssertEqual(cancelled, .cancelled)
+        XCTAssertEqual(pending, .pending)
+        XCTAssertEqual(spy.calls, 2)
+
+        harness.storeKit.jwsToReturn = ["one.jws.sig"]
+        let restored = try await harness.service.restore()
+
+        XCTAssertEqual(restored, .foundEntitlements)
+        XCTAssertEqual(harness.log.calls, [.sync, .verify("one.jws.sig"), .refresh, .refresh])
+    }
+
+    func test_purchaseAndRestoreRefusedWhenFlagsNeverFetched() async throws {
+        let defaults = try freshDefaults("SubscriptionServiceTests.w216NeverFetched")
+        let harness = Harness(flags: FeatureFlags(defaults: defaults))
+        let spy = PurchaseSpy()
+
+        await XCTAssertThrowsUnavailable { try await harness.service.purchase(using: spy.buy) }
+        await XCTAssertThrowsUnavailable { try await harness.service.restore() }
+
+        XCTAssertEqual(spy.calls, 0)
+        XCTAssertEqual(harness.log.calls, [])
+    }
+
+    /// The flag is read on every call, so turning it on while the paywall is
+    /// open takes effect on the next tap without rebuilding the service.
+    func test_restoreHonoursFlagFlipWithoutRebuild() async throws {
+        let harness = Harness(paidTier: false)
+
+        await XCTAssertThrowsUnavailable { try await harness.service.restore() }
+        XCTAssertEqual(harness.log.calls, [])
+
+        harness.gates.paidTier = true
+        try await harness.service.restore()
+
+        XCTAssertEqual(harness.log.calls, [.sync, .refresh])
+    }
+
+    /// An older client, or one whose cached flag is on while the server's is
+    /// off, gets the server's 403. It must read "not available yet", not
+    /// "confirm your email", which is what a bare `.forbidden` maps to. Starts
+    /// from the server's exact body (FallbackController) so a drift in the code
+    /// string fails here rather than silently falling back to `.forbidden`.
+    func test_paidTierDisabled403MapsToUnavailable() async {
+        let body = #"{"errors":[{"code":"paid_tier_disabled","message":"Trays Plus is not available"}]}"#
+        let mapped = await APIClient.shared.mapError(statusCode: 403, data: Data(body.utf8))
+
+        XCTAssertEqual(SubscriptionError.from(mapped), .unavailable)
+
+        // A 403 without the code is still a genuine permission failure.
+        let plain = await APIClient.shared.mapError(
+            statusCode: 403,
+            data: Data(#"{"errors":[{"message":"forbidden"}]}"#.utf8)
+        )
+        XCTAssertEqual(SubscriptionError.from(plain), .emailNotConfirmed)
+    }
+
+    private func XCTAssertThrowsUnavailable(
+        _ body: () async throws -> some Any,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async {
+        do {
+            _ = try await body()
+            XCTFail("Expected SubscriptionError.unavailable", file: file, line: line)
+        } catch {
+            XCTAssertEqual(error as? SubscriptionError, .unavailable, file: file, line: line)
+        }
     }
 }
