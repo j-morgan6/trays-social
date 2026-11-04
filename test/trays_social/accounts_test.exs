@@ -670,6 +670,55 @@ defmodule TraysSocial.AccountsTest do
       refute TraysSocial.Repo.get(User, user.id)
       assert TraysSocial.Repo.all(TraysSocial.Feedback.Submission) == []
     end
+
+    test "delete_account removes the user's iOS diagnostic payloads (D120)" do
+      user = user_fixture()
+      {:ok, first} = store_diagnostic(user.id)
+      {:ok, second} = store_diagnostic(user.id)
+
+      assert {:ok, _} = Accounts.delete_account(user)
+
+      # Look the rows up by id: under the old on_delete: :nilify_all they
+      # survived with user_id NULL, which a user_id lookup cannot see.
+      refute TraysSocial.Repo.get(TraysSocial.Diagnostics.IosDiagnosticPayload, first.id)
+      refute TraysSocial.Repo.get(TraysSocial.Diagnostics.IosDiagnosticPayload, second.id)
+    end
+
+    test "delete_account leaves other users' and signed-out diagnostics in place (D120)" do
+      user = user_fixture()
+      other = user_fixture()
+      {:ok, _} = store_diagnostic(user.id)
+      {:ok, others} = store_diagnostic(other.id)
+      {:ok, signed_out} = store_diagnostic(nil)
+
+      assert {:ok, _} = Accounts.delete_account(user)
+
+      remaining =
+        TraysSocial.Diagnostics.IosDiagnosticPayload
+        |> TraysSocial.Repo.all()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      assert remaining == Enum.sort([others.id, signed_out.id])
+    end
+
+    test "the FK deletes diagnostics with the user row (D120 migration)" do
+      user = user_fixture()
+      {:ok, payload} = store_diagnostic(user.id)
+
+      TraysSocial.Repo.delete!(user)
+
+      refute TraysSocial.Repo.get(TraysSocial.Diagnostics.IosDiagnosticPayload, payload.id)
+    end
+  end
+
+  defp store_diagnostic(user_id) do
+    TraysSocial.Diagnostics.store_payload(%{
+      user_id: user_id,
+      payload_type: "metric",
+      payload: %{"metricPayload" => %{}},
+      received_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    })
   end
 
   describe "follow_user/2" do

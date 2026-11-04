@@ -58,3 +58,7 @@ config :phoenix_live_view,
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# D120: no periodic ErrorTracker prune in test; the sandbox owns the
+# connections. Tests call TraysSocial.ErrorReports.prune/1 directly.
+config :trays_social, :error_reports, prune_enabled: false

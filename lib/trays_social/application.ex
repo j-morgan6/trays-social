@@ -7,22 +7,34 @@ defmodule TraysSocial.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      TraysSocialWeb.Telemetry,
-      TraysSocial.Repo,
-      {DNSCluster, query: Application.get_env(:trays_social, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: TraysSocial.PubSub},
-      {Task.Supervisor, name: TraysSocial.PushTaskSupervisor},
-      # Start a worker by calling: TraysSocial.Worker.start_link(arg)
-      # {TraysSocial.Worker, arg},
-      # Start to serve requests, typically the last entry
-      TraysSocialWeb.Endpoint
-    ]
+    children =
+      [
+        TraysSocialWeb.Telemetry,
+        TraysSocial.Repo,
+        {DNSCluster, query: Application.get_env(:trays_social, :dns_cluster_query) || :ignore},
+        {Phoenix.PubSub, name: TraysSocial.PubSub},
+        {Task.Supervisor, name: TraysSocial.PushTaskSupervisor}
+      ] ++
+        error_report_pruner() ++
+        [
+          # Start to serve requests, typically the last entry
+          TraysSocialWeb.Endpoint
+        ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: TraysSocial.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  # D120: age out ErrorTracker reports. Off in test, where the sandbox owns
+  # the database connections.
+  defp error_report_pruner do
+    config = Application.get_env(:trays_social, :error_reports, [])
+
+    if Keyword.get(config, :prune_enabled, true),
+      do: [TraysSocial.ErrorReports.Pruner],
+      else: []
   end
 
   # Tell Phoenix to update the endpoint configuration

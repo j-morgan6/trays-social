@@ -12,12 +12,17 @@ defmodule TraysSocial.Release do
 
   W181: `prune_grocery_checks/0` deletes grocery_checks rows older than the
   retention window. See docs/grocery-checks-prune.md.
+
+  D120: `prune_error_reports/0` ages out ErrorTracker reports and
+  `scrub_error_reports/0` redacts secrets from reports stored before the
+  filter. See docs/error-reports-retention.md.
   """
   import Ecto.Query
 
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.Follow
   alias TraysSocial.Accounts.User
+  alias TraysSocial.ErrorReports
   alias TraysSocial.MealPlans
   alias TraysSocial.Notifications.Notification
   alias TraysSocial.Posts
@@ -239,6 +244,53 @@ defmodule TraysSocial.Release do
 
     {:ok, deleted} = MealPlans.prune_grocery_checks()
     IO.puts("[prune_grocery_checks] OK — deleted #{deleted} grocery_checks rows.")
+
+    :ok
+  end
+
+  @doc """
+  D120: deletes ErrorTracker occurrences older than the retention window (any
+  status) and errors left with none. The same prune runs daily from
+  `TraysSocial.ErrorReports.Pruner`; this runs it on demand:
+
+      bin/trays_social eval "TraysSocial.Release.prune_error_reports()"
+
+  See docs/error-reports-retention.md.
+  """
+  def prune_error_reports do
+    load_app()
+    {:ok, _apps} = Application.ensure_all_started(:trays_social)
+
+    {:ok, %{occurrences: occurrences, errors: errors}} = ErrorReports.prune()
+
+    IO.puts("[prune_error_reports] OK — deleted #{occurrences} occurrences and #{errors} errors.")
+
+    :ok
+  end
+
+  @doc """
+  D120: one-off scrub of ErrorTracker occurrences stored before the filter
+  existed. Re-applies `TraysSocial.ErrorReports.Filter` to every stored
+  context, rewriting only rows that held a secret, token or email, and
+  re-fires the trigger that redacts stored exception messages. Safe to
+  re-run. It rewrites production data, so run it only when the operator has
+  decided to:
+
+      bin/trays_social eval "TraysSocial.Release.scrub_error_reports()"
+
+  See docs/error-reports-retention.md.
+  """
+  def scrub_error_reports do
+    load_app()
+    {:ok, _apps} = Application.ensure_all_started(:trays_social)
+
+    {:ok, %{scanned: scanned, scrubbed: scrubbed, reasons_rechecked: reasons}} =
+      ErrorReports.scrub()
+
+    IO.puts(
+      "[scrub_error_reports] OK — scanned #{scanned} occurrences, scrubbed #{scrubbed}; " <>
+        "re-checked #{reasons} stored error messages."
+    )
 
     :ok
   end

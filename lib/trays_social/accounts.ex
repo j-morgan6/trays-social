@@ -442,6 +442,12 @@ defmodule TraysSocial.Accounts do
       from(fs in TraysSocial.Feedback.Submission, where: fs.user_id == ^user_id)
       |> Repo.delete_all()
 
+      # Delete iOS diagnostic (MetricKit) reports. The FK is on_delete:
+      # :delete_all (since D120); signed-out reports have no user_id and are
+      # not touched.
+      from(p in TraysSocial.Diagnostics.IosDiagnosticPayload, where: p.user_id == ^user_id)
+      |> Repo.delete_all()
+
       # Delete the user record itself (Apple App Store requirement)
       Repo.delete!(user)
     end)

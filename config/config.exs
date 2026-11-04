@@ -102,7 +102,21 @@ config :trays_social, :grocery_checks, retention_weeks: 8
 
 # Configure ErrorTracker — captures unhandled exceptions and persists them
 # to the trays_social Postgres database. Self-hosted, no third-party calls.
-config :error_tracker, repo: TraysSocial.Repo, otp_app: :trays_social
+# D120: the filter strips passwords, tokens, signed payloads, emails and the
+# Authorization/Cookie headers before an occurrence is stored.
+config :error_tracker,
+  repo: TraysSocial.Repo,
+  otp_app: :trays_social,
+  filter: TraysSocial.ErrorReports.Filter
+
+# D120 ErrorTracker retention. TraysSocial.ErrorReports.Pruner deletes
+# occurrences older than retention_days (any status) every prune_interval ms,
+# matching the Privacy Policy's 30-day log promise. On demand:
+# TraysSocial.Release.prune_error_reports/0 — see docs/error-reports-retention.md.
+config :trays_social, :error_reports,
+  retention_days: 30,
+  prune_interval: :timer.hours(24),
+  prune_enabled: true
 
 # Configure esbuild (the version is required)
 config :esbuild,
