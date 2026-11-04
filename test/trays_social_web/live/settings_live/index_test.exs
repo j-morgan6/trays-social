@@ -3,6 +3,7 @@ defmodule TraysSocialWeb.SettingsLive.IndexTest do
 
   import Phoenix.LiveViewTest
   import TraysSocial.AccountsFixtures
+  import TraysSocial.MailerTestHelpers
 
   describe "Settings page" do
     test "redirects to login when not authenticated", %{conn: conn} do
@@ -248,6 +249,35 @@ defmodule TraysSocialWeb.SettingsLive.IndexTest do
       html = render(view)
       assert html =~ user.email
       assert html =~ "Email Address"
+
+      assert lv_flash(view)["info"] =~
+               "A link to confirm your email change has been sent to #{new_email}"
+    end
+
+    @tag :capture_log
+    test "email change shows an error flash when the mailer fails", %{conn: conn} do
+      user = user_fixture() |> set_password()
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/users/settings")
+
+      new_email = "unsent#{System.unique_integer([:positive])}@example.com"
+
+      html =
+        with_failing_mailer(fn ->
+          view
+          |> element("#email-form")
+          |> render_submit(%{
+            "user" => %{"email" => new_email, "current_password" => valid_user_password()}
+          })
+        end)
+
+      assert lv_flash(view)["error"] =~ "send the confirmation link right now"
+      refute lv_flash(view)["info"]
+      # What the user typed is kept so they can retry.
+      assert html =~ new_email
     end
 
     test "shows validation error for invalid email with correct password", %{conn: conn} do
@@ -596,4 +626,8 @@ defmodule TraysSocialWeb.SettingsLive.IndexTest do
       refute html =~ "should be at least"
     end
   end
+
+  # The flash renders in the root layout, not this LiveView's template, so
+  # read it from the LiveView process's socket.
+  defp lv_flash(view), do: :sys.get_state(view.pid).socket.assigns.flash
 end

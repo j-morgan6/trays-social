@@ -1,7 +1,10 @@
 defmodule TraysSocialWeb.UserRegistrationControllerTest do
-  use TraysSocialWeb.ConnCase, async: true
+  # Not async: the D117 mailer-failure tests swap the Mailer adapter through
+  # global Application env (TraysSocial.MailerTestHelpers).
+  use TraysSocialWeb.ConnCase, async: false
 
   import TraysSocial.AccountsFixtures
+  import TraysSocial.MailerTestHelpers
 
   describe "GET /users/register" do
     test "renders registration page", %{conn: conn} do
@@ -33,6 +36,40 @@ defmodule TraysSocialWeb.UserRegistrationControllerTest do
 
       assert get_session(conn, :user_token)
       assert redirected_to(conn) == ~p"/feed"
+    end
+
+    @tag :capture_log
+    test "keeps the success flash when the email is sent", %{conn: conn} do
+      conn =
+        post(conn, ~p"/users/register", %{
+          "user" => valid_user_attributes(email: unique_user_email())
+        })
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Please check your email"
+      refute Phoenix.Flash.get(conn.assigns.flash, :error)
+    end
+
+    @tag :capture_log
+    test "shows an error flash but still logs in when the confirmation email fails", %{
+      conn: conn
+    } do
+      email = unique_user_email()
+
+      conn =
+        with_failing_mailer(fn ->
+          post(conn, ~p"/users/register", %{"user" => valid_user_attributes(email: email)})
+        end)
+
+      assert get_session(conn, :user_token)
+      assert redirected_to(conn) == ~p"/feed"
+      assert TraysSocial.Accounts.get_user_by_email(email)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "couldn't send your confirmation email"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Resend verification email"
+      refute Phoenix.Flash.get(conn.assigns.flash, :error) =~ "simulated_mailer_failure"
+      refute Phoenix.Flash.get(conn.assigns.flash, :info)
     end
 
     test "render errors for invalid data", %{conn: conn} do

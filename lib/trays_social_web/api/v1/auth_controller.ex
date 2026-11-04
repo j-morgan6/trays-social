@@ -20,15 +20,25 @@ defmodule TraysSocialWeb.API.V1.AuthController do
 
     case Accounts.register_user(attrs) do
       {:ok, user} ->
-        Accounts.deliver_user_confirmation_instructions(user, fn token ->
-          TraysSocialWeb.Endpoint.url() <> "/users/confirm/" <> token
-        end)
+        # D117: registration succeeds either way; the client learns whether
+        # the confirmation email went out (shipped iOS builds ignore the key).
+        email_sent? =
+          match?(
+            {:ok, _},
+            Accounts.deliver_user_confirmation_instructions(user, &confirmation_url/1)
+          )
 
         encoded_token = Accounts.generate_user_api_token(user)
 
         conn
         |> put_status(:created)
-        |> json(%{data: %{token: encoded_token, user: user_json(user)}})
+        |> json(%{
+          data: %{
+            token: encoded_token,
+            user: user_json(user),
+            confirmation_email_sent: email_sent?
+          }
+        })
 
       {:error, changeset} ->
         {:error, changeset}
@@ -272,13 +282,21 @@ defmodule TraysSocialWeb.API.V1.AuthController do
     if user.confirmed_at do
       json(conn, %{data: %{message: "already confirmed"}})
     else
-      Accounts.deliver_user_confirmation_instructions(user, fn token ->
-        TraysSocialWeb.Endpoint.url() <> "/users/confirm/" <> token
-      end)
+      # D117: never claim success when the mailer failed. deliver/4 already
+      # logs and reports the reason; it is not returned to the client.
+      case Accounts.deliver_user_confirmation_instructions(user, &confirmation_url/1) do
+        {:ok, _email} ->
+          json(conn, %{data: %{message: "confirmation email sent"}})
 
-      json(conn, %{data: %{message: "confirmation email sent"}})
+        {:error, _reason} ->
+          conn
+          |> put_status(:service_unavailable)
+          |> json(%{errors: [%{message: "could not send confirmation email"}]})
+      end
     end
   end
+
+  defp confirmation_url(token), do: TraysSocialWeb.Endpoint.url() <> "/users/confirm/" <> token
 
   defp user_json(user) do
     %{

@@ -1,7 +1,10 @@
 defmodule TraysSocialWeb.API.V1.AuthControllerTest do
-  use TraysSocialWeb.ConnCase, async: true
+  # Not async: the D117 mailer-failure tests swap the Mailer adapter through
+  # global Application env (TraysSocial.MailerTestHelpers).
+  use TraysSocialWeb.ConnCase, async: false
 
   import TraysSocial.AccountsFixtures
+  import TraysSocial.MailerTestHelpers
 
   alias TraysSocialWeb.API.V1.AuthController
 
@@ -24,6 +27,33 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
       assert user["email"] == "new@example.com"
       assert user["username"] == "newuser"
       refute Map.has_key?(user, "hashed_password")
+    end
+
+    @tag :capture_log
+    test "register returns confirmation_email_sent true on success", %{conn: conn} do
+      conn = post(conn, ~p"/api/v1/auth/register", register_params("sent"))
+
+      assert %{"data" => %{"token" => token, "confirmation_email_sent" => true}} =
+               json_response(conn, 201)
+
+      assert is_binary(token)
+    end
+
+    @tag :capture_log
+    test "register returns 201 with confirmation_email_sent false when the mailer fails", %{
+      conn: conn
+    } do
+      conn =
+        with_failing_mailer(fn ->
+          post(conn, ~p"/api/v1/auth/register", register_params("unsent"))
+        end)
+
+      assert %{"data" => %{"token" => token, "user" => user, "confirmation_email_sent" => false}} =
+               json_response(conn, 201)
+
+      assert is_binary(token)
+      assert user["username"] == "unsent"
+      assert TraysSocial.Accounts.get_user_by_email("unsent@example.com")
     end
 
     test "returns error for duplicate email", %{conn: conn} do
@@ -439,5 +469,53 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
 
       assert %{"data" => %{"username" => "flowuser"}} = json_response(conn2, 200)
     end
+  end
+
+  describe "POST /api/v1/auth/resend-confirmation" do
+    @tag :capture_log
+    test "resend_confirmation sends to an unconfirmed user", %{conn: conn} do
+      conn =
+        conn |> api_auth(unconfirmed_user_fixture()) |> post(~p"/api/v1/auth/resend-confirmation")
+
+      assert %{"data" => %{"message" => "confirmation email sent"}} = json_response(conn, 200)
+    end
+
+    @tag :capture_log
+    test "resend_confirmation returns 503 when the mailer fails", %{conn: conn} do
+      conn = api_auth(conn, unconfirmed_user_fixture())
+
+      conn = with_failing_mailer(fn -> post(conn, ~p"/api/v1/auth/resend-confirmation") end)
+
+      assert %{"errors" => [%{"message" => "could not send confirmation email"}]} =
+               json_response(conn, 503)
+
+      refute response(conn, 503) =~ "simulated_mailer_failure"
+    end
+
+    test "resend_confirmation still reports an already-confirmed user", %{conn: conn} do
+      conn =
+        with_failing_mailer(fn ->
+          conn |> api_auth(user_fixture()) |> post(~p"/api/v1/auth/resend-confirmation")
+        end)
+
+      assert %{"data" => %{"message" => "already confirmed"}} = json_response(conn, 200)
+    end
+  end
+
+  defp register_params(username) do
+    %{
+      email: "#{username}@example.com",
+      username: username,
+      password: "valid_password123",
+      age_confirmation: true
+    }
+  end
+
+  defp api_auth(conn, user) do
+    put_req_header(
+      conn,
+      "authorization",
+      "Bearer #{TraysSocial.Accounts.generate_user_api_token(user)}"
+    )
   end
 end

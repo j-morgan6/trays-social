@@ -177,17 +177,31 @@ defmodule TraysSocialWeb.SettingsLive.Index do
     if email_changeset.valid? do
       user_with_new_email = Ecto.Changeset.apply_changes(email_changeset)
 
-      Accounts.deliver_user_update_email_instructions(
-        user_with_new_email,
-        user.email,
-        fn token -> url(~p"/users/settings/confirm-email/#{token}") end
-      )
+      # D117: never claim the link was sent when the mailer failed.
+      result =
+        case Accounts.deliver_user_update_email_instructions(
+               user_with_new_email,
+               user.email,
+               fn token -> url(~p"/users/settings/confirm-email/#{token}") end
+             ) do
+          {:ok, _email} ->
+            {:info, "A link to confirm your email change has been sent to #{email}.",
+             Accounts.change_user_email(user)}
+
+          # Keep what the user typed so they can retry.
+          {:error, _reason} ->
+            {:error,
+             "We couldn't send the confirmation link right now. Please try again in a few minutes.",
+             email_changeset}
+        end
+
+      {kind, message, changeset} = result
 
       {:noreply,
        socket
        |> assign(:email_form_error, nil)
-       |> assign(:email_changeset, Accounts.change_user_email(user))
-       |> put_flash(:info, "A link to confirm your email change has been sent to #{email}.")}
+       |> assign(:email_changeset, changeset)
+       |> put_flash(kind, message)}
     else
       {:noreply,
        socket

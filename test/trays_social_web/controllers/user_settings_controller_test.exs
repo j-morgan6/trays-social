@@ -1,7 +1,10 @@
 defmodule TraysSocialWeb.UserSettingsControllerTest do
-  use TraysSocialWeb.ConnCase, async: true
+  # Not async: the D117 mailer-failure tests swap the Mailer adapter through
+  # global Application env (TraysSocial.MailerTestHelpers).
+  use TraysSocialWeb.ConnCase, async: false
 
   import TraysSocial.AccountsFixtures
+  import TraysSocial.MailerTestHelpers
 
   alias TraysSocial.Accounts
 
@@ -87,6 +90,24 @@ defmodule TraysSocialWeb.UserSettingsControllerTest do
                "A link to confirm your email"
 
       assert Accounts.get_user_by_email(user.email)
+    end
+
+    @tag :capture_log
+    test "email change flashes an error when the mailer fails", %{conn: conn} do
+      conn =
+        with_failing_mailer(fn ->
+          put(conn, ~p"/users/settings", %{
+            "action" => "update_email",
+            "user" => %{"email" => unique_user_email()}
+          })
+        end)
+
+      assert redirected_to(conn) == ~p"/users/settings"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "couldn't send the confirmation link"
+
+      refute Phoenix.Flash.get(conn.assigns.flash, :info)
     end
 
     test "does not update email on invalid data", %{conn: conn} do

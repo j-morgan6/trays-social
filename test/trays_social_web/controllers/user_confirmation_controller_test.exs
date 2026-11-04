@@ -7,18 +7,7 @@ defmodule TraysSocialWeb.UserConfirmationControllerTest do
   import ExUnit.CaptureLog
   import Swoosh.TestAssertions
   import TraysSocial.AccountsFixtures
-
-  # D115: a Swoosh adapter that always fails, so the resend action's
-  # mailer-error branch can be exercised without a network call.
-  defmodule FailingAdapter do
-    @behaviour Swoosh.Adapter
-
-    @impl true
-    def deliver(_email, _config), do: {:error, :simulated_resend_rejection}
-
-    @impl true
-    def validate_config(_config), do: :ok
-  end
+  import TraysSocial.MailerTestHelpers
 
   describe "POST /users/confirmation/resend" do
     test "resend delivers a confirmation email to an unconfirmed user", %{conn: conn} do
@@ -137,19 +126,4 @@ defmodule TraysSocialWeb.UserConfirmationControllerTest do
   end
 
   defp signed_in_get(user, path), do: build_conn() |> log_in_user(user) |> get(path)
-
-  defp with_failing_mailer(fun) do
-    original = Application.get_env(:trays_social, TraysSocial.Mailer)
-    Application.put_env(:trays_social, TraysSocial.Mailer, adapter: FailingAdapter)
-
-    try do
-      fun.()
-    after
-      if original == nil do
-        Application.delete_env(:trays_social, TraysSocial.Mailer)
-      else
-        Application.put_env(:trays_social, TraysSocial.Mailer, original)
-      end
-    end
-  end
 end

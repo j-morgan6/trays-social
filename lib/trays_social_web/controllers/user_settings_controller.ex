@@ -6,6 +6,8 @@ defmodule TraysSocialWeb.UserSettingsController do
   alias TraysSocial.Accounts
   alias TraysSocialWeb.UserAuth
 
+  @email_change_failed "We couldn't send the confirmation link right now. Please try again in a few minutes."
+
   plug :require_sudo_mode
   plug :assign_email_and_password_changesets
 
@@ -19,18 +21,26 @@ defmodule TraysSocialWeb.UserSettingsController do
 
     case Accounts.change_user_email(user, user_params) do
       %{valid?: true} = changeset ->
-        changeset
-        |> Ecto.Changeset.apply_action!(:insert)
-        |> Accounts.deliver_user_update_email_instructions(
-          user.email,
-          &url(~p"/users/settings/confirm-email/#{&1}")
-        )
+        delivery =
+          changeset
+          |> Ecto.Changeset.apply_action!(:insert)
+          |> Accounts.deliver_user_update_email_instructions(
+            user.email,
+            &url(~p"/users/settings/confirm-email/#{&1}")
+          )
 
-        conn
-        |> put_flash(
-          :info,
-          "A link to confirm your email change has been sent to the new address."
-        )
+        # D117: never claim the link was sent when the mailer failed.
+        case delivery do
+          {:ok, _email} ->
+            put_flash(
+              conn,
+              :info,
+              "A link to confirm your email change has been sent to the new address."
+            )
+
+          {:error, _reason} ->
+            put_flash(conn, :error, @email_change_failed)
+        end
         |> redirect(to: ~p"/users/settings")
 
       changeset ->

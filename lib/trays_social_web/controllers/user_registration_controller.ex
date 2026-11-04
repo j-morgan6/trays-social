@@ -31,13 +31,27 @@ defmodule TraysSocialWeb.UserRegistrationController do
   defp do_create(conn, user_params) do
     case Accounts.register_user(user_params) do
       {:ok, user} ->
-        Accounts.deliver_user_confirmation_instructions(
-          user,
-          &url(~p"/users/confirm/#{&1}")
-        )
+        # D117: the account is created and the user logged in either way; a
+        # failed send only changes the message. deliver/4 already logs and
+        # reports the failure, so the reason is never shown to the user.
+        flash =
+          case Accounts.deliver_user_confirmation_instructions(
+                 user,
+                 &url(~p"/users/confirm/#{&1}")
+               ) do
+            {:ok, _email} ->
+              {:info, "Welcome to Trays! Please check your email to confirm your account."}
+
+            {:error, _reason} ->
+              {:error,
+               "Welcome to Trays! We couldn't send your confirmation email right now. " <>
+                 "Use \"Resend verification email\" in a few minutes."}
+          end
+
+        {kind, message} = flash
 
         conn
-        |> put_flash(:info, "Welcome to Trays! Please check your email to confirm your account.")
+        |> put_flash(kind, message)
         |> UserAuth.log_in_user(user)
 
       {:error, %Ecto.Changeset{} = changeset} ->

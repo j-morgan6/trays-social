@@ -7,21 +7,9 @@ defmodule TraysSocial.Accounts.UserNotifierTest do
 
   import ExUnit.CaptureLog
   import TraysSocial.AccountsFixtures
+  import TraysSocial.MailerTestHelpers
 
   alias TraysSocial.Accounts.UserNotifier
-
-  # D63: a Swoosh adapter that always returns an error. Used to verify the
-  # error branch in UserNotifier.deliver/4 logs + reports without changing
-  # the production code path.
-  defmodule FailingAdapter do
-    @behaviour Swoosh.Adapter
-
-    @impl true
-    def deliver(_email, _config), do: {:error, :simulated_resend_suppression}
-
-    @impl true
-    def validate_config(_config), do: :ok
-  end
 
   @primary_color "#1B5E20"
 
@@ -118,13 +106,13 @@ defmodule TraysSocial.Accounts.UserNotifierTest do
       with_failing_mailer(fn ->
         log =
           capture_log(fn ->
-            assert {:error, :simulated_resend_suppression} =
+            assert {:error, :simulated_mailer_failure} =
                      UserNotifier.deliver_login_instructions(user, url)
           end)
 
         assert log =~ "email delivery failed"
         assert log =~ user.email
-        assert log =~ "simulated_resend_suppression"
+        assert log =~ "simulated_mailer_failure"
 
         # Same credential-safety guarantee on the error path.
         refute log =~ url
@@ -185,21 +173,5 @@ defmodule TraysSocial.Accounts.UserNotifierTest do
     |> String.replace("&", "&amp;")
     |> String.replace("\"", "&quot;")
     |> String.replace("'", "&#39;")
-  end
-
-  defp with_failing_mailer(fun) do
-    original = Application.get_env(:trays_social, TraysSocial.Mailer)
-
-    Application.put_env(:trays_social, TraysSocial.Mailer, adapter: FailingAdapter)
-
-    try do
-      fun.()
-    after
-      if original == nil do
-        Application.delete_env(:trays_social, TraysSocial.Mailer)
-      else
-        Application.put_env(:trays_social, TraysSocial.Mailer, original)
-      end
-    end
   end
 end
