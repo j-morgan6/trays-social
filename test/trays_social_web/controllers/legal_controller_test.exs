@@ -26,12 +26,88 @@ defmodule TraysSocialWeb.LegalControllerTest do
         # not an appointed representative — guard both the legal hook and the
         # territory statement so neither can be silently dropped.
         "Article 27 of the GDPR",
-        "Canada and the United States"
+        "Canada and the United States",
+        # W215: what iOS 1.1.0 declares in PrivacyInfo.xcprivacy. Name, feedback,
+        # recipe opens and diagnostics must stay disclosed, with their retention.
+        "may also share your name",
+        "to suggest a username",
+        "In-app feedback you send us",
+        "the subject and message you write, plus your app version, OS version and device model",
+        "along with your app version, OS version and device model",
+        "Recipe opens: when you are signed in",
+        "Recipe opens are not used for analytics or ads",
+        "MetricKit",
+        "linked to your signed-in account",
+        "In-app feedback: kept while your account is active",
+        "Recipe opens: kept while your account is active",
+        "with no fixed deletion schedule, and deleted when you delete your account",
+        "Reports sent while you were signed out are not linked to any account",
+        "If you do not share your name",
+        "store your device",
+        "Server error reports: when a request to our servers fails",
+        # D120: error reports are redacted before storage and age out at 30 days.
+        "we remove passwords, sign-in and security tokens, and sign-in cookies and headers",
+        "we remove email addresses from the fields that normally hold them",
+        "the details of each failed request are deleted 30 days after it happens",
+        "Server error reports are deleted on their own 30-day schedule",
+        "section 10 lists what happens to each kind of data when you do",
+        # The no-tracking promises the App Privacy label relies on.
+        "do not run third-party analytics",
+        "do not collect advertising IDs",
+        "do not track you across other apps or websites"
       ]
 
       for phrase <- required do
         assert body =~ phrase, "expected /privacy body to contain #{inspect(phrase)}"
       end
+    end
+
+    test "no longer says diagnostics or error reports survive account deletion", %{conn: conn} do
+      body = conn |> get(~p"/privacy") |> html_response(200)
+
+      for stale <- [
+            "the diagnostic report itself may be kept",
+            "They are not removed when you delete your account",
+            "the recipient address and subject"
+          ] do
+        refute body =~ stale, "expected /privacy body not to contain #{inspect(stale)}"
+      end
+    end
+
+    test "no longer describes diagnostics as basic error events", %{conn: conn} do
+      conn = get(conn, ~p"/privacy")
+
+      refute response(conn, 200) =~ "Basic error events"
+    end
+
+    test "does not describe purchase or subscription data as collected", %{conn: conn} do
+      conn = get(conn, ~p"/privacy")
+      body = response(conn, 200)
+
+      # W215: those disclosures ship with the Plus release, alongside the
+      # manifest's purchase history declaration.
+      for phrase <- ~w(purchase subscription StoreKit) do
+        refute body =~ ~r/#{phrase}/i, "expected /privacy not to mention #{phrase}"
+      end
+    end
+
+    test "renders the frontmatter version and date, matching the CHANGELOG", %{conn: conn} do
+      conn = get(conn, ~p"/privacy")
+      body = response(conn, 200)
+
+      source = :trays_social |> Application.app_dir("priv/legal/privacy.md") |> File.read!()
+      [_, date] = Regex.run(~r/^effective_date: (\S+)$/m, source)
+      [_, version] = Regex.run(~r/^version: (\S+)$/m, source)
+
+      assert body =~ "Effective #{date}"
+      assert body =~ "v#{version}"
+
+      changelog = :trays_social |> Application.app_dir("priv/legal/CHANGELOG.md") |> File.read!()
+
+      [_, latest_version, latest_date] =
+        Regex.run(~r/^## Privacy Policy v(\S+) — (\S+)$/m, changelog)
+
+      assert {latest_version, latest_date} == {version, date}
     end
 
     test "links the ads-choices page and keeps the no-ad-cookies statement", %{conn: conn} do
@@ -261,6 +337,16 @@ defmodule TraysSocialWeb.LegalControllerTest do
       for phrase <- required do
         assert body =~ phrase, "expected /faq body to contain #{inspect(phrase)}"
       end
+    end
+
+    # W215: the FAQ summary must not understate what Privacy Policy v1.3 discloses.
+    test "lists what we collect in line with the privacy policy", %{conn: conn} do
+      body = conn |> get(~p"/faq") |> response(200)
+
+      assert body =~ "feedback you send us"
+      assert body =~ "which recipes you open"
+      assert body =~ "crash and performance reports"
+      refute body =~ "basic server logs"
     end
 
     # W182: the FAQ shipped at v1.0 asserting there were no subscriptions and

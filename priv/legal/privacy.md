@@ -1,6 +1,6 @@
 ---
-effective_date: 2026-07-23
-version: 1.2
+effective_date: 2026-11-04
+version: 1.3
 ---
 
 # Privacy Policy
@@ -21,22 +21,25 @@ We collect what you give us when using Trays:
 - Optional bio and profile photo
 - Posts, photos, recipes, comments, reports you submit
 - Blocking and muting choices
+- In-app feedback you send us: the subject and message you write, plus your app version, OS version and device model, stored with your account
 
 ## 3. Information collected automatically
 
-We log basic technical data needed to operate the service:
+We log and store technical and usage data needed to operate the service:
 
 - IP address (for abuse prevention and request handling)
 - Device type and OS version (for compatibility and bug triage)
 - App version
 - Server log timestamps
-- Basic error events
+- Recipe opens: when you are signed in and open a recipe in the app or on the website, we store which recipe you opened and when, with your account
+- Crash and performance diagnostics: the iOS app sends crash and performance reports from Apple's MetricKit framework, along with your app version, OS version and device model, and we store them linked to your signed-in account
+- Server error reports: when a request to our servers fails, we store the error and details of that request in our own database (such as the IP address, the page or endpoint requested, and its parameters). Before a report is stored we remove passwords, sign-in and security tokens, and sign-in cookies and headers, and we remove email addresses from the fields that normally hold them and from the error message. We use these reports to find and fix bugs
 
 We do not run third-party analytics, do not collect advertising IDs, and do not track you across other apps or websites.
 
 ## 4. Information from third parties — Sign in with Apple
 
-Apple performs identity assertion when you sign in with Apple — Apple issues a signed JWT that we verify against Apple's public JWKs. Apple does not access your subsequent app data. Apple may return either your real email address or a private relay email (`*@privaterelay.appleid.com`) that forwards to your real address — that is your choice at sign-in. We treat the relay address the same as a regular email; it is the only address we have for you in that case. Apple-supplied data we store: your email (real or relay) and a stable Apple user ID (the `sub` claim).
+Apple performs identity assertion when you sign in with Apple — Apple issues a signed JWT that we verify against Apple's public JWKs. Apple does not access your subsequent app data. Apple may return either your real email address or a private relay email (`*@privaterelay.appleid.com`) that forwards to your real address — that is your choice at sign-in. We treat the relay address the same as a regular email; it is the only address we have for you in that case. Sign in with Apple may also share your name with the app if you choose to share it. We use only your given name, in lowercase, to suggest a username: if it fits our username rules it becomes your starting username, which is public like every username (see section 7). We do not store your name in any other form. If you do not share your name, you choose a username yourself. Apple-supplied data we store: your email (real or relay), a stable Apple user ID (the `sub` claim), and the username made from your given name if you shared it.
 
 ## 5. How we use your information
 
@@ -45,6 +48,9 @@ Concrete examples:
 - Operate the service (show your feed, store your recipes, deliver your comments to recipients)
 - Authenticate you (compare your password against the stored bcrypt hash; verify your Sign in with Apple token)
 - Send transactional email (confirmation links, password resets, magic-link login codes — never marketing)
+- Read and act on feedback you send in the app
+- Show the recipes you recently opened in Jump back in on Home. Recipe opens are not used for analytics or ads
+- Find and fix crashes and performance problems using diagnostics
 - Enforce community rules (process reports, apply blocks, hide muted keywords)
 - Prevent abuse (rate limit, IP-based abuse detection)
 - Comply with law (respond to valid legal process)
@@ -68,10 +74,10 @@ Posts, recipes, comments, profiles (username + bio + profile photo), and follow 
 
 | Provider | Role | Where data flows | Location |
 |---|---|---|---|
-| Fly.io | Compute and Postgres database | Account data, posts, comments, IP for request handling | Toronto, Canada (yyz region) |
+| Fly.io | Compute and Postgres database | Account data, posts, comments, in-app feedback, recipe opens, diagnostics, IP for request handling | Toronto, Canada (yyz region) |
 | Tigris Data | Object storage for photos | Photos served at `https://trays-social-uploads.fly.storage.tigris.dev/...` | Distributed globally |
 | Resend | Transactional email | Recipient email and email body | United States |
-| Apple | Sign in with Apple | Identity assertion only; we receive `sub` claim and email | Global |
+| Apple | Sign in with Apple | Identity assertion only; we receive `sub` claim and email, plus your name if you choose to share it | Global |
 
 ## 9. International data transfers
 
@@ -80,15 +86,19 @@ Tigris and Resend may move your data outside Canada (United States and other reg
 ## 10. Data retention
 
 - Active account data: kept while your account is active
-- Account deletion: honored within 30 days of request
+- Account deletion: honored within 30 days of request. It removes your account data, including the in-app feedback, recipe opens and crash and performance diagnostics described below. Server error reports are deleted on their own 30-day schedule instead
 - Backups: purged within 90 days
 - Server logs: rotated within 30 days
+- In-app feedback: kept while your account is active and deleted when you delete your account
+- Recipe opens: kept while your account is active and deleted when you delete your account
+- Crash and performance diagnostics: kept linked to your account while your account is active, with no fixed deletion schedule, and deleted when you delete your account. Reports sent while you were signed out are not linked to any account
+- Server error reports: the details of each failed request are deleted 30 days after it happens. For an error that keeps recurring, a short summary (the error type and message, with secrets and email addresses removed) is kept while it keeps happening
 
 ## 11. Your rights
 
 Depending on where you live, you have specific rights over your data:
 
-**Everyone:** access, correct, or delete your data. Email `support@trays.app` to exercise these rights. We will respond within 30 days. You can also delete your account directly in the iOS app's Settings.
+**Everyone:** access, correct, or delete your data. Email `support@trays.app` to exercise these rights. We will respond within 30 days. You can also delete your account directly in the iOS app's Settings; section 10 lists what happens to each kind of data when you do.
 
 **EU and UK users (GDPR):** right of access, rectification, erasure, portability (delivered as a single JSON file containing your user record plus your posts, comments, and photo URLs — machine-readable per Article 20), restriction, objection, and the right to lodge a complaint with your supervisory authority.
 
@@ -122,7 +132,7 @@ The website may display clearly labeled sponsored placements on public recipe pa
 
 ## 15. Push notifications
 
-Trays may send push notifications via Apple's Push Notification service (APNs) for events like likes, comments, and follows once enabled. You can disable notifications at any time in iOS Settings.
+Trays may send push notifications via Apple's Push Notification service (APNs) for events like likes, comments, and follows once enabled. To deliver them we store your device's push token with your account, and it is deleted when you delete your account. You can disable notifications at any time in iOS Settings.
 
 ## 16. Changes to this policy
 

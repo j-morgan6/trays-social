@@ -1,6 +1,6 @@
 ---
-effective_date: 2026-10-28
-version: 1.2
+effective_date: 2026-11-04
+version: 1.3
 ---
 
 # Frequently Asked Questions
@@ -96,7 +96,9 @@ requests are handled by Apple, as described in our
 No. We do not run third-party analytics, we do not collect advertising
 identifiers, and we do not track you across other apps or websites — so there
 is no App Tracking Transparency prompt. We collect only what is needed to run
-the service (your account info, the content you post, and basic server logs).
+the service: your account info, the content you post, feedback you send us,
+which recipes you open (to power Jump back in), crash and performance reports
+from the app, and server logs and error reports.
 The full breakdown is in our [Privacy Policy](/privacy).
 
 ## How do I report a problem?

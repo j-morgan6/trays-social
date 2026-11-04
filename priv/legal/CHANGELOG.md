@@ -10,6 +10,44 @@ the document name (e.g. `## Community Guidelines v1.0 — …`). Entries
 that span multiple documents are unprefixed and the body lists which
 documents changed.
 
+## FAQ v1.3 — 2026-11-04
+
+FAQ only. "Do you track me?" now lists what Privacy Policy v1.3 discloses
+(feedback, recipe opens, app crash and performance reports, server logs and
+error reports) instead of "basic server logs". The no-tracking answer is
+unchanged.
+
+## Privacy Policy v1.3 — 2026-11-04
+
+Terms of Service unchanged at v1.2, Community Guidelines unchanged at v1.0. The
+FAQ moves to v1.3 on the same date (see its entry).
+
+Brings the policy in line with what iOS 1.1.0 declares in its privacy manifest
+(W215). No data collection changed in this release; these disclosures describe
+collection that already exists, and the retention and deletion lines describe the
+behaviour shipped in D120 (2026-11-04).
+
+- §2: added in-app feedback (subject, message, app and OS version, device model)
+- §3: added recipe opens; replaced "Basic error events" with MetricKit crash and
+  performance diagnostics linked to the signed-in account; added server error
+  reports stored in our own database, with passwords, tokens and sign-in cookies
+  and headers removed before storage, and email addresses removed from the fields
+  that normally hold them and from the error message; the no third-party
+  analytics, no advertising IDs and no cross-app tracking sentence is unchanged
+- §4: Sign in with Apple may share your name, and the given name is used to
+  suggest a username; the Apple-supplied data list now says so
+- §5: added uses for feedback, recipe opens (not used for analytics or ads) and
+  diagnostics
+- §8: Fly.io row lists feedback, recipe opens and diagnostics; Apple row lists
+  the shared name
+- §10: added retention for feedback, recipe opens and diagnostics (while the
+  account is active, deleted with the account; signed-out diagnostics are not
+  linked to any account) and for server error reports (request details deleted
+  after 30 days; a redacted summary of a recurring error is kept while it
+  recurs); the account deletion line lists what deletion removes
+- §11: the delete-your-account sentence points at §10
+- §15: added the push token stored to deliver notifications
+
 ## FAQ v1.2 — 2026-10-28
 
 FAQ only. Privacy Policy unchanged at v1.2, Terms of Service unchanged at
