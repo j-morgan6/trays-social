@@ -21,6 +21,7 @@ defmodule TraysSocial.MealPlans do
 
   import Ecto.Query, warn: false
 
+  alias TraysSocial.Accounts
   alias TraysSocial.Accounts.User
   alias TraysSocial.MealPlans.GroceryCheck
   alias TraysSocial.MealPlans.MealPlanEntry
@@ -40,7 +41,8 @@ defmodule TraysSocial.MealPlans do
   date then id, each with its post (and the post's photos) preloaded.
 
   Entries whose post has been soft-deleted or moderator-removed never
-  appear.
+  appear, and neither do entries for posts by a user blocked in either
+  direction (D121; hidden, not deleted).
   """
   def list_entries(user_id, %Date{} = week_start) do
     {monday, sunday} = week_window(week_start)
@@ -49,8 +51,10 @@ defmodule TraysSocial.MealPlans do
     |> where([e], e.user_id == ^user_id)
     |> where([e], e.date >= ^monday and e.date <= ^sunday)
     |> join(:inner, [e], p in Post,
-      on: e.post_id == p.id and is_nil(p.deleted_at) and is_nil(p.removed_at)
+      on: e.post_id == p.id and is_nil(p.deleted_at) and is_nil(p.removed_at),
+      as: :post
     )
+    |> Posts.exclude_blocked_authors(Accounts.blocked_pair_ids(user_id))
     |> order_by([e], asc: e.date, asc: e.id)
     |> preload(post: :post_photos)
     |> Repo.all()
@@ -61,16 +65,24 @@ defmodule TraysSocial.MealPlans do
 
   Only posts the user has bookmarked or authored may be planned — the meal
   plan schedules the user's own tray, it is not a second save mechanism.
-  Returns `{:error, :forbidden}` otherwise. The exact date is stored;
-  normalization to Monday happens only on week-scoped reads.
+  Returns `{:error, :forbidden}` otherwise. Across a block in either
+  direction it returns `{:error, :not_found}`, even for a recipe saved
+  before the block, so the API answers 404 as it does for the post itself
+  (D121). The exact date is stored; normalization to Monday happens only on
+  week-scoped reads.
   """
   def create_entry(%User{} = user, %Date{} = date, %Post{} = post) do
-    if post.user_id == user.id or Posts.bookmarked?(user.id, post.id) do
-      %MealPlanEntry{}
-      |> MealPlanEntry.changeset(%{user_id: user.id, date: date, post_id: post.id})
-      |> Repo.insert()
-    else
-      {:error, :forbidden}
+    cond do
+      Accounts.blocked_between?(user.id, post.user_id) ->
+        {:error, :not_found}
+
+      post.user_id == user.id or Posts.bookmarked?(user.id, post.id) ->
+        %MealPlanEntry{}
+        |> MealPlanEntry.changeset(%{user_id: user.id, date: date, post_id: post.id})
+        |> Repo.insert()
+
+      true ->
+        {:error, :forbidden}
     end
   end
 
@@ -100,9 +112,10 @@ defmodule TraysSocial.MealPlans do
 
   Groups are ordered by post id, items by ingredient order then id. Posts
   planned on several days of the week appear once. Soft-deleted and
-  moderator-removed posts never appear; posts without ingredients are
-  omitted entirely. `checked` reflects the user's `grocery_checks` rows for
-  the (Monday-normalized) week.
+  moderator-removed posts never appear, nor do posts by a user blocked in
+  either direction (D121); posts without ingredients are omitted entirely.
+  `checked` reflects the user's `grocery_checks` rows for the
+  (Monday-normalized) week.
   """
   def grocery_list(user_id, %Date{} = week_start) do
     {monday, sunday} = week_window(week_start)
@@ -112,8 +125,10 @@ defmodule TraysSocial.MealPlans do
     |> where([e], e.user_id == ^user_id)
     |> where([e], e.date >= ^monday and e.date <= ^sunday)
     |> join(:inner, [e], p in Post,
-      on: e.post_id == p.id and is_nil(p.deleted_at) and is_nil(p.removed_at)
+      on: e.post_id == p.id and is_nil(p.deleted_at) and is_nil(p.removed_at),
+      as: :post
     )
+    |> Posts.exclude_blocked_authors(Accounts.blocked_pair_ids(user_id))
     |> join(:inner, [e, p], i in Ingredient, on: i.post_id == p.id)
     |> join(:left, [e, p, i], ph in PostPhoto, on: ph.post_id == p.id and ph.position == 0)
     |> order_by([e, p, i], asc: p.id, asc: i.order, asc: i.id)

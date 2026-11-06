@@ -48,11 +48,19 @@ defmodule TraysSocialWeb.PostLive.Show do
   defp blocked_ids_for(viewer), do: Accounts.blocked_user_ids(viewer.id)
 
   # The viewer's liked / bookmarked / following state for `post`; all false
-  # for a logged-out visit.
+  # for a logged-out visit and, D121, across a block in either direction (a
+  # recipe saved before the block is hidden from the tray, so the page must
+  # not claim it is saved).
   defp viewer_relationship(nil, _post),
     do: %{liked: false, bookmarked: false, is_following: false}
 
   defp viewer_relationship(viewer, post) do
+    if Accounts.blocked_between?(viewer.id, post.user_id),
+      do: viewer_relationship(nil, post),
+      else: unblocked_relationship(viewer, post)
+  end
+
+  defp unblocked_relationship(viewer, post) do
     liked = Posts.liked_by?(post.id, viewer.id) || false
     bookmarked = Posts.bookmarked?(viewer.id, post.id) || false
 
@@ -107,27 +115,20 @@ defmodule TraysSocialWeb.PostLive.Show do
         post = socket.assigns.post
         liked = socket.assigns.liked
 
-        {new_count, new_liked} =
-          if liked do
-            {max(0, post.like_count - 1), false}
-          else
-            {post.like_count + 1, true}
-          end
+        # D121: flip the button and the count only once the server has
+        # recorded the toggle; a refusal (a block either way) changes nothing.
+        result = if liked, do: Posts.unlike_post(post, user), else: Posts.like_post(post, user)
 
-        updated_post = %{post | like_count: new_count}
+        case result do
+          {:ok, %{count: new_count}} ->
+            {:noreply,
+             socket
+             |> assign(:liked, !liked)
+             |> assign(:post, %{post | like_count: new_count})}
 
-        socket =
-          socket
-          |> assign(:liked, new_liked)
-          |> assign(:post, updated_post)
-
-        if liked do
-          Posts.unlike_post(post, user)
-        else
-          Posts.like_post(post, user)
+          _error ->
+            {:noreply, socket}
         end
-
-        {:noreply, socket}
     end
   end
 

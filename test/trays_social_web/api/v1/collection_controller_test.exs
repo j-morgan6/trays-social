@@ -315,4 +315,27 @@ defmodule TraysSocialWeb.API.V1.CollectionControllerTest do
       assert json_response(post(conn, ~p"/api/v1/collections", %{"name" => "X"}), 401)
     end
   end
+
+  # D121: across a block the add answers 404, like GET /api/v1/posts/:id,
+  # even for a recipe saved before the block, so the block is not enumerable.
+  describe "POST /api/v1/collections/:id/posts/:post_id across a block" do
+    test "returns 404 in either direction and adds nothing", %{conn: conn, user: user} do
+      enable_paid_tier()
+      subscribe(user)
+      blocker = user_fixture()
+      blocked = user_fixture()
+      blocker_post = bookmarked_post_fixture(user, blocker)
+      blocked_post = bookmarked_post_fixture(user, blocked)
+      collection = collection_fixture(user)
+      {:ok, _} = Accounts.block_user(blocker.id, user.id)
+      {:ok, _} = Accounts.block_user(user.id, blocked.id)
+
+      for post <- [blocker_post, blocked_post] do
+        conn = post(conn, ~p"/api/v1/collections/#{collection.id}/posts/#{post.id}")
+        assert json_response(conn, 404)
+      end
+
+      assert Collections.collection_summary(collection).item_count == 0
+    end
+  end
 end

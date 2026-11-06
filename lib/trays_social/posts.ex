@@ -100,6 +100,18 @@ defmodule TraysSocial.Posts do
   end
 
   @doc """
+  Narrows a query whose `Post` join is named `:post` to posts not written by
+  any of `blocked_ids`. `exclude_blocked_users/2` filters the first binding;
+  this one is for saved-content queries (bookmarks, collection items, meal
+  plan entries) where the post is joined in (D121).
+  """
+  def exclude_blocked_authors(query, []), do: query
+
+  def exclude_blocked_authors(query, blocked_ids) do
+    where(query, [post: p], p.user_id not in ^blocked_ids)
+  end
+
+  @doc """
   Narrows a `Post` query (first binding) to posts whose caption matches none
   of `keywords`. Shared by the Feed and the recipe-first Home's "New from
   people you follow", which replaces it.
@@ -1000,11 +1012,25 @@ defmodule TraysSocial.Posts do
 
   @doc """
   Bookmarks a post for a user (saves to My Tray).
+
+  D121: refused with `{:error, :blocked}` across a block in either direction,
+  like `like_post/2` and `create_comment/3`. A missing post falls through to
+  the changeset's foreign-key error.
   """
   def create_bookmark(user_id, post_id) do
-    %Bookmark{}
-    |> Bookmark.changeset(%{user_id: user_id, post_id: post_id})
-    |> Repo.insert()
+    author_id =
+      Post
+      |> where([p], p.id == ^post_id)
+      |> select([p], p.user_id)
+      |> Repo.one()
+
+    if author_id && TraysSocial.Accounts.blocked_between?(user_id, author_id) do
+      {:error, :blocked}
+    else
+      %Bookmark{}
+      |> Bookmark.changeset(%{user_id: user_id, post_id: post_id})
+      |> Repo.insert()
+    end
   end
 
   @doc """
@@ -1019,6 +1045,9 @@ defmodule TraysSocial.Posts do
 
   @doc """
   Lists bookmarked posts for a user with cursor pagination, newest first.
+
+  D121: posts by a user blocked in either direction are hidden, not deleted,
+  so they come back if the block is lifted.
   """
   def list_bookmarks(user_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
@@ -1029,8 +1058,10 @@ defmodule TraysSocial.Posts do
       Bookmark
       |> where([b], b.user_id == ^user_id)
       |> join(:inner, [b], p in Post,
-        on: b.post_id == p.id and is_nil(p.deleted_at) and is_nil(p.removed_at)
+        on: b.post_id == p.id and is_nil(p.deleted_at) and is_nil(p.removed_at),
+        as: :post
       )
+      |> exclude_blocked_authors(TraysSocial.Accounts.blocked_pair_ids(user_id))
       |> order_by([b], desc: b.inserted_at, desc: b.id)
       |> limit(^limit)
       |> preload([b, p],

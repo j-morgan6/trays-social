@@ -1293,4 +1293,54 @@ defmodule TraysSocial.PostsTest do
       assert "italian" in tags
     end
   end
+
+  describe "bookmarks across a block (D121)" do
+    test "create_bookmark/2 refuses across a block in either direction" do
+      author = user_fixture()
+      blocked = user_fixture()
+      blocker = user_fixture()
+      post = post_fixture(%{user_id: author.id})
+
+      {:ok, _} = TraysSocial.Accounts.block_user(author.id, blocked.id)
+      {:ok, _} = TraysSocial.Accounts.block_user(blocker.id, author.id)
+
+      assert {:error, :blocked} = Posts.create_bookmark(blocked.id, post.id)
+      assert {:error, :blocked} = Posts.create_bookmark(blocker.id, post.id)
+      refute Posts.bookmarked?(blocked.id, post.id)
+      refute Posts.bookmarked?(blocker.id, post.id)
+
+      assert {:ok, _} = Posts.create_bookmark(user_fixture().id, post.id)
+    end
+
+    test "list_bookmarks/2 hides posts by blocked authors and shows them again after unblock" do
+      saver = user_fixture()
+      author = user_fixture()
+      other = user_fixture()
+      blocked_post = post_fixture(%{user_id: author.id})
+      kept_post = post_fixture(%{user_id: other.id})
+
+      {:ok, _} = Posts.create_bookmark(saver.id, blocked_post.id)
+      {:ok, _} = Posts.create_bookmark(saver.id, kept_post.id)
+      {:ok, _} = TraysSocial.Accounts.block_user(author.id, saver.id)
+
+      assert saver.id |> Posts.list_bookmarks() |> Enum.map(& &1.post_id) == [kept_post.id]
+      assert Posts.bookmarked?(saver.id, blocked_post.id), "the row is hidden, not deleted"
+
+      :ok = TraysSocial.Accounts.unblock_user(author.id, saver.id)
+
+      assert saver.id |> Posts.list_bookmarks() |> Enum.map(& &1.post_id) |> Enum.sort() ==
+               Enum.sort([blocked_post.id, kept_post.id])
+    end
+
+    test "list_bookmarks/2 returns an empty list when every saved recipe is by a blocked author" do
+      saver = user_fixture()
+      author = user_fixture()
+      post = post_fixture(%{user_id: author.id})
+
+      {:ok, _} = Posts.create_bookmark(saver.id, post.id)
+      {:ok, _} = TraysSocial.Accounts.block_user(saver.id, author.id)
+
+      assert Posts.list_bookmarks(saver.id) == []
+    end
+  end
 end

@@ -140,7 +140,7 @@ defmodule TraysSocial.CollectionsTest do
       post = post_fixture(%{user_id: author.id})
 
       assert {:error, :forbidden} = Collections.add_post(user, collection, post)
-      assert Collections.list_collection_items(collection.id) == []
+      assert Collections.list_collection_items(collection) == []
     end
 
     test "rejects adding the same post twice" do
@@ -162,7 +162,7 @@ defmodule TraysSocial.CollectionsTest do
       {:ok, _} = Collections.add_post(user, collection, post)
 
       assert {:ok, %CollectionItem{}} = Collections.remove_post(collection, post.id)
-      assert Collections.list_collection_items(collection.id) == []
+      assert Collections.list_collection_items(collection) == []
     end
 
     test "returns not_found when the post is not in the collection" do
@@ -259,12 +259,12 @@ defmodule TraysSocial.CollectionsTest do
       items = for post <- posts, do: elem(Collections.add_post(user, collection, post), 1)
       [oldest, middle, newest] = items
 
-      assert [first, second] = Collections.list_collection_items(collection.id, limit: 2)
+      assert [first, second] = Collections.list_collection_items(collection, limit: 2)
       assert first.id == newest.id
       assert second.id == middle.id
 
       assert [third] =
-               Collections.list_collection_items(collection.id,
+               Collections.list_collection_items(collection,
                  limit: 2,
                  cursor_id: second.id,
                  cursor_time: second.inserted_at
@@ -289,7 +289,7 @@ defmodule TraysSocial.CollectionsTest do
       {:ok, _} = Posts.delete_post(deleted)
       {:ok, _} = Posts.remove_post(removed, %{removed_by_id: admin.id, reason: "test"})
 
-      assert [item] = Collections.list_collection_items(collection.id)
+      assert [item] = Collections.list_collection_items(collection)
       assert item.post.id == kept.id
     end
 
@@ -299,10 +299,49 @@ defmodule TraysSocial.CollectionsTest do
       post = post_fixture(%{user_id: user.id})
       {:ok, _} = Collections.add_post(user, collection, post)
 
-      assert [item] = Collections.list_collection_items(collection.id)
+      assert [item] = Collections.list_collection_items(collection)
       assert item.post.user.id == user.id
       assert is_list(item.post.post_photos)
       assert is_list(item.post.ingredients)
+    end
+  end
+
+  describe "blocked authors (D121)" do
+    test "collection contents hide posts by blocked authors" do
+      user = user_fixture()
+      author = user_fixture()
+      other = user_fixture()
+      blocked_post = bookmarked_post_fixture(user, author)
+      kept_post = bookmarked_post_fixture(user, other)
+      collection = collection_fixture(user)
+      {:ok, _} = Collections.add_post(user, collection, blocked_post)
+      {:ok, _} = Collections.add_post(user, collection, kept_post)
+
+      {:ok, _} = TraysSocial.Accounts.block_user(author.id, user.id)
+
+      assert collection |> Collections.list_collection_items() |> Enum.map(& &1.post_id) == [
+               kept_post.id
+             ]
+
+      assert [%{item_count: 1}] = Collections.list_collections(user.id)
+      assert %{item_count: 1} = Collections.collection_summary(collection)
+      assert Repo.aggregate(CollectionItem, :count) == 2, "items are hidden, not removed"
+
+      :ok = TraysSocial.Accounts.unblock_user(author.id, user.id)
+
+      assert %{item_count: 2} = Collections.collection_summary(collection)
+    end
+
+    test "add_post/3 answers not_found for a recipe saved before a block" do
+      user = user_fixture()
+      author = user_fixture()
+      post = bookmarked_post_fixture(user, author)
+      collection = collection_fixture(user)
+
+      {:ok, _} = TraysSocial.Accounts.block_user(user.id, author.id)
+
+      assert {:error, :not_found} = Collections.add_post(user, collection, post)
+      assert Repo.aggregate(CollectionItem, :count) == 0
     end
   end
 end

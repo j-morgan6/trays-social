@@ -32,7 +32,7 @@ defmodule TraysSocialWeb.API.V1.CollectionController do
       {cursor_id, cursor_time} = decode_cursor(params["cursor"])
 
       items =
-        Collections.list_collection_items(collection.id,
+        Collections.list_collection_items(collection,
           limit: @page_size,
           cursor_id: cursor_id,
           cursor_time: cursor_time

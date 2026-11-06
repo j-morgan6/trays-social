@@ -346,4 +346,24 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       assert path =~ "/users/log-in"
     end
   end
+
+  describe "likes across a block (D121)" do
+    test "toggle-like after a block lands changes nothing and broadcasts nothing", %{conn: conn} do
+      author = user_fixture()
+      viewer = user_fixture()
+      post = post_fixture(user_id: author.id)
+
+      {:ok, view, _html} = conn |> log_in_user(viewer) |> live(~p"/feed")
+      {:ok, _} = TraysSocial.Accounts.block_user(author.id, viewer.id)
+      Phoenix.PubSub.subscribe(TraysSocial.PubSub, "posts:likes")
+
+      render_click(view, "toggle-like", %{"post-id" => to_string(post.id)})
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      refute MapSet.member?(assigns.liked_post_ids, post.id)
+      assert assigns.posts_map[post.id].like_count == 0
+      refute TraysSocial.Posts.liked_by?(post.id, viewer.id)
+      refute_received {:like_updated, _, _}
+    end
+  end
 end

@@ -471,4 +471,53 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
       refute Repo.get_by(RecipeOpen, user_id: viewer.id, post_id: post.id)
     end
   end
+
+  describe "likes and saves across a block (D121)" do
+    setup %{conn: conn} do
+      author = user_fixture()
+      viewer = user_fixture()
+      post = post_fixture(user_id: author.id)
+      {:ok, view, _html} = conn |> log_in_user(viewer) |> live(~p"/posts/#{post.id}")
+      {:ok, _} = TraysSocial.Accounts.block_user(author.id, viewer.id)
+      %{view: view, viewer: viewer, post: post}
+    end
+
+    test "toggle-like across a block leaves liked false and the count unchanged", %{
+      view: view,
+      viewer: viewer,
+      post: post
+    } do
+      render_click(view, "toggle-like")
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      refute assigns.liked
+      assert assigns.post.like_count == 0
+      refute TraysSocial.Posts.liked_by?(post.id, viewer.id)
+      assert TraysSocial.Posts.get_post!(post.id).like_count == 0
+    end
+
+    test "toggle-bookmark across a block saves nothing", %{view: view, viewer: viewer, post: post} do
+      render_click(view, "toggle-bookmark")
+
+      refute :sys.get_state(view.pid).socket.assigns.bookmarked
+      refute TraysSocial.Posts.bookmarked?(viewer.id, post.id)
+    end
+  end
+
+  describe "a recipe saved before a block (D121)" do
+    test "does not show as saved or liked once the block exists", %{conn: conn} do
+      author = user_fixture()
+      viewer = user_fixture()
+      post = post_fixture(user_id: author.id)
+      {:ok, _} = TraysSocial.Posts.create_bookmark(viewer.id, post.id)
+      {:ok, _} = TraysSocial.Posts.like_post(post, viewer)
+      {:ok, _} = TraysSocial.Accounts.block_user(author.id, viewer.id)
+
+      {:ok, view, _html} = conn |> log_in_user(viewer) |> live(~p"/posts/#{post.id}")
+
+      assigns = :sys.get_state(view.pid).socket.assigns
+      refute assigns.bookmarked
+      refute assigns.liked
+    end
+  end
 end

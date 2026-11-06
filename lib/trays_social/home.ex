@@ -42,7 +42,7 @@ defmodule TraysSocial.Home do
 
     %{
       jump_back_in: jump_back_in(user_id, blocked_ids),
-      tonight: tonight(user_id, today, blocked_ids),
+      tonight: tonight(user_id, today),
       friends_trays: friends_trays(user_id, blocked_ids),
       new_from_following: new_from_following(following_ids, user_id),
       suggested_cooks: suggested_cooks(following_ids, user_id, blocked_ids)
@@ -75,18 +75,13 @@ defmodule TraysSocial.Home do
     |> Repo.preload(@post_preloads)
   end
 
-  # list_entries/2 already drops deleted and removed posts; Home also drops
-  # photo-only posts and anything a block now hides (blocks keep bookmarks and
-  # meal-plan rows, so the entry can outlive the block).
-  defp tonight(user_id, today, blocked_ids) do
+  # list_entries/2 already drops deleted and removed posts and, since D121,
+  # posts by a user blocked in either direction; Home also drops photo-only
+  # posts.
+  defp tonight(user_id, today) do
     user_id
     |> MealPlans.list_entries(today)
-    |> Enum.find(&tonight_entry?(&1, today, blocked_ids))
-  end
-
-  defp tonight_entry?(entry, today, blocked_ids) do
-    entry.date == today and entry.post.type == "recipe" and
-      entry.post.user_id not in blocked_ids
+    |> Enum.find(&(&1.date == today and &1.post.type == "recipe"))
   end
 
   defp friends_trays(user_id, blocked_ids) do

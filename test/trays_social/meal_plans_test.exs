@@ -499,4 +499,43 @@ defmodule TraysSocial.MealPlansTest do
       assert [%{items: [%{checked: true}]}] = MealPlans.grocery_list(user.id, @monday)
     end
   end
+
+  describe "blocked authors (D121)" do
+    test "list_entries and grocery_list hide posts by blocked authors" do
+      user = user_fixture()
+      author = user_fixture()
+      other = user_fixture()
+      blocked_post = bookmarked_post_fixture(user, author)
+      kept_post = bookmarked_post_fixture(user, other)
+      entry_fixture(user, @monday, blocked_post)
+      entry_fixture(user, @wednesday, kept_post)
+
+      {:ok, _} = TraysSocial.Accounts.block_user(author.id, user.id)
+
+      assert user.id |> MealPlans.list_entries(@monday) |> Enum.map(& &1.post_id) == [
+               kept_post.id
+             ]
+
+      assert user.id |> MealPlans.grocery_list(@sunday) |> Enum.map(& &1.post.id) == [
+               kept_post.id
+             ]
+
+      assert Repo.aggregate(MealPlanEntry, :count) == 2, "entries are hidden, not deleted"
+
+      :ok = TraysSocial.Accounts.unblock_user(author.id, user.id)
+
+      assert length(MealPlans.list_entries(user.id, @monday)) == 2
+    end
+
+    test "create_entry/3 answers not_found for a recipe saved before a block" do
+      user = user_fixture()
+      author = user_fixture()
+      post = bookmarked_post_fixture(user, author)
+
+      {:ok, _} = TraysSocial.Accounts.block_user(user.id, author.id)
+
+      assert {:error, :not_found} = MealPlans.create_entry(user, @monday, post)
+      assert Repo.aggregate(MealPlanEntry, :count) == 0
+    end
+  end
 end

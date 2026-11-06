@@ -335,4 +335,28 @@ defmodule TraysSocialWeb.API.V1.MealPlanControllerTest do
              )
     end
   end
+
+  # D121: across a block planning answers 404, like GET /api/v1/posts/:id,
+  # even for a recipe saved before the block, so the block is not enumerable.
+  describe "POST /api/v1/meal-plan/entries across a block" do
+    test "returns 404 in either direction and plans nothing", %{conn: conn, user: user} do
+      enable_paid_tier()
+      subscribe(user)
+      blocker = user_fixture()
+      blocked = user_fixture()
+      blocker_post = bookmarked_post_fixture(user, blocker)
+      blocked_post = bookmarked_post_fixture(user, blocked)
+      {:ok, _} = Accounts.block_user(blocker.id, user.id)
+      {:ok, _} = Accounts.block_user(user.id, blocked.id)
+
+      for post <- [blocker_post, blocked_post] do
+        conn =
+          post(conn, ~p"/api/v1/meal-plan/entries", %{"date" => @monday, "post_id" => post.id})
+
+        assert json_response(conn, 404)
+      end
+
+      assert MealPlans.list_entries(user.id, ~D[2026-03-02]) == []
+    end
+  end
 end

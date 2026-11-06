@@ -46,6 +46,11 @@ defmodule TraysSocialWeb.API.V1.BookmarkController do
           |> put_status(:created)
           |> json(%{data: %{message: "saved to tray"}})
 
+        # D121: 404 (not 403) across a block, like PostController.show, so a
+        # block is not enumerable.
+        {:error, :blocked} ->
+          {:error, :not_found}
+
         {:error, changeset} ->
           {:error, changeset}
       end

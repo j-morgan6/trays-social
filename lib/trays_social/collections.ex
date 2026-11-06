@@ -16,6 +16,7 @@ defmodule TraysSocial.Collections do
 
   import Ecto.Query, warn: false
 
+  alias TraysSocial.Accounts
   alias TraysSocial.Accounts.User
   alias TraysSocial.Collections.Collection
   alias TraysSocial.Collections.CollectionItem
@@ -30,7 +31,8 @@ defmodule TraysSocial.Collections do
       %{collection: %Collection{}, item_count: 3, cover_photo_url: "..." | nil}
 
   `item_count` and `cover_photo_url` only consider member posts that are
-  neither soft-deleted nor moderator-removed.
+  neither soft-deleted nor moderator-removed, and not by a user blocked in
+  either direction (D121).
   """
   def list_collections(user_id) do
     collections =
@@ -39,13 +41,14 @@ defmodule TraysSocial.Collections do
       |> order_by([c], desc: c.inserted_at, desc: c.id)
       |> Repo.all()
 
-    counts = item_counts(Enum.map(collections, & &1.id))
+    blocked_ids = Accounts.blocked_pair_ids(user_id)
+    counts = item_counts(Enum.map(collections, & &1.id), blocked_ids)
 
     Enum.map(collections, fn collection ->
       %{
         collection: collection,
         item_count: Map.get(counts, collection.id, 0),
-        cover_photo_url: cover_photo_url(collection.id)
+        cover_photo_url: cover_photo_url(collection.id, blocked_ids)
       }
     end)
   end
@@ -54,10 +57,12 @@ defmodule TraysSocial.Collections do
   Builds the summary map (see `list_collections/1`) for a single collection.
   """
   def collection_summary(%Collection{} = collection) do
+    blocked_ids = Accounts.blocked_pair_ids(collection.user_id)
+
     %{
       collection: collection,
-      item_count: [collection.id] |> item_counts() |> Map.get(collection.id, 0),
-      cover_photo_url: cover_photo_url(collection.id)
+      item_count: [collection.id] |> item_counts(blocked_ids) |> Map.get(collection.id, 0),
+      cover_photo_url: cover_photo_url(collection.id, blocked_ids)
     }
   end
 
@@ -102,15 +107,22 @@ defmodule TraysSocial.Collections do
 
   Only posts the user has bookmarked or authored may be added — a collection
   organizes the user's own tray, it is not a second save mechanism. Returns
-  `{:error, :forbidden}` otherwise.
+  `{:error, :forbidden}` otherwise. Across a block in either direction it
+  returns `{:error, :not_found}`, even for a recipe saved before the block,
+  so the API answers 404 as it does for the post itself (D121).
   """
   def add_post(%User{} = user, %Collection{} = collection, %Post{} = post) do
-    if post.user_id == user.id or Posts.bookmarked?(user.id, post.id) do
-      %CollectionItem{}
-      |> CollectionItem.changeset(%{collection_id: collection.id, post_id: post.id})
-      |> Repo.insert()
-    else
-      {:error, :forbidden}
+    cond do
+      Accounts.blocked_between?(user.id, post.user_id) ->
+        {:error, :not_found}
+
+      post.user_id == user.id or Posts.bookmarked?(user.id, post.id) ->
+        %CollectionItem{}
+        |> CollectionItem.changeset(%{collection_id: collection.id, post_id: post.id})
+        |> Repo.insert()
+
+      true ->
+        {:error, :forbidden}
     end
   end
 
@@ -127,23 +139,22 @@ defmodule TraysSocial.Collections do
   @doc """
   Lists a collection's items with cursor pagination, newest first, with each
   item's post preloaded for `PostJSON`. Soft-deleted and moderator-removed
-  posts never appear.
+  posts never appear, and neither do posts by a user blocked in either
+  direction from the collection's owner (D121; hidden, not removed).
 
   Options: `:limit` (default 20), `:cursor_id`, `:cursor_time` — the cursor
   is keyed off the collection_items row (id, inserted_at), mirroring
   `Posts.list_bookmarks/2`.
   """
-  def list_collection_items(collection_id, opts \\ []) do
+  def list_collection_items(%Collection{} = collection, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
     cursor_id = Keyword.get(opts, :cursor_id)
     cursor_time = Keyword.get(opts, :cursor_time)
 
     query =
       CollectionItem
-      |> where([ci], ci.collection_id == ^collection_id)
-      |> join(:inner, [ci], p in Post,
-        on: ci.post_id == p.id and is_nil(p.deleted_at) and is_nil(p.removed_at)
-      )
+      |> where([ci], ci.collection_id == ^collection.id)
+      |> live_member_posts(Accounts.blocked_pair_ids(collection.user_id))
       |> order_by([ci], desc: ci.inserted_at, desc: ci.id)
       |> limit(^limit)
       |> preload([ci, p],
@@ -165,16 +176,26 @@ defmodule TraysSocial.Collections do
     Repo.all(query)
   end
 
-  # Grouped live-item counts for a set of collections. The join repeats the
-  # soft-delete filter so counts always match what listings render.
-  defp item_counts([]), do: %{}
+  # The member posts a listing, a count or a cover may show: not
+  # soft-deleted, not moderator-removed, and not by a user blocked in either
+  # direction from the owner. Shared so counts always match what listings
+  # render.
+  defp live_member_posts(query, blocked_ids) do
+    query
+    |> join(:inner, [ci], p in Post,
+      on: ci.post_id == p.id and is_nil(p.deleted_at) and is_nil(p.removed_at),
+      as: :post
+    )
+    |> Posts.exclude_blocked_authors(blocked_ids)
+  end
 
-  defp item_counts(collection_ids) do
+  # Grouped live-item counts for a set of collections.
+  defp item_counts([], _blocked_ids), do: %{}
+
+  defp item_counts(collection_ids, blocked_ids) do
     CollectionItem
     |> where([ci], ci.collection_id in ^collection_ids)
-    |> join(:inner, [ci], p in Post,
-      on: ci.post_id == p.id and is_nil(p.deleted_at) and is_nil(p.removed_at)
-    )
+    |> live_member_posts(blocked_ids)
     |> group_by([ci], ci.collection_id)
     |> select([ci], {ci.collection_id, count(ci.id)})
     |> Repo.all()
@@ -184,12 +205,10 @@ defmodule TraysSocial.Collections do
   # The cover is the position-0 photo of the most recently added live member
   # post. Left join on photos: a newest member without photos yields nil
   # rather than falling back to an older post.
-  defp cover_photo_url(collection_id) do
+  defp cover_photo_url(collection_id, blocked_ids) do
     CollectionItem
     |> where([ci], ci.collection_id == ^collection_id)
-    |> join(:inner, [ci], p in Post,
-      on: ci.post_id == p.id and is_nil(p.deleted_at) and is_nil(p.removed_at)
-    )
+    |> live_member_posts(blocked_ids)
     |> join(:left, [ci, p], ph in PostPhoto, on: ph.post_id == p.id and ph.position == 0)
     |> order_by([ci], desc: ci.inserted_at, desc: ci.id)
     |> limit(1)

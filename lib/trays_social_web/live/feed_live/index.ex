@@ -316,31 +316,34 @@ defmodule TraysSocialWeb.FeedLive.Index do
       post ->
         liked = MapSet.member?(socket.assigns.liked_post_ids, post_id)
 
-        {new_count, new_liked_ids} =
-          if liked do
-            {max(0, post.like_count - 1), MapSet.delete(socket.assigns.liked_post_ids, post_id)}
-          else
-            {post.like_count + 1, MapSet.put(socket.assigns.liked_post_ids, post_id)}
-          end
+        # D121: change the button, the count and every other open feed only
+        # once the server has recorded the toggle. A refusal (a block that
+        # landed after this feed loaded) leaves everything as it was.
+        result = if liked, do: Posts.unlike_post(post, user), else: Posts.like_post(post, user)
 
-        updated_post = %{post | like_count: new_count}
+        case result do
+          {:ok, %{count: new_count}} ->
+            new_liked_ids =
+              if liked,
+                do: MapSet.delete(socket.assigns.liked_post_ids, post_id),
+                else: MapSet.put(socket.assigns.liked_post_ids, post_id)
 
-        if liked do
-          Posts.unlike_post(post, user)
-        else
-          Posts.like_post(post, user)
+            updated_post = %{post | like_count: new_count}
+
+            Phoenix.PubSub.broadcast(
+              TraysSocial.PubSub,
+              "posts:likes",
+              {:like_updated, post_id, new_count}
+            )
+
+            socket
+            |> assign(:liked_post_ids, new_liked_ids)
+            |> update(:posts_map, &Map.put(&1, post_id, updated_post))
+            |> stream_insert(:posts, updated_post)
+
+          _error ->
+            socket
         end
-
-        Phoenix.PubSub.broadcast(
-          TraysSocial.PubSub,
-          "posts:likes",
-          {:like_updated, post_id, new_count}
-        )
-
-        socket
-        |> assign(:liked_post_ids, new_liked_ids)
-        |> update(:posts_map, &Map.put(&1, post_id, updated_post))
-        |> stream_insert(:posts, updated_post)
     end
   end
 
