@@ -71,6 +71,8 @@ xcuserdata/
 DerivedData/
 build/
 .stride/
+# stride-exploratory-testing session notes and drafted checks; they can quote app data
+.exploratory/
 
 # App Review demo credentials live here in plaintext (per Apple) — keep local, do not commit.
 docs/app-review-notes.md
