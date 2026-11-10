@@ -84,3 +84,7 @@ tmp/
 .stride-changed-files.json
 .stride-diff-upload-state
 .stride-dirty-baseline
+
+# App Store Connect API private keys (W232): live only in GitHub env secrets and the password manager
+*.p8
+AuthKey_*

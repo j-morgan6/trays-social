@@ -1,0 +1,44 @@
+# Workflow guard.
+#
+# The `testflight` environment holds the App Store Connect Admin key with no
+# required reviewer (Beta uploads run unattended), so any job on `main` that
+# declares `environment: testflight` can use it. The one way code from outside
+# this repo could reach such a job is a workflow triggered by the
+# pull-request-target event, which runs with the base repo's secrets against a
+# fork's code. This job fails if any workflow file subscribes to that event, so
+# one can never land quietly. See docs/ios-release.md.
+
+name: Workflow guard
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/**"
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+# Least-privilege GITHUB_TOKEN scope (D40): read the workflow files, nothing else.
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: No pull-request-target workflows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: Refuse the pull-request-target trigger
+        run: |
+          # Built from two halves so this file does not match itself.
+          event="pull_request""_target"
+          # Ignore whole-line comments; any other mention of the event fails.
+          hits=$(grep -nE "^[^#]*\b${event}\b" .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null || true)
+          if [ -n "$hits" ]; then
+            echo "::error::Workflows must not use ${event}; it would expose environment secrets to fork code."
+            echo "$hits"
+            exit 1
+          fi
+          echo "No ${event} workflows."
