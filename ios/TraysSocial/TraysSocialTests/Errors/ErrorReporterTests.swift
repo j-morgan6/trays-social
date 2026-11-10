@@ -58,7 +58,9 @@ final class ErrorReporterTests: XCTestCase {
             ErrorReporter.report(message: "from-reporter")
 
             // Allow the run loop to deliver the notification + main-actor hop.
-            for _ in 0 ..< 20 {
+            // Budget is generous on purpose: a cold CI simulator can stall
+            // the main actor for seconds, and a 400ms poll window failed there.
+            for _ in 0 ..< 500 {
                 if app.currentError == "from-reporter" {
                     exp.fulfill()
                     return
@@ -67,6 +69,6 @@ final class ErrorReporterTests: XCTestCase {
             }
         }
 
-        await fulfillment(of: [exp], timeout: 1.0)
+        await fulfillment(of: [exp], timeout: 15.0)
     }
 }
