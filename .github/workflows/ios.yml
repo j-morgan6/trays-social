@@ -1,0 +1,155 @@
+# iOS build + test gate.
+#
+# Regenerates ios/TraysSocial/TraysSocial.xcodeproj from project.yml with
+# scripts/regen-xcodeproj.sh, then builds the TraysSocial scheme and runs
+# TraysSocialTests (app-hosted XCTest, including PrivacyManifestTests and
+# InfoPlistTests) on an iOS Simulator. A red test fails the job.
+#
+# Never a bare `xcodegen generate`: that resets CURRENT_PROJECT_VERSION to
+# project.yml's stale 12. regen-xcodeproj.sh derives it from
+# `git rev-list --count HEAD`, which is why the checkout needs full history.
+# The regenerated .xcodeproj stays on the runner and is NOT committed back.
+#
+# Path-filtered: a backend-only push (lib/, test/, config/, ...) never starts
+# a macOS runner. No signing and no secrets, so it also runs on pull_request.
+# Never switch it to pull_request_target, which runs with the base repo's
+# token and secrets against outside code. Future TestFlight upload jobs
+# should `needs: test` so a build that fails its own tests never ships.
+
+name: iOS
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "ios/**"
+      - "scripts/regen-xcodeproj.sh"
+      - ".github/workflows/ios.yml"
+  pull_request:
+    paths:
+      - "ios/**"
+      - "scripts/regen-xcodeproj.sh"
+      - ".github/workflows/ios.yml"
+  workflow_dispatch:
+
+# Least-privilege GITHUB_TOKEN scope (D40). The job only clones the repo; it
+# never writes back to git or touches issues/PRs. Override per-job if a future
+# upload step legitimately needs more.
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: xcodebuild test
+    # Explicit image label, never macos-latest, so the installed Xcode set
+    # only changes when this line does.
+    runs-on: macos-26
+    timeout-minutes: 45
+    # Test-only, per ref: a newer push supersedes an in-flight run. Upload
+    # jobs added later get their own non-cancelling group.
+    concurrency:
+      group: ios-test-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      # Pinned explicitly; never the image default. project.yml's
+      # xcodeVersion "16.0" is XcodeGen's project-format floor (objectVersion
+      # 77 needs Xcode 16+), so any Xcode 16 or later is compatible. 26.4.1
+      # is the image's closest match to the local Xcode 26.4. Bump this when
+      # the runner image drops it; the Select Xcode step lists what exists.
+      XCODE_APP: /Applications/Xcode_26.4.1.app
+      SIM_DEVICE: iPhone 17
+    # No caches on purpose: nothing here is keyed on input an outside PR
+    # could control (DerivedData, Homebrew), because nothing is cached.
+    steps:
+      # fetch-depth: 0 is load-bearing. A shallow clone makes
+      # `git rev-list --count HEAD` return 1, and
+      # InfoPlistTests.test_buildNumberDidNotRegress then fails.
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Assert full git history
+        run: |
+          if [ "$(git rev-parse --is-shallow-repository)" != "false" ]; then
+            echo "::error::Shallow clone; the build number would be wrong. Use fetch-depth: 0."
+            exit 1
+          fi
+          echo "Commit count: $(git rev-list --count HEAD)"
+
+      - name: Select Xcode
+        run: |
+          if [ ! -d "$XCODE_APP" ]; then
+            echo "::error::$XCODE_APP is not on this runner image. Installed:"
+            ls -d /Applications/Xcode*.app
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_APP"
+          xcodebuild -version
+
+      # Resolve the simulator by UDID on the runtime that matches the selected
+      # Xcode's simulator SDK, so a runtime from another installed Xcode is
+      # never picked and a point-release version string (26.4 vs 26.4.1)
+      # cannot make the destination unmatchable.
+      - name: Pick simulator
+        run: |
+          sdk="$(xcrun --sdk iphonesimulator --show-sdk-version)"
+          runtime="com.apple.CoreSimulator.SimRuntime.iOS-${sdk//./-}"
+          udid="$(xcrun simctl list devices available -j \
+            | jq -r --arg rt "$runtime" --arg name "$SIM_DEVICE" '
+                .devices | to_entries[]
+                | select(.key == $rt or (.key | startswith($rt + "-")))
+                | .value[] | select(.name == $name) | .udid' \
+            | head -n 1)"
+          if [ -z "$udid" ]; then
+            echo "::error::No available '$SIM_DEVICE' simulator on $runtime. Available:"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using $SIM_DEVICE ($udid) on $runtime"
+          echo "SIM_UDID=$udid" >> "$GITHUB_ENV"
+
+      # Homebrew ships whatever XcodeGen is current, so a generator release
+      # can change the generated project without any commit here. Flag that
+      # as a warning annotation rather than failing the gate; bump
+      # XCODEGEN_EXPECTED when you upgrade XcodeGen locally.
+      - name: Install XcodeGen
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+          XCODEGEN_EXPECTED: "2.46.0"
+        run: |
+          brew install xcodegen
+          installed="$(xcodegen --version | sed -E 's/^Version:[[:space:]]*//')"
+          echo "XcodeGen $installed (expected $XCODEGEN_EXPECTED)"
+          if [ "$installed" != "$XCODEGEN_EXPECTED" ]; then
+            echo "::warning::XcodeGen $installed differs from the expected $XCODEGEN_EXPECTED; the generated project may differ from a local regen."
+          fi
+
+      - name: Regenerate Xcode project
+        run: scripts/regen-xcodeproj.sh
+
+      - name: Assert build number equals commit count
+        run: |
+          expected="$(git rev-list --count HEAD)"
+          pbx=ios/TraysSocial/TraysSocial.xcodeproj/project.pbxproj
+          actual="$(grep -oE 'CURRENT_PROJECT_VERSION = [0-9]+;' "$pbx" | grep -oE '[0-9]+' | sort -u)"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::CURRENT_PROJECT_VERSION is '${actual}', expected ${expected}"
+            exit 1
+          fi
+          echo "CURRENT_PROJECT_VERSION = $expected"
+
+      # The scheme's test action uses the Debug config. No signing on the
+      # simulator: no test depends on a Keychain write succeeding.
+      - name: Build and test
+        run: |
+          xcodebuild test \
+            -project ios/TraysSocial/TraysSocial.xcodeproj \
+            -scheme TraysSocial \
+            -destination "id=$SIM_UDID" \
+            CODE_SIGNING_ALLOWED=NO
