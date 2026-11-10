@@ -1,9 +1,18 @@
-# iOS build + test gate.
+# iOS build + test gate, then a Beta upload to TestFlight.
 #
-# Regenerates ios/TraysSocial/TraysSocial.xcodeproj from project.yml with
-# scripts/regen-xcodeproj.sh, then builds the TraysSocial scheme and runs
+# `test` regenerates ios/TraysSocial/TraysSocial.xcodeproj from project.yml
+# with scripts/regen-xcodeproj.sh, then builds the TraysSocial scheme and runs
 # TraysSocialTests (app-hosted XCTest, including PrivacyManifestTests and
 # InfoPlistTests) on an iOS Simulator. A red test fails the job.
+#
+# `testflight_beta` (W234) runs only after `test` passes, and only on a push
+# to main or a workflow_dispatch on main. It archives the "TraysSocial Beta"
+# scheme (Beta config, review backend trays-social-review.fly.dev), never the
+# "TraysSocial" scheme (Release, prod), and uploads it to TestFlight. Signing
+# is cloud-managed through the App Store Connect API key held in the
+# `testflight` environment (docs/ios-release.md): no certificate or profile
+# is committed. The build number is the commit count, and
+# ExportOptions-AppStore.plist stops Apple from rewriting it.
 #
 # Never a bare `xcodegen generate`: that resets CURRENT_PROJECT_VERSION to
 # project.yml's stale 12. regen-xcodeproj.sh derives it from
@@ -11,10 +20,11 @@
 # The regenerated .xcodeproj stays on the runner and is NOT committed back.
 #
 # Path-filtered: a backend-only push (lib/, test/, config/, ...) never starts
-# a macOS runner. No signing and no secrets, so it also runs on pull_request.
-# Never switch it to pull_request_target, which runs with the base repo's
-# token and secrets against outside code. Future TestFlight upload jobs
-# should `needs: test` so a build that fails its own tests never ships.
+# a macOS runner. `test` has no signing and no secrets, so it also runs on
+# pull_request; `testflight_beta` never does, so fork code can never reach
+# the signing key. Never switch this workflow to pull_request_target, which
+# runs with the base repo's token and secrets against outside code
+# (.github/workflows/workflow-guard.yml fails CI if any workflow does).
 
 name: iOS
 on:
@@ -32,15 +42,25 @@ on:
       - ".github/workflows/ios.yml"
   workflow_dispatch:
 
-# Least-privilege GITHUB_TOKEN scope (D40). The job only clones the repo; it
-# never writes back to git or touches issues/PRs. Override per-job if a future
-# upload step legitimately needs more.
+# Least-privilege GITHUB_TOKEN scope (D40). Both jobs only clone the repo;
+# neither writes back to git or touches issues/PRs. The TestFlight upload
+# authenticates with the App Store Connect key, not GITHUB_TOKEN, so it
+# needs nothing more.
 permissions:
   contents: read
 
 defaults:
   run:
     shell: bash
+
+env:
+  # Pinned explicitly; never the image default, and shared by both jobs so
+  # the build that is tested is the build that is uploaded. project.yml's
+  # xcodeVersion "16.0" is XcodeGen's project-format floor (objectVersion
+  # 77 needs Xcode 16+), so any Xcode 16 or later is compatible. 26.4.1
+  # is the image's closest match to the local Xcode 26.4. Bump this when
+  # the runner image drops it; the Select Xcode step lists what exists.
+  XCODE_APP: /Applications/Xcode_26.4.1.app
 
 jobs:
   test:
@@ -49,18 +69,12 @@ jobs:
     # only changes when this line does.
     runs-on: macos-26
     timeout-minutes: 45
-    # Test-only, per ref: a newer push supersedes an in-flight run. Upload
-    # jobs added later get their own non-cancelling group.
+    # Test-only, per ref: a newer push supersedes an in-flight run. The
+    # upload job has its own non-cancelling group (ios-testflight-beta).
     concurrency:
       group: ios-test-${{ github.ref }}
       cancel-in-progress: true
     env:
-      # Pinned explicitly; never the image default. project.yml's
-      # xcodeVersion "16.0" is XcodeGen's project-format floor (objectVersion
-      # 77 needs Xcode 16+), so any Xcode 16 or later is compatible. 26.4.1
-      # is the image's closest match to the local Xcode 26.4. Bump this when
-      # the runner image drops it; the Select Xcode step lists what exists.
-      XCODE_APP: /Applications/Xcode_26.4.1.app
       SIM_DEVICE: iPhone 17
     # No caches on purpose: nothing here is keyed on input an outside PR
     # could control (DerivedData, Homebrew), because nothing is cached.
@@ -153,3 +167,192 @@ jobs:
             -scheme TraysSocial \
             -destination "id=$SIM_UDID" \
             CODE_SIGNING_ALLOWED=NO
+
+  testflight_beta:
+    name: TestFlight Beta upload
+    # A build that fails its own tests never ships.
+    needs: test
+    # An allowlist, not a denylist: push and workflow_dispatch only, and only
+    # on main. A pull_request run skips this job, so fork code never reaches
+    # the signing key. The `testflight` environment's main-only deployment
+    # branch rule is the second lock.
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 60
+    # The only job that can read ASC_KEY_ID / ASC_ISSUER_ID / ASC_KEY_P8_BASE64,
+    # which are environment-scoped, never repository secrets.
+    environment: testflight
+    # One upload at a time, and never cancelled mid-upload: a newer push
+    # waits for the running upload instead of interrupting it. GitHub keeps
+    # at most one pending run per group and drops the older pending one,
+    # which only ever skips a build number, never uploads out of order.
+    concurrency:
+      group: ios-testflight-beta
+      cancel-in-progress: false
+    env:
+      EXPECTED_API_BASE_URL: https://trays-social-review.fly.dev
+      # The last manual Xcode upload was build 382 (2026-11-05). App Store
+      # Connect refuses a build number that does not go up.
+      MIN_BUILD_NUMBER: "383"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Assert full git history
+        run: |
+          if [ "$(git rev-parse --is-shallow-repository)" != "false" ]; then
+            echo "::error::Shallow clone; the build number would be wrong. Use fetch-depth: 0."
+            exit 1
+          fi
+          echo "Commit count: $(git rev-list --count HEAD)"
+
+      - name: Select Xcode
+        run: |
+          if [ ! -d "$XCODE_APP" ]; then
+            echo "::error::$XCODE_APP is not on this runner image. Installed:"
+            ls -d /Applications/Xcode*.app
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_APP"
+          xcodebuild -version
+
+      # Not Homebrew: this job later holds the App Store Connect key, so every
+      # third-party binary it runs is pinned and checksum-verified, and a
+      # mismatch fails the job rather than warning. XCODEGEN_SHA256 is the
+      # digest GitHub publishes for the release asset; bump both together:
+      #   gh api repos/yonaskolb/XcodeGen/releases/tags/<version> \
+      #     --jq '.assets[] | select(.name == "xcodegen.zip") | .digest'
+      - name: Install XcodeGen (pinned release)
+        env:
+          XCODEGEN_VERSION: "2.46.0"
+          XCODEGEN_SHA256: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
+        run: |
+          zip="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION.zip"
+          curl -fsSL -o "$zip" \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip"
+          echo "$XCODEGEN_SHA256  $zip" | shasum -a 256 -c -
+          unzip -q "$zip" -d "$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION"
+          bin="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION/xcodegen/bin"
+          installed="$("$bin/xcodegen" --version | sed -E 's/^Version:[[:space:]]*//')"
+          if [ "$installed" != "$XCODEGEN_VERSION" ]; then
+            echo "::error::Pinned XcodeGen reports version '$installed', expected $XCODEGEN_VERSION"
+            exit 1
+          fi
+          echo "XcodeGen $installed (pinned, sha256 verified)"
+          echo "$bin" >> "$GITHUB_PATH"
+
+      - name: Regenerate Xcode project
+        run: scripts/regen-xcodeproj.sh
+
+      - name: Assert build number equals commit count
+        run: |
+          expected="$(git rev-list --count HEAD)"
+          pbx=ios/TraysSocial/TraysSocial.xcodeproj/project.pbxproj
+          actual="$(grep -oE 'CURRENT_PROJECT_VERSION = [0-9]+;' "$pbx" | grep -oE '[0-9]+' | sort -u)"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::CURRENT_PROJECT_VERSION is '${actual}', expected ${expected}"
+            exit 1
+          fi
+          if [ "$expected" -lt "$MIN_BUILD_NUMBER" ]; then
+            echo "::error::Build $expected is not above the last manual upload (MIN_BUILD_NUMBER $MIN_BUILD_NUMBER)"
+            exit 1
+          fi
+          echo "CURRENT_PROJECT_VERSION = $expected"
+
+      # The key is written to the runner temp dir (outside the checkout) in a
+      # 0700 directory as a 0600 file, passed to xcodebuild by path only, and
+      # removed by the always() step at the end of the job. Never echo it and
+      # never enable shell tracing in any step that can see it.
+      - name: Write App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          set +x
+          if [ -z "$ASC_KEY_ID" ] || [ -z "$ASC_KEY_P8_BASE64" ]; then
+            echo "::error::ASC_KEY_ID or ASC_KEY_P8_BASE64 is missing from the testflight environment"
+            exit 1
+          fi
+          umask 077
+          key_dir="$RUNNER_TEMP/asc-key"
+          mkdir -p "$key_dir"
+          chmod 700 "$key_dir"
+          key_path="$key_dir/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_KEY_P8_BASE64" | base64 --decode > "$key_path"
+          chmod 600 "$key_path"
+          if ! head -n 1 "$key_path" | grep -q 'BEGIN PRIVATE KEY'; then
+            echo "::error::ASC_KEY_P8_BASE64 does not decode to a PEM private key"
+            exit 1
+          fi
+
+      # Archive with the Beta configuration explicitly, even though the
+      # scheme's archive action already selects it, so the scheme cannot drift
+      # to Release unnoticed. Signing is Automatic (project.yml sets no
+      # CODE_SIGN_STYLE); -allowProvisioningUpdates plus the API key lets
+      # Xcode fetch or create the certificate and profile it needs. The archive
+      # must be signed: an unsigned one would drop the Sign in with Apple and
+      # associated-domains entitlements.
+      - name: Archive TraysSocial Beta
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcodebuild archive \
+            -project ios/TraysSocial/TraysSocial.xcodeproj \
+            -scheme "TraysSocial Beta" \
+            -configuration Beta \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/TraysSocialBeta.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc-key/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      # Mechanical proof of the two facts a tester would otherwise discover
+      # by installing: the build talks to the review backend, and its build
+      # number is the commit count. Also proves the archive is signed with
+      # its entitlements.
+      - name: Assert archive backend, build number and signing
+        run: |
+          app="$RUNNER_TEMP/TraysSocialBeta.xcarchive/Products/Applications/TraysSocial.app"
+          url="$(plutil -extract API_BASE_URL raw -o - "$app/Info.plist")"
+          if [ "$url" != "$EXPECTED_API_BASE_URL" ]; then
+            echo "::error::Archived API_BASE_URL is '$url', expected $EXPECTED_API_BASE_URL"
+            exit 1
+          fi
+          build="$(plutil -extract CFBundleVersion raw -o - "$app/Info.plist")"
+          expected="$(git rev-list --count HEAD)"
+          if [ "$build" != "$expected" ]; then
+            echo "::error::Archived CFBundleVersion is '$build', expected the commit count $expected"
+            exit 1
+          fi
+          if ! codesign -d --entitlements - --xml "$app" 2>/dev/null | grep -q 'com.apple.developer.associated-domains'; then
+            echo "::error::The archived app is not signed with its entitlements"
+            exit 1
+          fi
+          echo "Archive OK: build $build, backend $url"
+
+      # ExportOptions-AppStore.plist: method app-store-connect, destination
+      # upload, so this step uploads to App Store Connect itself. A build
+      # number App Store Connect already has (a re-run of the same commit)
+      # fails here.
+      - name: Export and upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/TraysSocialBeta.xcarchive" \
+            -exportOptionsPlist ios/TraysSocial/ExportOptions-AppStore.plist \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc-key/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      # Runs even when an earlier step failed or the job was cancelled.
+      - name: Remove App Store Connect API key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/asc-key"

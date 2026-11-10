@@ -30,10 +30,10 @@ The key lives only as **environment-scoped** GitHub Actions secrets, never at re
 
 | GitHub environment | Will be used by | Gate |
 |---|---|---|
-| `testflight` | Beta-scheme TestFlight upload on push to `main` (G45, Beta upload task; not wired yet) | Deployment branch: `main` only |
+| `testflight` | Beta-scheme TestFlight upload on push to `main`: the `testflight_beta` job in `.github/workflows/ios.yml` (W234) | Deployment branch: `main` only |
 | `production` | Release-scheme TestFlight upload (G45, Release upload task; not wired yet), and Fly `deploy_prod` (live today) | Required reviewers |
 
-As of this commit `.github/workflows/ios.yml` only builds and tests: it declares no environment and reads none of these secrets.
+In `.github/workflows/ios.yml` only the `testflight_beta` job declares `environment: testflight` and reads these secrets. It runs after the `test` job passes, on a push to `main` or a `workflow_dispatch` on `main`, never on a pull request. The `test` job declares no environment and reads none of them.
 
 Keep `production`'s required reviewers on: it is what stops the Release upload (and the prod deploy) from running without an approval.
 
@@ -68,6 +68,6 @@ gh secret list --env production
    ```
    Repeat with `--env production`.
 3. Save the `.p8` in the password manager, then delete the local copy: `rm ~/Downloads/AuthKey_<KEY_ID>.p8`.
-4. Confirm both environments list the three secrets (`gh secret list --env testflight`, `gh secret list --env production`). Until the G45 upload jobs exist that is the only check available; once they do, run one upload with the new key before going on.
+4. Confirm both environments list the three secrets (`gh secret list --env testflight`, `gh secret list --env production`). Then confirm one Beta upload succeeds with the new key before going on: either the next push to `main` that starts the iOS workflow (it watches `ios/**`, `scripts/regen-xcodeproj.sh` and `.github/workflows/ios.yml`; its `testflight_beta` run uses the new key), or, when the newest `main` commit touched none of those paths and so has no upload at its build number yet, `gh workflow run ios.yml --ref main`. Dispatching on a commit whose build number is already in App Store Connect fails as a duplicate.
 5. Revoke the old key in App Store Connect.
 6. Update the table above.
