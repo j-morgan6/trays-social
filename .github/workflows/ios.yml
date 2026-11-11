@@ -1,4 +1,5 @@
-# iOS build + test gate, then a Beta upload to TestFlight.
+# iOS build + test gate, then a Beta upload to TestFlight, plus an
+# approval-gated Release upload started by hand.
 #
 # `test` regenerates ios/TraysSocial/TraysSocial.xcodeproj from project.yml
 # with scripts/regen-xcodeproj.sh, then builds the TraysSocial scheme and runs
@@ -6,13 +7,27 @@
 # InfoPlistTests) on an iOS Simulator. A red test fails the job.
 #
 # `testflight_beta` (W234) runs only after `test` passes, and only on a push
-# to main or a workflow_dispatch on main. It archives the "TraysSocial Beta"
+# to main or a workflow_dispatch on main without the `release` input. It
+# archives the "TraysSocial Beta"
 # scheme (Beta config, review backend trays-social-review.fly.dev), never the
 # "TraysSocial" scheme (Release, prod), and uploads it to TestFlight. Signing
 # is cloud-managed through the App Store Connect API key held in the
 # `testflight` environment (docs/ios-release.md): no certificate or profile
 # is committed. The build number is the commit count, and
 # ExportOptions-AppStore.plist stops Apple from rewriting it.
+#
+# `testflight_release` (W235) runs only after `test` passes, and only on a
+# workflow_dispatch on main with `release` set:
+#   gh workflow run ios.yml --ref main -f release=true
+# It waits for an approval on the `production` environment (Required
+# Reviewers) before any step runs, so a rejected approval archives and
+# uploads nothing. It then archives the "TraysSocial" scheme (Release config,
+# prod backend trays.app) and uploads it to App Store Connect, where it can
+# be attached to an App Store version. Its build number is the commit count
+# plus ".1" (N.1), so it never collides with the Beta build of the same
+# commit (N) and still sorts below the next commit's Beta (N+1). Nothing in
+# this workflow submits for App Review; that stays a manual click in App
+# Store Connect. docs/ios-release.md has the runbook.
 #
 # Never a bare `xcodegen generate`: that resets CURRENT_PROJECT_VERSION to
 # project.yml's stale 12. regen-xcodeproj.sh derives it from
@@ -34,18 +49,32 @@ on:
     paths:
       - "ios/**"
       - "scripts/regen-xcodeproj.sh"
+      - "scripts/test-regen-xcodeproj.sh"
+      - "scripts/test-ios-workflow.rb"
       - ".github/workflows/ios.yml"
   pull_request:
     paths:
       - "ios/**"
       - "scripts/regen-xcodeproj.sh"
+      - "scripts/test-regen-xcodeproj.sh"
+      - "scripts/test-ios-workflow.rb"
       - ".github/workflows/ios.yml"
+  # A plain dispatch uploads a Beta build (testflight_beta). With release
+  # set it uploads a Release build instead (testflight_release), after the
+  # production approval, and skips the Beta upload. Read it as
+  # `inputs.release`, a real boolean; `github.event.inputs.release` is the
+  # string "false", which an `if:` treats as true.
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Upload a Release (prod) build instead of a Beta build. Waits for the production environment approval."
+        type: boolean
+        default: false
 
-# Least-privilege GITHUB_TOKEN scope (D40). Both jobs only clone the repo;
-# neither writes back to git or touches issues/PRs. The TestFlight upload
-# authenticates with the App Store Connect key, not GITHUB_TOKEN, so it
-# needs nothing more.
+# Least-privilege GITHUB_TOKEN scope (D40). Every job only clones the repo;
+# none writes back to git or touches issues/PRs. The TestFlight uploads
+# authenticate with the App Store Connect key, not GITHUB_TOKEN, so they
+# need nothing more.
 permissions:
   contents: read
 
@@ -54,7 +83,7 @@ defaults:
     shell: bash
 
 env:
-  # Pinned explicitly; never the image default, and shared by both jobs so
+  # Pinned explicitly; never the image default, and shared by every job so
   # the build that is tested is the build that is uploaded. project.yml's
   # xcodeVersion "16.0" is XcodeGen's project-format floor (objectVersion
   # 77 needs Xcode 16+), so any Xcode 16 or later is compatible. 26.4.1
@@ -69,10 +98,13 @@ jobs:
     # only changes when this line does.
     runs-on: macos-26
     timeout-minutes: 45
-    # Test-only, per ref: a newer push supersedes an in-flight run. The
-    # upload job has its own non-cancelling group (ios-testflight-beta).
+    # Test-only, per ref: a newer push supersedes an in-flight run. Each
+    # upload job has its own non-cancelling group (ios-testflight-beta,
+    # ios-testflight-release). A release dispatch's test run gets its own
+    # group, so it never cancels a push's test (which would skip that push's
+    # Beta upload) and a push never cancels it.
     concurrency:
-      group: ios-test-${{ github.ref }}
+      group: ios-test-${{ github.ref }}-${{ inputs.release == true && 'release' || 'default' }}
       cancel-in-progress: true
     env:
       SIM_DEVICE: iPhone 17
@@ -144,6 +176,19 @@ jobs:
             echo "::warning::XcodeGen $installed differs from the expected $XCODEGEN_EXPECTED; the generated project may differ from a local regen."
           fi
 
+      # Hermetic (a stub xcodegen, no Xcode): the no-argument regen still
+      # produces exactly what local archives and the Beta upload expect, and
+      # the Release suffix produces a quoted N.1.
+      - name: Check regen-xcodeproj.sh
+        run: bash scripts/test-regen-xcodeproj.sh
+
+      # The Release upload's safety is the workflow's shape: dispatch-only on
+      # main, behind the production approval, the only job that builds prod,
+      # and nothing that submits for review. A real dispatch can only be
+      # tried after merge, so this pins the shape on every run.
+      - name: Check workflow structure
+        run: ruby scripts/test-ios-workflow.rb
+
       - name: Regenerate Xcode project
         run: scripts/regen-xcodeproj.sh
 
@@ -175,8 +220,10 @@ jobs:
     # An allowlist, not a denylist: push and workflow_dispatch only, and only
     # on main. A pull_request run skips this job, so fork code never reaches
     # the signing key. The `testflight` environment's main-only deployment
-    # branch rule is the second lock.
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    # branch rule is the second lock. A release dispatch skips it: that run
+    # uploads the Release build, and a second Beta upload of a commit the
+    # push already uploaded would fail as a duplicate.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.release != true))
     runs-on: macos-26
     timeout-minutes: 60
     # The only job that can read ASC_KEY_ID / ASC_ISSUER_ID / ASC_KEY_P8_BASE64,
@@ -345,6 +392,201 @@ jobs:
         run: |
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/TraysSocialBeta.xcarchive" \
+            -exportOptionsPlist ios/TraysSocial/ExportOptions-AppStore.plist \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc-key/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      # Runs even when an earlier step failed or the job was cancelled.
+      - name: Remove App Store Connect API key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/asc-key"
+
+  testflight_release:
+    name: TestFlight Release upload
+    # A build that fails its own tests never ships.
+    needs: test
+    # workflow_dispatch with `release` set, on main, and nothing else: never
+    # a push, so a prod build is always a deliberate act. `inputs.release` is
+    # null on any other event, so this is false there.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release == true
+    runs-on: macos-26
+    timeout-minutes: 60
+    # The `production` environment has Required Reviewers and a main-only
+    # deployment branch rule. The job, and so every step below, waits for the
+    # approval: a rejected approval runs no step, so nothing is archived and
+    # nothing is uploaded, and the App Store Connect key is never written.
+    # Keep the archive in this job; an ungated archive job in front of it
+    # would build prod without an approval.
+    environment: production
+    # Its own non-cancelling group, not the Beta one. GitHub cancels the older
+    # pending run of a group when a newer one queues, so sharing
+    # ios-testflight-beta would let the next Beta push cancel a Release that
+    # is waiting for its approval.
+    concurrency:
+      group: ios-testflight-release
+      cancel-in-progress: false
+    env:
+      EXPECTED_API_BASE_URL: https://trays.app
+      # The Release build number is "<commit count>.<BUILD_SUFFIX>", one
+      # above the Beta build of the same commit and below the next commit's.
+      BUILD_SUFFIX: "1"
+      # Same floor as the Beta job: the commit count must be above the last
+      # manual Xcode upload (382, 2026-11-05).
+      MIN_BUILD_NUMBER: "383"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Assert full git history
+        run: |
+          if [ "$(git rev-parse --is-shallow-repository)" != "false" ]; then
+            echo "::error::Shallow clone; the build number would be wrong. Use fetch-depth: 0."
+            exit 1
+          fi
+          echo "Commit count: $(git rev-list --count HEAD)"
+
+      - name: Select Xcode
+        run: |
+          if [ ! -d "$XCODE_APP" ]; then
+            echo "::error::$XCODE_APP is not on this runner image. Installed:"
+            ls -d /Applications/Xcode*.app
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_APP"
+          xcodebuild -version
+
+      # Pinned and checksum-verified for the same reason as in the Beta job:
+      # this job later holds the App Store Connect key. Bump both jobs'
+      # XCODEGEN_VERSION and XCODEGEN_SHA256 together.
+      - name: Install XcodeGen (pinned release)
+        env:
+          XCODEGEN_VERSION: "2.46.0"
+          XCODEGEN_SHA256: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
+        run: |
+          zip="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION.zip"
+          curl -fsSL -o "$zip" \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip"
+          echo "$XCODEGEN_SHA256  $zip" | shasum -a 256 -c -
+          unzip -q "$zip" -d "$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION"
+          bin="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION/xcodegen/bin"
+          installed="$("$bin/xcodegen" --version | sed -E 's/^Version:[[:space:]]*//')"
+          if [ "$installed" != "$XCODEGEN_VERSION" ]; then
+            echo "::error::Pinned XcodeGen reports version '$installed', expected $XCODEGEN_VERSION"
+            exit 1
+          fi
+          echo "XcodeGen $installed (pinned, sha256 verified)"
+          echo "$bin" >> "$GITHUB_PATH"
+
+      # The suffix makes the build number N.1 instead of N.
+      - name: Regenerate Xcode project (Release build number)
+        run: scripts/regen-xcodeproj.sh "$BUILD_SUFFIX"
+
+      - name: Assert build number is the commit count plus the suffix
+        run: |
+          count="$(git rev-list --count HEAD)"
+          expected="$count.$BUILD_SUFFIX"
+          pbx=ios/TraysSocial/TraysSocial.xcodeproj/project.pbxproj
+          actual="$(grep -oE 'CURRENT_PROJECT_VERSION = [^;]+;' "$pbx" | sed -E 's/^CURRENT_PROJECT_VERSION = (.*);$/\1/' | sort -u)"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::CURRENT_PROJECT_VERSION is '${actual}', expected ${expected}"
+            exit 1
+          fi
+          if [ "$count" -lt "$MIN_BUILD_NUMBER" ]; then
+            echo "::error::Build $count is not above the last manual upload (MIN_BUILD_NUMBER $MIN_BUILD_NUMBER)"
+            exit 1
+          fi
+          echo "CURRENT_PROJECT_VERSION = $expected"
+
+      # Same handling as the Beta job: written to the runner temp dir in a
+      # 0700 directory as a 0600 file, passed to xcodebuild by path only, and
+      # removed by the always() step at the end of the job. Never echo it and
+      # never enable shell tracing in any step that can see it.
+      - name: Write App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          set +x
+          if [ -z "$ASC_KEY_ID" ] || [ -z "$ASC_KEY_P8_BASE64" ]; then
+            echo "::error::ASC_KEY_ID or ASC_KEY_P8_BASE64 is missing from the production environment"
+            exit 1
+          fi
+          umask 077
+          key_dir="$RUNNER_TEMP/asc-key"
+          mkdir -p "$key_dir"
+          chmod 700 "$key_dir"
+          key_path="$key_dir/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_KEY_P8_BASE64" | base64 --decode > "$key_path"
+          chmod 600 "$key_path"
+          if ! head -n 1 "$key_path" | grep -q 'BEGIN PRIVATE KEY'; then
+            echo "::error::ASC_KEY_P8_BASE64 does not decode to a PEM private key"
+            exit 1
+          fi
+
+      # The "TraysSocial" scheme with the Release configuration named
+      # explicitly, so the scheme cannot drift to Beta (review backend)
+      # unnoticed. Signing as in the Beta job: Automatic, cloud-managed
+      # through the API key.
+      - name: Archive TraysSocial (Release)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcodebuild archive \
+            -project ios/TraysSocial/TraysSocial.xcodeproj \
+            -scheme TraysSocial \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/TraysSocialRelease.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc-key/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      # Mechanical proof that the build talks to prod (not review), carries
+      # the N.1 build number, and is signed with its entitlements. The
+      # marketing version is printed because App Store Connect rejects an
+      # upload to a version that is already approved or released: when the
+      # export step fails that way, bump MARKETING_VERSION in project.yml.
+      - name: Assert archive backend, build number and signing
+        run: |
+          app="$RUNNER_TEMP/TraysSocialRelease.xcarchive/Products/Applications/TraysSocial.app"
+          url="$(plutil -extract API_BASE_URL raw -o - "$app/Info.plist")"
+          if [ "$url" != "$EXPECTED_API_BASE_URL" ]; then
+            echo "::error::Archived API_BASE_URL is '$url', expected $EXPECTED_API_BASE_URL"
+            exit 1
+          fi
+          build="$(plutil -extract CFBundleVersion raw -o - "$app/Info.plist")"
+          expected="$(git rev-list --count HEAD).$BUILD_SUFFIX"
+          if [ "$build" != "$expected" ]; then
+            echo "::error::Archived CFBundleVersion is '$build', expected $expected"
+            exit 1
+          fi
+          if ! codesign -d --entitlements - --xml "$app" 2>/dev/null | grep -q 'com.apple.developer.associated-domains'; then
+            echo "::error::The archived app is not signed with its entitlements"
+            exit 1
+          fi
+          version="$(plutil -extract CFBundleShortVersionString raw -o - "$app/Info.plist")"
+          echo "Archive OK: version $version, build $build, backend $url"
+
+      # The same ExportOptions-AppStore.plist as the Beta job: method
+      # app-store-connect, destination upload, so this step uploads to App
+      # Store Connect, and the build can be attached to an App Store version.
+      # It does not submit for App Review; nothing here does. A build number
+      # App Store Connect already has (a re-run of the same commit) fails
+      # here, as does a MARKETING_VERSION that is already approved or live.
+      - name: Export and upload to App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/TraysSocialRelease.xcarchive" \
             -exportOptionsPlist ios/TraysSocial/ExportOptions-AppStore.plist \
             -exportPath "$RUNNER_TEMP/export" \
             -allowProvisioningUpdates \

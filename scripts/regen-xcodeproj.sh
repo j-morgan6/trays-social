@@ -18,6 +18,26 @@
 # build number, then run xcodegen against the temp. Source project.yml
 # stays clean; only the generated .xcodeproj reflects the bumped
 # value.
+#
+# Usage: scripts/regen-xcodeproj.sh [suffix]
+#
+# With no argument the build number is the plain commit count N. This is
+# what local archives and the CI Beta upload use, and it must not change.
+#
+# With a suffix (a positive integer with no leading zero) the build number
+# is "N.<suffix>". The CI Release upload passes 1, so a Release build of a
+# commit (N.1) never collides with the Beta build of the same commit (N),
+# and still sorts between it and the next commit's Beta (N+1). The value
+# is quoted in the temp spec so YAML keeps it a string: unquoted, 395.10
+# would parse as the float 395.1. Zero and leading zeros are refused
+# because App Store Connect compares each component as a number, so 395.0
+# would equal 395 and 395.01 would equal 395.1.
+#
+# A suffixed build number is not an integer, so InfoPlistTests
+# (test_buildNumberDidNotRegress) fails against it. Run the tests after a
+# plain regen, never after a suffixed one.
+#
+# scripts/test-regen-xcodeproj.sh checks all of this without Xcode.
 
 set -euo pipefail
 
@@ -28,6 +48,26 @@ SPEC="$PROJECT_DIR/project.yml"
 # relative `sources` against the spec file's own directory, so a spec in
 # /tmp makes it look for sources in /tmp and fail validation.
 TEMP_SPEC="$PROJECT_DIR/.regen-spec.tmp.yml"
+
+usage() {
+  echo "Usage: scripts/regen-xcodeproj.sh [suffix]" >&2
+  echo "  suffix: a positive integer with no leading zero; the build number becomes <commit count>.<suffix>" >&2
+  exit 2
+}
+
+# Validated before anything else runs, so a bad argument never reaches
+# xcodegen and never writes a temp spec.
+if [ "$#" -gt 1 ]; then
+  usage
+fi
+SUFFIX_GIVEN=0
+if [ "$#" -eq 1 ]; then
+  SUFFIX_GIVEN=1
+  SUFFIX="$1"
+  if ! [[ "$SUFFIX" =~ ^[1-9][0-9]*$ ]]; then
+    usage
+  fi
+fi
 
 trap 'rm -f "$TEMP_SPEC"' EXIT
 
@@ -41,11 +81,19 @@ if ! command -v xcodegen >/dev/null 2>&1; then
   exit 1
 fi
 
-BUILD_NUMBER=$(cd "$REPO_ROOT" && git rev-list --count HEAD)
-echo "Setting CURRENT_PROJECT_VERSION to $BUILD_NUMBER (git commit count)"
+COMMIT_COUNT=$(cd "$REPO_ROOT" && git rev-list --count HEAD)
+if [ "$SUFFIX_GIVEN" -eq 1 ]; then
+  BUILD_NUMBER="$COMMIT_COUNT.$SUFFIX"
+  SPEC_VALUE="\"$BUILD_NUMBER\""
+  echo "Setting CURRENT_PROJECT_VERSION to $BUILD_NUMBER (git commit count, suffix $SUFFIX)"
+else
+  BUILD_NUMBER="$COMMIT_COUNT"
+  SPEC_VALUE="$BUILD_NUMBER"
+  echo "Setting CURRENT_PROJECT_VERSION to $BUILD_NUMBER (git commit count)"
+fi
 
 # Substitute on a copy. Source project.yml never changes.
-sed "s/^\(        CURRENT_PROJECT_VERSION:\) [0-9][0-9]*/\1 $BUILD_NUMBER/" \
+sed "s/^\(        CURRENT_PROJECT_VERSION:\) [0-9][0-9]*/\1 $SPEC_VALUE/" \
   "$SPEC" > "$TEMP_SPEC"
 
 xcodegen generate --spec "$TEMP_SPEC" --project "$PROJECT_DIR"
