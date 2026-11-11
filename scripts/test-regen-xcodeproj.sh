@@ -7,8 +7,8 @@
 # so no tracked file changes. The checks:
 #
 #   - With no argument the spec and stdout are exactly what the script
-#     produced before it took an argument. Local archives and the CI Beta
-#     upload depend on that default.
+#     produced before it took an argument. Local dev builds and the CI Beta
+#     upload depend on that default (a manual fallback upload uses suffix 2).
 #   - With a suffix the build number is "<commit count>.<suffix>", quoted so
 #     YAML keeps it a string (unquoted, 395.10 would parse as the float 395.1).
 #   - A bad suffix or a second argument exits non-zero, prints usage, never

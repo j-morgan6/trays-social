@@ -22,7 +22,9 @@
 # Usage: scripts/regen-xcodeproj.sh [suffix]
 #
 # With no argument the build number is the plain commit count N. This is
-# what local archives and the CI Beta upload use, and it must not change.
+# what local dev builds and the CI Beta upload use, and it must not change.
+# A manual fallback upload passes 2 (N.2) so it cannot collide with CI's N
+# or N.1; docs/ios-release.md section 7.
 #
 # With a suffix (a positive integer with no leading zero) the build number
 # is "N.<suffix>". The CI Release upload passes 1, so a Release build of a

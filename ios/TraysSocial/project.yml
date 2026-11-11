@@ -22,6 +22,8 @@ options:
 # Three build configurations. Beta is a release-type build (optimized,
 # distribution signing) that points at the review backend — it exists so
 # TestFlight builds can be exercised against review before prod is touched.
+# Which scheme archives which config: the `schemes` block below, and the
+# release runbook in docs/ios-release.md.
 # Declaring `configs` here overrides XcodeGen's default Debug/Release pair,
 # so all three must be listed.
 configs:
@@ -80,7 +82,8 @@ targets:
 
 schemes:
   # Production / App Store scheme. Archive -> Release -> prod (trays.app).
-  # This is the build you submit to the App Store. Unchanged.
+  # This is the build you submit to the App Store. CI archives and uploads it
+  # (testflight_release); docs/ios-release.md has the release runbook.
   TraysSocial:
     build:
       targets:
@@ -112,9 +115,10 @@ schemes:
     analyze:
       config: Debug
   # TestFlight staging scheme. Archive -> Beta -> review
-  # (trays-social-review.fly.dev). Use this to upload a build that exercises
-  # the review backend in TestFlight before approving the prod deploy. Do NOT
-  # submit a Beta archive to the App Store — it points at review.
+  # (trays-social-review.fly.dev). CI uploads it to TestFlight on every iOS
+  # push to main (testflight_beta), so a change can be exercised against the
+  # review backend before approving the prod deploy. Do NOT submit a Beta
+  # archive to the App Store — it points at review. docs/ios-release.md.
   TraysSocial Beta:
     build:
       targets:

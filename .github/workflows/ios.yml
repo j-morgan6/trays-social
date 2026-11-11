@@ -1,3 +1,5 @@
+# Runbook: docs/ios-release.md (Beta and Release flows, build numbers, key rotation, manual fallback).
+#
 # iOS build + test gate, then a Beta upload to TestFlight, plus an
 # approval-gated Release upload started by hand.
 #
@@ -177,7 +179,7 @@ jobs:
           fi
 
       # Hermetic (a stub xcodegen, no Xcode): the no-argument regen still
-      # produces exactly what local archives and the Beta upload expect, and
+      # produces exactly what local dev builds and the Beta upload expect, and
       # the Release suffix produces a quoted N.1.
       - name: Check regen-xcodeproj.sh
         run: bash scripts/test-regen-xcodeproj.sh
