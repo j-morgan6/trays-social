@@ -1,13 +1,10 @@
 import SwiftUI
 
-/// Top floating pill in the nav shell. Hosts the Trays wordmark, the
-/// three tab segments of `layout` (Feed / My Tray / Find, or Home /
-/// My Tray / Search when recipe-first), and the bell button with an
-/// unread indicator.
-///
-/// Below the 380pt-width threshold (iPhone SE class devices in
-/// portrait), the wordmark hides so the three segments + bell still
-/// fit on a single row without truncating.
+/// Top of the nav shell (W239, redesign canvas): a floating pill holding
+/// the three tab segments of `layout` (Home / My Tray / Search when
+/// recipe-first, Feed / My Tray / Find otherwise) and, on the right, a
+/// separate round pill for the bell with an amber unread dot. The canvas
+/// drops the "Trays" wordmark from the iOS top bar.
 struct TopPill: View {
     @Binding var selectedTray: AppState.TrayTab
     var layout: ShellLayout = .classic
@@ -16,23 +13,21 @@ struct TopPill: View {
     var onBellTap: () -> Void
 
     var body: some View {
-        GeometryReader { proxy in
-            let showWordmark = proxy.size.width >= 380
+        HStack(spacing: 8) {
             PillBar {
-                if showWordmark {
-                    Text("Trays")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Theme.accent)
-                        .padding(.leading, 4)
-                        .padding(.trailing, 4)
-                }
                 ForEach(layout.tabs, id: \.self) { tray in
                     tabSegment(for: tray, label: tray.label)
                 }
+            }
+            Spacer(minLength: 8)
+            PillBar(horizontalPadding: 0, verticalPadding: 0) {
                 bellButton
             }
         }
         .frame(height: 56)
+        // The shell is fixed chrome: past xxxLarge the three tabs and the bell no longer fit
+        // a 375pt row, so larger sizes read the labels through the large content viewer.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     private func tabSegment(for tray: AppState.TrayTab, label: LocalizedStringKey) -> some View {
@@ -48,18 +43,22 @@ struct TopPill: View {
             Image(systemName: "bell")
                 .font(.system(size: 17, weight: .regular))
                 .foregroundStyle(Theme.text)
-                .frame(width: 36, height: 36)
+                .frame(width: 46, height: 46)
                 .overlay(alignment: .topTrailing) {
                     if hasUnread {
                         Circle()
                             .fill(Theme.accent)
-                            .frame(width: 7, height: 7)
-                            .offset(x: -6, y: 6)
+                            .frame(width: 9, height: 9)
+                            .padding(2)
+                            .background(Circle().fill(Theme.surface))
+                            .padding(7)
                     }
                 }
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(bellAccessibilityLabel)
+        .accessibilityShowsLargeContentViewer()
     }
 
     private var bellAccessibilityLabel: String {
@@ -70,4 +69,25 @@ struct TopPill: View {
         }
         return String(localized: "Notifications")
     }
+}
+
+#Preview("TopPill · light") {
+    TopPill(selectedTray: .constant(.home), layout: .recipeFirst, hasUnread: true) {}
+        .padding()
+        .background(Theme.background)
+        .preferredColorScheme(.light)
+}
+
+#Preview("TopPill · dark") {
+    TopPill(selectedTray: .constant(.home), layout: .recipeFirst, hasUnread: true) {}
+        .padding()
+        .background(Theme.background)
+        .preferredColorScheme(.dark)
+}
+
+#Preview("TopPill · largest text") {
+    TopPill(selectedTray: .constant(.home), layout: .recipeFirst, hasUnread: true) {}
+        .padding()
+        .background(Theme.background)
+        .dynamicTypeSize(.accessibility5)
 }

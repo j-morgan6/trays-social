@@ -2,36 +2,34 @@ import SwiftUI
 
 /// Reusable floating-pill container for the nav shell.
 ///
-/// Applies the Pass 1 prototype's pill chrome:
-/// `.ultraThinMaterial` backdrop + a tinted `Theme.pillBg(for:)` fill
-/// (light: rgba(255,255,255,0.78), dark: rgba(32,32,30,0.72)) + a 1pt
-/// hairline stroke + a 22pt-corner capsule shape. The content is
-/// horizontally laid out by callers; this container only owns chrome.
+/// W239 (redesign canvas, "Floating pills"): `.ultraThinMaterial` tinted
+/// with `Theme.pill` (light rgba(255,255,255,0.78), dark
+/// rgba(32,32,30,0.72)), an inset strong hairline, and a soft shadow. The
+/// content is laid out horizontally by callers; this container only owns
+/// chrome.
 ///
-/// Both TopPill and BottomPill wrap their contents in a PillBar so the
-/// shell stays visually coherent across the two surfaces.
+/// TopPill (tabs and bell) and BottomPill (Create and avatar) wrap their
+/// contents in a PillBar so the shell stays visually coherent.
 struct PillBar<Content: View>: View {
-    @Environment(\.colorScheme) private var colorScheme
+    var horizontalPadding: CGFloat = 4
+    var verticalPadding: CGFloat = 1
+    var spacing: CGFloat = 2
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: spacing) {
             content()
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
+        .padding(.horizontal, horizontalPadding)
+        .padding(.vertical, verticalPadding)
+        .background {
             ZStack {
-                Capsule(style: .continuous)
-                    .fill(.ultraThinMaterial)
-                Capsule(style: .continuous)
-                    .fill(Theme.pillBg(for: colorScheme))
+                Capsule(style: .continuous).fill(.ultraThinMaterial)
+                Capsule(style: .continuous).fill(Theme.pill)
             }
-        )
-        .overlay(
-            Capsule(style: .continuous)
-                .stroke(Theme.hairline(for: colorScheme), lineWidth: 1)
-        )
+        }
+        .overlay(Capsule(style: .continuous).strokeBorder(Theme.hairlineStrong, lineWidth: 1))
         .clipShape(Capsule(style: .continuous))
+        .shadow(color: Theme.shadow, radius: 12, y: 8)
     }
 }

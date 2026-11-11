@@ -25,23 +25,32 @@ enum Theme {
 
     // MARK: - Semantic Colors
 
-    /// Background adapts to light/dark mode
-    static let background = Color("Background")
+    //
+    // W239: background, surface and text resolve from the canvas pairs below
+    // instead of the Background/Surface/Text colorsets, which held older values.
 
-    /// Surface adapts to light/dark mode (cards, elevated surfaces)
-    static let surface = Color("Surface")
+    /// Screen background — adapts to light/dark mode
+    static let background = Color(light: bgLight, dark: bgDark)
 
-    /// Primary text adapts to light/dark mode
-    static let text = Color("Text")
+    /// Cards and elevated surfaces — adapts to light/dark mode
+    static let surface = Color(light: surfaceLight, dark: surfaceDark)
+
+    /// Primary text — adapts to light/dark mode
+    static let text = Color(light: textLight, dark: textDark)
 
     /// Secondary text — subdued
     static let textSecondary = Color(hex: 0x757575)
 
-    /// Subtle borders and dividers — adapts to light/dark
-    static let border = Color("Surface")
+    /// Chip and field rings — the canvas border token
+    static let border = Color(
+        light: borderLight,
+        dark: borderDark,
+        highContrastLight: Color(hex: 0x1A1A1A, opacity: 0.20),
+        highContrastDark: Color(hex: 0xEDEDE7, opacity: 0.24)
+    )
 
-    /// Subtle background for inputs, chips, cards — adapts to light/dark
-    static let inputBackground = Color("Surface")
+    /// Inputs, chips and cards
+    static let inputBackground = surface
 
     // MARK: - Pass 1 Prototype Tokens
 
@@ -104,6 +113,44 @@ enum Theme {
     static let modalScrimLight = Color(red: 250.0 / 255.0, green: 250.0 / 255.0, blue: 246.0 / 255.0, opacity: 0.85)
     static let modalScrimDark = Color(red: 22.0 / 255.0, green: 22.0 / 255.0, blue: 20.0 / 255.0, opacity: 0.78)
 
+    // MARK: - Adaptive tokens (canvas token map)
+
+    //
+    // W239: single tokens that resolve per trait collection, so views no
+    // longer need @Environment(\.colorScheme) plus a `(for:)` helper. The
+    // `(for:)` helpers below stay until the screen tasks stop using them.
+
+    static let lift = Color(light: liftLight, dark: liftDark)
+    static let muted = Color(light: mutedLight, dark: mutedDark)
+    static let subtle = Color(light: subtleLight, dark: subtleDark)
+    static let hairline = Color(
+        light: hairLight,
+        dark: hairDark,
+        highContrastLight: Color(hex: 0x1A1A1A, opacity: 0.16),
+        highContrastDark: Color(hex: 0xEDEDE7, opacity: 0.20)
+    )
+    static let hairlineStrong = Color(
+        light: hairStrongLight,
+        dark: hairStrongDark,
+        highContrastLight: Color(hex: 0x1A1A1A, opacity: 0.24),
+        highContrastDark: Color(hex: 0xEDEDE7, opacity: 0.28)
+    )
+    /// Floating pill fill (tab bar, bottom bar, time pill); layer over .ultraThinMaterial
+    static let pill = Color(light: pillBgLight, dark: pillBgDark)
+    /// Secondary (mint) at 35% light / 14% dark: end card, tiles, Ready pill
+    static let mintTint = Color(
+        light: Color(hex: 0xA5D6A7, opacity: 0.35),
+        dark: Color(hex: 0xA5D6A7, opacity: 0.14)
+    )
+    /// Photo, avatar and empty-block fill: cream in light, lift in dark
+    static let creamOrLift = Color(light: cream, dark: liftDark)
+    /// Links, See all, Ready pill text: emerald in light, mint in dark
+    static let primaryInk = Color(light: primary, dark: secondary)
+    /// Text on an emerald fill: white in light, cream in dark
+    static let onPrimary = Color(light: Color(hex: 0xFFFFFF), dark: cream)
+    /// Soft drop shadow for pills and cards
+    static let shadow = Color(light: Color(hex: 0x1A1A1A, opacity: 0.08), dark: Color(hex: 0x000000, opacity: 0.35))
+
     // MARK: - Adaptive Helpers
 
     //
@@ -146,42 +193,21 @@ extension Color {
             opacity: opacity
         )
     }
-}
 
-// MARK: - Editorial Typography
-
-//
-// Instrument Serif (Regular + Italic) is bundled under
-// Resources/Fonts/ and registered via UIAppFonts in Info.plist. These
-// helpers mirror the web app's `.font-serif-editorial` utility (see
-// assets/css/app.css) so type usage stays consistent across platforms.
-//
-// Editorial sizes (matching the web type scale):
-//   h1 40 / h2 32 / h3 28 / h4 24 / h5 20 / h6 18
-//
-// Use `.serif(size:)` for recipe titles, wordmark, section headers,
-// and quiet emphasis. UI text continues to use SwiftUI system fonts.
-
-extension Font {
-    /// Instrument Serif Regular at an arbitrary size.
-    static func serif(_ size: CGFloat) -> Font {
-        .custom("InstrumentSerif-Regular", size: size)
+    /// A colour that resolves per trait collection: `dark` in Dark Mode,
+    /// `light` otherwise, and the optional high-contrast variants when
+    /// Increase Contrast is on.
+    init(light: Color, dark: Color, highContrastLight: Color? = nil, highContrastDark: Color? = nil) {
+        let lightColor = UIColor(light)
+        let darkColor = UIColor(dark)
+        let contrastLight = highContrastLight.map { UIColor($0) } ?? lightColor
+        let contrastDark = highContrastDark.map { UIColor($0) } ?? darkColor
+        self.init(uiColor: UIColor { traits in
+            let highContrast = traits.accessibilityContrast == .high
+            if traits.userInterfaceStyle == .dark {
+                return highContrast ? contrastDark : darkColor
+            }
+            return highContrast ? contrastLight : lightColor
+        })
     }
-
-    /// Instrument Serif Italic at an arbitrary size.
-    static func serifItalic(_ size: CGFloat) -> Font {
-        .custom("InstrumentSerif-Italic", size: size)
-    }
-
-    // MARK: Editorial Scale (matches web h1–h6)
-
-    static let serifH1 = Font.custom("InstrumentSerif-Regular", size: 40)
-    static let serifH2 = Font.custom("InstrumentSerif-Regular", size: 32)
-    static let serifH3 = Font.custom("InstrumentSerif-Regular", size: 28)
-    static let serifH4 = Font.custom("InstrumentSerif-Regular", size: 24)
-    static let serifH5 = Font.custom("InstrumentSerif-Regular", size: 20)
-    static let serifH6 = Font.custom("InstrumentSerif-Regular", size: 18)
-
-    /// Oversized hero display — recipe titles on a detail screen.
-    static let serifDisplay = Font.custom("InstrumentSerif-Regular", size: 44)
 }

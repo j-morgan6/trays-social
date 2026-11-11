@@ -1,87 +1,5 @@
 import SwiftUI
 
-// MARK: - Primitives
-
-/// A shimmering rounded rectangle used as a loading placeholder.
-/// One animation per shape (a single LinearGradient that translates), so a
-/// screen full of skeletons stays cheap. All skeleton shapes are
-/// .accessibilityHidden so VoiceOver doesn't announce each rectangle —
-/// wrap a group in `.skeletonGroup(label:)` to announce the load state once.
-struct SkeletonShape: View {
-    var width: CGFloat?
-    var height: CGFloat = 0
-    var cornerRadius: CGFloat = 8
-    /// When set, the shape sizes to this width:height aspect ratio and
-    /// `height` is ignored — used for full-width photo blocks that must
-    /// match an aspect-ratio'd real image (e.g. the 1:1 feed photo).
-    var aspectRatio: CGFloat?
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var phase: CGFloat = -1
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(Theme.surface)
-            .overlay(
-                LinearGradient(
-                    colors: [.clear, Color.white.opacity(0.18), .clear],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .mask(RoundedRectangle(cornerRadius: cornerRadius))
-                .offset(x: phase * (width ?? 600))
-            )
-
-        Group {
-            if let aspectRatio {
-                shape.aspectRatio(aspectRatio, contentMode: .fit)
-            } else {
-                shape.frame(width: width, height: height)
-            }
-        }
-        .clipped()
-        .accessibilityHidden(true)
-        .onAppear {
-            // Reduce Motion: keep the placeholder static (no translating
-            // highlight), per the app-flow Reduce Motion table.
-            guard !reduceMotion else { return }
-            withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
-                phase = 1
-            }
-        }
-    }
-}
-
-/// A circular skeleton placeholder, sized to match avatar dimensions.
-struct SkeletonCircle: View {
-    var size: CGFloat
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var phase: CGFloat = -1
-
-    var body: some View {
-        Circle()
-            .fill(Theme.surface)
-            .overlay(
-                LinearGradient(
-                    colors: [.clear, Color.white.opacity(0.18), .clear],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .mask(Circle())
-                .offset(x: phase * size)
-            )
-            .frame(width: size, height: size)
-            .accessibilityHidden(true)
-            .onAppear {
-                guard !reduceMotion else { return }
-                withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
-                    phase = 1
-                }
-            }
-    }
-}
-
 // MARK: - Content-shaped composites
 
 /// D93: matches the Pass 1 `FeedCardView` (W136): rounded 18pt card
@@ -140,24 +58,16 @@ struct SkeletonPostCard: View {
 /// Profile, Find).
 struct SkeletonGridTile: View {
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var phase: CGFloat = -1
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // Fill the tile with the surface color + a translating
-            // shimmer so it reads as one big photo placeholder.
-            Theme.surface
-            LinearGradient(
-                colors: [.clear, Color.white.opacity(0.18), .clear],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-            .offset(x: phase * 200)
+            // W239: one big lift block for the photo, pulsing as a unit.
+            Theme.lift
+                .skeletonPulse()
 
             VStack(alignment: .leading, spacing: 4) {
-                SkeletonShape(height: 11, cornerRadius: 3)
-                SkeletonShape(width: 80, height: 11, cornerRadius: 3)
+                SkeletonShape(height: 11, cornerRadius: 3, fill: Theme.surface.opacity(0.7))
+                SkeletonShape(width: 80, height: 11, cornerRadius: 3, fill: Theme.surface.opacity(0.7))
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 12)
@@ -169,12 +79,6 @@ struct SkeletonGridTile: View {
                 .stroke(Theme.hairline(for: colorScheme), lineWidth: 0.5)
         )
         .accessibilityHidden(true)
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
-                phase = 1
-            }
-        }
     }
 }
 
@@ -261,8 +165,8 @@ struct SkeletonListRow: View {
 /// label with optional count chip). Use above grid skeletons on
 /// screens that have `SectionHeader`-led sections (MyTray, Profile).
 struct SkeletonSectionHeader: View {
-    /// Mirror `SectionHeader.Style`. `.compact` is the 11pt uppercase
-    /// label; `.editorial` is the 22pt centered label MyTray uses, so
+    /// Mirror `SectionHeader.Style`. `.compact` is the 20pt rounded
+    /// heading; `.editorial` is the 22pt centered label MyTray uses, so
     /// the skeleton header reads at the same scale as the loaded one.
     enum Style { case compact, editorial }
     var style: Style = .compact
@@ -270,13 +174,14 @@ struct SkeletonSectionHeader: View {
     /// Editorial header is a 22pt .system font that scales with Dynamic
     /// Type, so the placeholder height tracks it.
     @ScaledMetric(relativeTo: .title2) private var editorialHeight: CGFloat = 22
+    /// W239: the compact header is a 20pt rounded heading, so its bar is 16.
+    @ScaledMetric(relativeTo: .title3) private var compactHeight: CGFloat = 16
 
     var body: some View {
         switch style {
         case .compact:
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                SkeletonShape(width: 80, height: 11, cornerRadius: 3)
-                SkeletonShape(width: 18, height: 11, cornerRadius: 3)
+            HStack {
+                SkeletonShape(width: 120, height: compactHeight, cornerRadius: 6)
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -349,55 +254,3 @@ struct SkeletonPostDetail: View {
 }
 
 // MARK: - Presentation wrapper
-
-/// Wraps a skeleton cluster at a loading->content swap site so the load
-/// state (a) fades in/out instead of snapping, and (b) does not flash a
-/// single frame on instant (cached) loads — it only becomes visible
-/// after a short delay, so a sub-180ms fetch shows no skeleton at all.
-///
-/// Removal is animated by the parent: put
-/// `.animation(.easeInOut(duration: 0.18), value: <loadingFlag>)` on the
-/// container that owns the `if <loadingFlag> { SkeletonFade { … } }`
-/// branch so the `.transition(.opacity)` here fires on the way out.
-///
-/// Honors Reduce Motion: the fade-in is skipped (instant show) while the
-/// shimmer itself is already disabled in the primitives.
-struct SkeletonFade<Content: View>: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @ViewBuilder var content: () -> Content
-    @State private var shown = false
-
-    var body: some View {
-        content()
-            .opacity(shown ? 1 : 0)
-            // Asymmetric so the two opacity drivers don't fight: insertion
-            // is handled solely by the debounced `shown` fade below
-            // (identity here), removal by the parent's
-            // `.animation(value:)` driving this opacity transition.
-            .transition(.asymmetric(insertion: .identity, removal: .opacity))
-            .task {
-                // Debounce: a fast-cached load finishes inside this window
-                // and the branch is removed before `shown` ever flips, so
-                // no skeleton frame is shown.
-                try? await Task.sleep(for: .milliseconds(180))
-                guard !Task.isCancelled else { return }
-                if reduceMotion {
-                    shown = true
-                } else {
-                    withAnimation(.easeInOut(duration: 0.18)) { shown = true }
-                }
-            }
-    }
-}
-
-// MARK: - Group helpers
-
-extension View {
-    /// Wrap a cluster of skeletons so VoiceOver announces "Loading <thing>"
-    /// once instead of stepping through each invisible rectangle.
-    func skeletonGroup(label: String) -> some View {
-        accessibilityElement(children: .ignore)
-            .accessibilityLabel(label)
-            .accessibilityAddTraits(.updatesFrequently)
-    }
-}

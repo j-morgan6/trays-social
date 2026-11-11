@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// Uppercase section header used by My Tray, Find, and other screens.
-/// Mirrors the prototype's `SectionHeader` (prototype.jsx lines
-/// 295-320): 11pt semibold uppercase label with 0.12em letter-spacing,
-/// optional subtle count suffix, and an optional "See all" affordance
-/// in amber-ink (mode-adaptive) with a chevron-right.
+/// Section header used by Home, Search, My Tray and other screens.
+///
+/// W239 (redesign canvas, "Section heading"): `.compact` is a plain,
+/// sentence-case heading in the rounded design, 20pt bold, with an optional
+/// muted aside or count and an optional "See all" in primary ink with a
+/// 44pt hit height.
 ///
 /// W144: opt-in `style: .editorial` renders the label at 22pt
 /// semibold (matching FeedView's headline) and centers it. Used by
@@ -18,6 +19,8 @@ struct SectionHeader: View {
     var count: Int?
     var onSeeAll: (() -> Void)?
     var style: Style = .compact
+    /// Optional muted aside after the label, e.g. "Newest first".
+    var aside: String?
 
     enum Style {
         case compact
@@ -33,16 +36,18 @@ struct SectionHeader: View {
 
     private var compactBody: some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(label.uppercased())
-                    .font(.system(size: 11, weight: .semibold))
-                    .tracking(1.32)
-                    .foregroundStyle(Theme.muted(for: colorScheme))
-                if let count {
-                    Text("· \(count)")
-                        .font(.system(size: 11, weight: .medium))
-                        .tracking(1.32)
-                        .foregroundStyle(Theme.subtle(for: colorScheme))
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(label)
+                    .roundedFont(.section)
+                    .foregroundStyle(Theme.text)
+                if let aside {
+                    Text(aside)
+                        .scaledFont(13.5, relativeTo: .footnote)
+                        .foregroundStyle(Theme.muted)
+                } else if let count {
+                    Text(count, format: .number)
+                        .scaledFont(13.5, relativeTo: .footnote)
+                        .foregroundStyle(Theme.muted)
                 }
             }
 
@@ -50,14 +55,12 @@ struct SectionHeader: View {
 
             if let onSeeAll {
                 Button(action: onSeeAll) {
-                    HStack(spacing: 4) {
-                        Text("See all")
-                            .font(.system(size: 12, weight: .medium))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
-                    }
-                    .foregroundStyle(Theme.accentInk(for: colorScheme))
-                    .padding(4)
+                    Text("See all")
+                        .scaledFont(14.5, weight: .semibold, relativeTo: .subheadline)
+                        .foregroundStyle(Theme.primaryInk)
+                        .frame(minHeight: 44)
+                        .padding(.leading, 12)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(String(localized: "See all \(label.lowercased())"))
@@ -69,7 +72,7 @@ struct SectionHeader: View {
     private var editorialBody: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Text(label)
-                .font(.system(size: 22, weight: .semibold))
+                .roundedFont(22, weight: .bold, relativeTo: .title2)
                 .tracking(-0.44)
                 .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
             if let count {
@@ -86,22 +89,33 @@ struct SectionHeader: View {
 
 #Preview("SectionHeader · light") {
     VStack(alignment: .leading, spacing: 24) {
-        SectionHeader(label: "Recipes", count: 12, onSeeAll: {})
+        SectionHeader(label: "Friends' trays", onSeeAll: {})
+        SectionHeader(label: "My recipes", aside: "Newest first")
         SectionHeader(label: "Saved", count: 4)
-        SectionHeader(label: "Trending this week")
     }
     .padding(.vertical)
-    .background(Theme.bgLight)
+    .background(Theme.background)
     .preferredColorScheme(.light)
 }
 
 #Preview("SectionHeader · dark") {
     VStack(alignment: .leading, spacing: 24) {
-        SectionHeader(label: "Recipes", count: 12, onSeeAll: {})
+        SectionHeader(label: "Friends' trays", onSeeAll: {})
+        SectionHeader(label: "My recipes", aside: "Newest first")
         SectionHeader(label: "Saved", count: 4)
-        SectionHeader(label: "Trending this week")
     }
     .padding(.vertical)
-    .background(Theme.bgDark)
+    .background(Theme.background)
     .preferredColorScheme(.dark)
+}
+
+#Preview("SectionHeader · largest text") {
+    VStack(alignment: .leading, spacing: 24) {
+        SectionHeader(label: "Friends' trays", onSeeAll: {})
+        SectionHeader(label: "My recipes", aside: "Newest first")
+        SectionHeader(label: "Saved", count: 4)
+    }
+    .padding(.vertical)
+    .background(Theme.background)
+    .dynamicTypeSize(.accessibility5)
 }
