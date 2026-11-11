@@ -161,11 +161,12 @@ defmodule TraysSocialWeb.CoreComponents do
   """
   attr :username, :string, required: true
   attr :photo_url, :string, default: nil
-  attr :size, :string, default: "md", values: ~w(sm md lg xl 2xl)
+  attr :size, :string, default: "md", values: ~w(xs sm md lg xl 2xl)
   attr :class, :any, default: nil
 
   def user_avatar(assigns) do
     size_classes = %{
+      "xs" => "w-[22px] h-[22px] text-[9px]",
       "sm" => "w-8 h-8 text-xs",
       "md" => "w-10 h-10 text-sm",
       "lg" => "w-12 h-12 text-base",

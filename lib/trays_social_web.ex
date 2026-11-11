@@ -87,6 +87,8 @@ defmodule TraysSocialWeb do
       import Phoenix.HTML
       # Core UI components
       import TraysSocialWeb.CoreComponents
+      # Redesign components (W240)
+      import TraysSocialWeb.DesignComponents
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS
