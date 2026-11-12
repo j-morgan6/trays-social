@@ -69,15 +69,53 @@ private enum SearchPreviewData {
     }
 }
 
+/// The field and chips that sit above every Search state on the real screen,
+/// so each preview shows where the search is edited, not just its results.
+private struct SearchPreviewHeader: View {
+    @State var query: String
+    @State var chips: [String]
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SearchField(
+                text: $query,
+                isFocused: $focused,
+                showsClear: !query.isEmpty || !chips.isEmpty,
+                onSubmit: {},
+                onClear: {
+                    query = ""
+                    chips = []
+                }
+            )
+            .padding(.horizontal, HomeMetrics.inset)
+            if !chips.isEmpty {
+                FlowLayout(spacing: 8) {
+                    ForEach(chips, id: \.self) { chip in
+                        IngredientChip(name: chip) { chips.removeAll { $0 == chip } }
+                    }
+                }
+                .padding(.top, 12)
+                .padding(.horizontal, HomeMetrics.inset)
+            }
+        }
+    }
+}
+
 private struct SearchPreviewScreen<Content: View>: View {
+    var query = ""
+    var chips: [String] = []
     @ViewBuilder var content: () -> Content
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                content()
-                    .padding(.top, 24)
-                    .padding(.bottom, 40)
+                VStack(alignment: .leading, spacing: 0) {
+                    SearchPreviewHeader(query: query, chips: chips)
+                    content()
+                }
+                .padding(.top, 24)
+                .padding(.bottom, 40)
             }
             .background(Theme.background)
         }
@@ -89,17 +127,17 @@ private func browse() -> some View {
 }
 
 private func term() -> some View {
-    SearchPreviewScreen { SearchTermContent(results: SearchPreviewData.term) { _ in } }
+    SearchPreviewScreen(query: "chicken") { SearchTermContent(results: SearchPreviewData.term) { _ in } }
 }
 
 private func ingredients() -> some View {
-    SearchPreviewScreen {
+    SearchPreviewScreen(chips: ["chicken", "rice"]) {
         IngredientMatchContent(chips: ["chicken", "rice"], results: SearchPreviewData.ingredients)
     }
 }
 
 private func noMatches() -> some View {
-    SearchPreviewScreen {
+    SearchPreviewScreen(query: "zzz") {
         EmptyStateBlock(
             title: "No results yet.",
             subtitle: "Try a different recipe, ingredient, or cook.",
@@ -116,7 +154,7 @@ private func noMatches() -> some View {
 }
 
 private func loading() -> some View {
-    SearchPreviewScreen {
+    SearchPreviewScreen(query: "chicken") {
         SearchTermSkeleton()
         SearchIngredientSkeleton()
     }
