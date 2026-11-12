@@ -11,12 +11,11 @@ struct AdSlot: Codable, Hashable, Sendable {
     /// indices (feed slot 0, find slot 0, and the cook-mode finish card are
     /// different ads; the server dedups open reports on this integer).
     var reportTargetID: Int {
-        let base: Int
-        switch placement {
-        case "feed": base = 0
-        case "find": base = 10_000
-        case "cook_mode_finish": base = 20_000
-        default: base = 90_000
+        let base = switch placement {
+        case "feed": 0
+        case "find": 10000
+        case "cook_mode_finish": 20000
+        default: 90000
         }
         return base + slot
     }
@@ -61,7 +60,9 @@ enum FeedItem: Identifiable, Hashable, Sendable {
     /// The wrapped post, when this item is one. Ad and unknown slots
     /// return nil, which lets list mutation helpers skip them naturally.
     var post: Post? {
-        if case let .post(post) = self { return post }
+        if case let .post(post) = self {
+            return post
+        }
         return nil
     }
 }
@@ -81,9 +82,9 @@ extension FeedItem: Decodable {
             let type = try container.decodeIfPresent(String.self, forKey: .type)
             switch type {
             case "post":
-                self = .post(try container.decode(Post.self, forKey: .post))
+                self = try .post(container.decode(Post.self, forKey: .post))
             case "ad":
-                self = .ad(id: UUID(), slot: try container.decode(AdSlot.self, forKey: .ad))
+                self = try .ad(id: UUID(), slot: container.decode(AdSlot.self, forKey: .ad))
             default:
                 // Forward compatible: a tag this build doesn't know about
                 // must not sink the whole page.
@@ -91,7 +92,7 @@ extension FeedItem: Decodable {
             }
         } else {
             // Legacy flat Post object (ads disabled on the server).
-            self = .post(try Post(from: decoder))
+            self = try .post(Post(from: decoder))
         }
     }
 }

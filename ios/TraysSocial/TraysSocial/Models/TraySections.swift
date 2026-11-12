@@ -9,9 +9,16 @@ enum TraySections {
         let posts: [Post]
     }
 
-    /// Empty sections are dropped so the tray never shows a "· 0" header.
+    /// Empty sections are dropped so the tray never shows a "· 0" header, unless
+    /// `includeEmpty` is set: W245's two-way switch always offers both lists and
+    /// shows an empty state inside the one that has nothing.
     /// A nil `currentUserId` (signed out) owns nothing, so every post is Saved.
-    static func make(posts: [Post], currentUserId: Int?, recipeFirst: Bool) -> [Section] {
+    static func make(
+        posts: [Post],
+        currentUserId: Int?,
+        recipeFirst: Bool,
+        includeEmpty: Bool = false
+    ) -> [Section] {
         let sections: [Section] = if recipeFirst {
             [
                 Section(title: String(localized: "My recipes"), posts: posts.filter { $0.user.id == currentUserId }),
@@ -23,7 +30,7 @@ enum TraySections {
                 Section(title: String(localized: "Saved posts"), posts: posts.filter { !$0.isRecipe }),
             ]
         }
-        return sections.filter { !$0.posts.isEmpty }
+        return includeEmpty ? sections : sections.filter { !$0.posts.isEmpty }
     }
 
     /// Grid badge that marks a legacy photo-only post once the app is recipe-first.

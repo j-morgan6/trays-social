@@ -9,21 +9,29 @@ final class ProfileViewModel {
     var filter: String = "all"
     var isLoading = false
     var isOwnProfile = false
+    /// W245: the last profile load failed (logged only). Cleared when a load
+    /// starts, so a retry shows the skeleton again.
+    private(set) var loadFailed = false
+    /// W245: a profile load has finished at least once.
+    private(set) var hasLoaded = false
 
     private static let log = Logger(subsystem: "com.trays.social", category: "profile")
 
     func loadProfile(username: String, currentUserId: Int?) async {
         isLoading = true
+        loadFailed = false
         do {
             let response: DataResponse<User> = try await APIClient.shared.get(path: "/users/\(username)")
             user = response.data
             isOwnProfile = response.data.id == currentUserId
             await loadPosts(username: username)
         } catch {
-            // D95: read-path failure — log; ProfileView's skeleton +
-            // empty-state branch surfaces the no-data case.
+            // D95: read-path failure — log only, never toast. W245: ProfileView
+            // shows its error block with Try again.
+            loadFailed = true
             Self.log.error("loadProfile failed: \(String(describing: error), privacy: .public)")
         }
+        hasLoaded = true
         isLoading = false
     }
 

@@ -8,8 +8,10 @@ struct CollectionRoute: Hashable {
     let name: String
 }
 
-/// One collection's recipes: a 2-column grid identical in shape to My Tray's,
-/// with cursor pagination and a remove-from-collection context action.
+/// One collection's recipes (W245 restyle, collection artboard): the name as
+/// an in-page rounded title, a count line, then a uniform 4:3 grid with cursor
+/// pagination and a remove-from-collection context action. A failed load
+/// shows the error block (logged only, never toasted).
 ///
 /// No ads, sponsored cards, or discovery inserts appear here — My Tray and
 /// everything reachable from it stays pristine per the monetization spec.
@@ -26,48 +28,21 @@ struct CollectionDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                if viewModel.isEmpty, !viewModel.isLoading {
-                    EditorialEmptyState(
-                        title: String(localized: "Nothing in this collection yet"),
-                        subtitle: String(localized: "Add recipes from your tray.")
-                    )
-                } else {
-                    grid
-                        .padding(.horizontal, 16)
-
-                    if viewModel.isLoadingMore {
-                        ProgressView()
-                            .tint(.gray)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                    }
-                }
+                CollectionDetailHeader(
+                    name: route.name,
+                    subtitle: MyTrayCopy.collectionSubtitle(count: viewModel.hasMore ? nil : viewModel.posts.count)
+                )
+                content
+                    .padding(.top, 20)
             }
             .padding(.top, 16)
-            .padding(.bottom, 116)
+            .padding(.bottom, 60)
         }
         .background(Theme.background)
-        .navigationTitle(route.name)
+        // The name is the in-page title; an empty inline title avoids
+        // showing it twice.
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .overlay {
-            if viewModel.isLoading, viewModel.isEmpty {
-                SkeletonFade {
-                    LazyVGrid(
-                        columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
-                        spacing: 10
-                    ) {
-                        ForEach(0 ..< 4, id: \.self) { _ in
-                            SkeletonGridTile()
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .allowsHitTesting(false)
-                    .skeletonGroup(label: String(localized: "Loading collection"))
-                }
-            }
-        }
         .animation(.easeInOut(duration: 0.18), value: viewModel.isLoading)
         .task { await viewModel.load() }
         .refreshable { await viewModel.refresh() }
@@ -83,18 +58,50 @@ struct CollectionDetailView: View {
         }
     }
 
+    private var state: ContentLoadState {
+        ContentLoadState.decide(
+            hasContent: !viewModel.posts.isEmpty,
+            hasLoaded: viewModel.hasLoaded,
+            isLoading: viewModel.isLoading,
+            loadFailed: viewModel.loadFailed
+        )
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch state {
+        case .loading:
+            MyTrayListSkeleton()
+        case .error:
+            let copy = CollectionLoadErrorCopy.decide(notFound: viewModel.notFound)
+            TrayLoadErrorView(
+                title: copy.title,
+                subtitle: copy.subtitle,
+                onRetry: copy.allowsRetry ? { Task { await viewModel.refresh() } } : nil
+            )
+        case .empty:
+            EmptyStateBlock(
+                title: String(localized: "Nothing in \(route.name) yet"),
+                subtitle: String(localized: "Press and hold a recipe in your tray to add it here."),
+                topPadding: 0
+            )
+        case .content:
+            grid
+                .padding(.horizontal, HomeMetrics.inset)
+            if viewModel.isLoadingMore {
+                ProgressView()
+                    .tint(Theme.muted)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+            }
+        }
+    }
+
     private var grid: some View {
-        LazyVGrid(
-            columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())],
-            spacing: 10
-        ) {
+        LazyVGrid(columns: PostGrid.columns, alignment: .leading, spacing: PostGrid.spacing) {
             ForEach(viewModel.posts) { post in
                 NavigationLink(value: post) {
-                    GridCard(
-                        photoKey: photoKey(for: post),
-                        title: gridTitle(for: post),
-                        url: post.primaryPhotoURL?.asBackendURL
-                    )
+                    PostRecipeCard(post: post)
                 }
                 .buttonStyle(.borderless)
                 .contextMenu {
@@ -117,18 +124,25 @@ struct CollectionDetailView: View {
             }
         }
     }
+}
 
-    private func photoKey(for post: Post) -> FoodPalette.Key {
-        let keys = FoodPalette.Key.allCases
-        return keys[abs(post.id) % keys.count]
-    }
+/// W245: a collection's in-page title and its count / privacy line.
+struct CollectionDetailHeader: View {
+    let name: String
+    let subtitle: String
 
-    private func gridTitle(for post: Post) -> String {
-        let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return String(localized: "Untitled") }
-        let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
-            .first?
-            .trimmingCharacters(in: .whitespaces) ?? raw
-        return candidate.isEmpty ? String(localized: "Untitled") : candidate
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(name)
+                .roundedFont(32, weight: .heavy, relativeTo: .largeTitle)
+                .tracking(-0.64)
+                .foregroundStyle(Theme.text)
+                .lineLimit(3)
+            Text(subtitle)
+                .scaledFont(15, relativeTo: .subheadline)
+                .foregroundStyle(Theme.muted)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, HomeMetrics.inset)
     }
 }

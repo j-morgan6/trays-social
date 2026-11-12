@@ -230,7 +230,9 @@ struct CookModeView: View {
 
     private var progress: CGFloat {
         guard !steps.isEmpty else { return 0 }
-        if isComplete { return 1 }
+        if isComplete {
+            return 1
+        }
         return CGFloat(currentStep + 1) / CGFloat(steps.count)
     }
 

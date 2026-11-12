@@ -112,8 +112,12 @@ struct FeedCardView: View {
     private func formatCookTime(minutes: Int) -> String {
         let h = minutes / 60
         let m = minutes % 60
-        if h == 0 { return String(localized: "\(m) min") }
-        if m == 0 { return String(localized: "\(h)h") }
+        if h == 0 {
+            return String(localized: "\(m) min")
+        }
+        if m == 0 {
+            return String(localized: "\(h)h")
+        }
         return String(localized: "\(h)h \(m)m")
     }
 

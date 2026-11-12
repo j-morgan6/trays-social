@@ -63,7 +63,9 @@ struct WelcomeView: View {
         Binding(
             get: { appState.suspensionMessage != nil },
             set: { presented in
-                if !presented { appState.clearSuspensionMessage() }
+                if !presented {
+                    appState.clearSuspensionMessage()
+                }
             }
         )
     }

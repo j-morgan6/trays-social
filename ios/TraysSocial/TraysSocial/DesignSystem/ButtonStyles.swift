@@ -54,6 +54,9 @@ struct AccentButtonStyle: ButtonStyle {
 /// Follow toggle: emerald when not following, lift when following.
 struct FollowButtonStyle: ButtonStyle {
     let isFollowing: Bool
+    /// W245: the friend's-tray header uses a full-width, 48pt Follow button.
+    var fillsWidth = false
+    var minHeight: CGFloat = 44
 
     func makeBody(configuration: ButtonStyleConfiguration) -> some View {
         TrayButtonBody(
@@ -61,8 +64,8 @@ struct FollowButtonStyle: ButtonStyle {
             fill: isFollowing ? Theme.lift : (configuration.isPressed ? Theme.primaryLight : Theme.primary),
             foreground: isFollowing ? Theme.text : Theme.onPrimary,
             ring: nil,
-            minHeight: 44,
-            fillsWidth: false,
+            minHeight: minHeight,
+            fillsWidth: fillsWidth,
             fontSize: 14,
             minWidth: 100
         )
@@ -117,8 +120,8 @@ extension ButtonStyle where Self == AccentButtonStyle {
 }
 
 extension ButtonStyle where Self == FollowButtonStyle {
-    static func follow(isFollowing: Bool) -> Self {
-        .init(isFollowing: isFollowing)
+    static func follow(isFollowing: Bool, fillsWidth: Bool = false, minHeight: CGFloat = 44) -> Self {
+        .init(isFollowing: isFollowing, fillsWidth: fillsWidth, minHeight: minHeight)
     }
 }
 

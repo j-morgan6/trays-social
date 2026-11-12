@@ -7,6 +7,12 @@ final class MyTrayViewModel {
     var posts: [Post] = []
     var isLoading = false
     var cursor: String?
+    /// W245: the last load failed. Drives the error block when the tray has
+    /// nothing to show; cleared when a load starts. Logged only, never toasted.
+    private(set) var loadFailed = false
+    /// W245: a load has finished at least once, so an empty tray is really
+    /// empty rather than not fetched yet.
+    private(set) var hasLoaded = false
 
     private static let log = Logger(subsystem: "com.trays.social", category: "mytray")
 
@@ -53,8 +59,11 @@ final class MyTrayViewModel {
 
     func load(currentUsername: String? = nil) async {
         guard !isLoading else { return }
-        if let currentUsername { self.currentUsername = currentUsername }
+        if let currentUsername {
+            self.currentUsername = currentUsername
+        }
         isLoading = true
+        loadFailed = false
 
         async let bookmarksTask: PaginatedResponse<[Post]> = APIClient.shared.get(path: "/bookmarks")
         // Stored value is the source of truth — a later refresh() without
@@ -80,9 +89,11 @@ final class MyTrayViewModel {
             }
             posts = byId.values.sorted(by: { $0.insertedAt > $1.insertedAt })
         } catch {
+            loadFailed = true
             Self.log.error("load failed: \(String(describing: error), privacy: .public)")
         }
 
+        hasLoaded = true
         isLoading = false
     }
 

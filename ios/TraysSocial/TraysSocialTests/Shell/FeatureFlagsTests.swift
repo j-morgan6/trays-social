@@ -88,55 +88,18 @@ final class FeatureFlagsTests: XCTestCase {
         XCTAssertFalse(PlusVisibility.showsPlus(paidTier: false))
     }
 
-    func test_trayEmptyStateIgnoresPlusStateWhenPaidTierOff() {
-        XCTAssertTrue(PlusVisibility.showsTrayEmptyState(
-            paidTier: false, trayIsEmpty: true,
-            hasCollections: true, hasAnyEntries: true, isLoadingWeek: true
-        ))
-    }
-
-    func test_trayEmptyStateKeepsW177W178GuardWhenPaidTierOn() {
-        func shows(_ collections: Bool, _ entries: Bool, _ loading: Bool) -> Bool {
-            PlusVisibility.showsTrayEmptyState(
-                paidTier: true, trayIsEmpty: true,
-                hasCollections: collections, hasAnyEntries: entries, isLoadingWeek: loading
-            )
-        }
-        XCTAssertTrue(shows(false, false, false))
-        XCTAssertFalse(shows(true, false, false))
-        XCTAssertFalse(shows(false, true, false))
-        XCTAssertFalse(shows(false, false, true))
-    }
-
-    func test_trayEmptyStateHiddenWhenTrayHasContent() {
-        for paidTier in [true, false] {
-            XCTAssertFalse(PlusVisibility.showsTrayEmptyState(
-                paidTier: paidTier, trayIsEmpty: false,
-                hasCollections: false, hasAnyEntries: false, isLoadingWeek: false
-            ))
-        }
-    }
-
     /// Edge case "flag flips between launches while a planner or collection
-    /// sheet is open": the in-memory flag follows each fetch, and stale Plus
-    /// state loaded before a flip to off no longer holds back the empty state.
-    /// What an already-open sheet does is a view-lifecycle question with no
-    /// view-test infrastructure here, so it stays on the manual tests.
-    func test_midSessionFlipOffHidesPlusAndRestoresEmptyState() {
+    /// sheet is open": the in-memory flag follows each fetch. What an
+    /// already-open sheet does is a view-lifecycle question with no view-test
+    /// infrastructure here, so it stays on the manual tests.
+    func test_midSessionFlipOffHidesPlus() {
         let defaults = freshDefaults()
         let flags = plusBuildFlags(defaults)
         flags.apply(FeaturesPayload(recipeFirst: false, paidTier: true))
-        XCTAssertFalse(PlusVisibility.showsTrayEmptyState(
-            paidTier: flags.paidTier, trayIsEmpty: true,
-            hasCollections: true, hasAnyEntries: true, isLoadingWeek: false
-        ))
+        XCTAssertTrue(PlusVisibility.showsPlus(paidTier: flags.paidTier))
 
         flags.apply(FeaturesPayload(recipeFirst: false, paidTier: false))
         XCTAssertFalse(PlusVisibility.showsPlus(paidTier: flags.paidTier))
-        XCTAssertTrue(PlusVisibility.showsTrayEmptyState(
-            paidTier: flags.paidTier, trayIsEmpty: true,
-            hasCollections: true, hasAnyEntries: true, isLoadingWeek: false
-        ))
         defaults.removePersistentDomain(forName: suite)
     }
 

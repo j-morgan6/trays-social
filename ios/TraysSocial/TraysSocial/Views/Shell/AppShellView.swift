@@ -41,8 +41,11 @@ struct AppShellView: View {
                     leadingPage(for: layout)
                     // Outside the layout switch so My Tray keeps its identity
                     // (and its loaded state) when the flag flips mid-session.
-                    MyTrayView()
-                        .tag(AppState.TrayTab.myTray)
+                    MyTrayView(
+                        onCreateRecipe: { showCreatePost = true },
+                        onOpenSearch: { appState.selectedTray = layout == .recipeFirst ? .search : .find }
+                    )
+                    .tag(AppState.TrayTab.myTray)
                     trailingPage(for: layout)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))

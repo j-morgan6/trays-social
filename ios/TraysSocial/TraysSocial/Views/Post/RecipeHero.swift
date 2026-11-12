@@ -49,34 +49,33 @@ struct RecipeHero: View {
         ImageLoader.shared.prefetch(urls: Array(urls))
     }
 
+    @ViewBuilder
     private var photo: some View {
-        Group {
-            if post.photos.count > 1 {
-                TabView {
-                    ForEach(post.photos.sorted(by: { $0.position < $1.position }), id: \.position) { photo in
-                        CachedAsyncImage(url: photo.url.asBackendURL) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: {
-                            Rectangle().fill(Color(.systemGray5))
-                        }
-                        .containerRelativeFrame(.horizontal)
-                        .frame(height: 360)
-                        .clipped()
+        if post.photos.count > 1 {
+            TabView {
+                ForEach(post.photos.sorted(by: { $0.position < $1.position }), id: \.position) { photo in
+                    CachedAsyncImage(url: photo.url.asBackendURL) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Rectangle().fill(Color(.systemGray5))
                     }
+                    .containerRelativeFrame(.horizontal)
+                    .frame(height: 360)
+                    .clipped()
                 }
-                .tabViewStyle(.page)
-            } else if let url = post.primaryPhotoURL {
-                CachedAsyncImage(url: url.asBackendURL) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Rectangle().fill(Color(.systemGray5))
-                }
-                .containerRelativeFrame(.horizontal)
-                .frame(height: 360)
-                .clipped()
-            } else {
+            }
+            .tabViewStyle(.page)
+        } else if let url = post.primaryPhotoURL {
+            CachedAsyncImage(url: url.asBackendURL) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
                 Rectangle().fill(Color(.systemGray5))
             }
+            .containerRelativeFrame(.horizontal)
+            .frame(height: 360)
+            .clipped()
+        } else {
+            Rectangle().fill(Color(.systemGray5))
         }
     }
 

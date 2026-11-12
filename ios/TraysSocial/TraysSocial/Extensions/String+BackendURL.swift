@@ -9,7 +9,9 @@ extension String {
     /// `/uploads/abc123.jpg`, which must be resolved against `Configuration.apiBaseURL`
     /// before `AsyncImage` can fetch them.
     var asBackendURL: URL? {
-        if hasPrefix("http") { return URL(string: self) }
+        if hasPrefix("http") {
+            return URL(string: self)
+        }
         return URL(string: Configuration.apiBaseURL + self)
     }
 }

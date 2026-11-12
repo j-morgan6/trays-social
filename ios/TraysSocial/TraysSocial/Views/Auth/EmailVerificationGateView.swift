@@ -59,7 +59,9 @@ struct EmailVerificationGateView: View {
                         Task { await refresh() }
                     } label: {
                         HStack {
-                            if isRefreshing { ProgressView().tint(Color(hex: 0x2A1C00)) }
+                            if isRefreshing {
+                                ProgressView().tint(Color(hex: 0x2A1C00))
+                            }
                             Text(isRefreshing ? "Checking..." : "I verified my email")
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(Color(hex: 0x2A1C00))
@@ -110,7 +112,9 @@ struct EmailVerificationGateView: View {
     }
 
     private var resendLabel: String {
-        if isResending { return String(localized: "Sending...") }
+        if isResending {
+            return String(localized: "Sending...")
+        }
         if isInCooldown, let last = lastResendAt {
             let remaining = Int(resendCooldown - Date().timeIntervalSince(last))
             return String(localized: "Resend in \(max(remaining, 1))s")

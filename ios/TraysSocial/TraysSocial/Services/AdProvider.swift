@@ -17,7 +17,7 @@ protocol AdProviding {
 /// Stubbed first-party house ad. Same creative for every slot for now;
 /// the slot is part of the signature so a real provider can target.
 struct HouseAdProvider: AdProviding {
-    func creative(for slot: AdSlot) -> AdCreative {
+    func creative(for _: AdSlot) -> AdCreative {
         AdCreative(
             title: String(localized: "Cook more with Trays"),
             body: String(localized: "Discover trending recipes from home cooks on Trays.")

@@ -117,8 +117,12 @@ final class ImageLoader: @unchecked Sendable {
     /// is no worse than no prefetch.
     func prefetch(urls: [URL]) {
         for url in urls {
-            if memoryCache.object(forKey: url as NSURL) != nil { continue }
-            if isInFlight(url: url) { continue }
+            if memoryCache.object(forKey: url as NSURL) != nil {
+                continue
+            }
+            if isInFlight(url: url) {
+                continue
+            }
             Task { try? await load(url: url) }
         }
     }

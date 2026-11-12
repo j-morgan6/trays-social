@@ -94,9 +94,7 @@ enum KeychainService {
             kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
             .biometryCurrentSet,
             nil
-        ) else { return }
-
-        guard let data = refreshToken.data(using: .utf8) else { return }
+        ), let data = refreshToken.data(using: .utf8) else { return }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: credentialService,

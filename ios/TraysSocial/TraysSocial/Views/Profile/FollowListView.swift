@@ -275,7 +275,9 @@ struct FollowListView: View {
     }
 
     private var emptySubtitle: String? {
-        if !query.isEmpty { return String(localized: "Try a different name.") }
+        if !query.isEmpty {
+            return String(localized: "Try a different name.")
+        }
         switch route.mode {
         case .followers: return String(localized: "Share recipes you're proud of and they'll find you.")
         case .following: return String(localized: "Tap a cook's handle to follow them.")

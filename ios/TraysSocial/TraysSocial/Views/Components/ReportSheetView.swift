@@ -7,7 +7,7 @@ struct ReportSheetView: View {
     /// Prepended to the submitted details so an ad report identifies the
     /// slot even when the user types nothing. Defaulted so the existing
     /// post/comment/user call sites are unaffected.
-    var adContext: String? = nil
+    var adContext: String?
     @Environment(\.dismiss) private var dismiss
 
     @State private var reason = "spam"

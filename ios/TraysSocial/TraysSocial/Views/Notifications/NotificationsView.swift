@@ -71,7 +71,9 @@ struct NotificationsView: View {
 
     private var subtitle: String {
         let unread = viewModel.notifications.count(where: { !$0.isRead })
-        if unread == 0 { return String(localized: "You're caught up.") }
+        if unread == 0 {
+            return String(localized: "You're caught up.")
+        }
         return String(localized: "\(unread) unread.")
     }
 

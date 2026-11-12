@@ -39,9 +39,11 @@ struct HomeGreetingHeader: View {
 struct HomeSectionHeading: View {
     let label: String
     var onSeeAll: (() -> Void)?
+    /// W245: a muted note after the label ("Newest first").
+    var aside: String?
 
     var body: some View {
-        SectionHeader(label: label, onSeeAll: onSeeAll)
+        SectionHeader(label: label, onSeeAll: onSeeAll, aside: aside)
             .padding(.horizontal, HomeMetrics.inset - 20)
             .padding(.top, 30)
             .padding(.bottom, 12)

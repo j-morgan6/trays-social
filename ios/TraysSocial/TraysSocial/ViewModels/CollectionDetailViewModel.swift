@@ -19,6 +19,13 @@ final class CollectionDetailViewModel {
     var isLoadingMore = false
     var cursor: String?
     var hasMore = true
+    /// W245: the last load failed (logged only). Cleared when a load starts.
+    private(set) var loadFailed = false
+    /// W245: a load has finished at least once.
+    private(set) var hasLoaded = false
+    /// W245: the last load got a 404 (the collection was deleted or is not
+    /// the viewer's). Retrying cannot bring it back.
+    private(set) var notFound = false
 
     private var loadGeneration = 0
     private var pendingRemovals: [Int: (index: Int, post: Post)] = [:]
@@ -37,6 +44,8 @@ final class CollectionDetailViewModel {
     func load() async {
         guard !isLoading else { return }
         isLoading = true
+        loadFailed = false
+        notFound = false
         do {
             let response: PaginatedResponse<[Post]> = try await APIClient.shared.get(
                 path: "/collections/\(collectionID)"
@@ -45,10 +54,16 @@ final class CollectionDetailViewModel {
             cursor = response.cursor
             hasMore = response.cursor != nil
         } catch {
-            // Includes the 404 a deleted or foreign collection returns; the
-            // view falls through to its empty state rather than toasting.
+            // Includes the 404 a deleted or foreign collection returns. W245:
+            // the view shows its error block instead of a misleading empty
+            // state; still logged only, never toasted.
+            loadFailed = true
+            if let apiError = error as? APIError, case .notFound = apiError {
+                notFound = true
+            }
             Self.log.error("load failed: \(String(describing: error), privacy: .public)")
         }
+        hasLoaded = true
         isLoading = false
     }
 

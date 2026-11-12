@@ -25,6 +25,10 @@ struct RecipeCard: View {
     var badge: Badge?
     var kind: Kind = .recipe
     var photoAspectRatio: CGFloat = 4.0 / 3.0
+    /// W245: false on a cook's own tray, where every card is theirs; the
+    /// byline then shows only the context. The row keeps the avatar's 22pt
+    /// height so the card's footprint does not change.
+    var showsAuthor = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -96,12 +100,21 @@ struct RecipeCard: View {
     @ViewBuilder
     private var titleText: some View {
         if kind == .photoPost {
-            Text(title)
-                .scaledFont(14, relativeTo: .subheadline)
-                .foregroundStyle(Theme.text)
-                // Reserve both lines so a one-line title gives the same card
-                // height as a two-line one; side-by-side cards stay level.
+            // W245: the plain 14pt caption sits in a block sized by the recipe
+            // title's two reserved lines, so a photo post's card is exactly as
+            // tall as a recipe card at every text size (a bare 14pt block was
+            // about 2pt shorter, which unlevelled the row).
+            Text(verbatim: " ")
+                .roundedFont(.cardTitle)
                 .lineLimit(2, reservesSpace: true)
+                .hidden()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(alignment: .topLeading) {
+                    Text(title)
+                        .scaledFont(14, relativeTo: .subheadline)
+                        .foregroundStyle(Theme.text)
+                        .lineLimit(2)
+                }
         } else {
             Text(title)
                 .roundedFont(.cardTitle)
@@ -113,19 +126,24 @@ struct RecipeCard: View {
 
     private var byline: some View {
         HStack(spacing: 6) {
-            AvatarSlot(url: authorAvatarURL, size: 22)
-            Text(authorName)
-                .scaledFont(12.5, weight: .semibold, relativeTo: .caption)
-                .foregroundStyle(Theme.text)
+            if showsAuthor {
+                AvatarSlot(url: authorAvatarURL, size: 22)
+                Text(authorName)
+                    .scaledFont(12.5, weight: .semibold, relativeTo: .caption)
+                    .foregroundStyle(Theme.text)
+            }
             if let context {
-                Text(verbatim: "·")
-                    .foregroundStyle(Theme.muted)
+                if showsAuthor {
+                    Text(verbatim: "·")
+                        .foregroundStyle(Theme.muted)
+                }
                 Text(context)
                     .scaledFont(12.5, relativeTo: .caption)
                     .foregroundStyle(Theme.muted)
             }
         }
         .lineLimit(1)
+        .frame(minHeight: 22, alignment: .leading)
     }
 }
 

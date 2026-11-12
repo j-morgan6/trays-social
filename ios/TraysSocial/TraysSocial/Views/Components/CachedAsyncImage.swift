@@ -20,15 +20,13 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     @State private var loadedImage: UIImage?
 
     var body: some View {
-        Group {
-            if let image = loadedImage {
-                content(Image(uiImage: image))
-            } else {
-                placeholder()
-                    .task(id: url) {
-                        await load()
-                    }
-            }
+        if let image = loadedImage {
+            content(Image(uiImage: image))
+        } else {
+            placeholder()
+                .task(id: url) {
+                    await load()
+                }
         }
     }
 

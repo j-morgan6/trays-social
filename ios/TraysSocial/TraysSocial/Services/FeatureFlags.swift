@@ -109,19 +109,4 @@ enum PlusVisibility {
     static func showsPlus(paidTier: Bool) -> Bool {
         paidTier
     }
-
-    /// My Tray's W177/W178 empty-state guard with the Plus inputs masked while
-    /// Plus is hidden: collections or a plan the user cannot see must not hold
-    /// back the empty state and leave a blank tray.
-    static func showsTrayEmptyState(
-        paidTier: Bool,
-        trayIsEmpty: Bool,
-        hasCollections: Bool,
-        hasAnyEntries: Bool,
-        isLoadingWeek: Bool
-    ) -> Bool {
-        guard trayIsEmpty else { return false }
-        guard showsPlus(paidTier: paidTier) else { return true }
-        return !hasCollections && !hasAnyEntries && !isLoadingWeek
-    }
 }

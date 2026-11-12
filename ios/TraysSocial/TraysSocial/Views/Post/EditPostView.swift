@@ -53,7 +53,9 @@ struct EditPostView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         Task {
-                            if await viewModel.save(into: postViewModel) { dismiss() }
+                            if await viewModel.save(into: postViewModel) {
+                                dismiss()
+                            }
                         }
                     }
                     .disabled(viewModel.isSaving)

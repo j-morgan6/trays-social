@@ -39,7 +39,9 @@ struct FilterChip: View {
     }
 
     private var labelColor: Color {
-        if isActive { return Theme.accentInk(for: colorScheme) }
+        if isActive {
+            return Theme.accentInk(for: colorScheme)
+        }
         return colorScheme == .dark ? Theme.textDark : Theme.textLight
     }
 

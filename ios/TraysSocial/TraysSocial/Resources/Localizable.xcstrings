@@ -24,6 +24,29 @@
         }
       }
     },
+    "%lld of %lld dinners planned." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld of %lld dinners planned."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld de %2$lld cenas planificadas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld dîners prévus sur %2$lld."
+          }
+        }
+      }
+    },
     ", unread" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -43,6 +66,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ", non lu"
+          }
+        }
+      }
+    },
+    "It may have been deleted." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It may have been deleted."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puede que se haya eliminado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elle a peut-être été supprimée."
+          }
+        }
+      }
+    },
+    "This collection is gone." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This collection is gone."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta colección ya no existe."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette collection n'existe plus."
           }
         }
       }
@@ -634,6 +703,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld recettes"
+          }
+        }
+      }
+    },
+    "%lld saved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld saved"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld guardadas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld enregistrées"
           }
         }
       }
@@ -2630,6 +2722,29 @@
         }
       }
     },
+    "Couldn't load this collection" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load this collection"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo cargar esta colección"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de charger cette collection"
+          }
+        }
+      }
+    },
     "Couldn't load this post" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2649,6 +2764,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Impossible de charger cette publication"
+          }
+        }
+      }
+    },
+    "Couldn't load this tray" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load this tray"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo cargar esta bandeja"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de charger ce plateau"
+          }
+        }
+      }
+    },
+    "Couldn't load your tray" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load your tray"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo cargar tu bandeja"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de charger votre plateau"
           }
         }
       }
@@ -3481,6 +3642,29 @@
         }
       }
     },
+    "Every dinner this week is planned." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every dinner this week is planned."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todas las cenas de esta semana están planificadas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tous les dîners de la semaine sont prévus."
+          }
+        }
+      }
+    },
     "Everyone" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3826,6 +4010,29 @@
         }
       }
     },
+    "Following @%@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Following @%@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siguiendo a @%@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abonné à @%@"
+          }
+        }
+      }
+    },
     "Free trial included" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4029,6 +4236,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Courses"
+          }
+        }
+      }
+    },
+    "Group recipes for weeknights, guests, or a baking project." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Group recipes for weeknights, guests, or a baking project."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agrupa recetas para entre semana, para invitados o para un proyecto de repostería."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regroupez des recettes pour les soirs de semaine, les invités ou un projet de pâtisserie."
           }
         }
       }
@@ -4677,6 +4907,29 @@
         }
       }
     },
+    "Loading your tray" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading your tray"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cargando tu bandeja"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chargement de votre plateau"
+          }
+        }
+      }
+    },
     "Log in" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5255,6 +5508,29 @@
         }
       }
     },
+    "Newest first" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Newest first"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las más recientes primero"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les plus récentes d’abord"
+          }
+        }
+      }
+    },
     "Next" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5531,6 +5807,29 @@
         }
       }
     },
+    "No recipes yet." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No recipes yet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no hay recetas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas encore de recettes."
+          }
+        }
+      }
+    },
     "No results for “%@”." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5619,6 +5918,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pas maintenant"
+          }
+        }
+      }
+    },
+    "Not planned" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not planned"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin planificar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien de prévu"
           }
         }
       }
@@ -5715,6 +6037,29 @@
         }
       }
     },
+    "Nothing in %@ yet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing in %@ yet"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no hay nada en %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien dans %@ pour l’instant"
+          }
+        }
+      }
+    },
     "Nothing in this collection yet" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5757,6 +6102,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rien de nouveau cette semaine"
+          }
+        }
+      }
+    },
+    "Nothing planned yet. Pick a dinner for each day." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing planned yet. Pick a dinner for each day."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no hay nada planificado. Elige una cena para cada día."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien de prévu pour l’instant. Choisissez un dîner pour chaque jour."
+          }
+        }
+      }
+    },
+    "Nothing saved yet." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing saved yet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no has guardado nada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien d’enregistré pour l’instant."
           }
         }
       }
@@ -5959,6 +6350,52 @@
         }
       }
     },
+    "Only you can see this" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only you can see this"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo tú puedes ver esto"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous seul pouvez voir ceci"
+          }
+        }
+      }
+    },
+    "Open planner" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open planner"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir el planificador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir le planificateur"
+          }
+        }
+      }
+    },
     "Opens the week planner" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6143,6 +6580,29 @@
         }
       }
     },
+    "Plan the week once, and stop deciding what's for dinner every night." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan the week once, and stop deciding what's for dinner every night."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planifica la semana una vez y deja de decidir la cena cada noche."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planifiez la semaine une fois et arrêtez de vous demander chaque soir quoi manger."
+          }
+        }
+      }
+    },
     "Plan your week" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6189,6 +6649,29 @@
         }
       }
     },
+    "Plus" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus"
+          }
+        }
+      }
+    },
     "Post" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6208,6 +6691,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Publication"
+          }
+        }
+      }
+    },
+    "Post a recipe" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Post a recipe"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publicar una receta"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publier une recette"
           }
         }
       }
@@ -6277,6 +6783,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Publiez votre première recette"
+          }
+        }
+      }
+    },
+    "Press and hold a recipe in your tray to add it here." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press and hold a recipe in your tray to add it here."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén pulsada una receta de tu bandeja para añadirla aquí."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenez une recette de votre plateau appuyée pour l’ajouter ici."
           }
         }
       }
@@ -6737,6 +7266,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "DES RECETTES À GARDER"
+          }
+        }
+      }
+    },
+    "Recipes you post and save live here." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recipes you post and save live here."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aquí están las recetas que publicas y guardas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les recettes que vous publiez et enregistrez se trouvent ici."
           }
         }
       }
@@ -7312,6 +7864,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enregistrer"
+          }
+        }
+      }
+    },
+    "Save a recipe from Search or a friend's tray and it waits here." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save a recipe from Search or a friend's tray and it waits here."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guarda una receta desde Buscar o la bandeja de un amigo y te esperará aquí."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrez une recette depuis Rechercher ou le plateau d’un ami et elle vous attend ici."
           }
         }
       }
@@ -8791,6 +9366,29 @@
         }
       }
     },
+    "The one you make without looking is a good place to start." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The one you make without looking is a good place to start."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La que preparas sin mirar es un buen punto de partida."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Celle que vous faites les yeux fermés est un bon point de départ."
+          }
+        }
+      }
+    },
     "Then %@ per month" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9044,6 +9642,29 @@
         }
       }
     },
+    "Today" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoy"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aujourd’hui"
+          }
+        }
+      }
+    },
     "Tonight" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9248,6 +9869,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Trays. Des recettes à garder."
+          }
+        }
+      }
+    },
+    "Try Trays Plus" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try Trays Plus"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probar Trays Plus"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essayer Trays Plus"
           }
         }
       }
@@ -9988,6 +10632,29 @@
         }
       }
     },
+    "When @%@ posts a recipe, it shows up here." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When @%@ posts a recipe, it shows up here."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuando @%@ publique una receta, aparecerá aquí."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand @%@ publie une recette, elle apparaît ici."
+          }
+        }
+      }
+    },
     "When someone you follow posts a recipe, it shows up here for seven days." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -10122,6 +10789,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Annuel"
+          }
+        }
+      }
+    },
+    "You" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tú"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous"
           }
         }
       }
@@ -10306,6 +10996,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vos abonnements"
+          }
+        }
+      }
+    },
+    "Your first recipe goes here." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your first recipe goes here."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu primera receta irá aquí."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre première recette ira ici."
           }
         }
       }

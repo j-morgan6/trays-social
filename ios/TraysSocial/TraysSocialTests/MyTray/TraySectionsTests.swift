@@ -60,4 +60,24 @@ final class TraySectionsTests: XCTestCase {
         XCTAssertEqual(CreatePostViewModel.PostType.available(recipeFirst: true), [.recipe])
         XCTAssertEqual(CreatePostViewModel.PostType.available(recipeFirst: false), [.recipe, .post])
     }
+
+    // W245: the switch always offers both lists, empty ones included.
+    func test_includeEmptyKeepsBothListsInOrder() {
+        let sections = TraySections.make(
+            posts: [post(id: 1, userId: 8)],
+            currentUserId: 7,
+            recipeFirst: true,
+            includeEmpty: true
+        )
+        XCTAssertEqual(sections.map(\.title), [String(localized: "My recipes"), String(localized: "Saved")])
+        XCTAssertEqual(sections[0].posts, [])
+        XCTAssertEqual(sections[1].posts.map(\.id), [1])
+    }
+
+    func test_includeEmptyWithNoPostsStillOffersBothLists() {
+        let recipeFirst = TraySections.make(posts: [], currentUserId: 7, recipeFirst: true, includeEmpty: true)
+        let classic = TraySections.make(posts: [], currentUserId: 7, recipeFirst: false, includeEmpty: true)
+        XCTAssertEqual(recipeFirst.count, 2)
+        XCTAssertEqual(classic.map(\.title), [String(localized: "Recipes"), String(localized: "Saved posts")])
+    }
 }

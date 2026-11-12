@@ -262,9 +262,9 @@ extension MealPlannerViewModel {
     @discardableResult
     func beginToggleCheck(itemKey: String, to checked: Bool) -> Bool? {
         guard let groupIndex = groceryGroups.firstIndex(where: { group in
-            group.items.contains { $0.itemKey == itemKey }
-        }),
-            let previous = groceryGroups[groupIndex].items.first(where: { $0.itemKey == itemKey })?.checked
+                  group.items.contains { $0.itemKey == itemKey }
+              }),
+              let previous = groceryGroups[groupIndex].items.first(where: { $0.itemKey == itemKey })?.checked
         else {
             return nil
         }
