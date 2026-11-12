@@ -89,7 +89,10 @@ defmodule TraysSocialWeb.DesignComponents do
     values: [:recipe, :photo_post],
     doc: "legacy photo posts get a Photo tag"
 
-  attr :author_name, :string, required: true
+  attr :author_name, :string,
+    default: nil,
+    doc: "nil on a cook's own tray or profile, where every card is theirs"
+
   attr :author_avatar_url, :string, default: nil
   attr :context, :string, default: nil, doc: "byline context, e.g. Opened today"
   attr :class, :any, default: nil
@@ -137,15 +140,17 @@ defmodule TraysSocialWeb.DesignComponents do
         </span>
       </div>
       <div class="flex flex-col gap-[7px] px-1.5 pb-1.5 pt-[9px]">
-        <%!-- min-h-[2lh] reserves both title lines, so a one-line title gives
-             the same card height as a two-line one and rows stay level. --%>
+        <%!-- min-h-10 reserves both title lines (2 x 20px line height), so a
+             one-line title gives the same card height as a two-line one.
+             Both title variants share it, so a photo post is as tall as a
+             recipe and rows stay level. --%>
         <h3
           :if={@kind == :recipe}
-          class="min-h-[2lh] font-display text-base font-bold leading-tight line-clamp-2"
+          class="min-h-10 font-display text-base font-bold leading-tight line-clamp-2"
         >
           {@title}
         </h3>
-        <p :if={@kind == :photo_post} class="min-h-[2lh] text-sm leading-snug line-clamp-2">
+        <p :if={@kind == :photo_post} class="min-h-10 text-sm leading-5 line-clamp-2">
           {@title}
         </p>
         <.byline name={@author_name} avatar_url={@author_avatar_url} context={@context} />
@@ -168,9 +173,11 @@ defmodule TraysSocialWeb.DesignComponents do
   attr :avatar_url, :string, default: nil
   attr :context, :string, default: nil
 
+  # min-h-[22px] is the avatar's height, so a byline without the cook's name
+  # (W246: own tray, profile) keeps the card's footprint.
   defp byline(assigns) do
     ~H"""
-    <div class="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-[12.5px] text-muted">
+    <div class="flex min-h-[22px] min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-[12.5px] text-muted">
       <.user_avatar :if={@name} username={@name} photo_url={@avatar_url} size="xs" class="shrink-0" />
       <span :if={@name} class="truncate font-semibold text-base-content">{@name}</span>
       <span :if={@name && @context} aria-hidden="true">·</span>
@@ -352,6 +359,57 @@ defmodule TraysSocialWeb.DesignComponents do
     </div>
     """
   end
+
+  # ---------------------------------------------------------------------------
+  # Segmented pills
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  List switch (canvas "Segmented pills", iOS `SegmentedPills`): equal pills on
+  a lift track; the selected one sits on the surface. Each option is a patch
+  link, so the choice lives in the URL. A count shows when it is known.
+
+  ## Examples
+
+      <.segmented_pills
+        id="my-tray-switch"
+        label="My Tray lists"
+        options={[
+          %{label: "My recipes", count: 7, patch: ~p"/my-tray", selected: true},
+          %{label: "Saved", count: 8, patch: ~p"/my-tray?list=saved", selected: false}
+        ]}
+      />
+  """
+  attr :id, :string, required: true
+  attr :label, :string, required: true, doc: "accessible name for the switch"
+
+  attr :options, :list,
+    required: true,
+    doc: "maps with :label, :patch, :selected and an optional :count (nil hides it)"
+
+  attr :class, :any, default: nil
+
+  def segmented_pills(assigns) do
+    ~H"""
+    <nav id={@id} aria-label={@label} class={["flex gap-1 rounded-full bg-base-300 p-1", @class]}>
+      <.link
+        :for={option <- @options}
+        patch={option.patch}
+        aria-current={option.selected && "page"}
+        class={[
+          "flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-4 text-[15px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+          pill_state_class(option.selected)
+        ]}
+      >
+        <span class="truncate">{option.label}</span>
+        <span :if={option[:count]} class="opacity-75">{option.count}</span>
+      </.link>
+    </nav>
+    """
+  end
+
+  defp pill_state_class(true), do: "bg-base-100 text-base-content shadow-card"
+  defp pill_state_class(_selected), do: "text-muted hover:text-base-content"
 
   # ---------------------------------------------------------------------------
   # Chips

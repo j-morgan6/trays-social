@@ -1,106 +1,85 @@
-<%!-- Editorial notifications — matches WebNotifications in the design
-     handoff (design/handoff/trays-social/project/web-screens.jsx). Serif
-     "Notes for you" heading, mono day-count, rows with serif phrasing,
-     italic notes/bios, mono relative time, recipe thumbnail (or follow-back
-     button), amber unread tint + dot. --%>
+<%!-- W246: notifications on the redesign canvas (More artboard): the rounded
+     "Notes for you" heading and count line, one rounded surface list (newest
+     first, amber dot for unread), a mint end card, and an empty block when
+     there is nothing. The empty block and end card are driven by
+     @total_count, outside the stream, so #notifications stays in the DOM
+     for live inserts. --%>
 
-<main class="max-w-[720px] mx-auto px-6 md:px-8 pt-8 pb-12">
-  <%!-- Header — serif title, mono summary, mark-all-read CTA. Mount
-       auto-marks everything read on connection, so the button is mostly
-       symbolic here; it's left in to match the design and to surface the
-       behaviour. --%>
-  <div class="flex items-baseline gap-4 mb-6 flex-wrap">
-    <h1 class="font-serif-editorial text-[36px] md:text-[40px] leading-none tracking-[-0.015em] text-base-content">
+<main class="mx-auto max-w-[720px] px-4 pb-12 pt-8 md:px-8">
+  <header class="mb-5">
+    <h1 class="font-display text-[32px] font-extrabold leading-tight tracking-[-0.02em] text-base-content md:text-[40px]">
       Notes for you
     </h1>
-    <%= if @total_count > 0 do %>
-      <div class="font-mono text-[11px] text-base-content/60 uppercase tracking-[0.14em]">
-        {@total_count} {if @total_count == 1, do: "note", else: "notes"} · {@unread_count} unread
-      </div>
-    <% end %>
-    <div class="flex-1"></div>
-  </div>
+    <p :if={@total_count > 0} class="mt-1.5 text-[15px] text-muted">
+      {@total_count} {if @total_count == 1, do: "note", else: "notes"} · {@unread_count} unread
+    </p>
+  </header>
+
+  <.empty_block
+    :if={@total_count == 0}
+    id="notifications-empty"
+    title="Nothing yet."
+    message="When someone saves your recipe, leaves a note or follows you, it shows up here."
+  />
 
   <div
     id="notifications"
     phx-update="stream"
-    class="bg-base-100 border border-base-300 rounded-sm divide-y divide-base-300"
+    class={[
+      "divide-y divide-hairline overflow-hidden rounded-3xl bg-base-100 shadow-card",
+      @total_count == 0 && "hidden"
+    ]}
   >
     <div
       :for={{dom_id, n} <- @streams.notifications}
       id={dom_id}
-      class={[
-        "relative grid grid-cols-[40px_1fr_auto] gap-3.5 px-5 md:px-6 py-4 items-center",
-        if(is_nil(n.read_at), do: "bg-accent/[0.04]", else: "")
-      ]}
+      class={["relative", is_nil(n.read_at) && "bg-accent/[0.06]"]}
     >
-      <%!-- Amber unread dot, left-anchored. --%>
-      <%= if is_nil(n.read_at) do %>
-        <span class="absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-accent">
-        </span>
-      <% end %>
+      <span
+        :if={is_nil(n.read_at)}
+        class="absolute left-2 top-1/2 size-1.5 -translate-y-1/2 rounded-full bg-accent"
+      >
+      </span>
 
-      <%!-- Actor avatar — links to actor profile for non-post events,
-           and to the post for post-related events. --%>
-      <% target_path =
-        cond do
-          n.type == "follow" -> ~p"/@#{n.actor.username}"
-          n.post -> ~p"/posts/#{n.post.id}"
-          true -> ~p"/feed"
-        end %>
-      <.link navigate={target_path} class="contents">
-        <.user_avatar
-          username={n.actor.username}
-          photo_url={n.actor.profile_photo_url}
-          size="md"
-        />
+      <.link
+        navigate={target_path(n)}
+        class="grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3.5 px-5 py-4 transition-colors hover:bg-base-300/40 md:px-6"
+      >
+        <.user_avatar username={actor_name(n)} photo_url={actor_photo(n)} size="md" />
 
-        <%!-- Serif phrasing block. --%>
         <div class="min-w-0">
-          <p class="font-serif-editorial text-[16px] leading-[1.4] text-base-content">
+          <p class="text-[15px] leading-snug text-base-content [overflow-wrap:anywhere]">
             <%= case n.type do %>
               <% "like" -> %>
-                <span class="font-semibold">{n.actor.username}</span>
-                found your <em>{post_title(n.post) || "recipe"}</em>
+                <span class="font-semibold">{actor_name(n)}</span>
+                found your <span class="font-semibold">{post_title(n.post) || "recipe"}</span>
                 helpful
               <% "comment" -> %>
-                <span class="font-semibold">{n.actor.username}</span>
-                left a note on <em>{post_title(n.post) || "your recipe"}</em>
+                <span class="font-semibold">{actor_name(n)}</span>
+                left a note on
+                <span class="font-semibold">{post_title(n.post) || "your recipe"}</span>
               <% "follow" -> %>
-                <span class="font-semibold">{n.actor.username}</span> followed you
+                <span class="font-semibold">{actor_name(n)}</span> followed you
               <% _ -> %>
-                <span class="font-semibold">{n.actor.username}</span> interacted with you
+                <span class="font-semibold">{actor_name(n)}</span> interacted with you
             <% end %>
           </p>
-
-          <%!-- Optional bio line for follow events. --%>
-          <%= if n.type == "follow" and n.actor.bio do %>
-            <p class="text-[12px] text-base-content/60 mt-1 line-clamp-1">
-              {n.actor.bio}
-            </p>
-          <% end %>
-
-          <%!-- Relative timestamp, mono. --%>
-          <p class="font-mono text-[10px] uppercase tracking-[0.12em] text-base-content/60 mt-1.5">
-            {relative_time(n.inserted_at)}
-          </p>
+          <p :if={actor_bio(n)} class="mt-1 truncate text-[13px] text-muted">{actor_bio(n)}</p>
+          <p class="mt-1 text-[12.5px] text-muted">{relative_time(n.inserted_at)}</p>
         </div>
 
-        <%!-- Right slot — recipe thumbnail for post events, follow-back
-             button for follows, nothing otherwise. --%>
         <%= cond do %>
           <% n.post -> %>
-            <div class="w-[72px] h-[72px] rounded-sm overflow-hidden bg-base-200 shrink-0">
+            <div class="size-[60px] shrink-0 overflow-hidden rounded-[14px] bg-cream-lift">
               <img
                 src={TraysSocial.Uploads.ImageProcessor.thumb_url(n.post.photo_url)}
-                alt={post_title(n.post) || ""}
-                class="w-full h-full object-cover"
+                alt=""
+                class="size-full object-cover"
               />
             </div>
           <% n.type == "follow" -> %>
-            <%!-- "Follow back" CTA — visual only for now; wiring it
-                 needs a LiveView event hitting the existing follow flow. --%>
-            <span class="inline-flex items-center h-8 px-3.5 rounded-md bg-primary text-primary-content text-[12px] font-semibold">
+            <%!-- Visual only: the whole row links to the cook's profile. --%>
+            <span class="inline-flex min-h-8 items-center rounded-full bg-primary px-3.5 text-[13px] font-semibold text-primary-content">
               Follow back
             </span>
           <% true -> %>
@@ -110,11 +89,11 @@
     </div>
   </div>
 
-  <%!-- Empty state — shown when the stream is empty. We can't reliably
-       detect that inside phx-update="stream" without a separate assign,
-       so the editorial footer line below doubles as a soft message. --%>
-
-  <p class="font-serif-editorial italic text-[13px] text-base-content/60 text-center mt-5">
-    Quiet by design. We don't ping you for the algorithm's sake.
-  </p>
+  <.end_card
+    :if={@total_count > 0}
+    id="notifications-end"
+    class="mt-5"
+    title="That's everything."
+    message="Quiet by design. We don't ping you for the algorithm's sake."
+  />
 </main>

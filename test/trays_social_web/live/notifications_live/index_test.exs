@@ -237,4 +237,96 @@ defmodule TraysSocialWeb.NotificationsLive.IndexTest do
       assert html =~ "Notes for you"
     end
   end
+
+  # W246: the restyled chrome: an empty block when there is nothing, a
+  # rounded list and an end card when there is something.
+  describe "restyle" do
+    test "an empty inbox renders the Nothing yet block and keeps the stream", %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, view, html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/notifications")
+
+      assert has_element?(view, "#notifications-empty", "Nothing yet.")
+      assert has_element?(view, "#notifications.hidden")
+      refute has_element?(view, "#notifications-end")
+      assert html =~ ~s|id="notifications"|
+    end
+
+    test "rows link to the actor or the post and unread rows carry the dot", %{conn: conn} do
+      user = user_fixture()
+      actor = user_fixture()
+      post = post_fixture(user_id: user.id)
+
+      {:ok, _} =
+        Notifications.create_notification(%{
+          type: "like",
+          user_id: user.id,
+          actor_id: actor.id,
+          post_id: post.id
+        })
+
+      {:ok, _} =
+        Notifications.create_notification(%{type: "follow", user_id: user.id, actor_id: actor.id})
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/notifications")
+
+      refute has_element?(view, "#notifications-empty")
+      assert has_element?(view, "#notifications a[href='/posts/#{post.id}']", "helpful")
+      assert has_element?(view, "#notifications a[href='/@#{actor.username}']", "followed you")
+      assert has_element?(view, "#notifications span.bg-accent.rounded-full")
+      assert has_element?(view, "#notifications-end")
+    end
+
+    test "a 30-character actor name wraps inside its column instead of overflowing", %{
+      conn: conn
+    } do
+      user = user_fixture()
+      long_name = String.pad_trailing("traycook", 30, "x")
+      actor = user_fixture(%{username: long_name})
+
+      {:ok, _} =
+        Notifications.create_notification(%{type: "follow", user_id: user.id, actor_id: actor.id})
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/notifications")
+
+      # A username has no spaces, so only overflow-wrap:anywhere lets it break
+      # inside the minmax(0,1fr) column at 390px.
+      assert has_element?(
+               view,
+               "#notifications div.min-w-0 > p[class*='overflow-wrap:anywhere']",
+               long_name
+             )
+    end
+  end
+
+  describe "row helpers" do
+    alias TraysSocialWeb.NotificationsLive.Index
+
+    test "a notification with no actor still has a name and a link" do
+      orphan = %{type: "follow", actor: nil, post: nil}
+
+      assert Index.actor_name(orphan) == "Someone"
+      assert Index.actor_photo(orphan) == nil
+      assert Index.actor_bio(orphan) == nil
+      assert Index.target_path(orphan) == "/feed"
+    end
+
+    test "a follow links to the actor and a post event to the post" do
+      actor = %{username: "noor", profile_photo_url: nil, bio: "Cooks"}
+
+      assert Index.target_path(%{type: "follow", actor: actor, post: nil}) == "/@noor"
+      assert Index.target_path(%{type: "like", actor: actor, post: %{id: 7}}) == "/posts/7"
+      assert Index.actor_bio(%{type: "follow", actor: actor}) == "Cooks"
+      assert Index.actor_bio(%{type: "like", actor: actor}) == nil
+    end
+  end
 end

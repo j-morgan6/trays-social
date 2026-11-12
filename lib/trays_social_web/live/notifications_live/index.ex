@@ -70,6 +70,21 @@ defmodule TraysSocialWeb.NotificationsLive.Index do
     end
   end
 
+  # A notification whose actor is gone still renders (the blocked-actor
+  # filter lets nil actors through), so every actor read is nil-safe.
+  def actor_name(%{actor: %{username: username}}), do: username
+  def actor_name(_notification), do: "Someone"
+
+  def actor_photo(%{actor: %{profile_photo_url: url}}), do: url
+  def actor_photo(_notification), do: nil
+
+  def actor_bio(%{type: "follow", actor: %{bio: bio}}), do: bio
+  def actor_bio(_notification), do: nil
+
+  def target_path(%{type: "follow", actor: %{username: username}}), do: ~p"/@#{username}"
+  def target_path(%{post: %{id: id}}), do: ~p"/posts/#{id}"
+  def target_path(_notification), do: ~p"/feed"
+
   # Derive a serif-friendly recipe title from a post's caption — the
   # caption is free-form text, so we take the first sentence/line and
   # fall back to a placeholder when it's empty.

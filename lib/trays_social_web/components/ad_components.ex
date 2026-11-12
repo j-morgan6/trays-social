@@ -114,7 +114,7 @@ defmodule TraysSocialWeb.AdComponents do
         </span>
       </div>
       <div class="flex flex-col gap-[7px] px-1.5 pb-1.5 pt-[9px]">
-        <p class="min-h-[2lh] font-display text-base font-bold leading-tight line-clamp-2">
+        <p class="min-h-10 font-display text-base font-bold leading-tight line-clamp-2">
           Trays stays free thanks to our sponsors
         </p>
         <div class="flex min-h-[22px] min-w-0 items-center justify-between gap-2 text-[12.5px] text-muted">

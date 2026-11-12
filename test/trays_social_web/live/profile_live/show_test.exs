@@ -41,9 +41,29 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
       assert html =~ user.username
       assert html =~ "2"
       assert html =~ "posts"
-      # Posts should be displayed in grid using thumb variants
-      assert html =~ TraysSocial.Uploads.ImageProcessor.thumb_url(post1.photo_url)
-      assert html =~ TraysSocial.Uploads.ImageProcessor.thumb_url(post2.photo_url)
+      # W246: posts sit in a uniform two-column grid of recipe cards, which
+      # show the medium variant.
+      assert html =~ TraysSocial.Uploads.ImageProcessor.medium_url(post1.photo_url)
+      assert html =~ TraysSocial.Uploads.ImageProcessor.medium_url(post2.photo_url)
+    end
+
+    test "renders the header card, the Recipes heading and an equal-size grid", %{conn: conn} do
+      user = user_fixture(%{username: String.pad_trailing("longprofile", 30, "x")})
+      post_fixture(user_id: user.id)
+      post_fixture(user_id: user.id)
+
+      {:ok, view, html} = live(conn, ~p"/@#{user.username}")
+
+      assert has_element?(view, "#profile-header.bg-cream-lift h1.truncate", user.username)
+      assert has_element?(view, "#profile-header .w-24.h-24")
+      assert has_element?(view, "#profile-stats", "Recipes")
+      assert has_element?(view, "#profile-header button[phx-click='toggle-follow'].w-full")
+      assert html |> String.split(~s(phx-click="toggle-follow")) |> length() == 2
+      assert has_element?(view, "#profile-recipes h2", "Recipes")
+      assert has_element?(view, "#profile-recipes h2 span", "Newest first")
+      assert has_element?(view, "#profile-posts.grid.grid-cols-2")
+      assert html |> String.split("aspect-[4/3]") |> length() == 3
+      refute html =~ "overflow-x"
     end
 
     test "shows edit profile button for own profile", %{conn: conn} do
@@ -132,9 +152,8 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
         |> log_in_user(viewer)
         |> live(~p"/@#{user.username}")
 
-      # Follow the user. The editorial profile renders two buttons
-      # (desktop + mobile) — both flip together. Match on the button
-      # text without relying on exact whitespace.
+      # Follow the user. W246: one full-width Follow button in the header
+      # card. Match on the button text without relying on exact whitespace.
       html = render_click(view, "toggle-follow")
       assert html =~ ~r/phx-click="toggle-follow"[^>]*>\s*Following/
 
@@ -150,7 +169,7 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
       # Create a follow relationship
       TraysSocial.Accounts.follow_user(follower, user)
 
-      {:ok, _view, html} =
+      {:ok, view, html} =
         conn
         |> log_in_user(follower)
         |> live(~p"/@#{user.username}")
@@ -158,6 +177,12 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
       # Should show 1 follower
       assert html =~ "1"
       assert html =~ "follower"
+
+      assert has_element?(
+               view,
+               "#profile-stats a[href='/@#{user.username}/followers']",
+               "Followers"
+             )
     end
 
     test "displays following count for own profile", %{conn: conn} do
@@ -182,16 +207,22 @@ defmodule TraysSocialWeb.ProfileLive.ShowTest do
         |> log_in_user(user)
         |> live(~p"/@#{user.username}")
 
-      assert html =~ "No recipes yet"
-      assert html =~ "Share your first recipe"
+      assert html =~ "Your first recipe goes here."
+      assert html =~ "Post a recipe"
     end
 
     test "shows empty posts state for other user with no posts", %{conn: conn} do
       user = user_fixture()
 
-      {:ok, _view, html} = live(conn, ~p"/@#{user.username}")
+      {:ok, view, html} = live(conn, ~p"/@#{user.username}")
 
       assert html =~ "No recipes yet"
+
+      assert has_element?(
+               view,
+               "#profile-recipes-empty",
+               "When @#{user.username} posts a recipe, it shows up here."
+             )
     end
   end
 

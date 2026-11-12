@@ -3,6 +3,7 @@ defmodule TraysSocialWeb.ProfileLive.Show do
 
   alias TraysSocial.Accounts
   alias TraysSocial.Posts
+  alias TraysSocialWeb.HomeFormatting
 
   on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
   on_mount {TraysSocialWeb.UserAuth, :require_confirmed_user}
@@ -39,9 +40,7 @@ defmodule TraysSocialWeb.ProfileLive.Show do
       {is_following, follower_count, following_count} = follow_stats(socket, user)
 
       socket
-      |> assign(:page_title, "@#{user.username}")
-      |> assign(:current_tab, :profile)
-      |> assign(:user, user)
+      |> assign_static(user)
       |> assign(:posts, posts)
       |> assign(:post_count, length(posts))
       |> assign(:is_following, is_following)
@@ -50,9 +49,7 @@ defmodule TraysSocialWeb.ProfileLive.Show do
       |> assign(:loading, false)
     else
       socket
-      |> assign(:page_title, "@#{user.username}")
-      |> assign(:current_tab, :profile)
-      |> assign(:user, user)
+      |> assign_static(user)
       |> assign(:posts, [])
       |> assign(:post_count, 0)
       |> assign(:is_following, false)
@@ -60,6 +57,15 @@ defmodule TraysSocialWeb.ProfileLive.Show do
       |> assign(:following_count, 0)
       |> assign(:loading, true)
     end
+  end
+
+  defp assign_static(socket, user) do
+    socket
+    |> assign(:page_title, "@#{user.username}")
+    |> assign(:current_tab, :profile)
+    |> assign(:recipe_first, TraysSocial.Features.recipe_first?())
+    |> assign(:now, DateTime.utc_now())
+    |> assign(:user, user)
   end
 
   defp follow_stats(socket, user) do
@@ -95,18 +101,15 @@ defmodule TraysSocialWeb.ProfileLive.Show do
 
   def format_count(n), do: "#{n}"
 
-  def format_cooking_time(nil), do: nil
+  # Recipe-first labels legacy photo posts and shows their caption; a
+  # recipe shows the first sentence of its caption.
+  defp photo_post?(post, recipe_first), do: recipe_first and post.type != "recipe"
 
-  def format_cooking_time(minutes) when minutes >= 60 do
-    hours = div(minutes, 60)
-    remaining = rem(minutes, 60)
+  defp card_title(post, true), do: post.caption || ""
+  defp card_title(post, false), do: TraysSocialWeb.TrayFormatting.post_title(post)
 
-    if remaining == 0,
-      do: "#{hours}h",
-      else: "#{hours}h #{remaining}min"
-  end
-
-  def format_cooking_time(minutes), do: "#{minutes} min"
+  defp own_profile?(%{current_scope: %{user: %{id: id}}, user: %{id: id}}), do: true
+  defp own_profile?(_assigns), do: false
 
   defp toggle_follow(socket, current_user) do
     target_user = socket.assigns.user

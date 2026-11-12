@@ -16,13 +16,15 @@ defmodule TraysSocialWeb.MyTrayLive.IndexTest do
     test "renders the My Tray header for an authenticated user", %{conn: conn} do
       user = user_fixture()
 
-      {:ok, _view, html} =
+      {:ok, view, html} =
         conn
         |> log_in_user(user)
         |> live(~p"/my-tray")
 
-      assert html =~ "My Tray"
-      assert html =~ "All saved"
+      assert has_element?(view, "#my-tray-header h1", "My Tray")
+      # W246: the fake collections row is gone; the web has no collections.
+      refute html =~ "All saved"
+      refute html =~ "New collection"
     end
 
     test "shows the empty state when nothing is saved", %{conn: conn} do
@@ -35,7 +37,7 @@ defmodule TraysSocialWeb.MyTrayLive.IndexTest do
 
       html = render(view)
       assert html =~ "Nothing saved yet"
-      assert html =~ "Find recipes to save"
+      assert has_element?(view, "#my-tray-empty a[href='/explore']", "Find recipes to save")
     end
 
     test "renders saved recipes as cards", %{conn: conn} do
@@ -54,8 +56,10 @@ defmodule TraysSocialWeb.MyTrayLive.IndexTest do
       # both surface on the saved card.
       assert html =~ "Sunday short ribs over polenta"
       assert html =~ author.username
-      # Saved-date chip is present.
+      # The saved date rides in the card's byline.
       assert html =~ "Saved "
+      assert has_element?(view, "#saved-recipes a[href='/posts/#{post.id}']", author.username)
+      assert has_element?(view, "#my-tray-header p", "1 saved")
     end
   end
 end
