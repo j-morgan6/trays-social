@@ -4,61 +4,84 @@ import SwiftUI
 /// W149: edit form for a post the current user owns. Text + photo scope only
 /// (caption, cooking time, servings, optional new photo) — no ingredient/step/
 /// tool/tag editing. Presented as a sheet from PostDetailView's overflow menu.
+///
+/// W249: the same look as the recipe editor (Create artboard): the photo slot
+/// with a Change pill, the Basics card (name and a line over the caption,
+/// time and serves) and an amber Save changes bar with a spinner while
+/// saving. Save errors stay in place, in amber; nothing toasts.
 struct EditPostView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: EditPostViewModel
     @State private var selectedPhoto: PhotosPickerItem?
+    @FocusState private var focus: EditorField?
     private let postViewModel: PostViewModel
 
     init(post: Post, postViewModel: PostViewModel) {
-        _viewModel = State(initialValue: EditPostViewModel(post: post))
+        self.init(viewModel: EditPostViewModel(post: post), postViewModel: postViewModel)
+    }
+
+    /// Previews hand in a view model in a given state.
+    init(viewModel: EditPostViewModel, postViewModel: PostViewModel) {
+        _viewModel = State(initialValue: viewModel)
         self.postViewModel = postViewModel
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    sectionLabel("PHOTOGRAPH")
-                    photoSection
+                VStack(alignment: .leading, spacing: 14) {
+                    EditorPhotoSlot(
+                        image: viewModel.newPhotoImage,
+                        remoteURL: viewModel.currentPhotoURL?.asBackendURL,
+                        selection: $selectedPhoto,
+                        emptySubtitle: String(localized: "Choose a photo of the finished dish.")
+                    )
 
-                    sectionLabel(viewModel.isRecipe ? "TITLE & COOK'S NOTE" : "CAPTION")
-                    TextField("Caption", text: $viewModel.caption, axis: .vertical)
-                        .lineLimit(3 ... 6)
-                        .textFieldStyle(.plain)
-                        .padding(12)
-                        .background(Theme.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                    if viewModel.isRecipe {
-                        sectionLabel("TIMING")
-                        timingFields
-                    }
+                    RecipeBasicsCard(
+                        caption: $viewModel.caption,
+                        minutes: $viewModel.cookingTimeMinutes,
+                        servings: $viewModel.servings,
+                        showsRecipeFields: viewModel.isRecipe,
+                        focus: $focus
+                    )
 
                     if let error = viewModel.errorMessage {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundStyle(.red)
+                        EditorAttentionNote(message: error)
                     }
                 }
-                .padding(16)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 16)
             }
+            .scrollDismissesKeyboard(.interactively)
             .background(Theme.background)
-            .navigationTitle("Edit Post")
+            .safeAreaInset(edge: .bottom) {
+                EditorActionBar(
+                    title: String(localized: "Save changes"),
+                    busyLabel: String(localized: "Saving"),
+                    isBusy: viewModel.isSaving,
+                    action: save
+                )
+            }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Theme.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .scaledFont(16, weight: .medium, relativeTo: .body)
+                        .foregroundStyle(Theme.text)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        Task {
-                            if await viewModel.save(into: postViewModel) {
-                                dismiss()
-                            }
-                        }
-                    }
-                    .disabled(viewModel.isSaving)
+                ToolbarItem(placement: .principal) {
+                    Text(viewModel.isRecipe ? String(localized: "Edit recipe") : String(localized: "Edit post"))
+                        .roundedFont(17, weight: .heavy, relativeTo: .headline)
+                        .foregroundStyle(Theme.text)
+                        .accessibilityAddTraits(.isHeader)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(String(localized: "Done")) { focus = nil }
+                        .foregroundStyle(Theme.primaryInk)
                 }
             }
             .onChange(of: selectedPhoto) {
@@ -66,71 +89,16 @@ struct EditPostView: View {
                 Task { await viewModel.loadPhoto() }
             }
         }
+        .tint(Theme.primary)
     }
 
-    // MARK: - Sections
-
-    private var photoSection: some View {
-        Group {
-            if let image = viewModel.newPhotoImage {
-                image
-                    .resizable()
-                    .scaledToFill()
-            } else if let url = viewModel.currentPhotoURL?.asBackendURL {
-                CachedAsyncImage(url: url) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Rectangle().fill(Theme.surface)
-                }
-            } else {
-                Rectangle().fill(Theme.surface)
+    private func save() {
+        guard !viewModel.isSaving else { return }
+        focus = nil
+        Task {
+            if await viewModel.save(into: postViewModel) {
+                dismiss()
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 200)
-        .clipped()
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(alignment: .bottomTrailing) {
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                Text("Change")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Capsule())
-                    .padding(8)
-            }
-        }
-    }
-
-    private var timingFields: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Cook time (min)").font(.caption).foregroundStyle(.gray)
-                TextField("30", text: $viewModel.cookingTimeMinutes)
-                    .keyboardType(.numberPad)
-                    .textFieldStyle(.plain)
-                    .padding(12)
-                    .background(Theme.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Servings").font(.caption).foregroundStyle(.gray)
-                TextField("4", text: $viewModel.servings)
-                    .keyboardType(.numberPad)
-                    .textFieldStyle(.plain)
-                    .padding(12)
-                    .background(Theme.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-        }
-    }
-
-    private func sectionLabel(_ text: LocalizedStringKey) -> some View {
-        Text(text)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.gray)
-            .tracking(0.5)
     }
 }

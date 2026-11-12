@@ -1,137 +1,68 @@
 import PhotosUI
 import SwiftUI
 
+/// The recipe editor (W249, Create artboard): one calm page, not a form. A
+/// photo slot, the Basics card (name, a line about it, time and serves),
+/// Ingredients, Steps and Tools cards, Tags, a Preview of the recipe as
+/// others will see it, and a floating amber Post button that shows a
+/// spinner while posting. Posting and its rules are the view model's,
+/// unchanged. Post looks quiet until a name, an ingredient, a step and a
+/// photo are in, but stays tappable; after a tap, each missing piece says
+/// what it needs in place, in amber, never red.
 struct CreatePostView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var viewModel = CreatePostViewModel()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var viewModel: CreatePostViewModel
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var keyboardVisible = false
+    @State private var showsPreview = false
+    /// Set by the first Post tap; from then on each missing piece says so in place.
+    @State private var attemptedPost = false
+    @FocusState private var focus: EditorField?
+
+    init(viewModel: CreatePostViewModel = CreatePostViewModel()) {
+        _viewModel = State(initialValue: viewModel)
+    }
+
+    private var isRecipe: Bool {
+        viewModel.postType == .recipe
+    }
+
+    private var readiness: EditorReadiness {
+        EditorReadiness.of(viewModel)
+    }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    editorialHeading
-
-                    typePicker
-
-                    sectionLabel("PHOTOGRAPH")
-
-                    // Photo display + picker
-                    if let image = viewModel.photoImage {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 200)
-                            .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(alignment: .bottomTrailing) {
-                                PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                                    Text("Change")
-                                        .font(.caption.weight(.medium))
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(.ultraThinMaterial)
-                                        .clipShape(Capsule())
-                                        .padding(8)
-                                }
-                            }
-                    } else {
-                        PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                            VStack(spacing: 8) {
-                                Image(systemName: "camera")
-                                    .font(.title)
-                                Text("Add photo")
-                                    .font(.subheadline)
-                            }
-                            .foregroundStyle(.gray)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 200)
-                            .background(Theme.surface)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                    }
-
-                    // Load photo when selection changes
-                    EmptyView()
-                        .onChange(of: selectedPhoto) {
-                            viewModel.selectedPhoto = selectedPhoto
-                            Task { await viewModel.loadPhoto() }
-                        }
-
-                    // Caption — also serves as the title's first line.
-                    sectionLabel(viewModel.postType == .recipe ? "TITLE & COOK'S NOTE" : "CAPTION")
-                    TextField("Caption", text: $viewModel.caption, axis: .vertical)
-                        .lineLimit(3 ... 6)
-                        .textFieldStyle(.plain)
-                        .padding(12)
-                        .background(Theme.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                    if viewModel.postType == .recipe {
-                        sectionLabel("TIMING")
-                        recipeFields
-                    }
-
-                    // Tags
-                    sectionLabel("TAGS")
-                    TextField("comma separated", text: $viewModel.tags)
-                        .textFieldStyle(.plain)
-                        .padding(12)
-                        .background(Theme.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                    if let error = viewModel.errorMessage {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                    }
-
-                    // Publish button — Golden Amber, "do something
-                    // delicious" reserved color per the editorial system.
-                    Button {
-                        Task {
-                            if await viewModel.publish() {
-                                // W170: Feed and My Tray observe this to
-                                // refresh — their .task gates never refire
-                                // under the paging TabView, so a new post
-                                // was invisible until manual pull-to-refresh.
-                                NotificationCenter.default.post(name: .postCreated, object: nil)
-                                dismiss()
-                            }
-                        }
-                    } label: {
-                        if viewModel.isPublishing {
-                            ProgressView()
-                                .tint(Color(hex: 0x2A1C00))
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                        } else {
-                            HStack(spacing: 8) {
-                                Image(systemName: "paperplane.fill")
-                                let publishLabel: LocalizedStringKey = viewModel.postType == .recipe ? "Publish recipe" : "Publish post"
-                                Text(publishLabel)
-                            }
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color(hex: 0x2A1C00))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                        }
-                    }
-                    .background(Theme.accent)
-                    .clipShape(Capsule())
-                    .disabled(viewModel.isPublishing)
-                    .padding(.top, 8)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    editor
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 16)
+                        .simultaneousGesture(
+                            DragGesture(minimumDistance: 40)
+                                .onEnded(handleTypeSwipe)
+                        )
                 }
-                .padding(16)
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 40)
-                        .onEnded(handleTypeSwipe)
-                )
+                .scrollDismissesKeyboard(.interactively)
+                .onChange(of: viewModel.errorMessage) { _, message in
+                    guard message != nil else { return }
+                    withAnimation(reduceMotion ? nil : .easeInOut) {
+                        proxy.scrollTo(viewModel.photoData == nil ? "photo" : "error", anchor: .center)
+                    }
+                }
             }
             .background(Theme.background)
+            .safeAreaInset(edge: .bottom) {
+                EditorActionBar(
+                    title: isRecipe ? String(localized: "Post recipe") : String(localized: "Share post"),
+                    busyLabel: String(localized: "Posting"),
+                    isBusy: viewModel.isPublishing,
+                    looksReady: readiness.isReady,
+                    action: publish
+                )
+            }
             // W196: recipe-first posts only recipes. `initial: true` covers
             // appear; the change covers the flag flipping while Create is open.
             .onChange(of: FeatureFlags.shared.recipeFirst, initial: true) { _, recipeFirst in
@@ -139,216 +70,133 @@ struct CreatePostView: View {
                     viewModel.postType = .recipe
                 }
             }
+            .onChange(of: selectedPhoto) {
+                viewModel.selectedPhoto = selectedPhoto
+                Task { await viewModel.loadPhoto() }
+            }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
                 keyboardVisible = true
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
                 keyboardVisible = false
             }
-            .navigationTitle(viewModel.postType == .recipe ? LocalizedStringKey("New Recipe") : LocalizedStringKey("New Post"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Theme.text)
-                }
-            }
+            .toolbarBackground(Theme.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar { toolbarContent }
         }
         .tint(Theme.primary)
+        .overlay {
+            if showsPreview {
+                RecipeDraftPreview(
+                    draft: RecipeDraft.make(from: viewModel),
+                    photo: viewModel.photoImage,
+                    onBack: { setPreview(false) },
+                    onPost: {
+                        setPreview(false)
+                        publish()
+                    }
+                )
+                .transition(reduceMotion ? .opacity : .move(edge: .bottom))
+            }
+        }
     }
 
-    // MARK: - Heading + section labels
-
-    /// Mono eyebrow + page heading at the top of the form, mirroring
-    /// IOSCreate's "Step 3 of 5 → What's in it?" pattern but without
-    /// the multi-step machinery.
-    private var editorialHeading: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            let eyebrow: LocalizedStringKey = viewModel.postType == .recipe ? "WRITING A RECIPE PAGE" : "WRITING A POST"
-            Text(eyebrow)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .tracking(2)
-                .foregroundStyle(Theme.primary)
-
-            let heading: LocalizedStringKey = viewModel.postType == .recipe ? "Tell us how you cooked it." : "Show us what you ate."
-            Text(heading)
-                .font(.system(size: 28, weight: .bold))
-                .foregroundStyle(Theme.text)
-        }
-        .padding(.top, 4)
-        .padding(.bottom, 6)
+    /// What to flag in place: nothing until Post has been tapped once.
+    private var missing: EditorReadiness {
+        attemptedPost ? readiness : .nothingMissing
     }
 
-    /// Small monospace caps section label — matches the design's
-    /// per-section eyebrows.
-    private func sectionLabel(_ text: LocalizedStringKey) -> some View {
-        Text(text)
-            .font(.system(size: 10, weight: .medium, design: .monospaced))
-            .tracking(1.6)
-            .foregroundStyle(Theme.textSecondary)
-            .padding(.top, 6)
+    private var editor: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            typePicker
+
+            VStack(alignment: .leading, spacing: 8) {
+                EditorPhotoSlot(
+                    image: viewModel.photoImage,
+                    selection: $selectedPhoto,
+                    needsAttention: missing.needsPhoto
+                )
+                if missing.needsPhoto {
+                    EditorAttentionNote(message: String(localized: "Add a photo to post."))
+                }
+            }
+            .id("photo")
+
+            RecipeBasicsCard(
+                caption: $viewModel.caption,
+                minutes: $viewModel.cookingTimeMinutes,
+                servings: $viewModel.servings,
+                showsRecipeFields: isRecipe,
+                nameNeedsAttention: missing.needsName,
+                focus: $focus
+            )
+
+            if isRecipe {
+                IngredientsCard(viewModel: viewModel, needsAttention: missing.needsIngredient, focus: $focus)
+                StepsCard(viewModel: viewModel, needsAttention: missing.needsStep, focus: $focus)
+                ToolsCard(viewModel: viewModel, focus: $focus)
+            }
+
+            TagsCard(viewModel: viewModel, focus: $focus)
+
+            // A missing photo is the view model's only own rule, and it says so
+            // at the photo slot; anything else (upload or server) shows here.
+            if let error = viewModel.errorMessage, viewModel.photoData != nil {
+                EditorAttentionNote(message: error)
+                    .id("error")
+            }
+        }
     }
 
-    // MARK: - Recipe Fields
-
-    @ViewBuilder
-    private var recipeFields: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("COOK TIME (MIN)")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .tracking(1.6)
-                    .foregroundStyle(Theme.textSecondary)
-                TextField("30", text: $viewModel.cookingTimeMinutes)
-                    .keyboardType(.numberPad)
-                    .padding(10)
-                    .background(Theme.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("SERVINGS")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .tracking(1.6)
-                    .foregroundStyle(Theme.textSecondary)
-                TextField("4", text: $viewModel.servings)
-                    .keyboardType(.numberPad)
-                    .padding(10)
-                    .background(Theme.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+    @ToolbarContentBuilder private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .cancellationAction) {
+            Button("Cancel") { dismiss() }
+                .scaledFont(16, weight: .medium, relativeTo: .body)
+                .foregroundStyle(Theme.text)
+        }
+        ToolbarItem(placement: .principal) {
+            Text(isRecipe ? String(localized: "New recipe") : String(localized: "New post"))
+                .roundedFont(17, weight: .heavy, relativeTo: .headline)
+                .foregroundStyle(Theme.text)
+                .accessibilityAddTraits(.isHeader)
+        }
+        if isRecipe {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(String(localized: "Preview")) {
+                    focus = nil
+                    setPreview(true)
+                }
+                .scaledFont(16, weight: .semibold, relativeTo: .body)
+                .foregroundStyle(Theme.primaryInk)
+                .disabled(viewModel.isPublishing)
             }
         }
-
-        // Ingredients
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Ingredients")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(Theme.text)
-
-            ForEach(Array(viewModel.ingredients.enumerated()), id: \.element.id) { index, ing in
-                HStack {
-                    Text("\(ing.quantity) \(ing.unit) \(ing.name)")
-                        .font(.subheadline)
-                    Spacer()
-                    Button { viewModel.removeIngredient(at: index) } label: {
-                        Image(systemName: "xmark.circle")
-                            .foregroundStyle(.red)
-                    }
-                }
-            }
-
-            HStack(spacing: 8) {
-                TextField("Name", text: $viewModel.newIngredientName)
-                    .frame(maxWidth: .infinity)
-                TextField("Qty", text: $viewModel.newIngredientQuantity)
-                    .frame(width: 50)
-                TextField("Unit", text: $viewModel.newIngredientUnit)
-                    .frame(width: 50)
-                    .onSubmit { viewModel.addIngredient() }
-            }
-            .font(.subheadline)
-            .padding(10)
-            .background(Theme.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            Button { viewModel.addIngredient() } label: {
-                HStack {
-                    Image(systemName: "plus")
-                    Text("Add Ingredient")
-                }
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Theme.primary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Theme.primary.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
+        ToolbarItemGroup(placement: .keyboard) {
+            Spacer()
+            Button(String(localized: "Done")) { focus = nil }
+                .foregroundStyle(Theme.primaryInk)
         }
+    }
 
-        // Steps
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Steps")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(Theme.text)
-
-            ForEach(Array(viewModel.steps.enumerated()), id: \.element.id) { index, step in
-                HStack(alignment: .top) {
-                    Text("\(index + 1).")
-                        .foregroundStyle(Theme.primary)
-                    Text(step.description)
-                    Spacer()
-                    Button { viewModel.removeStep(at: index) } label: {
-                        Image(systemName: "xmark.circle")
-                            .foregroundStyle(.red)
-                    }
-                }
-                .font(.subheadline)
-            }
-
-            TextField("Describe the step", text: $viewModel.newStepText)
-                .font(.subheadline)
-                .padding(10)
-                .background(Theme.surface)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .onSubmit { viewModel.addStep() }
-
-            Button { viewModel.addStep() } label: {
-                HStack {
-                    Image(systemName: "plus")
-                    Text("Add Step")
-                }
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Theme.primary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Theme.primary.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
+    private func setPreview(_ shown: Bool) {
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+            showsPreview = shown
         }
+    }
 
-        // Tools
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Tools")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(Theme.text)
-
-            FlowLayout(spacing: 6) {
-                ForEach(Array(viewModel.tools.enumerated()), id: \.offset) { index, tool in
-                    HStack(spacing: 4) {
-                        Text(tool)
-                        Button { viewModel.removeTool(at: index) } label: {
-                            Image(systemName: "xmark")
-                                .font(.caption2)
-                        }
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Theme.surface)
-                    .clipShape(Capsule())
-                }
-            }
-
-            TextField("Tool name", text: $viewModel.newToolName)
-                .font(.subheadline)
-                .padding(10)
-                .background(Theme.surface)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .onSubmit { viewModel.addTool() }
-
-            Button { viewModel.addTool() } label: {
-                HStack {
-                    Image(systemName: "plus")
-                    Text("Add Tool")
-                }
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Theme.primary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Theme.primary.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+    private func publish() {
+        guard !viewModel.isPublishing else { return }
+        focus = nil
+        attemptedPost = true
+        Task {
+            if await viewModel.publish() {
+                // W170: Feed and My Tray observe this to
+                // refresh — their .task gates never refire
+                // under the paging TabView, so a new post
+                // was invisible until manual pull-to-refresh.
+                NotificationCenter.default.post(name: .postCreated, object: nil)
+                dismiss()
             }
         }
     }
@@ -357,15 +205,17 @@ struct CreatePostView: View {
 // MARK: - Type selection (W196: hidden under recipe-first)
 
 private extension CreatePostView {
-    /// Type picker — also swipe horizontally on the form to toggle. Hidden
+    /// Type switch — also swipe horizontally on the form to toggle. Hidden
     /// when recipe-first leaves a single type to choose.
     @ViewBuilder var typePicker: some View {
         if CreatePostViewModel.PostType.available(recipeFirst: FeatureFlags.shared.recipeFirst).count > 1 {
-            Picker("Type", selection: $viewModel.postType) {
-                Text("Recipe").tag(CreatePostViewModel.PostType.recipe)
-                Text("Post").tag(CreatePostViewModel.PostType.post)
-            }
-            .pickerStyle(.segmented)
+            SegmentedPills(
+                options: [
+                    .init(value: CreatePostViewModel.PostType.recipe, title: String(localized: "Recipe")),
+                    .init(value: CreatePostViewModel.PostType.post, title: String(localized: "Post")),
+                ],
+                selection: $viewModel.postType
+            )
         }
     }
 

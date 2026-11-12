@@ -46,15 +46,20 @@ enum RecipeMeta {
     }
 
     static func capsules(for post: Post) -> [Capsule] {
+        capsules(minutes: post.cookingTimeMinutes, servings: post.servings, ingredientCount: post.ingredients.count)
+    }
+
+    /// W249: the same row for the recipe editor's preview, which has no `Post`.
+    static func capsules(minutes: Int?, servings: Int?, ingredientCount: Int) -> [Capsule] {
         var capsules: [Capsule] = []
-        if let minutes = post.cookingTimeMinutes {
+        if let minutes {
             capsules.append(Capsule(systemImage: "clock", text: timeLabel(minutes: minutes)))
         }
-        if let servings = post.servings {
+        if let servings {
             capsules.append(Capsule(systemImage: "person.2", text: String(localized: "Serves \(servings)")))
         }
-        if !post.ingredients.isEmpty {
-            let count = post.ingredients.count
+        if ingredientCount > 0 {
+            let count = ingredientCount
             let text = count == 1
                 ? String(localized: "1 ingredient")
                 : String(localized: "\(count) ingredients")

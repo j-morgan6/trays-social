@@ -42,6 +42,9 @@ struct AccentButtonStyle: ButtonStyle {
     var fillsWidth = false
     /// W247: Cook mode's Back and Next are 60pt high (Recipe artboard).
     var minHeight: CGFloat = 50
+    /// W249: the editor's Post button stays full amber with a spinner while
+    /// posting (Create artboard), though it is disabled.
+    var dimsWhenDisabled = true
 
     func makeBody(configuration: ButtonStyleConfiguration) -> some View {
         TrayButtonBody(
@@ -50,7 +53,8 @@ struct AccentButtonStyle: ButtonStyle {
             foreground: Theme.inkOnAccent,
             ring: nil,
             minHeight: minHeight,
-            fillsWidth: fillsWidth
+            fillsWidth: fillsWidth,
+            dimsWhenDisabled: dimsWhenDisabled
         )
     }
 }
@@ -87,6 +91,7 @@ private struct TrayButtonBody<Label: View>: View {
     let fillsWidth: Bool
     var fontSize: CGFloat = 15.5
     var minWidth: CGFloat?
+    var dimsWhenDisabled = true
 
     var body: some View {
         label
@@ -101,7 +106,7 @@ private struct TrayButtonBody<Label: View>: View {
                 }
             }
             .contentShape(Capsule(style: .continuous))
-            .opacity(isEnabled ? 1 : 0.55)
+            .opacity(isEnabled || !dimsWhenDisabled ? 1 : 0.55)
     }
 }
 
