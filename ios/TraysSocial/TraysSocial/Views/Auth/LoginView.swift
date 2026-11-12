@@ -1,98 +1,146 @@
 import SwiftUI
 
+/// W251: Log in on the redesign canvas (Login artboard): the emerald band,
+/// a rounded sheet with labelled fields, the Remember me switch, one amber
+/// callout above an amber Log in button, Face ID under an "or" rule when a
+/// saved credential exists, and a footer link to Create account. While a
+/// field is focused the band collapses to a compact bar. The view model,
+/// its validation and the login calls are unchanged.
 struct LoginView: View {
     @Environment(AppState.self) private var appState
     @Bindable var viewModel: AuthViewModel
+    /// Footer link: swaps this screen for Create account.
+    var onCreateAccount: () -> Void = {}
+
+    private enum Field: Hashable {
+        case email
+        case password
+    }
+
+    @FocusState private var focusedField: Field?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Welcome back")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Theme.secondary)
-
-                Text("Log in")
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundStyle(Theme.text)
-            }
-            .padding(.top, 12)
-
-            VStack(spacing: 16) {
-                TextField("Email", text: $viewModel.email)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .padding()
-                    .background(Theme.surface)
-                    .cornerRadius(12)
-
-                SecureField("Password", text: $viewModel.password)
-                    .textContentType(.password)
-                    .padding()
-                    .background(Theme.surface)
-                    .cornerRadius(12)
+        AuthScreen(band: .standard, isCompact: focusedField != nil) {
+            if focusedField == nil {
+                AuthHeading(title: "Welcome back", subtitle: "Log in to get back to your tray.")
+                    .padding(.bottom, 24)
             }
 
-            Toggle("Remember me", isOn: $viewModel.rememberMe)
-                .font(.system(size: 14))
-                .foregroundStyle(Theme.textSecondary)
-                .tint(Theme.accent)
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    AuthFieldLabel("Email")
+                    TextField("Email", text: $viewModel.email, prompt: .authEmailPrompt)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .submitLabel(.next)
+                        .focused($focusedField, equals: .email)
+                        .onSubmit { focusedField = .password }
+                        .authField(isFocused: focusedField == .email, isBusy: viewModel.isLoading)
+                }
 
-            if let error = viewModel.errorMessage {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-            }
+                VStack(alignment: .leading, spacing: 8) {
+                    AuthFieldLabel("Password")
+                    SecureField("Password", text: $viewModel.password, prompt: .authPrompt("Your password"))
+                        .textContentType(.password)
+                        .submitLabel(.go)
+                        .focused($focusedField, equals: .password)
+                        .onSubmit(submit)
+                        .authField(isFocused: focusedField == .password, isBusy: viewModel.isLoading)
+                }
 
-            Button {
-                Task { await viewModel.login(appState: appState) }
-            } label: {
-                Group {
+                AuthSwitchRow(
+                    title: "Remember me",
+                    subtitle: "Use Face ID next time",
+                    isOn: $viewModel.rememberMe
+                )
+
+                if let error = viewModel.errorMessage, !viewModel.isLoading {
+                    AuthCallout(message: error)
+                }
+
+                Button(action: submit) {
                     if viewModel.isLoading {
-                        ProgressView().tint(Color(hex: 0x2A1C00))
+                        AuthButtonSpinner(accessibilityLabel: "Logging in")
                     } else {
                         Text("Log in")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color(hex: 0x2A1C00))
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(viewModel.canLogin ? Theme.accent : Theme.surface)
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-            .disabled(!viewModel.canLogin)
+                .buttonStyle(AuthCTAButtonStyle(isBusy: viewModel.isLoading))
+                .disabled(!viewModel.canLogin)
 
-            if viewModel.hasSavedCredential {
-                Button {
-                    Task { await viewModel.loginWithBiometrics(appState: appState) }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "faceid")
-                        Text("Sign in with Face ID")
+                if viewModel.hasSavedCredential, focusedField == nil {
+                    AuthOrDivider()
+                    Button {
+                        Task { await viewModel.loginWithBiometrics(appState: appState) }
+                    } label: {
+                        Label("Sign in with Face ID", systemImage: "faceid")
                     }
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Theme.text)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(Theme.surface)
-                    .clipShape(Capsule())
+                    .buttonStyle(AuthOutlineButtonStyle())
+                    .disabled(viewModel.isLoading)
                 }
-                .buttonStyle(.plain)
-                .disabled(viewModel.isLoading)
             }
+            .disabled(viewModel.isLoading)
 
-            Spacer()
+            if focusedField == nil {
+                Spacer(minLength: 24)
+                AuthFooterLink(prompt: "New here?", linkTitle: "Create an account", action: onCreateAccount)
+            }
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.background)
+        .authNavigationChrome()
+        // Canvas: the callout clears as soon as either field is edited.
+        .onChange(of: viewModel.email) { clearErrorIfShown() }
+        .onChange(of: viewModel.password) { clearErrorIfShown() }
         .onAppear { viewModel.checkBiometricAvailability() }
         .onDisappear { viewModel.clearError() }
     }
+
+    private func submit() {
+        guard viewModel.canLogin else { return }
+        focusedField = nil
+        Task { await viewModel.login(appState: appState) }
+    }
+
+    private func clearErrorIfShown() {
+        if viewModel.errorMessage != nil, !viewModel.isLoading {
+            viewModel.clearError()
+        }
+    }
+}
+
+extension View {
+    /// Pushed auth screens: the navigation bar stays (so the system back
+    /// button and swipe-back keep working) but draws no background, and its
+    /// back button is cream over the emerald band.
+    func authNavigationChrome() -> some View {
+        toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.inline)
+            .tint(Theme.cream)
+    }
+}
+
+#Preview("Log in · light") {
+    NavigationStack {
+        LoginView(viewModel: AuthViewModel())
+    }
+    .environment(AppState())
+    .preferredColorScheme(.light)
+}
+
+#Preview("Log in · dark") {
+    NavigationStack {
+        LoginView(viewModel: AuthViewModel())
+    }
+    .environment(AppState())
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Log in · largest text") {
+    NavigationStack {
+        LoginView(viewModel: AuthViewModel())
+    }
+    .environment(AppState())
+    .dynamicTypeSize(.accessibility5)
 }

@@ -1,13 +1,17 @@
 import SwiftUI
 
+/// The Terms and Privacy line under the sign-up buttons. W251: 12.5 muted,
+/// centred, with the two links underlined in the body colour (Login
+/// artboard). Callers set the spacing around it.
 struct LegalAcceptanceFooter: View {
     var body: some View {
         Text(makeAttributed())
-            .font(.footnote)
+            .scaledFont(12.5, relativeTo: .caption)
+            .lineSpacing(2)
             .multilineTextAlignment(.center)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 24)
-            .padding(.top, 8)
+            .foregroundStyle(Theme.muted)
+            .tint(Theme.text)
+            .frame(maxWidth: .infinity)
     }
 
     private func makeAttributed() -> AttributedString {
@@ -28,13 +32,13 @@ struct LegalAcceptanceFooter: View {
         // preview legal copy changes from the auth screen.
         if let termsRange = s.range(of: termsWord) {
             s[termsRange].link = URL(string: Configuration.apiBaseURL + "/terms")
-            s[termsRange].foregroundColor = .accentColor
+            s[termsRange].foregroundColor = Theme.text
             s[termsRange].underlineStyle = .single
         }
 
         if let privacyRange = s.range(of: privacyWord) {
             s[privacyRange].link = URL(string: Configuration.apiBaseURL + "/privacy")
-            s[privacyRange].foregroundColor = .accentColor
+            s[privacyRange].foregroundColor = Theme.text
             s[privacyRange].underlineStyle = .single
         }
 

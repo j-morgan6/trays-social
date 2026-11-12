@@ -1,45 +1,62 @@
 import AuthenticationServices
 import SwiftUI
 
-/// Welcome / sign-in entry. Recreates the Claude Design "Trays — Welcome /
-/// Sign-up" handoff: an emerald hero band (wordmark + eyebrow), a stage that
-/// floats the divided-tray illustration (a riff on the app icon, built from
-/// native shapes — no image asset), and a pinned action stack (Sign in with
-/// Apple, Create an account, log into an existing account) over the legal
-/// line.
+/// Welcome / sign-in entry. W251: rebuilt on the redesign canvas (Login
+/// artboard, "Welcome"): the tall emerald band with the handles logo, the
+/// rounded sheet with "A quiet place to cook." and three tiles that echo the
+/// logo's compartments, then the action stack pinned to the bottom (Sign in
+/// with Apple, the amber Create an account, I already have an account) over
+/// the legal line.
 ///
 /// The auth wiring (Apple sign-in, register/login navigation, username
-/// picker, suspension alert) is unchanged from the prior version — only the
-/// visual layer was redesigned. The web app has a separate post-signup
-/// `/welcome`; this view stays the sign-in landing.
+/// picker, suspension alert) is unchanged; only the visual layer changed.
+/// Navigation moved from two flags to a path so the footer links on Log in
+/// and Create account can swap one for the other in place. The web app has
+/// a separate post-signup `/welcome`; this view stays the sign-in landing.
 struct WelcomeView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var viewModel = AuthViewModel()
-    @State private var showLogin = false
-    @State private var showRegister = false
+    @State private var path: [AuthRoute] = []
+
+    enum AuthRoute: Hashable {
+        case login
+        case register
+    }
+
+    /// The path that shows `route`. Every entry point, the footer links on
+    /// Log in and Create account included, replaces the path rather than
+    /// pushing onto it, so switching between the two never stacks screens
+    /// and Back always returns to Welcome.
+    static func path(showing route: AuthRoute) -> [AuthRoute] {
+        [route]
+    }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                hero
+        NavigationStack(path: $path) {
+            AuthScreen(band: .hero) {
+                Text("A quiet place to cook.")
+                    .roundedFont(30, weight: .heavy, relativeTo: .largeTitle)
+                    .foregroundStyle(Theme.text)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
 
-                // Stage — flexes to fill the space between the hero and the
-                // actions, centering the floating tray on the off-white base.
-                trayIllustration
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 24)
+                featureTiles
+                    .padding(.top, 18)
+
+                Spacer(minLength: 24)
 
                 authActions
-                    .padding(.horizontal, 30)
-                    .padding(.bottom, 18)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Theme.bgLight)
-            .navigationDestination(isPresented: $showLogin) {
-                LoginView(viewModel: viewModel)
-            }
-            .navigationDestination(isPresented: $showRegister) {
-                RegisterView(viewModel: viewModel)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .navigationDestination(for: AuthRoute.self) { route in
+                switch route {
+                case .login:
+                    LoginView(viewModel: viewModel, onCreateAccount: { path = Self.path(showing: .register) })
+                case .register:
+                    RegisterView(viewModel: viewModel, onLogIn: { path = Self.path(showing: .login) })
+                }
             }
             .sheet(isPresented: $viewModel.needsUsername) {
                 UsernamePickerView(viewModel: viewModel)
@@ -70,113 +87,51 @@ struct WelcomeView: View {
         )
     }
 
-    // MARK: - Hero
+    // MARK: - Feature tiles
 
-    /// Emerald hero band, ~232pt tall, with the cream wordmark and the gold
-    /// eyebrow centered. Only the green background bleeds under the status
-    /// bar (`ignoresSafeArea`); the text stays centered within the visible
-    /// band below the safe area.
-    private var hero: some View {
-        VStack(spacing: 11) {
-            Text("Trays")
-                .font(.system(size: 58, weight: .heavy))
-                .tracking(-2.32)
-                .foregroundStyle(Theme.cream)
-
-            Text("RECIPES WORTH KEEPING")
-                .font(.system(size: 12, weight: .semibold))
-                .tracking(2.4)
-                .foregroundStyle(Theme.gold)
+    /// Three tiles in place of the old tray illustration: mint tint, amber
+    /// muted and cream (lift in dark), 18pt corners, at least 96pt high, one
+    /// shared height. At the accessibility text sizes they stack.
+    @ViewBuilder private var featureTiles: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(spacing: 10) { tiles }
+        } else {
+            HStack(alignment: .top, spacing: 10) { tiles }
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 232)
-        .background(Theme.primary.ignoresSafeArea(edges: .top))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Trays. Recipes worth keeping.")
     }
 
-    // MARK: - Tray illustration
-
-    /// Fixed geometry from the handoff: 338pt wide, 1.46:1 aspect, 5pt emerald
-    /// border, 30pt radius, 14pt inner padding, 14pt grid gap, columns 0.9fr /
-    /// 1.1fr. 338pt fits every iOS 17 device (smallest is 375pt wide). Widths
-    /// are computed explicitly rather than via flexible frames so a wide child
-    /// can't stretch the layout (`.frame(maxWidth:.infinity)` does not cap).
-    private var trayIllustration: some View {
-        let trayWidth: CGFloat = 338
-        let trayHeight = trayWidth / 1.46
-        let border: CGFloat = 5
-        let inset: CGFloat = 14
-        let gap: CGFloat = 14
-        let innerWidth = trayWidth - (border * 2) - (inset * 2)
-        let leftColumn = (innerWidth - gap) * 0.9 / 2.0
-        let rightColumn = (innerWidth - gap) * 1.1 / 2.0
-
-        return HStack(spacing: gap) {
-            VStack(spacing: gap) {
-                compartment("Recipes", fill: Theme.secondary, foreground: Theme.primary)
-                friendsCompartment
-            }
-            .frame(width: leftColumn)
-
-            compartment("A Quiet Place to Cook", fill: Theme.primary, foreground: Theme.cream)
-                .frame(width: rightColumn)
-        }
-        .padding(inset)
-        .frame(width: trayWidth, height: trayHeight)
-        .background(RoundedRectangle(cornerRadius: 30, style: .continuous).fill(Theme.cream))
-        .overlay(
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .strokeBorder(Theme.primary, lineWidth: border)
-        )
-        .shadow(color: Color(hex: 0x143C14).opacity(0.26), radius: 18, x: 0, y: 12)
-        .shadow(color: Color(hex: 0x143C14).opacity(0.14), radius: 5, x: 0, y: 4)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Recipes, friends, and a quiet place to cook.")
+    @ViewBuilder private var tiles: some View {
+        featureTile("Keep the recipes you love", systemImage: "book.closed", fill: Theme.mintTint)
+        featureTile("See what friends cook", systemImage: "person.2", fill: Theme.accentMuted)
+        featureTile("Cook from what you have", systemImage: "refrigerator", fill: Theme.creamOrLift)
     }
 
-    /// A filled tray compartment with a centered label. Rounded 18pt with a
-    /// hairline inner stroke standing in for the design's subtle inset shadow.
-    private func compartment(_ title: LocalizedStringKey, fill: Color, foreground: Color) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 18, style: .continuous).fill(fill)
+    private func featureTile(_ title: LocalizedStringKey, systemImage: String, fill: Color) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Image(systemName: systemImage)
+                .scaledFont(18, weight: .semibold, relativeTo: .body)
+                .accessibilityHidden(true)
             Text(title)
-                .font(.system(size: 17, weight: .bold))
-                .tracking(-0.26)
-                .lineSpacing(2)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(foreground)
-                .padding(.horizontal, 8)
+                .roundedFont(14, weight: .heavy, relativeTo: .subheadline)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.black.opacity(0.04), lineWidth: 1)
-        )
-    }
-
-    /// Bottom-left cell: transparent (shows the cream base), with a centered
-    /// amber circle whose diameter tracks the cell height (aspect 1).
-    private var friendsCompartment: some View {
-        Color.clear
-            .overlay {
-                ZStack {
-                    Circle().fill(Theme.accent)
-                    Text("Friends")
-                        .font(.system(size: 17, weight: .bold))
-                        .tracking(-0.26)
-                        .foregroundStyle(Theme.textLight)
-                }
-                .overlay(Circle().strokeBorder(Color.black.opacity(0.05), lineWidth: 1))
-                .aspectRatio(1, contentMode: .fit)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .foregroundStyle(Theme.text)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, minHeight: 96, maxHeight: .infinity, alignment: .topLeading)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(fill))
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Auth actions
 
     private var authActions: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
+            if let error = viewModel.errorMessage, !viewModel.isLoading {
+                AuthCallout(message: error)
+            }
+
             // D75: the 13+ affirmation Toggle used to gate Apple Sign In here.
             // It was moved out of the login path entirely — affirmation is
             // collected at account creation (RegisterView keeps its toggle for
@@ -192,54 +147,72 @@ struct WelcomeView: View {
                     await viewModel.handleAppleSignIn(result: result, appState: appState)
                 }
             }
-            .signInWithAppleButtonStyle(.black)
+            .appleButtonStyleForScheme()
             .frame(height: 54)
             .clipShape(Capsule())
             .accessibilityHint("Sign in with your Apple ID")
 
             Button {
-                showRegister = true
+                path = Self.path(showing: .register)
             } label: {
                 Text("Create an account")
-                    .font(.system(size: 17, weight: .semibold))
-                    .tracking(-0.17)
-                    .foregroundStyle(Theme.textLight)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(Theme.accent)
-                    .clipShape(Capsule())
-                    .shadow(color: Theme.accent.opacity(0.38), radius: 10, x: 0, y: 8)
-                    .shadow(color: Theme.accent.opacity(0.30), radius: 2, x: 0, y: 2)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(AuthCTAButtonStyle())
 
             Button {
-                showLogin = true
+                path = Self.path(showing: .login)
             } label: {
                 Text("I already have an account")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(Theme.textLight)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(AuthTextButtonStyle())
 
             if viewModel.isLoading {
                 ProgressView()
-                    .tint(Theme.primary)
-                    .padding(.top, 4)
-            }
-
-            if let error = viewModel.errorMessage {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 4)
+                    .tint(Theme.primaryInk)
             }
 
             LegalAcceptanceFooter()
                 .padding(.top, 6)
         }
     }
+}
+
+private extension View {
+    /// Apple's black button in light mode and its white button in dark mode,
+    /// as Apple's guidelines ask (Login artboard, "Welcome").
+    func appleButtonStyleForScheme() -> some View {
+        modifier(AppleButtonSchemeStyle())
+    }
+}
+
+private struct AppleButtonSchemeStyle: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        content
+            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+            // The style is read when the button is created; rebuild it when
+            // the appearance changes. Known edge: an appearance change while
+            // Apple's sheet is open (automatic dark mode at sunset) rebuilds
+            // the button mid-request; accepted, since the user can tap again.
+            .id(colorScheme)
+    }
+}
+
+#Preview("Welcome · light") {
+    WelcomeView()
+        .environment(AppState())
+        .preferredColorScheme(.light)
+}
+
+#Preview("Welcome · dark") {
+    WelcomeView()
+        .environment(AppState())
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Welcome · largest text") {
+    WelcomeView()
+        .environment(AppState())
+        .dynamicTypeSize(.accessibility5)
 }

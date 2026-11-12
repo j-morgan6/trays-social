@@ -1,5 +1,9 @@
 import SwiftUI
 
+/// The verify-email gate shown to a signed-in user whose email is not yet
+/// confirmed. W251: restyled to the Login artboard's "Check your email"
+/// state (emerald band, rounded heading, mint panel, amber button). The
+/// refresh, resend cooldown and sign-out behaviour are unchanged.
 struct EmailVerificationGateView: View {
     @Environment(AppState.self) private var appState
     @State private var isResending = false
@@ -10,95 +14,80 @@ struct EmailVerificationGateView: View {
     private let resendCooldown: TimeInterval = 60
 
     var body: some View {
-        ZStack {
-            Theme.background.ignoresSafeArea()
+        AuthScreen(band: .standard) {
+            AuthHeading(title: "Verify your email")
 
-            VStack(spacing: 24) {
-                Spacer()
-
-                Image(systemName: "envelope.badge.shield.half.filled")
-                    .font(.system(size: 56))
-                    .foregroundStyle(Theme.accent)
-
-                Text("Verify your email")
-                    .font(.system(size: 28, weight: .bold))
+            // The mint "Check your email" panel from the Login artboard.
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "envelope")
+                    .scaledFont(18, weight: .semibold, relativeTo: .body)
                     .foregroundStyle(Theme.text)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityHidden(true)
 
-                VStack(spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Check your email")
+                        .roundedFont(17, weight: .heavy, relativeTo: .headline)
+                        .foregroundStyle(Theme.text)
+
                     Text("We sent a verification link to")
-                        .foregroundStyle(Theme.textSecondary)
+                        .foregroundStyle(Theme.text)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Text(appState.currentUser?.email ?? String(localized: "your email"))
-                        .font(.system(size: 14, weight: .semibold))
+                        .fontWeight(.semibold)
                         .foregroundStyle(Theme.text)
                         .lineLimit(1)
                         .truncationMode(.middle)
 
                     Text("Tap the link in that email, then return here.")
-                        .foregroundStyle(Theme.textSecondary)
-                        .multilineTextAlignment(.center)
+                        .foregroundStyle(Theme.text)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 4)
                 }
-                .font(.system(size: 13))
-                .padding(.horizontal, 32)
+                .scaledFont(14.5, relativeTo: .subheadline)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
+            }
+            .padding(16)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.mintTint))
+            .accessibilityElement(children: .combine)
+            .padding(.top, 24)
 
-                if let message = statusMessage {
-                    Text(message)
-                        .font(.caption)
-                        .foregroundStyle(Theme.accent)
-                        .padding(.horizontal, 32)
-                        .multilineTextAlignment(.center)
-                }
+            if let message = statusMessage {
+                AuthCallout(message: message, systemImage: "info.circle")
+                    .padding(.top, 16)
+            }
 
-                Spacer()
+            Spacer(minLength: 24)
 
-                VStack(spacing: 12) {
-                    Button {
-                        Task { await refresh() }
-                    } label: {
-                        HStack {
-                            if isRefreshing {
-                                ProgressView().tint(Color(hex: 0x2A1C00))
-                            }
-                            Text(isRefreshing ? "Checking..." : "I verified my email")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(Color(hex: 0x2A1C00))
+            VStack(spacing: 12) {
+                Button {
+                    Task { await refresh() }
+                } label: {
+                    HStack(spacing: 10) {
+                        if isRefreshing {
+                            ProgressView().tint(Theme.inkOnAccent)
                         }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(Theme.accent)
-                        .clipShape(Capsule())
+                        Text(isRefreshing ? "Checking..." : "I verified my email")
                     }
-                    .buttonStyle(.plain)
-                    .disabled(isRefreshing)
-
-                    Button {
-                        Task { await resend() }
-                    } label: {
-                        Text(resendLabel)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Theme.text)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(isResending || isInCooldown)
-
-                    Button(role: .destructive) {
-                        appState.logout()
-                    } label: {
-                        Text("Sign out")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Theme.textSecondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                    }
-                    .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 32)
+                .buttonStyle(AuthCTAButtonStyle(isBusy: isRefreshing))
+                .disabled(isRefreshing)
+
+                Button {
+                    Task { await resend() }
+                } label: {
+                    Text(resendLabel)
+                }
+                .buttonStyle(AuthTextButtonStyle())
+                .disabled(isResending || isInCooldown)
+
+                Button(role: .destructive) {
+                    appState.logout()
+                } label: {
+                    Text("Sign out")
+                }
+                .buttonStyle(AuthTextButtonStyle(weight: .regular, size: 15, color: Theme.muted))
             }
         }
         .task {
@@ -145,4 +134,22 @@ struct EmailVerificationGateView: View {
             statusMessage = String(localized: "Could not send email. Try again in a moment.")
         }
     }
+}
+
+#Preview("Verify email · light") {
+    EmailVerificationGateView()
+        .environment(AppState())
+        .preferredColorScheme(.light)
+}
+
+#Preview("Verify email · dark") {
+    EmailVerificationGateView()
+        .environment(AppState())
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Verify email · largest text") {
+    EmailVerificationGateView()
+        .environment(AppState())
+        .dynamicTypeSize(.accessibility5)
 }

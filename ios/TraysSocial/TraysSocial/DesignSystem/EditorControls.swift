@@ -12,6 +12,9 @@ struct TrayFieldBox: ViewModifier {
     var needsAttention = false
     var minHeight: CGFloat = 50
     var alignment: Alignment = .leading
+    /// W251: the sign-in fields sit on `surface` (Login artboard); the
+    /// editor keeps the page background.
+    var fill: Color = Theme.background
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -21,7 +24,7 @@ struct TrayFieldBox: ViewModifier {
             .tint(Theme.primaryInk)
             .padding(.horizontal, 14)
             .frame(maxWidth: .infinity, minHeight: minHeight, alignment: alignment)
-            .background(shape.fill(Theme.background))
+            .background(shape.fill(fill))
             .overlay {
                 if isFocused || needsAttention {
                     shape.strokeBorder(Theme.accent, lineWidth: 1.5)
@@ -43,13 +46,15 @@ extension View {
         isFocused: Bool = false,
         needsAttention: Bool = false,
         minHeight: CGFloat = 50,
-        alignment: Alignment = .leading
+        alignment: Alignment = .leading,
+        fill: Color = Theme.background
     ) -> some View {
         modifier(TrayFieldBox(
             isFocused: isFocused,
             needsAttention: needsAttention,
             minHeight: minHeight,
-            alignment: alignment
+            alignment: alignment,
+            fill: fill
         ))
     }
 }
