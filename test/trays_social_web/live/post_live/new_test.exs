@@ -80,23 +80,24 @@ defmodule TraysSocialWeb.PostLive.NewTest do
       {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
       {_view, html} = select_type(view, "recipe")
 
-      # Editorial recipe form headings.
-      assert html =~ "Writing a recipe page"
+      # Redesign (W250) recipe editor cards.
+      assert has_element?(view, "#editor-head h1", "New recipe")
       assert html =~ "Ingredients"
-      assert html =~ "Method"
-      assert html =~ "Publish recipe"
+      assert html =~ "Steps"
+      assert html =~ "Post recipe"
     end
 
     test "selecting Post shows minimal post form", %{conn: conn} do
       {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
       {_view, html} = select_type(view, "post")
 
-      # Editorial post form headings.
-      assert html =~ "Writing a post"
+      # Redesign (W250) post editor: caption and tags, no recipe cards.
+      assert has_element?(view, "#editor-head h1", "New post")
       assert html =~ "Caption"
       assert html =~ "Tags"
       refute html =~ "Ingredients"
-      refute html =~ "Method"
+      refute html =~ "Steps"
+      refute has_element?(view, "#editor-checklist")
     end
 
     test "back button returns to type picker", %{conn: conn} do
@@ -115,9 +116,8 @@ defmodule TraysSocialWeb.PostLive.NewTest do
       {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
       {_view, html} = select_type(view, "recipe")
 
-      # Editorial photo section.
-      assert html =~ "Photograph"
-      assert html =~ "Drop the hero shot"
+      # Redesign (W250) photo slot.
+      assert has_element?(view, "#editor-photo #photo-drop-zone", "Add a photo")
       assert html =~ "Up to 5 photos"
     end
 
@@ -139,7 +139,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
       assert html =~ "post[cooking_steps][0][description]"
       # Editorial empty-state copy for the optional tools section.
       assert html =~ "No tools listed"
-      assert html =~ "Drop the hero shot"
+      assert html =~ "Add a photo"
     end
 
     test "does not show difficulty select", %{conn: conn} do
@@ -155,12 +155,11 @@ defmodule TraysSocialWeb.PostLive.NewTest do
       {_user, view, _html} = authenticated_live(conn, ~p"/posts/new")
       select_type(view, "recipe")
 
-      html =
-        view
-        |> form("#post-form", post: %{caption: "", cooking_time_minutes: ""})
-        |> render_change()
+      view
+      |> form("#post-form", post: %{caption: "", cooking_time_minutes: ""})
+      |> render_change()
 
-      assert html =~ "Writing a recipe page"
+      assert has_element?(view, "#editor-head h1", "New recipe")
     end
 
     test "validates with valid caption and cooking time", %{conn: conn} do
@@ -174,7 +173,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
         )
         |> render_change()
 
-      assert html =~ "Writing a recipe page"
+      assert has_element?(view, "#editor-head h1", "New recipe")
       refute html =~ "can&#39;t be blank"
     end
 
@@ -350,8 +349,8 @@ defmodule TraysSocialWeb.PostLive.NewTest do
       |> render_submit()
 
       html = render(view)
-      assert html =~ "Writing a recipe page"
-      assert html =~ "Publish"
+      assert has_element?(view, "#editor-head h1", "New recipe")
+      assert html =~ "Post recipe"
     end
 
     test "save without photos triggers the no-photo error path", %{conn: conn} do
@@ -364,8 +363,7 @@ defmodule TraysSocialWeb.PostLive.NewTest do
       |> render_submit()
 
       # User should stay on the form (not redirected)
-      html = render(view)
-      assert html =~ "Writing a recipe page"
+      assert has_element?(view, "#editor-head h1", "New recipe")
     end
   end
 

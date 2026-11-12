@@ -79,8 +79,13 @@ defmodule TraysSocialWeb.PostLive.New do
       |> Posts.change_post(post_params)
       |> Map.put(:action, :validate)
 
+    # W250: a save error from the flash is shown inline in the editor
+    # (the root layout's flash group never re-renders here). Any edit,
+    # including attaching a photo, clears it so a stale message does not
+    # stay after the user acted on it.
     {:noreply,
      socket
+     |> clear_flash(:error)
      |> assign(:changeset, changeset)
      |> assign(:form_params, post_params)}
   end
@@ -275,5 +280,130 @@ defmodule TraysSocialWeb.PostLive.New do
 
   defp field_value(form_params, section, row_id, field) do
     get_in(form_params, [section, to_string(row_id), field]) || ""
+  end
+
+  # ---------------------------------------------------------------------------
+  # Editor view helpers (W250). Presentation only: they read the form params
+  # and upload entries the events above already keep, and change no event,
+  # param or validation.
+  # ---------------------------------------------------------------------------
+
+  # Errors for a field once the user has touched it, as the core <.input>
+  # shows them. The editor renders them as amber notes, never red (canvas).
+  defp field_errors(%Phoenix.HTML.FormField{} = field) do
+    if Phoenix.Component.used_input?(field),
+      do: Enum.map(field.errors, &TraysSocialWeb.CoreComponents.translate_error/1),
+      else: []
+  end
+
+  # The preview card's title: the caption's first line or sentence, as the
+  # recipe page (W248) splits it.
+  defp preview_title(caption) when is_binary(caption) do
+    case String.split(caption, ~r/[\n.!?]/, parts: 2, trim: true) do
+      [title | _] -> String.trim(title)
+      [] -> ""
+    end
+  end
+
+  defp preview_title(_caption), do: ""
+
+  defp preview_time(value) do
+    case positive_integer(value) do
+      nil -> nil
+      minutes -> "#{minutes} min"
+    end
+  end
+
+  # What the aside's checklist shows for a recipe: the things a post needs,
+  # read from the params the validate event stores. Done means filled in,
+  # not valid; the changeset still decides on save.
+  defp editor_checklist(form_params, photo_entries) do
+    [
+      {"A photo", photo_entries != []},
+      {"A name (recommended)", present?(form_params["caption"])},
+      {"Total time", positive_integer(form_params["cooking_time_minutes"]) != nil},
+      {"At least one ingredient", any_row_filled?(form_params, "ingredients", "name")},
+      {"At least one step", any_row_filled?(form_params, "cooking_steps", "description")}
+    ]
+  end
+
+  defp any_row_filled?(form_params, section, field) do
+    case form_params[section] do
+      rows when is_map(rows) -> rows |> Map.values() |> Enum.any?(&present?(&1[field]))
+      _ -> false
+    end
+  end
+
+  defp present?(value) when is_binary(value), do: String.trim(value) != ""
+  defp present?(_value), do: false
+
+  defp positive_integer(value) when is_integer(value) and value > 0, do: value
+
+  defp positive_integer(value) when is_binary(value) do
+    case value |> String.trim() |> Integer.parse() do
+      {n, ""} when n > 0 -> n
+      _ -> nil
+    end
+  end
+
+  defp positive_integer(_value), do: nil
+
+  # ---------------------------------------------------------------------------
+  # Editor building blocks (W250), from the canvas Create artboard.
+  # ---------------------------------------------------------------------------
+
+  attr :id, :string, required: true
+  attr :title, :string, default: nil
+  attr :aside, :string, default: nil, doc: "muted note beside the title"
+  attr :class, :any, default: nil
+  slot :inner_block, required: true
+
+  defp editor_card(assigns) do
+    ~H"""
+    <section
+      id={@id}
+      aria-label={@title}
+      class={["min-w-0 rounded-[22px] bg-base-100 p-4 shadow-card md:p-[22px]", @class]}
+    >
+      <div :if={@title} class="mb-3 flex items-baseline justify-between gap-2.5">
+        <h2 class="font-display text-lg font-extrabold">{@title}</h2>
+        <span :if={@aside} class="text-[13px] text-muted">{@aside}</span>
+      </div>
+      {render_slot(@inner_block)}
+    </section>
+    """
+  end
+
+  attr :id, :string, default: nil
+  attr :messages, :list, required: true
+
+  defp field_note(assigns) do
+    ~H"""
+    <div :if={@messages != []} id={@id} data-role="field-note" class="mt-2.5 flex flex-col gap-1.5">
+      <p
+        :for={msg <- @messages}
+        class="flex items-center gap-2 rounded-xl bg-accent/25 px-3 py-2 text-[13.5px] text-base-content"
+      >
+        <.icon name="hero-exclamation-circle" class="size-4 shrink-0" />
+        <span class="min-w-0 break-words">{msg}</span>
+      </p>
+    </div>
+    """
+  end
+
+  attr :rest, :global, include: ~w(phx-click)
+  slot :inner_block, required: true
+
+  defp add_row_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class="inline-flex min-h-11 items-center gap-2 rounded-full bg-mint-tint pl-3 pr-4 text-[15px] font-semibold text-primary-ink transition hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      {@rest}
+    >
+      <.icon name="hero-plus" class="size-4" />
+      {render_slot(@inner_block)}
+    </button>
+    """
   end
 end

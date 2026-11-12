@@ -1,119 +1,82 @@
-<%!-- Editorial Create — matches WebCreate in the design handoff
-     (design/handoff/trays-social/project/web-screens.jsx). Framed as
-     "writing a recipe page" rather than "posting": serif section
-     headers as chapters, monospace eyebrow showing progress, amber
-     Publish primary action.
+<%!-- Recipe editor (W250), per the redesign canvas Create artboard (web).
+     Desktop: the editor cards on the left, a sticky preview, checklist and
+     Post button on the right. Narrower than lg it is one column with the
+     aside last. Missing or invalid fields show amber notes, never red.
 
-     The underlying LiveView events (validate / save / add-ingredient /
-     remove-ingredient / add-step / etc.) are unchanged. --%>
+     The LiveView events (validate / save / add-ingredient / remove-step /
+     cancel-upload / ...), the form id and every input name are unchanged.
+     Not built here (spec D16): "Paste a list", drafts that save as you go,
+     step timers. The canvas's "Add to a collection" card and full-screen
+     preview are not existing behaviour either; the aside card is the
+     preview. Flag off, the type picker and the photo post form still
+     render in the same style. --%>
 
 <%= if @post_type == nil do %>
-  <%!-- Type picker — editorial framing. --%>
-  <main class="max-w-[760px] mx-auto px-6 pt-12 md:pt-16 pb-16">
-    <div class="mb-10 text-center">
-      <div class="font-mono text-[11px] text-primary uppercase tracking-[0.18em] mb-3">
-        Start a new tray
-      </div>
-      <h1 class="font-serif-editorial text-[44px] md:text-[56px] leading-none tracking-[-0.015em] text-base-content mb-3">
+  <%!-- Type picker (recipe_first off only). --%>
+  <main id="editor-picker" class="mx-auto max-w-[760px] px-4 pb-16 pt-10 md:px-10 md:pt-14">
+    <div class="mb-8 text-center">
+      <h1 class="font-display text-[32px] font-extrabold leading-tight tracking-[-0.02em] md:text-[38px]">
         What are you sharing?
       </h1>
-      <p class="text-[15px] text-base-content/70">
-        A recipe is a full page — ingredients, tools, method. A post is a quick note about something you made.
+      <p class="mt-2 text-[15px] text-muted">
+        A recipe is a full page: ingredients, tools, method. A post is a quick note about something you made.
       </p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <button
+        type="button"
         phx-click="select-type"
         phx-value-type="recipe"
-        class="bg-base-100 border border-base-300 rounded-md p-7 text-left hover:border-primary transition-colors group"
+        class="min-w-0 rounded-[22px] bg-base-100 p-6 text-left shadow-card transition hover:ring-2 hover:ring-accent/32 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
-        <div class="font-mono text-[11px] text-base-content/60 uppercase tracking-[0.14em] mb-2 group-hover:text-primary transition-colors">
-          Recipe page
-        </div>
-        <h2 class="font-serif-editorial text-[28px] leading-[1.1] text-base-content mb-2">
-          Write a recipe
-        </h2>
-        <p class="text-[13px] text-base-content/70 leading-[1.55]">
+        <h2 class="font-display text-[22px] font-extrabold">Write a recipe</h2>
+        <p class="mt-1.5 text-[14px] leading-normal text-muted">
           Photo, ingredients, tools, cooking time, step-by-step method. Becomes a page someone could cook from.
         </p>
       </button>
 
       <button
+        type="button"
         phx-click="select-type"
         phx-value-type="post"
-        class="bg-base-100 border border-base-300 rounded-md p-7 text-left hover:border-primary transition-colors group"
+        class="min-w-0 rounded-[22px] bg-base-100 p-6 text-left shadow-card transition hover:ring-2 hover:ring-accent/32 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
-        <div class="font-mono text-[11px] text-base-content/60 uppercase tracking-[0.14em] mb-2 group-hover:text-primary transition-colors">
-          Quick note
-        </div>
-        <h2 class="font-serif-editorial text-[28px] leading-[1.1] text-base-content mb-2">
-          Share a post
-        </h2>
-        <p class="text-[13px] text-base-content/70 leading-[1.55]">
+        <h2 class="font-display text-[22px] font-extrabold">Share a post</h2>
+        <p class="mt-1.5 text-[14px] leading-normal text-muted">
           A photo and a caption. For when you just want to show what you ate, not write the recipe up.
         </p>
       </button>
     </div>
 
-    <.link
-      navigate={~p"/feed"}
-      class="block text-center mt-10 text-sm text-base-content/60 hover:text-base-content transition-colors"
-    >
-      Cancel and go back
-    </.link>
+    <div class="mt-8 flex justify-center">
+      <.secondary_button navigate={~p"/feed"}>Cancel</.secondary_button>
+    </div>
   </main>
 <% else %>
   <% is_recipe = @post_type == "recipe" %>
 
-  <%!-- Editorial header: progress strip + autosave eyebrow + Close. --%>
-  <div class="sticky top-16 z-10 bg-base-100 border-b border-base-300">
-    <div class="max-w-[760px] mx-auto px-6 md:px-8 py-3.5 flex items-center gap-4">
+  <main id="editor" class="mx-auto max-w-[1120px] px-4 pb-16 pt-8 md:px-10 md:pt-10">
+    <header id="editor-head" class="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div class="min-w-0">
+        <h1 class="break-words font-display text-[32px] font-extrabold leading-tight tracking-[-0.02em] md:text-[38px]">
+          {if is_recipe, do: "New recipe", else: "New post"}
+        </h1>
+        <p class="mt-1.5 text-[15px] text-muted">
+          {if is_recipe,
+            do: "A photo, the total time, one ingredient and one step are needed to post.",
+            else: "A photo and a few words. No recipe required."}
+        </p>
+      </div>
       <button
         :if={!@recipe_first}
         type="button"
         phx-click="back-to-picker"
-        class="inline-flex items-center gap-1 text-sm text-base-content/70 hover:text-base-content transition-colors"
+        class="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-[14.5px] font-semibold text-primary-ink hover:bg-mint-tint"
       >
-        <.icon name="hero-arrow-left" class="size-4" />
-        <span class="hidden md:inline">Pick type</span>
+        <.icon name="hero-arrow-left" class="size-4" /> Pick type
       </button>
-
-      <%= if is_recipe do %>
-        <div class="flex-1 hidden md:flex items-center gap-1.5 max-w-[440px] mx-auto">
-          <%= for {label, _i} <- Enum.with_index(["Photo", "Title", "Ingredients", "Tools", "Method"]) do %>
-            <div class="flex-1 h-1 rounded-full bg-base-300"></div>
-            <span class="hidden lg:inline text-[11px] text-base-content/60 font-mono uppercase tracking-[0.1em]">
-              {label}
-            </span>
-          <% end %>
-        </div>
-      <% end %>
-
-      <div class="flex-1 md:hidden"></div>
-
-      <span class="font-mono text-[10px] text-base-content/60 uppercase tracking-[0.14em] hidden sm:inline">
-        Draft · Autosaved
-      </span>
-    </div>
-  </div>
-
-  <main class="max-w-[760px] mx-auto px-6 md:px-8 pt-10 pb-16">
-    <div class="mb-8">
-      <div class="font-mono text-[11px] text-primary uppercase tracking-[0.18em] mb-3">
-        {if is_recipe, do: "Writing a recipe page", else: "Writing a post"}
-      </div>
-      <h1 class="font-serif-editorial text-[44px] md:text-[52px] leading-none tracking-[-0.015em] text-base-content mb-3">
-        {if is_recipe, do: "Tell us how you cooked it.", else: "Show us what you ate."}
-      </h1>
-      <p class="text-[15px] text-base-content/70 leading-[1.55] max-w-[560px]">
-        <%= if is_recipe do %>
-          Write it down well — quantities, timing, the small things that matter. Someone is going to cook from this.
-        <% else %>
-          A photo and a few words. No recipe required.
-        <% end %>
-      </p>
-    </div>
+    </header>
 
     <.form
       :let={f}
@@ -121,365 +84,406 @@
       id="post-form"
       phx-change="validate"
       phx-submit="save"
-      class="space-y-10"
+      class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10"
     >
-      <%!-- Photo section --%>
-      <section>
-        <div class="flex items-baseline gap-3 mb-4">
-          <span class="font-serif-editorial italic text-[24px] text-primary leading-none">1</span>
-          <h2 class="font-serif-editorial text-[24px] text-base-content">Photograph</h2>
-          <span class="text-[12px] text-base-content/60">Up to 5 photos</span>
-        </div>
+      <div id="editor-fields" class="flex min-w-0 flex-col gap-3.5">
+        <%!-- Photos --%>
+        <section id="editor-photo" aria-label="Photos" class="min-w-0">
+          <.live_file_input upload={@uploads.photos} class="sr-only" />
 
-        <.live_file_input upload={@uploads.photos} class="sr-only" />
+          <div
+            id="photo-drop-zone"
+            class="overflow-hidden rounded-[22px] transition-colors phx-drop-target:ring-2 phx-drop-target:ring-accent"
+            phx-drop-target={@uploads.photos.ref}
+          >
+            <%= if @uploads.photos.entries == [] do %>
+              <label
+                for={@uploads.photos.ref}
+                class="flex aspect-[4/3] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-[22px] border-[1.5px] border-dashed border-hairline-strong bg-base-100 p-4 text-center md:aspect-[16/7]"
+              >
+                <.icon name="hero-camera" class="size-7 text-muted" />
+                <span class="font-display text-[17px] font-extrabold">Add a photo</span>
+                <span class="text-[13px] text-muted">
+                  Up to 5 photos. PNG, JPG or HEIC, up to 10MB each.
+                </span>
+              </label>
+            <% else %>
+              <div class="grid grid-cols-3 gap-2 rounded-[22px] bg-base-100 p-2 shadow-card sm:grid-cols-5">
+                <div
+                  :for={entry <- @uploads.photos.entries}
+                  class="relative aspect-square min-w-0 overflow-hidden rounded-[15px] bg-cream-lift"
+                >
+                  <.live_img_preview entry={entry} class="size-full object-cover" />
 
-        <div
-          id="photo-drop-zone"
-          class="rounded-md border-2 border-dashed border-base-300 overflow-hidden transition-colors duration-200 phx-drop-target:border-primary phx-drop-target:bg-primary/5"
-          phx-drop-target={@uploads.photos.ref}
-        >
-          <%= if @uploads.photos.entries == [] do %>
-            <label
-              for={@uploads.photos.ref}
-              class="flex flex-col items-center justify-center py-14 px-6 text-center cursor-pointer"
-            >
-              <div class="w-14 h-14 rounded-full bg-base-200 flex items-center justify-center mb-4">
-                <.icon name="hero-camera" class="size-7 text-base-content/40" />
-              </div>
-              <p class="font-serif-editorial text-[20px] text-base-content">
-                Drop the hero shot here
-              </p>
-              <p class="text-[13px] text-base-content/60 mt-1">
-                Or click to browse. PNG, JPG, HEIC, up to 10MB each.
-              </p>
-            </label>
-          <% else %>
-            <div class="p-3 grid grid-cols-3 gap-2">
-              <%= for entry <- @uploads.photos.entries do %>
-                <div class="relative aspect-square rounded-md overflow-hidden bg-base-200">
-                  <.live_img_preview entry={entry} class="w-full h-full object-cover" />
-
-                  <%= if entry.progress > 0 && entry.progress < 100 do %>
-                    <div class="absolute inset-0 flex items-center justify-center bg-black/40">
-                      <span class="text-white text-sm font-bold">{trunc(entry.progress)}%</span>
-                    </div>
-                  <% end %>
+                  <div
+                    :if={entry.progress > 0 && entry.progress < 100}
+                    class="absolute inset-0 flex items-center justify-center bg-base-content/40"
+                  >
+                    <span class="text-sm font-bold text-base-100">{trunc(entry.progress)}%</span>
+                  </div>
 
                   <button
                     type="button"
-                    class="absolute top-1 right-1 inline-flex items-center justify-center w-6 h-6 rounded-full bg-black/55 hover:bg-black/75 text-white"
+                    class="absolute right-1 top-1 grid size-9 place-items-center rounded-full bg-pill text-base-content backdrop-blur-[20px]"
                     phx-click="cancel-upload"
                     phx-value-ref={entry.ref}
                     aria-label="Remove photo"
                   >
-                    <.icon name="hero-x-mark" class="size-3" />
-                  </button>
-                </div>
-              <% end %>
-
-              <%= if length(@uploads.photos.entries) < 5 do %>
-                <label
-                  for={@uploads.photos.ref}
-                  class="aspect-square rounded-md border-2 border-dashed border-base-300 flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
-                >
-                  <.icon name="hero-plus" class="size-6 text-base-content/40" />
-                  <p class="text-[11px] text-base-content/60 mt-1">Add more</p>
-                </label>
-              <% end %>
-            </div>
-          <% end %>
-        </div>
-
-        <%= for entry <- @uploads.photos.entries do %>
-          <%= for err <- upload_errors(@uploads.photos, entry) do %>
-            <p class="mt-2 text-sm text-error flex items-center gap-1.5">
-              <.icon name="hero-exclamation-circle" class="size-4" />
-              {entry.client_name}: {error_to_string(err)}
-            </p>
-          <% end %>
-        <% end %>
-        <%= for err <- upload_errors(@uploads.photos) do %>
-          <p class="mt-2 text-sm text-error flex items-center gap-1.5">
-            <.icon name="hero-exclamation-circle" class="size-4" />
-            {error_to_string(err)}
-          </p>
-        <% end %>
-      </section>
-
-      <%!-- Title + cook's note --%>
-      <section>
-        <div class="flex items-baseline gap-3 mb-4">
-          <span class="font-serif-editorial italic text-[24px] text-primary leading-none">2</span>
-          <h2 class="font-serif-editorial text-[24px] text-base-content">
-            {if is_recipe, do: "Title & cook's note", else: "Caption"}
-          </h2>
-        </div>
-        <.input
-          field={f[:caption]}
-          type="textarea"
-          label={
-            if is_recipe,
-              do: "What's the recipe called? Add a short note about how you'd cook it.",
-              else: "Describe your dish"
-          }
-          placeholder={
-            if is_recipe,
-              do:
-                "Sunday short ribs over polenta.\n\nA short note: the trick is reducing the wine long enough that it stops smelling like wine — three minutes longer than feels right.",
-              else: "Tell us about it…"
-          }
-          phx-debounce="300"
-          rows="5"
-        />
-        <%= if is_recipe do %>
-          <p class="mt-1.5 text-[12px] text-base-content/60">
-            First line becomes the recipe title on the feed. The rest is your cook's-note.
-          </p>
-        <% end %>
-      </section>
-
-      <%= if is_recipe do %>
-        <%!-- Ingredients --%>
-        <section>
-          <div class="flex items-baseline gap-3 mb-4">
-            <span class="font-serif-editorial italic text-[24px] text-primary leading-none">
-              3
-            </span>
-            <h2 class="font-serif-editorial text-[24px] text-base-content">Ingredients</h2>
-            <span class="text-[12px] text-base-content/60">At least one required</span>
-            <div class="flex-1"></div>
-            <button
-              type="button"
-              class="inline-flex items-center gap-1 text-[13px] text-primary font-semibold"
-              phx-click="add-ingredient"
-            >
-              <.icon name="hero-plus" class="size-3.5" /> Add ingredient
-            </button>
-          </div>
-
-          <div class="bg-base-100 border border-base-300 rounded-md overflow-hidden">
-            <div class="grid grid-cols-[110px_1fr_72px_32px] gap-3 px-4 py-2 bg-base-200 border-b border-base-300 font-mono text-[10px] text-base-content/60 uppercase tracking-[0.14em]">
-              <span>Qty</span>
-              <span>Ingredient</span>
-              <span>Unit</span>
-              <span></span>
-            </div>
-            <%= for {row_id, display_idx} <- Enum.with_index(@ingredient_rows) do %>
-              <div class="grid grid-cols-[110px_1fr_72px_32px] gap-3 px-4 py-2.5 items-center border-b border-base-300 last:border-b-0">
-                <input
-                  type="text"
-                  name={"post[ingredients][#{row_id}][quantity]"}
-                  value={field_value(@form_params, "ingredients", row_id, "quantity")}
-                  placeholder="2 lb"
-                  class="bg-transparent border-0 outline-none text-[13px] font-mono text-base-content placeholder:text-base-content/30 px-0 focus:ring-0"
-                />
-                <input
-                  type="text"
-                  name={"post[ingredients][#{row_id}][name]"}
-                  value={field_value(@form_params, "ingredients", row_id, "name")}
-                  placeholder="bone-in beef short ribs"
-                  required
-                  class="bg-transparent border-0 outline-none text-[14px] text-base-content placeholder:text-base-content/30 px-0 focus:ring-0"
-                />
-                <input
-                  type="text"
-                  name={"post[ingredients][#{row_id}][unit]"}
-                  value={field_value(@form_params, "ingredients", row_id, "unit")}
-                  placeholder="—"
-                  class="bg-transparent border-0 outline-none text-[13px] font-mono text-base-content placeholder:text-base-content/30 px-0 focus:ring-0"
-                />
-                <input
-                  type="hidden"
-                  name={"post[ingredients][#{row_id}][order]"}
-                  value={display_idx}
-                />
-                <%= if length(@ingredient_rows) > 1 do %>
-                  <button
-                    type="button"
-                    class="text-base-content/40 hover:text-error transition-colors"
-                    phx-click="remove-ingredient"
-                    phx-value-id={row_id}
-                    aria-label="Remove ingredient"
-                  >
                     <.icon name="hero-x-mark" class="size-4" />
                   </button>
-                <% else %>
-                  <span></span>
-                <% end %>
+                </div>
+
+                <label
+                  :if={length(@uploads.photos.entries) < 5}
+                  for={@uploads.photos.ref}
+                  class="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-[15px] border-[1.5px] border-dashed border-hairline-strong text-muted hover:bg-mint-tint"
+                >
+                  <.icon name="hero-plus" class="size-6" />
+                  <span class="mt-1 text-[12px] font-semibold">Add more</span>
+                </label>
               </div>
             <% end %>
           </div>
+
+          <.field_note
+            id="editor-photo-note"
+            messages={
+              for(
+                entry <- @uploads.photos.entries,
+                err <- upload_errors(@uploads.photos, entry),
+                do: "#{entry.client_name}: #{error_to_string(err)}"
+              ) ++
+                Enum.map(upload_errors(@uploads.photos), &error_to_string/1)
+            }
+          />
         </section>
 
-        <%!-- Tools (optional) --%>
-        <section>
-          <div class="flex items-baseline gap-3 mb-4">
-            <span class="font-serif-editorial italic text-[24px] text-primary leading-none">
-              4
-            </span>
-            <h2 class="font-serif-editorial text-[24px] text-base-content">Tools</h2>
-            <span class="text-[12px] text-base-content/60">Optional</span>
-            <div class="flex-1"></div>
-            <button
-              type="button"
-              class="inline-flex items-center gap-1 text-[13px] text-primary font-semibold"
-              phx-click="add-tool"
-            >
-              <.icon name="hero-plus" class="size-3.5" /> Add tool
-            </button>
+        <%!-- Basics: one caption field (the API stores one caption; its first
+             line is the recipe name), then time and servings. --%>
+        <.editor_card id="editor-basics" title={if is_recipe, do: "Basics", else: "Caption"}>
+          <% caption_errors = field_errors(f[:caption]) %>
+          <label for={f[:caption].id} class="mb-2 block text-[13.5px] font-semibold">
+            {if is_recipe, do: "Recipe name and a line about it", else: "Describe your dish"}
+          </label>
+          <div class={[
+            "flex rounded-[14px] bg-base-200 px-3.5 ring-inset focus-within:ring-2 focus-within:ring-accent",
+            if(caption_errors == [],
+              do: "ring-1 ring-hairline-strong",
+              else: "ring-[1.5px] ring-accent"
+            )
+          ]}>
+            <textarea
+              id={f[:caption].id}
+              name={f[:caption].name}
+              rows="4"
+              phx-debounce="300"
+              placeholder={
+                if is_recipe,
+                  do: "Sesame chicken thighs\nWhen you make it, and what makes it good",
+                  else: "Tell us about it"
+              }
+              aria-describedby={if is_recipe, do: "editor-caption-hint"}
+              class="min-h-[96px] w-full resize-y border-0 bg-transparent px-0 py-3 text-base leading-normal text-base-content outline-none placeholder:text-muted focus:ring-0"
+            >{Phoenix.HTML.Form.normalize_value("textarea", f[:caption].value)}</textarea>
           </div>
+          <p :if={is_recipe} id="editor-caption-hint" class="mt-2 text-[13px] text-muted">
+            The first line is the recipe name. The rest is the note people read first.
+          </p>
+          <.field_note id="editor-caption-note" messages={caption_errors} />
 
-          <%= if @tool_rows == [] do %>
-            <p class="font-serif-editorial italic text-[14px] text-base-content/60">
-              No tools listed. Add things like a Dutch oven, a whisk, or a sheet pan.
-            </p>
-          <% else %>
-            <div class="flex flex-wrap gap-2">
-              <%= for {row_id, display_idx} <- Enum.with_index(@tool_rows) do %>
-                <div class="inline-flex items-center gap-1.5 bg-base-100 border border-base-300 rounded-full pl-3.5 pr-2 h-9">
+          <div :if={is_recipe} class="mt-3.5 grid grid-cols-2 gap-3">
+            <div
+              :for={
+                {field, label, placeholder, required} <- [
+                  {f[:cooking_time_minutes], "Total time (minutes)", "30", true},
+                  {f[:servings], "Serves", "4", false}
+                ]
+              }
+              class="min-w-0"
+            >
+              <% errors = field_errors(field) %>
+              <label
+                for={field.id}
+                class={[
+                  "flex min-w-0 flex-col gap-1 rounded-2xl bg-base-200 px-3.5 py-2.5 ring-inset focus-within:ring-2 focus-within:ring-accent",
+                  if(errors == [],
+                    do: "ring-1 ring-hairline-strong",
+                    else: "ring-[1.5px] ring-accent"
+                  )
+                ]}
+              >
+                <span class="text-[12.5px] font-semibold text-muted">{label}</span>
+                <input
+                  type="number"
+                  id={field.id}
+                  name={field.name}
+                  value={Phoenix.HTML.Form.normalize_value("number", field.value)}
+                  placeholder={placeholder}
+                  min="1"
+                  required={required}
+                  phx-debounce="300"
+                  class="w-full min-w-0 border-0 bg-transparent p-0 font-display text-[17px] font-extrabold text-base-content outline-none placeholder:font-sans placeholder:font-normal placeholder:text-muted focus:ring-0"
+                />
+              </label>
+              <.field_note id={"#{field.id}-note"} messages={errors} />
+            </div>
+          </div>
+        </.editor_card>
+
+        <%= if is_recipe do %>
+          <%!-- Ingredients. Phone: the name on its own line, amount and unit
+               below; from sm: amount | ingredient | unit. --%>
+          <.editor_card id="editor-ingredients" title="Ingredients" aside="At least one">
+            <div class="flex flex-col">
+              <div
+                :for={{row_id, display_idx} <- Enum.with_index(@ingredient_rows)}
+                class="flex items-start gap-2 border-b border-hairline py-2 last:border-b-0"
+              >
+                <div class="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-[92px_minmax(0,1fr)_88px]">
                   <input
                     type="text"
-                    name={"post[tools][#{row_id}][name]"}
-                    value={field_value(@form_params, "tools", row_id, "name")}
-                    placeholder="e.g. cast iron"
-                    class="bg-transparent border-0 outline-none text-[13px] text-base-content placeholder:text-base-content/40 w-32 px-0 focus:ring-0"
+                    name={"post[ingredients][#{row_id}][quantity]"}
+                    value={field_value(@form_params, "ingredients", row_id, "quantity")}
+                    placeholder="Amount"
+                    aria-label={"Amount, ingredient #{display_idx + 1}"}
+                    class="min-h-[50px] w-full min-w-0 rounded-[14px] border-0 bg-base-200 px-3.5 text-base text-base-content ring-1 ring-inset ring-hairline-strong outline-none placeholder:text-muted focus:ring-2 focus:ring-accent"
                   />
-                  <input type="hidden" name={"post[tools][#{row_id}][order]"} value={display_idx} />
-                  <button
-                    type="button"
-                    class="text-base-content/40 hover:text-error transition-colors"
-                    phx-click="remove-tool"
-                    phx-value-id={row_id}
-                    aria-label="Remove tool"
-                  >
-                    <.icon name="hero-x-mark" class="size-3.5" />
-                  </button>
+                  <input
+                    type="text"
+                    name={"post[ingredients][#{row_id}][name]"}
+                    value={field_value(@form_params, "ingredients", row_id, "name")}
+                    placeholder="Ingredient"
+                    required
+                    aria-label={"Ingredient #{display_idx + 1}"}
+                    class="order-first col-span-2 min-h-[50px] w-full min-w-0 rounded-[14px] border-0 bg-base-200 px-3.5 text-base text-base-content ring-1 ring-inset ring-hairline-strong outline-none placeholder:text-muted focus:ring-2 focus:ring-accent sm:order-none sm:col-span-1"
+                  />
+                  <input
+                    type="text"
+                    name={"post[ingredients][#{row_id}][unit]"}
+                    value={field_value(@form_params, "ingredients", row_id, "unit")}
+                    placeholder="Unit"
+                    aria-label={"Unit, ingredient #{display_idx + 1}"}
+                    class="min-h-[50px] w-full min-w-0 rounded-[14px] border-0 bg-base-200 px-3.5 text-base text-base-content ring-1 ring-inset ring-hairline-strong outline-none placeholder:text-muted focus:ring-2 focus:ring-accent"
+                  />
+                  <input
+                    type="hidden"
+                    name={"post[ingredients][#{row_id}][order]"}
+                    value={display_idx}
+                  />
                 </div>
-              <% end %>
+                <button
+                  :if={length(@ingredient_rows) > 1}
+                  type="button"
+                  class="grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-base-300 hover:text-base-content"
+                  phx-click="remove-ingredient"
+                  phx-value-id={row_id}
+                  aria-label={"Remove ingredient #{display_idx + 1}"}
+                >
+                  <.icon name="hero-x-mark" class="size-5" />
+                </button>
+              </div>
             </div>
-          <% end %>
-        </section>
+            <div class="mt-2 flex flex-wrap items-center gap-3">
+              <.add_row_button phx-click="add-ingredient">Add ingredient</.add_row_button>
+            </div>
+          </.editor_card>
 
-        <%!-- Time + servings --%>
-        <section>
-          <div class="flex items-baseline gap-3 mb-4">
-            <span class="font-serif-editorial italic text-[24px] text-primary leading-none">
-              5
-            </span>
-            <h2 class="font-serif-editorial text-[24px] text-base-content">Timing</h2>
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <.input
-              field={f[:cooking_time_minutes]}
-              type="number"
-              label="Total time (minutes)"
-              required
-              min="1"
-              phx-debounce="300"
-            />
-            <.input
-              field={f[:servings]}
-              type="number"
-              label="Serves"
-              placeholder="4"
-              min="1"
-              phx-debounce="300"
-            />
-          </div>
-        </section>
-
-        <%!-- Method --%>
-        <section>
-          <div class="flex items-baseline gap-3 mb-4">
-            <span class="font-serif-editorial italic text-[24px] text-primary leading-none">
-              6
-            </span>
-            <h2 class="font-serif-editorial text-[24px] text-base-content">Method</h2>
-            <span class="text-[12px] text-base-content/60">At least one step</span>
-            <div class="flex-1"></div>
-            <button
-              type="button"
-              class="inline-flex items-center gap-1 text-[13px] text-primary font-semibold"
-              phx-click="add-step"
-            >
-              <.icon name="hero-plus" class="size-3.5" /> Add step
-            </button>
-          </div>
-
-          <div class="space-y-3">
-            <%= for {row_id, display_idx} <- Enum.with_index(@step_rows) do %>
-              <div class="bg-base-100 border border-base-300 rounded-md p-4 grid grid-cols-[36px_1fr_32px] gap-3">
-                <div class="font-serif-editorial italic text-[24px] text-primary leading-none pt-1">
+          <%!-- Steps --%>
+          <.editor_card id="editor-steps" title="Steps" aside="At least one">
+            <div class="flex flex-col">
+              <div
+                :for={{row_id, display_idx} <- Enum.with_index(@step_rows)}
+                class="flex items-start gap-3 border-b border-hairline py-2.5 last:border-b-0"
+              >
+                <span class="mt-2.5 grid size-[30px] shrink-0 place-items-center rounded-full bg-accent/25 font-display text-sm font-extrabold">
                   {display_idx + 1}
+                </span>
+                <div class="flex min-w-0 flex-1 rounded-[14px] bg-base-200 px-3.5 ring-1 ring-inset ring-hairline-strong focus-within:ring-2 focus-within:ring-accent">
+                  <textarea
+                    name={"post[cooking_steps][#{row_id}][description]"}
+                    placeholder="What to do in this step"
+                    required
+                    rows="2"
+                    aria-label={"Step #{display_idx + 1}"}
+                    class="min-h-[72px] w-full resize-y border-0 bg-transparent px-0 py-3 text-base leading-normal text-base-content outline-none placeholder:text-muted focus:ring-0"
+                  >{field_value(@form_params, "cooking_steps", row_id, "description")}</textarea>
                 </div>
-                <textarea
-                  name={"post[cooking_steps][#{row_id}][description]"}
-                  placeholder="Describe this step. What's happening, what to watch for, when to move on."
-                  required
-                  rows="3"
-                  class="bg-transparent border-0 outline-none text-[14px] text-base-content leading-[1.55] placeholder:text-base-content/30 resize-none px-0 focus:ring-0 w-full"
-                >{field_value(@form_params, "cooking_steps", row_id, "description")}</textarea>
                 <input
                   type="hidden"
                   name={"post[cooking_steps][#{row_id}][order]"}
                   value={display_idx}
                 />
-                <%= if length(@step_rows) > 1 do %>
-                  <button
-                    type="button"
-                    class="text-base-content/40 hover:text-error transition-colors self-start mt-1"
-                    phx-click="remove-step"
-                    phx-value-id={row_id}
-                    aria-label="Remove step"
-                  >
-                    <.icon name="hero-x-mark" class="size-4" />
-                  </button>
-                <% else %>
-                  <span></span>
-                <% end %>
+                <button
+                  :if={length(@step_rows) > 1}
+                  type="button"
+                  class="grid size-11 shrink-0 place-items-center rounded-full text-muted hover:bg-base-300 hover:text-base-content"
+                  phx-click="remove-step"
+                  phx-value-id={row_id}
+                  aria-label={"Remove step #{display_idx + 1}"}
+                >
+                  <.icon name="hero-x-mark" class="size-5" />
+                </button>
               </div>
-            <% end %>
+            </div>
+            <div class="mt-2 flex flex-wrap items-center gap-3">
+              <.add_row_button phx-click="add-step">Add step</.add_row_button>
+            </div>
+          </.editor_card>
+
+          <%!-- Tools --%>
+          <.editor_card id="editor-tools" title="Tools" aside="Optional">
+            <p :if={@tool_rows == []} class="text-[14px] text-muted">
+              No tools listed. Add things like a Dutch oven, a whisk or a sheet pan.
+            </p>
+            <div :if={@tool_rows != []} class="flex flex-wrap gap-2">
+              <div
+                :for={{row_id, display_idx} <- Enum.with_index(@tool_rows)}
+                class="inline-flex min-h-10 max-w-full items-center gap-1 rounded-full bg-base-300 pl-3.5 pr-1 focus-within:ring-2 focus-within:ring-accent"
+              >
+                <input
+                  type="text"
+                  name={"post[tools][#{row_id}][name]"}
+                  value={field_value(@form_params, "tools", row_id, "name")}
+                  placeholder="e.g. cast iron"
+                  aria-label={"Tool #{display_idx + 1}"}
+                  class="w-32 min-w-0 border-0 bg-transparent p-0 text-[14px] font-semibold text-base-content outline-none placeholder:font-normal placeholder:text-muted focus:ring-0"
+                />
+                <input type="hidden" name={"post[tools][#{row_id}][order]"} value={display_idx} />
+                <button
+                  type="button"
+                  class="grid size-9 shrink-0 place-items-center rounded-full text-muted hover:text-base-content"
+                  phx-click="remove-tool"
+                  phx-value-id={row_id}
+                  aria-label={"Remove tool #{display_idx + 1}"}
+                >
+                  <.icon name="hero-x-mark" class="size-4" />
+                </button>
+              </div>
+            </div>
+            <div class="mt-3 flex flex-wrap items-center gap-3">
+              <.add_row_button phx-click="add-tool">Add tool</.add_row_button>
+            </div>
+          </.editor_card>
+        <% end %>
+
+        <%!-- Tags (both types) --%>
+        <.editor_card id="editor-tags" title="Tags" aside="Optional, comma separated">
+          <div class="flex min-h-[50px] items-center rounded-[14px] bg-base-200 px-3.5 ring-1 ring-inset ring-hairline-strong focus-within:ring-2 focus-within:ring-accent">
+            <input
+              type="text"
+              name="post[tags_input]"
+              value={@form_params["tags_input"]}
+              placeholder="pasta, italian, weeknight"
+              aria-label="Tags"
+              phx-debounce="500"
+              class="w-full min-w-0 border-0 bg-transparent p-0 text-base text-base-content outline-none placeholder:text-muted focus:ring-0"
+            />
           </div>
-        </section>
-      <% end %>
-
-      <%!-- Tags (both types) --%>
-      <section>
-        <div class="flex items-baseline gap-3 mb-4">
-          <span class="font-serif-editorial italic text-[24px] text-primary leading-none">
-            {if is_recipe, do: "7", else: "3"}
-          </span>
-          <h2 class="font-serif-editorial text-[24px] text-base-content">Tags</h2>
-          <span class="text-[12px] text-base-content/60">Optional · comma separated</span>
-        </div>
-        <input
-          type="text"
-          name="post[tags_input]"
-          placeholder="pasta, italian, weeknight"
-          class="input input-bordered w-full"
-          phx-debounce="500"
-        />
-      </section>
-
-      <%!-- Publish — amber primary action, matches the design's
-           "Make me a tray" / "Continue" / "Publish" pattern. --%>
-      <div class="pt-6 border-t border-base-300 flex flex-col-reverse md:flex-row md:items-center gap-3 md:gap-4">
-        <.link
-          navigate={~p"/feed"}
-          class="text-sm text-base-content/60 hover:text-base-content text-center md:text-left transition-colors"
-        >
-          Cancel
-        </.link>
-        <div class="flex-1"></div>
-        <button
-          type="submit"
-          phx-disable-with="Publishing…"
-          class="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-md bg-accent text-accent-content text-[15px] font-semibold hover:brightness-95 transition"
-        >
-          <.icon name="hero-paper-airplane" class="size-4" />
-          {if is_recipe, do: "Publish recipe", else: "Publish post"}
-        </button>
+        </.editor_card>
       </div>
+
+      <%!-- Preview and post --%>
+      <aside
+        id="editor-aside"
+        aria-label="Preview and post"
+        class="flex min-w-0 flex-col gap-3.5 lg:sticky lg:top-24"
+      >
+        <% title = preview_title(f[:caption].value) %>
+        <% time = is_recipe && preview_time(f[:cooking_time_minutes].value) %>
+        <% first_entry = List.first(@uploads.photos.entries) %>
+        <div
+          id="editor-preview"
+          class="flex min-w-0 flex-col rounded-[21px] bg-base-100 p-1.5 shadow-card"
+        >
+          <div class="relative aspect-[4/3] overflow-hidden rounded-[15px] bg-cream-lift">
+            <.live_img_preview
+              :if={first_entry}
+              id={"editor-preview-#{first_entry.ref}"}
+              entry={first_entry}
+              class="absolute inset-0 size-full object-cover"
+            />
+            <div :if={!first_entry} class="absolute inset-0 grid place-items-center">
+              <.icon name="hero-camera" class="size-7 text-muted" />
+            </div>
+            <span
+              :if={time}
+              class="absolute bottom-2 left-2 rounded-full bg-pill px-[9px] py-1 text-xs font-semibold leading-none text-base-content backdrop-blur-[20px]"
+            >
+              {time}
+            </span>
+          </div>
+          <div class="flex flex-col gap-1.5 px-2 pb-2 pt-2.5">
+            <span class={[
+              "font-display text-base font-extrabold leading-tight line-clamp-2 break-words",
+              title == "" && "text-muted"
+            ]}>
+              {if title == "",
+                do: if(is_recipe, do: "Your recipe name", else: "Your caption"),
+                else: title}
+            </span>
+            <span class="flex min-w-0 items-center gap-1.5 text-[12.5px] text-muted">
+              <.user_avatar
+                username={@current_scope.user.username}
+                photo_url={@current_scope.user.profile_photo_url}
+                size="xs"
+              />
+              <span class="truncate">You, as it shows in feeds</span>
+            </span>
+          </div>
+        </div>
+
+        <div
+          :if={is_recipe}
+          id="editor-checklist"
+          class="rounded-[22px] bg-base-100 p-4 shadow-card md:p-[22px]"
+        >
+          <ul class="flex flex-col gap-2.5">
+            <li
+              :for={{label, done} <- editor_checklist(@form_params, @uploads.photos.entries)}
+              data-done={to_string(done)}
+              class="flex items-center gap-2.5 text-[14.5px]"
+            >
+              <span
+                aria-hidden="true"
+                class={[
+                  "grid size-[22px] shrink-0 place-items-center rounded-full",
+                  if(done,
+                    do: "bg-primary text-primary-content",
+                    else: "ring-2 ring-inset ring-hairline-strong"
+                  )
+                ]}
+              >
+                <.icon :if={done} name="hero-check" class="size-3.5" />
+              </span>
+              <span>{label}</span>
+              <span class="sr-only">{if done, do: "(done)", else: "(to do)"}</span>
+            </li>
+          </ul>
+        </div>
+
+        <%!-- The save errors put in the flash ("Please upload at least one
+             photo", "Photo upload failed") and the recipe-only rule. The
+             root layout's flash group does not re-render inside a
+             LiveView, so without this note they were never seen here. The
+             validate event clears the flash, so the note goes once the
+             user edits the form or attaches a photo. --%>
+        <.field_note
+          id="editor-form-note"
+          messages={field_errors(f[:type]) ++ List.wrap(Phoenix.Flash.get(@flash, :error))}
+        />
+
+        <div id="editor-publish" class="flex flex-col gap-2.5">
+          <.accent_button
+            type="submit"
+            wide
+            phx-disable-with="Posting…"
+            class="min-h-[54px] text-[17px]"
+          >
+            {if is_recipe, do: "Post recipe", else: "Post"}
+          </.accent_button>
+          <.secondary_button navigate={~p"/feed"} wide>Cancel</.secondary_button>
+        </div>
+      </aside>
     </.form>
   </main>
 <% end %>
