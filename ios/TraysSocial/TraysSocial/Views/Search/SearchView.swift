@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Recipe-first Search tab with one search box (W205).
+/// Recipe-first Search tab with one search box (W205), restyled to the
+/// redesign canvas in W243.
 ///
 /// Return turns the typed text into an ingredient chip. Browse tiles and Most
 /// saved show before typing; one term (typed or a single chip) shows grouped
@@ -8,43 +9,57 @@ import SwiftUI
 /// show "You have everything" / "Almost there" (`IngredientMatchResults`).
 /// `IngredientSearchViewModel.route` makes that call.
 ///
-/// Laid out like `FindView`: each child pads itself, because the sections
-/// carry `SectionHeader`'s built-in inset and outer padding would double it.
+/// Children inset themselves by `HomeMetrics.inset` (the canvas's 18pt), so
+/// horizontal rows can bleed to the screen edge where the canvas does.
 struct SearchView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @State private var recipes = SearchViewModel()
     @State private var ingredients = IngredientSearchViewModel()
     @FocusState private var fieldFocused: Bool
+    /// View-local: Browse has been asked for at least once. A finished first
+    /// load with nothing to show is a failure (the view models only log).
+    @State private var browseAttempted = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Search")
-                    .font(.system(size: 28, weight: .bold))
-                    .tracking(-0.7)
-                    .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 4)
-                    .padding(.bottom, 14)
-
-                searchField
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
+                SearchField(
+                    text: $ingredients.draft,
+                    isFocused: $fieldFocused,
+                    showsClear: showsClear,
+                    onSubmit: {
+                        // Return adds the text as a chip and keeps the keyboard up.
+                        ingredients.submitDraft()
+                        fieldFocused = true
+                    },
+                    onClear: {
+                        ingredients.clear()
+                        recipes.clear()
+                    }
+                )
+                .padding(.horizontal, HomeMetrics.inset)
                 IngredientChipBar(viewModel: ingredients)
-                    .padding(.bottom, 10)
 
                 if ingredients.isMatchingIngredients {
                     IngredientMatchResults(viewModel: ingredients)
-                        .padding(.bottom, 24)
                 } else {
-                    SearchRecipesSection(viewModel: recipes)
-                        .padding(.bottom, 24)
+                    SearchRecipesSection(
+                        viewModel: recipes,
+                        browseFailed: browseFailed,
+                        onRetryBrowse: { Task { await recipes.loadBrowse() } }
+                    )
                 }
             }
             .padding(.top, 116)
-            .padding(.bottom, 116)
+            .padding(.bottom, 128)
         }
-        .task { await recipes.loadBrowseIfNeeded() }
+        .background(Theme.background)
+        .task {
+            await recipes.loadBrowseIfNeeded()
+            // A cancelled load (the tab was left mid-load) is not a failure.
+            if !Task.isCancelled {
+                browseAttempted = true
+            }
+        }
         .refreshable { await recipes.loadBrowse() }
         // Both view models debounce 300ms and cancel any in-flight search,
         // so firing on every keystroke is safe.
@@ -65,47 +80,11 @@ struct SearchView: View {
         recipes.showsResults || !ingredients.chips.isEmpty || !ingredients.draft.isEmpty
     }
 
-    private var searchField: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(Theme.subtle(for: colorScheme))
-            TextField(
-                "",
-                text: $ingredients.draft,
-                prompt: Text("Search recipes, ingredients, cooks…").foregroundStyle(Theme.subtle(for: colorScheme))
-            )
-            .font(.system(size: 14.5))
-            .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .submitLabel(.return)
-            .focused($fieldFocused)
-            // Return adds the text as a chip and keeps the keyboard up for the next one.
-            .onSubmit {
-                ingredients.submitDraft()
-                fieldFocused = true
-            }
-            .accessibilityLabel(Text("Search recipes, ingredients, cooks"))
-            if showsClear {
-                Button {
-                    ingredients.clear()
-                    recipes.clear()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundStyle(Theme.subtle(for: colorScheme))
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel(Text("Clear search"))
-            }
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 46)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.surface))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Theme.hairline(for: colorScheme), lineWidth: 1)
+    private var browseFailed: Bool {
+        SearchBrowseState.failed(
+            attempted: browseAttempted,
+            hasBrowse: recipes.browse != nil,
+            isLoading: recipes.isLoadingBrowse
         )
     }
 }

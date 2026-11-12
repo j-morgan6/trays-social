@@ -1,8 +1,11 @@
 import SwiftUI
 
 /// "See all" for one grouped-search section: a 2-column grid paged by cursor.
-/// Sponsored tiles appear only when the server interleaves them (the
+/// Sponsored cards appear only when the server interleaves them (the
 /// Everyone group); tray and following pages are plain posts.
+///
+/// W243: cards are the shared RecipeCard at 4:3 and SponsoredRecipeCard,
+/// so cards in a row are the same size.
 struct SearchGroupView: View {
     let route: SearchGroupRoute
     @State private var viewModel = SearchGroupViewModel()
@@ -11,27 +14,29 @@ struct SearchGroupView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 if viewModel.isEmpty {
-                    EditorialEmptyState(title: String(localized: "No results yet."))
+                    EmptyStateBlock(
+                        title: String(localized: "No results yet."),
+                        subtitle: String(localized: "Try a different recipe, ingredient, or cook."),
+                        topPadding: 56,
+                        chrome: .plain
+                    )
                 } else {
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible())], spacing: 10) {
-                        ForEach(viewModel.items) { item in
-                            cell(item)
-                                .onAppear {
-                                    // Every cell pages, so a trailing ad or
-                                    // unknown tile cannot stall pagination.
-                                    if item.id == viewModel.items.last?.id {
-                                        Task { await viewModel.loadMore(route) }
-                                    }
-                                }
+                    SearchRecipeGrid(items: viewModel.items) { item in
+                        // Every cell pages, so a trailing ad or unknown
+                        // card cannot stall pagination.
+                        if item.id == viewModel.items.last?.id {
+                            Task { await viewModel.loadMore(route) }
                         }
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, HomeMetrics.inset)
                 }
                 if viewModel.isLoading {
-                    ProgressView()
-                        .tint(.gray)
-                        .frame(maxWidth: .infinity)
-                        .padding()
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
+                        ForEach(0 ..< 2, id: \.self) { _ in SkeletonRecipeCard() }
+                    }
+                    .padding(.horizontal, HomeMetrics.inset)
+                    .padding(.top, 12)
+                    .skeletonGroup(label: String(localized: "Loading search results"))
                 }
             }
             .padding(.top, 16)
@@ -41,27 +46,5 @@ struct SearchGroupView: View {
         .navigationTitle(route.group.title)
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.loadInitial(route) }
-    }
-
-    @ViewBuilder
-    private func cell(_ item: FeedItem) -> some View {
-        switch item {
-        case let .post(post):
-            NavigationLink(value: post) {
-                GridCard(
-                    photoKey: HomeTiles.photoKey(post.id),
-                    title: RecipeTitle.from(caption: post.caption),
-                    url: post.primaryPhotoURL?.asBackendURL
-                )
-            }
-            .buttonStyle(.borderless)
-        case let .ad(_, slot):
-            SponsoredTileView(slot: slot)
-        case .unknown:
-            // A real (blank) view rather than EmptyView, so the paging
-            // onAppear still fires when a newer server ends a page with a
-            // tag this build does not know.
-            Color.clear.frame(height: 1)
-        }
     }
 }

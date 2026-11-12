@@ -116,6 +116,52 @@
         }
       }
     },
+    "%lld almost there" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld almost there"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld casi listas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld presque prêtes"
+          }
+        }
+      }
+    },
+    "%lld ready now" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld ready now"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld listas ya"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld prêtes maintenant"
+          }
+        }
+      }
+    },
     ", unread" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -162,6 +208,98 @@
         }
       }
     },
+    "Couldn't load Search" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load Search"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo cargar la búsqueda"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de charger la recherche"
+          }
+        }
+      }
+    },
+    "Loading search results" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading search results"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cargando resultados de búsqueda"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chargement des résultats de recherche"
+          }
+        }
+      }
+    },
+    "No matches yet." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No matches yet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todavía no hay coincidencias."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune correspondance pour l’instant."
+          }
+        }
+      }
+    },
+    "Nothing complete yet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing complete yet"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nada completo todavía"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien de complet pour l’instant"
+          }
+        }
+      }
+    },
     "Opens the week planner" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -204,6 +342,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Publiez une recette que vous aimez déjà, ou enregistrez-en quelques-unes d’autres cuisiniers. Il se remplit au fil de vos plats."
+          }
+        }
+      }
+    },
+    "Salt, pepper, oil and garlic count as pantry staples." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salt, pepper, oil and garlic count as pantry staples."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La sal, la pimienta, el aceite y el ajo cuentan como básicos de despensa."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le sel, le poivre, l’huile et l’ail comptent comme des produits de base."
+          }
+        }
+      }
+    },
+    "Sponsored · partner recipe" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sponsored · partner recipe"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Patrocinado · receta de un socio"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sponsorisé · recette partenaire"
           }
         }
       }
@@ -277,6 +461,29 @@
         }
       }
     },
+    "Try removing an ingredient." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try removing an ingredient."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prueba a quitar un ingrediente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essayez de retirer un ingrédient."
+          }
+        }
+      }
+    },
     "What are you cooking, %@?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -342,6 +549,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quand une personne que vous suivez publie une recette, elle apparaît ici pendant sept jours."
+          }
+        }
+      }
+    },
+    "With %@, you can make…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With %@, you can make…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con %@, puedes preparar…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avec %@, vous pouvez cuisiner…"
+          }
+        }
+      }
+    },
+    "With your %lld ingredients" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With your %lld ingredients"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con tus %lld ingredientes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avec vos %lld ingrédients"
           }
         }
       }
@@ -9406,6 +9659,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "nom d'utilisateur"
+          }
+        }
+      }
+    },
+    "Uses %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uses %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilise %@"
           }
         }
       }

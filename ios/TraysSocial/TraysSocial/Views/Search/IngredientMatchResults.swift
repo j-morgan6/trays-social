@@ -4,71 +4,87 @@ import SwiftUI
 /// (W205): "You have everything" and "Almost there", each recipe listing
 /// what it still needs.
 ///
-/// Pads its own content (16pt) like the other search sections, because
-/// `SectionHeader` carries a built-in 20pt inset; outer padding would double it.
+/// W243: a summary card first ("With chicken and rice, you can make…"),
+/// then RowCards with Ready to cook / Need N pills, and a pantry note. Also
+/// shown by the classic `FindView`. Insets itself by `HomeMetrics.inset`.
 struct IngredientMatchResults: View {
     let viewModel: IngredientSearchViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            if let results = viewModel.results {
-                if results.isEmpty {
-                    EditorialEmptyState(
-                        title: String(localized: "No matches yet. Try removing an ingredient."),
-                        topPadding: 24
-                    )
-                } else {
-                    matchSection(String(localized: "You have everything"), results.everything)
-                    matchSection(String(localized: "Almost there"), results.almost)
-                }
-            } else if viewModel.isSearching {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 16)
+        if viewModel.isSearching {
+            SearchIngredientSkeleton()
+        } else if let results = viewModel.results {
+            if results.isEmpty {
+                EmptyStateBlock(
+                    title: String(localized: "No matches yet."),
+                    subtitle: String(localized: "Try removing an ingredient."),
+                    topPadding: 56,
+                    chrome: .plain
+                )
+            } else {
+                IngredientMatchContent(chips: viewModel.chips, results: results)
             }
         }
+    }
+}
+
+/// Loaded ingredient results, separate from the view model so previews can
+/// render it with sample data.
+struct IngredientMatchContent: View {
+    let chips: [String]
+    let results: IngredientSearchResults
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            summary(results)
+            matchSection(String(localized: "You have everything"), results.everything, ready: true)
+            matchSection(String(localized: "Almost there"), results.almost, ready: false)
+            Text("Salt, pepper, oil and garlic count as pantry staples.")
+                .scaledFont(12.5, relativeTo: .caption)
+                .foregroundStyle(Theme.muted)
+                .padding(.top, 18)
+                .padding(.horizontal, 4)
+        }
+        .padding(.horizontal, HomeMetrics.inset)
+    }
+
+    private func summary(_ results: IngredientSearchResults) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(IngredientSummary.title(chips: chips))
+                .roundedFont(22, weight: .bold, relativeTo: .title2)
+                .foregroundStyle(Theme.text)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(IngredientSummary.subtitle(ready: results.everything.count, almost: results.almost.count))
+                .scaledFont(14, relativeTo: .subheadline)
+                .foregroundStyle(Theme.muted)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 18)
+        .padding(.horizontal, 18)
+        .padding(.bottom, 16)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.accentMuted))
+        .padding(.top, 24)
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder
-    private func matchSection(_ title: String, _ matches: [IngredientMatch]) -> some View {
+    private func matchSection(_ title: String, _ matches: [IngredientMatch], ready: Bool) -> some View {
         if !matches.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                SectionHeader(label: title, count: matches.count)
+            HomeSectionHeading(label: title)
+                .padding(.horizontal, -HomeMetrics.inset)
+            VStack(spacing: 10) {
                 ForEach(matches) { match in
-                    NavigationLink(value: match.post) { matchRow(match) }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, 16)
+                    NavigationLink(value: match.post) {
+                        SearchRowCard(
+                            post: match.post,
+                            match: ready ? .readyToCook : .need(match.missing.count),
+                            uses: ready ? IngredientUses.line(chips: chips, in: match.post.ingredients) : nil,
+                            missing: match.missing
+                        )
+                    }
+                    .buttonStyle(.borderless)
                 }
             }
         }
-    }
-
-    private func matchRow(_ match: IngredientMatch) -> some View {
-        HStack(spacing: 12) {
-            Photo(key: photoKey(match.post), url: match.post.thumbURL?.asBackendURL)
-                .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(RecipeTitle.from(caption: match.post.caption))
-                    .font(.system(size: 15, weight: .semibold))
-                    .lineLimit(1)
-                Text("@\(match.post.user.username)")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                if !match.missing.isEmpty {
-                    Text("missing: \(match.missing.joined(separator: ", "))")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .contentShape(Rectangle())
-    }
-
-    private func photoKey(_ post: Post) -> FoodPalette.Key {
-        let keys = FoodPalette.Key.allCases
-        return keys[abs(post.id) % keys.count]
     }
 }
