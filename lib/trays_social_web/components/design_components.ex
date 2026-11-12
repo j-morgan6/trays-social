@@ -32,7 +32,12 @@ defmodule TraysSocialWeb.DesignComponents do
   """
   use Phoenix.Component
 
-  import TraysSocialWeb.CoreComponents, only: [icon: 1, user_avatar: 1]
+  use Phoenix.VerifiedRoutes,
+    endpoint: TraysSocialWeb.Endpoint,
+    router: TraysSocialWeb.Router,
+    statics: TraysSocialWeb.static_paths()
+
+  import TraysSocialWeb.CoreComponents, only: [icon: 1, user_avatar: 1, translate_error: 1]
 
   alias TraysSocial.Uploads.ImageProcessor
 
@@ -683,4 +688,319 @@ defmodule TraysSocialWeb.DesignComponents do
 
   defp follow_class(true), do: "bg-base-300 text-base-content"
   defp follow_class(false), do: "bg-primary text-primary-content hover:bg-primary-light"
+  # ---------------------------------------------------------------------------
+  # Sign-in (WebAuth artboard)
+  # ---------------------------------------------------------------------------
+
+  @brand_tiles [
+    {"hero-book-open", "Keep the recipes you love"},
+    {"hero-user-group", "See what friends cook"},
+    {"hero-shopping-bag", "Cook from what you have"}
+  ]
+
+  @doc """
+  The split-panel sign-in shell: the emerald brand panel (lockup, eyebrow,
+  headline and three tiles) beside the form. At phone width the panel
+  shrinks to the lockup and eyebrow, and the form sits under it on a
+  rounded sheet. The panel stays emerald in dark mode, as on the canvas.
+
+  ## Examples
+
+      <.auth_shell>
+        <.auth_heading title="Welcome back" subtitle="Log in to get back to your tray." />
+        ...
+      </.auth_shell>
+  """
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def auth_shell(assigns) do
+    assigns = assign(assigns, :tiles, @brand_tiles)
+
+    ~H"""
+    <div class="-mt-8 lg:mx-auto lg:mt-0 lg:max-w-[1280px] lg:px-6" {@rest}>
+      <div class="flex flex-col overflow-hidden lg:min-h-[760px] lg:flex-row lg:rounded-[14px] lg:shadow-card lg:ring-1 lg:ring-hairline-strong">
+        <section
+          aria-label="Trays"
+          class="flex flex-none flex-col items-center bg-primary px-[22px] pt-[26px] pb-11 text-center text-cream lg:w-[46%] lg:items-start lg:px-[52px] lg:py-11 lg:text-left"
+        >
+          <div class="flex items-center gap-3">
+            <img
+              src={~p"/images/logo-on-dark.svg"}
+              alt=""
+              width="52"
+              height="41"
+              class="h-auto w-11 lg:w-[52px]"
+            />
+            <span class="font-display text-[30px] font-black leading-none tracking-[-1px] lg:text-[34px]">
+              Trays
+            </span>
+          </div>
+          <p class="mt-3 text-xs font-semibold uppercase tracking-[2.4px] text-accent">
+            Recipes worth keeping
+          </p>
+          <div class="hidden flex-1 flex-col justify-center gap-6 lg:flex">
+            <p class="max-w-[440px] font-display text-[44px] font-extrabold leading-[1.1] tracking-[-0.02em]">
+              A quiet place to cook.
+            </p>
+            <ul class="grid max-w-[470px] grid-cols-3 gap-3">
+              <li
+                :for={{icon, label} <- @tiles}
+                class="flex min-h-28 flex-col justify-between gap-3 rounded-[18px] bg-cream/10 px-3.5 py-4 ring-1 ring-inset ring-cream/16"
+              >
+                <.icon name={icon} class="size-5" />
+                <span class="font-display text-[15px] font-extrabold leading-[1.25]">{label}</span>
+              </li>
+            </ul>
+          </div>
+          <p class="hidden text-[13px] text-cream/85 lg:block">Also on iPhone.</p>
+        </section>
+
+        <section class="relative -mt-[22px] flex flex-1 justify-center rounded-t-3xl bg-base-200 px-[22px] pb-7 lg:mt-0 lg:items-center lg:rounded-none lg:p-10">
+          <div class="w-full max-w-[400px] pt-[26px] lg:pt-0">
+            {render_slot(@inner_block)}
+          </div>
+        </section>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  The sign-in page heading: rounded sans title and a muted line under it.
+  """
+  attr :title, :string, required: true
+  attr :subtitle, :string, default: nil
+  slot :inner_block, doc: "rich subtitle content, used in place of `subtitle`"
+
+  def auth_heading(assigns) do
+    ~H"""
+    <h1 class="font-display text-[28px] font-extrabold leading-[1.15] tracking-[-0.02em] text-base-content break-words lg:text-[32px]">
+      {@title}
+    </h1>
+    <p
+      :if={@subtitle || @inner_block != []}
+      class="mt-1.5 text-[15px] leading-[1.45] text-muted break-words"
+    >
+      {@subtitle}{render_slot(@inner_block)}
+    </p>
+    """
+  end
+
+  @doc """
+  A labelled sign-in field: 13.5 semibold label 8px above a 50px surface
+  field with a strong hairline, the amber focus ring, and amber field
+  errors under it. Takes a form field like `<.input>`; the input keeps the
+  field's name and id, so form params are unchanged.
+
+  ## Examples
+
+      <.auth_input field={f[:email]} type="email" label="Email" autocomplete="email" required />
+  """
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :type, :string, default: "text", values: ~w(email password text)
+  attr :label, :string, required: true
+  attr :hint, :string, default: nil, doc: "muted note under the field"
+  attr :id, :any, default: nil
+
+  attr :rest, :global,
+    include: ~w(autocomplete disabled maxlength minlength placeholder readonly required)
+
+  slot :aside, doc: "shown at the end of the label row, e.g. a Forgot password? link"
+
+  def auth_input(assigns) do
+    field = assigns.field
+    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+
+    assigns =
+      assigns
+      |> assign(:id, assigns.id || field.id)
+      |> assign(:name, field.name)
+      |> assign(:value, field_value(assigns.type, field.value))
+      |> assign(:errors, Enum.map(errors, &translate_error/1))
+
+    ~H"""
+    <div class="flex flex-col gap-2">
+      <div class="flex min-h-5 items-center justify-between gap-3">
+        <label for={@id} class="text-[13.5px] font-semibold text-base-content">{@label}</label>
+        {render_slot(@aside)}
+      </div>
+      <input
+        type={@type}
+        name={@name}
+        id={@id}
+        value={@value}
+        aria-invalid={@errors != [] && "true"}
+        class={[
+          "min-h-[50px] w-full rounded-[14px] bg-base-100 px-4 text-base text-base-content",
+          "placeholder:text-muted outline-none read-only:text-muted",
+          "focus:ring-[1.5px] focus:ring-accent focus:outline-4 focus:outline-solid focus:outline-accent/25",
+          if(@errors != [],
+            do: "ring-[1.5px] ring-inset ring-accent",
+            else: "ring-1 ring-inset ring-hairline-strong"
+          )
+        ]}
+        {@rest}
+      />
+      <span :if={@hint} class="text-[13px] text-muted">{@hint}</span>
+      <.field_error :for={msg <- @errors}>{msg}</.field_error>
+    </div>
+    """
+  end
+
+  defp checkbox_checked?(nil, default), do: default
+
+  defp checkbox_checked?(value, _default),
+    do: Phoenix.HTML.Form.normalize_value("checkbox", value)
+
+  # A password is never written back into the page, so a failed log-in or
+  # registration does not echo what was typed into the HTML response.
+  defp field_value("password", _value), do: nil
+  defp field_value(type, value), do: Phoenix.HTML.Form.normalize_value(type, value)
+
+  @doc """
+  A sign-in checkbox row, 44px high, emerald when on, with amber field
+  errors under it. Sends "false" when unchecked, like `<.input type="checkbox">`.
+  `default` is the state before the field has a value (Keep me logged in
+  starts on); once the form is re-rendered with params, the submitted value
+  wins, so a box the user unchecked stays unchecked after a failed attempt.
+  """
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :label, :string, required: true
+  attr :default, :boolean, default: false, doc: "checked when the field has no value yet"
+  attr :rest, :global, include: ~w(required disabled)
+
+  def auth_checkbox(assigns) do
+    field = assigns.field
+    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+
+    assigns =
+      assigns
+      |> assign(:id, field.id)
+      |> assign(:name, field.name)
+      |> assign(:errors, Enum.map(errors, &translate_error/1))
+      |> assign(:is_checked, checkbox_checked?(field.value, assigns.default))
+
+    ~H"""
+    <div class="flex flex-col gap-2">
+      <input type="hidden" name={@name} value="false" />
+      <label class="flex min-h-11 cursor-pointer items-center gap-2.5 text-[15px] text-base-content">
+        <input
+          type="checkbox"
+          id={@id}
+          name={@name}
+          value="true"
+          checked={@is_checked}
+          class="checkbox checkbox-sm rounded-[7px] border-hairline-strong checked:border-primary checked:bg-primary checked:text-primary-content"
+          {@rest}
+        />
+        {@label}
+      </label>
+      <.field_error :for={msg <- @errors}>{msg}</.field_error>
+    </div>
+    """
+  end
+
+  @doc """
+  The mint "check your email" box: an in-place status (a sent sign-in link,
+  the verify-email gate), mint tint at 35% / 14%, radius 18.
+  """
+  attr :title, :string, default: nil
+  attr :class, :any, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def auth_status(assigns) do
+    ~H"""
+    <div
+      role="status"
+      class={["flex items-start gap-3 rounded-[18px] bg-mint-tint p-4 text-base-content", @class]}
+      {@rest}
+    >
+      <.icon name="hero-envelope" class="mt-0.5 size-5 shrink-0" />
+      <div class="min-w-0">
+        <p :if={@title} class="mb-1 font-display text-[17px] font-extrabold">{@title}</p>
+        <p class="text-[14.5px] leading-[1.45] break-words">{render_slot(@inner_block)}</p>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  An amber field error, in place under the field it belongs to.
+  """
+  slot :inner_block, required: true
+
+  def field_error(assigns) do
+    ~H"""
+    <p class="flex items-start gap-2 rounded-xl bg-accent/25 px-3 py-2 text-[13.5px] leading-[1.4] text-base-content">
+      <.icon name="hero-exclamation-circle" class="mt-px size-4 shrink-0" />
+      <span>{render_slot(@inner_block)}</span>
+    </p>
+    """
+  end
+
+  @doc """
+  The single error callout: amber-muted fill, amber-border ring, radius 14.
+  Sits directly above the primary button on the sign-in pages.
+  """
+  attr :class, :any, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def callout(assigns) do
+    ~H"""
+    <div
+      role="alert"
+      class={[
+        "flex items-start gap-2.5 rounded-[14px] bg-accent/25 px-3.5 py-3 text-[14.5px] leading-[1.4] text-base-content ring-1 ring-inset ring-accent/32",
+        @class
+      ]}
+      {@rest}
+    >
+      <.icon name="hero-exclamation-circle" class="mt-px size-5 shrink-0" />
+      <span>{render_slot(@inner_block)}</span>
+    </div>
+    """
+  end
+
+  @doc """
+  The "or with email" divider between Continue with Apple and the form.
+  """
+  attr :label, :string, default: "or with email"
+
+  def or_divider(assigns) do
+    ~H"""
+    <div class="flex items-center gap-3 text-[13px] text-muted before:h-px before:flex-1 before:bg-hairline-strong after:h-px after:flex-1 after:bg-hairline-strong">
+      {@label}
+    </div>
+    """
+  end
+
+  @doc """
+  Continue with Apple: a dark pill in light mode and a light pill in dark
+  mode, from the text and surface tokens so it follows the theme, including
+  the system setting.
+  """
+  attr :label, :string, default: "Continue with Apple"
+
+  def apple_button(assigns) do
+    ~H"""
+    <.link
+      navigate={~p"/auth/apple/start"}
+      class="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-base-content text-base font-semibold text-base-100 transition-opacity hover:opacity-90"
+      aria-label={@label}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 17 17"
+        class="size-5 fill-current"
+        aria-hidden="true"
+      >
+        <path d="M12.152 0c-.943.061-2.05.654-2.7 1.43-.59.71-1.083 1.764-.892 2.787 1.026.031 2.087-.575 2.713-1.366.582-.736 1.026-1.789.879-2.851zM15.97 12.18a4.49 4.49 0 0 1-.62 1.14c-.39.55-.71.93-.95 1.14-.39.36-.81.55-1.26.56-.32 0-.71-.09-1.16-.28-.46-.19-.88-.28-1.27-.28-.41 0-.84.09-1.3.28-.47.19-.85.29-1.13.3-.43.02-.86-.17-1.28-.58-.27-.23-.6-.62-.99-1.17-.42-.59-.77-1.28-1.04-2.06C5.66 10.5 5.5 9.43 5.5 8.4c0-1.18.26-2.2.78-3.05.41-.69.95-1.23 1.63-1.63.68-.4 1.41-.6 2.21-.62.34 0 .79.1 1.34.31.55.21.91.31 1.07.31.12 0 .51-.12 1.18-.36.63-.22 1.16-.32 1.6-.28 1.18.09 2.07.55 2.66 1.36-1.06.64-1.59 1.54-1.58 2.7 0 .9.33 1.65.98 2.24.29.28.62.5.98.65-.08.22-.16.43-.25.63z" />
+      </svg>
+      {@label}
+    </.link>
+    """
+  end
 end

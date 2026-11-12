@@ -1,48 +1,43 @@
 <%!-- W203: the confirm-email gate. Every logged-in page sends an
      unconfirmed user here, and this page offers only the ways out:
      resend the link, fix the address in settings, or log out. Copy
-     follows the iOS EmailVerificationGateView. Same editorial shell as
-     the rest of the auth flow; the root layout supplies the chrome. --%>
+     follows the iOS EmailVerificationGateView. W252 moves it into the
+     WebAuth split panel with the canvas's mint "Check your email" box. --%>
 
-<div id="confirm-required" class="max-w-[440px] mx-auto px-6 pt-12 md:pt-16 pb-16">
-  <div class="mb-8">
-    <div class="font-mono text-[11px] text-primary uppercase tracking-[0.18em] mb-3">
-      One last step
-    </div>
-    <h1 class="font-serif-editorial text-[44px] md:text-[52px] leading-none tracking-[-0.015em] text-base-content mb-3">
-      Verify your email
-    </h1>
-    <p class="text-[15px] text-base-content/70 leading-[1.55]">
-      We sent a verification link to <strong class="text-base-content">{@email}</strong>.
-      Open the link in that email, then come back here.
-    </p>
-  </div>
+<.auth_shell id="confirm-required">
+  <.auth_heading title="Verify your email" subtitle="One last step before you start cooking." />
 
-  <div class="bg-base-100 border border-base-300 rounded-md p-7 md:p-8">
+  <.auth_status title="Check your email" class="mt-6">
+    We sent a verification link to <strong>{@email}</strong>.
+    Open the link in that email, then come back here.
+  </.auth_status>
+
+  <div class="mt-6 flex flex-col gap-3">
     <.form for={%{}} id="resend-confirmation-form" action={~p"/users/confirmation/resend"}>
-      <.button phx-disable-with="Sending…" class="btn btn-primary w-full">
+      <.accent_button
+        type="submit"
+        wide
+        phx-disable-with="Sending…"
+        class="min-h-[52px] text-base shadow-lg shadow-accent/30"
+      >
         Resend verification email
-      </.button>
+      </.accent_button>
     </.form>
 
-    <.link
-      id="confirm-required-change-email"
-      href={~p"/users/settings"}
-      class="btn btn-ghost border border-base-300 w-full mt-2"
-    >
+    <.secondary_button id="confirm-required-change-email" href={~p"/users/settings"} wide>
       Change email
-    </.link>
-
-    <p class="mt-6 pt-4 border-t border-base-300 text-[12px] text-base-content/60">
-      Wrong account?
-      <.link
-        id="confirm-required-log-out"
-        href={~p"/users/log-out"}
-        method="delete"
-        class="underline"
-      >
-        Log out
-      </.link>
-    </p>
+    </.secondary_button>
   </div>
-</div>
+
+  <p class="mt-[22px] text-center text-[15px] text-muted">
+    Wrong account?
+    <.link
+      id="confirm-required-log-out"
+      href={~p"/users/log-out"}
+      method="delete"
+      class="inline-flex min-h-11 items-center px-1 font-semibold text-primary-ink hover:underline"
+    >
+      Log out
+    </.link>
+  </p>
+</.auth_shell>

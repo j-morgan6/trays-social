@@ -6,6 +6,11 @@ defmodule TraysSocialWeb.UserRegistrationController do
   alias TraysSocialWeb.AuthRateLimit
   alias TraysSocialWeb.UserAuth
 
+  # W252: the sign-in pages show info and error flashes in place (the amber
+  # callout above the button, the mint "check your email" box), so the root
+  # layout leaves them out of its toast group on these pages.
+  plug :inline_flash
+
   def new(conn, _params) do
     changeset = User.registration_changeset(%User{}, %{}, validate_unique: false)
     render(conn, :new, changeset: changeset)
@@ -58,4 +63,6 @@ defmodule TraysSocialWeb.UserRegistrationController do
         render(conn, :new, changeset: changeset)
     end
   end
+
+  defp inline_flash(conn, _opts), do: assign(conn, :inline_flash, true)
 end

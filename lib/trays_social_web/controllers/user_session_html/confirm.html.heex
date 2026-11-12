@@ -1,83 +1,79 @@
-<%!-- Magic-link confirm. Same editorial shell as the rest of the auth
-     flow — quiet centered form, serif heading. The root layout supplies
-     the page chrome. --%>
+<%!-- Magic-link confirm, in the WebAuth split panel (W252) so the whole
+     sign-in flow shares one shell. Amber primary, surface secondary. --%>
 
-<main class="max-w-[440px] mx-auto px-6 pt-12 md:pt-16 pb-16">
-  <div class="mb-8">
-    <div class="font-mono text-[11px] text-primary uppercase tracking-[0.18em] mb-3">
-      Confirm sign-in
-    </div>
-    <h1 class="font-serif-editorial text-[44px] md:text-[52px] leading-none tracking-[-0.015em] text-base-content mb-3">
-      Welcome, {@user.email}
-    </h1>
-    <p :if={!@user.confirmed_at} class="text-[15px] text-base-content/70 leading-[1.55]">
-      Confirm to finish setting up your tray.
-    </p>
-    <p :if={@user.confirmed_at} class="text-[15px] text-base-content/70 leading-[1.55]">
-      Pick how long you want to stay signed in.
-    </p>
-  </div>
+<.auth_shell id="confirm-sign-in">
+  <.auth_heading title={"Welcome, #{@user.email}"}>
+    {if @user.confirmed_at,
+      do: "Pick how long you want to stay logged in.",
+      else: "Confirm to finish setting up your tray."}
+  </.auth_heading>
 
-  <div class="bg-base-100 border border-base-300 rounded-md p-7 md:p-8">
-    <.form
-      :if={!@user.confirmed_at}
-      for={@form}
-      id="confirmation_form"
-      action={~p"/users/log-in?_action=confirmed"}
-      phx-mounted={JS.focus_first()}
+  <.auth_status :if={Phoenix.Flash.get(@flash, :info)} class="mt-6">
+    {Phoenix.Flash.get(@flash, :info)}
+  </.auth_status>
+
+  <.callout :if={Phoenix.Flash.get(@flash, :error)} id="confirm-error" class="mt-6">
+    {Phoenix.Flash.get(@flash, :error)}
+  </.callout>
+
+  <.form
+    :if={!@user.confirmed_at}
+    for={@form}
+    id="confirmation_form"
+    action={~p"/users/log-in?_action=confirmed"}
+    class="mt-6 flex flex-col gap-3"
+  >
+    <input type="hidden" name={@form[:token].name} value={@form[:token].value} />
+    <.accent_button
+      type="submit"
+      wide
+      name={@form[:remember_me].name}
+      value="true"
+      phx-disable-with="Confirming…"
+      class="min-h-[52px] text-base shadow-lg shadow-accent/30"
     >
-      <input type="hidden" name={@form[:token].name} value={@form[:token].value} />
-      <.button
+      Confirm and stay signed in
+    </.accent_button>
+    <.secondary_button type="submit" wide phx-disable-with="Confirming…">
+      Confirm just this once
+    </.secondary_button>
+  </.form>
+
+  <.form
+    :if={@user.confirmed_at}
+    for={@form}
+    id="login_form"
+    action={~p"/users/log-in"}
+    class="mt-6 flex flex-col gap-3"
+  >
+    <input type="hidden" name={@form[:token].name} value={@form[:token].value} />
+    <%= if @current_scope do %>
+      <.accent_button
+        type="submit"
+        wide
+        phx-disable-with="Logging in…"
+        class="min-h-[52px] text-base shadow-lg shadow-accent/30"
+      >
+        Log in
+      </.accent_button>
+    <% else %>
+      <.accent_button
+        type="submit"
+        wide
         name={@form[:remember_me].name}
         value="true"
-        phx-disable-with="Confirming…"
-        class="btn btn-primary w-full"
+        phx-disable-with="Logging in…"
+        class="min-h-[52px] text-base shadow-lg shadow-accent/30"
       >
-        Confirm and stay signed in
-      </.button>
-      <.button
-        phx-disable-with="Confirming…"
-        class="btn btn-ghost border border-base-300 w-full mt-2"
-      >
-        Confirm just this once
-      </.button>
-    </.form>
+        Keep me signed in on this browser
+      </.accent_button>
+      <.secondary_button type="submit" wide phx-disable-with="Logging in…">
+        Log in just this once
+      </.secondary_button>
+    <% end %>
+  </.form>
 
-    <.form
-      :if={@user.confirmed_at}
-      for={@form}
-      id="login_form"
-      action={~p"/users/log-in"}
-      phx-mounted={JS.focus_first()}
-    >
-      <input type="hidden" name={@form[:token].name} value={@form[:token].value} />
-      <%= if @current_scope do %>
-        <.button phx-disable-with="Signing in…" class="btn btn-primary w-full">
-          Sign in
-        </.button>
-      <% else %>
-        <.button
-          name={@form[:remember_me].name}
-          value="true"
-          phx-disable-with="Signing in…"
-          class="btn btn-primary w-full"
-        >
-          Keep me signed in on this device
-        </.button>
-        <.button
-          phx-disable-with="Signing in…"
-          class="btn btn-ghost border border-base-300 w-full mt-2"
-        >
-          Sign in just this once
-        </.button>
-      <% end %>
-    </.form>
-
-    <p
-      :if={!@user.confirmed_at}
-      class="mt-6 pt-4 border-t border-base-300 text-[12px] text-base-content/60"
-    >
-      Tip: if you prefer passwords, you can enable them in user settings.
-    </p>
-  </div>
-</main>
+  <p :if={!@user.confirmed_at} class="mt-6 text-center text-[13px] leading-normal text-muted">
+    Prefer a password? You can set one in your account settings.
+  </p>
+</.auth_shell>

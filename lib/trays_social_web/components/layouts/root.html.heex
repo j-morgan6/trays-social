@@ -56,8 +56,12 @@
 
     <%!-- Flash messages, rendered globally so controller flows (login,
          signup, settings, etc.) and LiveView flashes both surface
-         without needing each page to wrap in a layout component. --%>
-    <Layouts.flash_group flash={@flash} />
+         without needing each page to wrap in a layout component. The
+         sign-in pages render info and error in place (W252), so they set
+         :inline_flash and the toast group skips those two kinds. --%>
+    <Layouts.flash_group flash={
+      if assigns[:inline_flash], do: Map.drop(@flash, ["info", "error"]), else: @flash
+    } />
 
     <%!-- Main Content --%>
     <main class={["min-h-screen py-8", nav_mode == :classic && "pb-24 md:pb-8"]}>

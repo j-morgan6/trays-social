@@ -316,4 +316,104 @@ defmodule TraysSocialWeb.DesignComponentsTest do
       assert following =~ "bg-base-300"
     end
   end
+
+  # W252: the sign-in components from the WebAuth artboard.
+  describe "sign-in components" do
+    test "auth_shell stacks at phone width and splits from lg up" do
+      assigns = %{}
+
+      doc =
+        rendered_to_string(~H"""
+        <.auth_shell id="shell">Form</.auth_shell>
+        """)
+        |> LazyHTML.from_fragment()
+
+      # Phone first: one column, panel then form; the split, the headline and
+      # the tiles appear only from lg, and nothing has a fixed phone width.
+      row = LazyHTML.query(doc, "#shell > div")
+      assert_classes(LazyHTML.to_html(row), ["flex flex-col overflow-hidden", "lg:flex-row"])
+
+      assert doc
+             |> LazyHTML.query("section[aria-label=Trays] > div.hidden.lg\\:flex")
+             |> Enum.count() == 1
+
+      assert doc |> LazyHTML.query("section[aria-label=Trays] li") |> Enum.count() == 3
+      assert doc |> LazyHTML.query("div.w-full.max-w-\\[400px\\]") |> LazyHTML.text() =~ "Form"
+      refute LazyHTML.to_html(row) =~ ~r/ w-\[\d+px\]/
+    end
+
+    test "auth_input never renders a password value and marks errors" do
+      form =
+        to_form(%{"email" => "a b", "password" => "hunter2-secret"},
+          as: :user,
+          errors: [email: {"must have the @ sign and no spaces", []}],
+          action: :validate
+        )
+
+      assigns = %{form: form}
+
+      html =
+        rendered_to_string(~H"""
+        <.auth_input field={@form[:email]} type="email" label="Email" />
+        <.auth_input field={@form[:password]} type="password" label="Password" />
+        """)
+
+      refute html =~ "hunter2-secret"
+      assert html =~ ~s(value="a b")
+      assert html =~ ~s(aria-invalid="true")
+      assert_classes(html, ["bg-accent/25", "ring-accent", "must have the @ sign"])
+    end
+
+    test "auth_checkbox uses its default only before the field has a value" do
+      assigns = %{
+        fresh: to_form(%{}, as: :user),
+        posted: to_form(%{"remember_me" => "false"}, as: :user)
+      }
+
+      fresh =
+        rendered_to_string(~H"""
+        <.auth_checkbox field={@fresh[:remember_me]} label="Keep me logged in" default />
+        """)
+
+      posted =
+        rendered_to_string(~H"""
+        <.auth_checkbox field={@posted[:remember_me]} label="Keep me logged in" default />
+        """)
+
+      checked = fn html ->
+        html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("input[type=checkbox][checked]")
+        |> Enum.count()
+      end
+
+      assert checked.(fresh) == 1
+      assert checked.(posted) == 0
+    end
+
+    test "callout, auth_status and apple_button use theme tokens" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.callout>Invalid email or password</.callout>
+        <.auth_status title="Check your email">Sent.</.auth_status>
+        <.apple_button />
+        """)
+
+      assert_classes(html, [
+        ~s(role="alert"),
+        "bg-accent/25",
+        "ring-accent/32",
+        ~s(role="status"),
+        "bg-mint-tint",
+        "Check your email",
+        "bg-base-content",
+        "text-base-100",
+        "/auth/apple/start"
+      ])
+
+      refute html =~ "bg-black"
+    end
+  end
 end

@@ -1,119 +1,147 @@
-<%!-- Editorial sign-in. The root layout already supplies the Trays
-     wordmark and "Log in / Sign up" CTAs for unauthenticated visitors,
-     so this page is just the form, centered and quiet. --%>
+<%!-- Log in, per the WebAuth artboard (W252): the brand panel does the
+     Welcome screen's job beside the form. Continue with Apple first, then
+     email and password, "Keep me logged in" and the amber Log in button,
+     with the amber callout directly above it. Flashes render here rather
+     than as toasts (the controller sets :inline_flash). There is no
+     password reset on the web, so "Forgot password?" reveals the existing
+     sign-in link form. Sudo mode (@current_scope) reuses the page to
+     reauthenticate. --%>
 
-<main class="max-w-[440px] mx-auto px-6 pt-12 md:pt-16 pb-16">
+<.auth_shell id="log-in">
   <%= if @current_scope do %>
-    <div class="mb-8 text-center">
-      <h1 class="font-serif-editorial text-[44px] leading-none tracking-[-0.015em] text-base-content mb-3">
-        Reauthenticate
-      </h1>
-      <p class="text-[15px] text-base-content/70 leading-[1.55]">
-        Confirm your password to perform sensitive actions on your account.
-      </p>
-    </div>
+    <.auth_heading
+      title="Reauthenticate"
+      subtitle="Confirm your password to perform sensitive actions on your account."
+    />
   <% else %>
-    <div class="mb-8">
-      <div class="font-mono text-[11px] text-primary uppercase tracking-[0.18em] mb-3">
-        Welcome back
-      </div>
-      <h1 class="font-serif-editorial text-[44px] md:text-[52px] leading-none tracking-[-0.015em] text-base-content mb-3">
-        Back to your tray
-      </h1>
-      <p class="text-[15px] text-base-content/70 leading-[1.55]">
-        New here?
-        <.link navigate={~p"/users/register"} class="text-primary font-semibold hover:underline">
-          Start your tray
-        </.link>
-        — takes thirty seconds.
-      </p>
-    </div>
+    <.auth_heading title="Welcome back" subtitle="Log in to get back to your tray." />
   <% end %>
 
-  <div :if={local_mail_adapter?()} class="alert alert-info mb-6">
-    <.icon name="hero-information-circle" class="size-5 shrink-0" />
-    <div class="text-sm">
-      You're on the local mail adapter — sent emails appear in <.link
+  <.auth_status :if={Phoenix.Flash.get(@flash, :info)} class="mt-6">
+    {Phoenix.Flash.get(@flash, :info)}
+  </.auth_status>
+
+  <div
+    :if={local_mail_adapter?()}
+    class="mt-6 flex items-start gap-2.5 rounded-[14px] bg-base-100 px-3.5 py-3 text-[13.5px] leading-[1.45] text-muted ring-1 ring-inset ring-hairline-strong"
+  >
+    <.icon name="hero-information-circle" class="mt-px size-5 shrink-0" />
+    <span>
+      You're on the local mail adapter: sent emails appear in <.link
         href="/dev/mailbox"
-        class="underline"
+        class="font-semibold text-primary-ink underline"
       >the mailbox</.link>.
-    </div>
+    </span>
   </div>
 
-  <%!-- Primary path: password sign-in --%>
-  <div class="bg-base-100 border border-base-300 rounded-md p-7 md:p-8">
-    <.form :let={f} for={@form} as={:user} id="login_form_password" action={~p"/users/log-in"}>
-      <.input
-        readonly={!!@current_scope}
+  <div class="mt-6 flex flex-col gap-4">
+    <.apple_button />
+    <.or_divider />
+
+    <.form
+      :let={f}
+      for={@form}
+      as={:user}
+      id="login_form_password"
+      action={~p"/users/log-in"}
+      class="flex flex-col gap-4"
+    >
+      <.auth_input
         field={f[:email]}
         type="email"
         label="Email"
         autocomplete="email"
+        placeholder="you@example.com"
+        readonly={!!@current_scope}
         required
       />
-      <.input
+      <.auth_input
         field={f[:password]}
         type="password"
         label="Password"
         autocomplete="current-password"
+        placeholder="Your password"
         required
+      >
+        <:aside>
+          <a
+            href="#sign-in-link"
+            class="-my-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary-ink hover:underline"
+          >
+            Forgot password?
+          </a>
+        </:aside>
+      </.auth_input>
+
+      <.auth_checkbox
+        field={f[:remember_me]}
+        label="Keep me logged in on this browser"
+        default
       />
-      <.button
-        class="btn btn-primary w-full mt-2"
-        name={@form[:remember_me].name}
-        value="true"
+
+      <.callout :if={Phoenix.Flash.get(@flash, :error)} id="login-error">
+        {Phoenix.Flash.get(@flash, :error)}
+      </.callout>
+
+      <.accent_button
+        type="submit"
+        wide
+        phx-disable-with="Logging in…"
+        class="min-h-[52px] text-base shadow-lg shadow-accent/30"
       >
-        Sign in
-      </.button>
-      <.button class="btn btn-ghost btn-sm w-full mt-1 text-base-content/60">
-        Sign in just this once
-      </.button>
+        Log in
+      </.accent_button>
     </.form>
-
-    <%!-- Alternative paths — Apple Sign In + magic link. Kept under a
-         soft hairline so they feel like "or there's this" rather than
-         the stacked-social-buttons noise the editorial system avoids. --%>
-    <div class="relative my-6 flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-base-content/40">
-      <div class="flex-1 h-px bg-base-300"></div>
-      <span>or</span>
-      <div class="flex-1 h-px bg-base-300"></div>
-    </div>
-
-    <.link
-      navigate={~p"/auth/apple/start"}
-      class="inline-flex items-center justify-center w-full h-11 rounded-md bg-black text-white text-sm font-medium hover:bg-neutral-800 transition-colors gap-2"
-      aria-label="Sign in with Apple"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 17 17"
-        class="size-5 fill-current"
-        aria-hidden="true"
-      >
-        <path d="M12.152 0c-.943.061-2.05.654-2.7 1.43-.59.71-1.083 1.764-.892 2.787 1.026.031 2.087-.575 2.713-1.366.582-.736 1.026-1.789.879-2.851zM15.97 12.18a4.49 4.49 0 0 1-.62 1.14c-.39.55-.71.93-.95 1.14-.39.36-.81.55-1.26.56-.32 0-.71-.09-1.16-.28-.46-.19-.88-.28-1.27-.28-.41 0-.84.09-1.3.28-.47.19-.85.29-1.13.3-.43.02-.86-.17-1.28-.58-.27-.23-.6-.62-.99-1.17-.42-.59-.77-1.28-1.04-2.06C5.66 10.5 5.5 9.43 5.5 8.4c0-1.18.26-2.2.78-3.05.41-.69.95-1.23 1.63-1.63.68-.4 1.41-.6 2.21-.62.34 0 .79.1 1.34.31.55.21.91.31 1.07.31.12 0 .51-.12 1.18-.36.63-.22 1.16-.32 1.6-.28 1.18.09 2.07.55 2.66 1.36-1.06.64-1.59 1.54-1.58 2.7 0 .9.33 1.65.98 2.24.29.28.62.5.98.65-.08.22-.16.43-.25.63z" />
-      </svg>
-      Continue with Apple
-    </.link>
-
-    <details class="mt-4 group">
-      <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer text-xs text-base-content/60 hover:text-base-content text-center">
-        <span class="group-open:hidden">Forgot your password? Use a sign-in link instead</span>
-        <span class="hidden group-open:inline">Hide sign-in link option</span>
-      </summary>
-      <div class="mt-4 pt-4 border-t border-base-300">
-        <.form :let={f} for={@form} as={:user} id="login_form_magic" action={~p"/users/log-in"}>
-          <.input
-            field={f[:email]}
-            type="email"
-            label="Email"
-            autocomplete="email"
-            required
-          />
-          <.button class="btn btn-ghost border border-base-300 w-full mt-2">
-            Email me a sign-in link
-          </.button>
-        </.form>
-      </div>
-    </details>
   </div>
-</main>
+
+  <%!-- No reset flow exists on the web; the sign-in link is the way back
+       in. The section is hidden until "Forgot password?" targets it
+       (:target), so it opens without JavaScript in every browser. --%>
+  <section
+    id="sign-in-link"
+    aria-labelledby="sign-in-link-title"
+    class="mt-6 hidden scroll-mt-24 rounded-[18px] bg-base-100 p-4 ring-1 ring-inset ring-hairline-strong target:block"
+  >
+    <div class="flex items-start justify-between gap-3">
+      <h2
+        id="sign-in-link-title"
+        class="font-display text-[17px] font-extrabold text-base-content"
+      >
+        Email me a sign-in link
+      </h2>
+      <a
+        href="#log-in"
+        class="-mt-2 -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted hover:text-base-content"
+        aria-label="Close the sign-in link form"
+      >
+        <.icon name="hero-x-mark" class="size-5" />
+      </a>
+    </div>
+    <p class="mt-1 text-[14px] leading-[1.45] text-muted">
+      Enter the email you signed up with and we'll send a link that logs you in.
+    </p>
+    <.form
+      :let={f}
+      for={@form}
+      as={:user}
+      id="login_form_magic"
+      action={~p"/users/log-in"}
+      class="mt-4 flex flex-col gap-4"
+    >
+      <.auth_input field={f[:email]} type="email" label="Email" autocomplete="email" required />
+      <.secondary_button type="submit" wide phx-disable-with="Sending…">
+        Send sign-in link
+      </.secondary_button>
+    </.form>
+  </section>
+
+  <p :if={!@current_scope} class="mt-[22px] text-center text-[15px] text-muted">
+    New here?
+    <.link
+      navigate={~p"/users/register"}
+      class="inline-flex min-h-11 items-center px-1 font-semibold text-primary-ink hover:underline"
+    >
+      Create an account
+    </.link>
+  </p>
+</.auth_shell>

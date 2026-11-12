@@ -125,5 +125,40 @@ defmodule TraysSocialWeb.UserConfirmationControllerTest do
     end
   end
 
+  # W252: the verify-email gate shares the WebAuth shell; the mint
+  # "Check your email" box and the gate's ids and routes are unchanged.
+  describe "GET /users/confirm-required in the sign-in shell" do
+    test "renders the brand panel, the check-your-email box and the ways out" do
+      user = unconfirmed_user_fixture()
+
+      doc =
+        user
+        |> signed_in_get(~p"/users/confirm-required")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert doc |> LazyHTML.query("#confirm-required section[aria-label=Trays]") |> Enum.count() ==
+               1
+
+      status = LazyHTML.query(doc, "#confirm-required [role=status].bg-mint-tint")
+      assert LazyHTML.text(status) =~ "Check your email"
+      assert LazyHTML.text(status) =~ user.email
+
+      resend =
+        LazyHTML.query(doc, "form#resend-confirmation-form[action='/users/confirmation/resend']")
+
+      assert resend |> LazyHTML.query("input[name='_csrf_token']") |> Enum.count() == 1
+      assert resend |> LazyHTML.query("button.bg-accent") |> Enum.count() == 1
+
+      assert doc
+             |> LazyHTML.query("a#confirm-required-change-email[href='/users/settings']")
+             |> Enum.count() == 1
+
+      assert doc
+             |> LazyHTML.query("a#confirm-required-log-out[data-method=delete]")
+             |> Enum.count() == 1
+    end
+  end
+
   defp signed_in_get(user, path), do: build_conn() |> log_in_user(user) |> get(path)
 end

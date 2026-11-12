@@ -11,6 +11,11 @@ defmodule TraysSocialWeb.UserSessionController do
   # currently under attack).
   @generic_login_error "Invalid email or password"
 
+  # W252: the sign-in pages show info and error flashes in place (the amber
+  # callout above the button, the mint "check your email" box), so the root
+  # layout leaves them out of its toast group on these pages.
+  plug :inline_flash
+
   def new(conn, _params) do
     email = get_in(conn.assigns, [:current_scope, Access.key(:user), Access.key(:email)])
     form = Phoenix.Component.to_form(%{"email" => email}, as: "user")
@@ -110,4 +115,6 @@ defmodule TraysSocialWeb.UserSessionController do
     |> put_flash(:info, "Logged out successfully.")
     |> UserAuth.log_out_user()
   end
+
+  defp inline_flash(conn, _opts), do: assign(conn, :inline_flash, true)
 end

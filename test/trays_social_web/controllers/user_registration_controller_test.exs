@@ -84,6 +84,55 @@ defmodule TraysSocialWeb.UserRegistrationControllerTest do
       assert response =~ "must have the @ sign and no spaces"
     end
 
+    # W252: field errors sit in place under their field as the amber
+    # field error, the form keeps its action and param names, and the
+    # restyled shell (brand panel, amber Create account) renders.
+    test "invalid registration shows errors", %{conn: conn} do
+      doc =
+        conn
+        |> post(~p"/users/register", %{"user" => %{"email" => "with spaces", "username" => "x"}})
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert doc |> LazyHTML.query("#create-account section[aria-label=Trays]") |> Enum.count() ==
+               1
+
+      form = LazyHTML.query(doc, "#create-account form[action='/users/register']")
+      assert form |> LazyHTML.query("input[name='_csrf_token']") |> Enum.count() == 1
+
+      for name <- ~w(username email password password_confirmation age_confirmation) do
+        assert form |> LazyHTML.query("input[name='user[#{name}]']") |> Enum.count() >= 1
+      end
+
+      email_field = LazyHTML.query(form, "input#user_email[aria-invalid=true]")
+      assert Enum.count(email_field) == 1
+
+      assert form |> LazyHTML.query("p.bg-accent\\/25") |> LazyHTML.text() =~
+               "must have the @ sign"
+
+      assert form |> LazyHTML.query("button[type=submit].bg-accent") |> LazyHTML.text() =~
+               "Create account"
+    end
+
+    test "a failed registration never echoes the password", %{conn: conn} do
+      html =
+        conn
+        |> post(~p"/users/register", %{
+          "user" => %{
+            "email" => "with spaces",
+            "password" => "typed-secret-password",
+            "password_confirmation" => "typed-secret-password"
+          }
+        })
+        |> html_response(200)
+
+      refute html =~ "typed-secret-password"
+      doc = LazyHTML.from_document(html)
+      password = LazyHTML.query(doc, "input#user_password")
+      assert Enum.count(password) == 1
+      assert LazyHTML.attribute(password, "value") == []
+    end
+
     test "rejects registration when age confirmation checkbox is unchecked", %{conn: conn} do
       # Phoenix's checkbox component always renders a hidden `value="false"`
       # before the visible input, so an unchecked checkbox POSTs as "false"
@@ -96,6 +145,34 @@ defmodule TraysSocialWeb.UserRegistrationControllerTest do
       response = html_response(conn, 200)
       assert response =~ "Start your tray"
       assert response =~ "13 or older"
+      refute get_session(conn, :user_token)
+    end
+  end
+
+  describe "POST /users/register with rate limiting enabled" do
+    setup do
+      Application.put_env(:trays_social, :disable_rate_limiting, false)
+      on_exit(fn -> Application.put_env(:trays_social, :disable_rate_limiting, true) end)
+      :ok
+    end
+
+    # W252: the rate limit still applies after the restyle, and its neutral
+    # D46 message shows once, as the amber callout above the button rather
+    # than as a toast.
+    test "a rate-limited registration shows the amber callout in place" do
+      ip = {10, Enum.random(0..255), Enum.random(0..255), Enum.random(0..255)}
+
+      attempt = fn ->
+        post(%{build_conn() | remote_ip: ip}, ~p"/users/register", %{"user" => %{}})
+      end
+
+      for _ <- 1..5, do: attempt.()
+      conn = attempt.()
+
+      doc = conn |> html_response(200) |> LazyHTML.from_document()
+      callout = LazyHTML.query(doc, "#create-account #registration-error[role=alert]")
+      assert LazyHTML.text(callout) =~ "Unable to create your account right now"
+      assert doc |> LazyHTML.query("#flash-error") |> Enum.count() == 0
       refute get_session(conn, :user_token)
     end
   end

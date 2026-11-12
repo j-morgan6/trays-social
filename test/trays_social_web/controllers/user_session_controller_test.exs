@@ -12,10 +12,57 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
     test "renders login page", %{conn: conn} do
       conn = get(conn, ~p"/users/log-in")
       response = html_response(conn, 200)
-      # Editorial sign-in: serif heading + primary CTA + link to register.
-      assert response =~ "Back to your tray"
+      # WebAuth sign-in: heading, amber Log in, link to Create account.
+      assert response =~ "Welcome back"
       assert response =~ ~p"/users/register"
-      assert response =~ "Sign in"
+      assert response =~ "Log in"
+    end
+
+    # W252: the WebAuth split panel. Asserts each restyled section and that
+    # the form keeps its ids, action and param names (the visual pass must
+    # not change what the controller receives).
+    test "log-in page renders the form", %{conn: conn} do
+      doc = conn |> get(~p"/users/log-in") |> html_response(200) |> LazyHTML.from_document()
+
+      # Brand panel beside the form: lockup, eyebrow, headline, three tiles.
+      panel = LazyHTML.query(doc, "#log-in section[aria-label=Trays]")
+      assert LazyHTML.text(panel) =~ "Recipes worth keeping"
+      assert LazyHTML.text(panel) =~ "A quiet place to cook."
+      assert panel |> LazyHTML.query("li") |> Enum.count() == 3
+      assert panel |> LazyHTML.query("img[src='/images/logo-on-dark.svg']") |> Enum.count() == 1
+
+      # The password form posts to the same route with the same params.
+      form = LazyHTML.query(doc, "form#login_form_password[action='/users/log-in']")
+      assert Enum.count(form) == 1
+      assert form |> LazyHTML.query("input[name='_csrf_token']") |> Enum.count() == 1
+
+      assert form
+             |> LazyHTML.query("input#login_form_password_email[name='user[email]']")
+             |> Enum.count() == 1
+
+      assert form
+             |> LazyHTML.query("input#login_form_password_password[name='user[password]']")
+             |> Enum.count() == 1
+
+      # Keep me logged in is a checkbox sending remember_me=true, on by default.
+      remember =
+        LazyHTML.query(form, "input[type=checkbox][name='user[remember_me]'][value=true]")
+
+      assert LazyHTML.attribute(remember, "checked") == [""]
+
+      # Amber primary button; no error callout until a failed attempt.
+      assert form |> LazyHTML.query("button[type=submit].bg-accent") |> LazyHTML.text() =~
+               "Log in"
+
+      assert doc |> LazyHTML.query("#login-error") |> Enum.count() == 0
+
+      # Forgot password? reveals the existing sign-in link form: the section
+      # is hidden until it is the :target, so it needs no JavaScript.
+      assert doc |> LazyHTML.query("a[href='#sign-in-link']") |> LazyHTML.text() =~
+               "Forgot password?"
+
+      section = LazyHTML.query(doc, "section#sign-in-link.hidden.target\\:block")
+      assert section |> LazyHTML.query("form#login_form_magic") |> Enum.count() == 1
     end
 
     test "renders login page with email filled in (sudo mode)", %{conn: conn, user: user} do
@@ -39,9 +86,9 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
     test "renders login page (email + password)", %{conn: conn} do
       conn = get(conn, ~p"/users/log-in?mode=password")
       response = html_response(conn, 200)
-      assert response =~ "Back to your tray"
+      assert response =~ "Welcome back"
       assert response =~ ~p"/users/register"
-      assert response =~ "Sign in"
+      assert response =~ "Log in"
     end
   end
 
@@ -55,6 +102,33 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
       conn = get(conn, ~p"/users/log-in/#{token}")
       # Editorial confirm copy.
       assert html_response(conn, 200) =~ "Confirm and stay signed in"
+    end
+
+    # W252: the confirm page shares the WebAuth shell, and a long email in
+    # its heading wraps instead of overflowing at phone width.
+    test "renders the confirm page in the sign-in shell with a wrapping heading", %{conn: conn} do
+      user = user_fixture(email: String.duplicate("a", 60) <> "@example.com")
+
+      token =
+        extract_user_token(fn url ->
+          Accounts.deliver_login_instructions(user, url)
+        end)
+
+      doc =
+        conn |> get(~p"/users/log-in/#{token}") |> html_response(200) |> LazyHTML.from_document()
+
+      panel = LazyHTML.query(doc, "#confirm-sign-in section[aria-label=Trays]")
+      assert LazyHTML.text(panel) =~ "A quiet place to cook."
+
+      assert doc |> LazyHTML.query("#confirm-sign-in h1.break-words") |> LazyHTML.text() =~
+               user.email
+
+      form = LazyHTML.query(doc, "form#login_form[action='/users/log-in']")
+      assert form |> LazyHTML.query("input[name='user[token]'][type=hidden]") |> Enum.count() == 1
+
+      assert form
+             |> LazyHTML.query("button.bg-accent[name='user[remember_me]'][value=true]")
+             |> Enum.count() == 1
     end
 
     test "renders login page for confirmed user", %{conn: conn, user: user} do
@@ -141,9 +215,62 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
         })
 
       response = html_response(conn, 200)
-      # Failed credential POST re-renders the editorial sign-in landing.
-      assert response =~ "Back to your tray"
-      assert response =~ "Invalid email or password"
+      # Failed credential POST re-renders the sign-in page with the amber
+      # callout above the button, and the toast group leaves it out so the
+      # message shows once.
+      assert response =~ "Welcome back"
+      doc = LazyHTML.from_document(response)
+      callout = LazyHTML.query(doc, "#login_form_password #login-error[role=alert]")
+      assert LazyHTML.text(callout) =~ "Invalid email or password"
+      assert doc |> LazyHTML.query("#flash-error") |> Enum.count() == 0
+      # Generic copy: nothing says whether the account exists.
+      refute response =~ "not found"
+      refute response =~ "no account"
+    end
+
+    test "a failed log-in keeps the remember-me choice and never echoes the password", %{
+      conn: conn,
+      user: user
+    } do
+      doc =
+        conn
+        |> post(~p"/users/log-in", %{
+          "user" => %{
+            "email" => user.email,
+            "password" => "wrong-password-typed",
+            "remember_me" => "false"
+          }
+        })
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      remember = LazyHTML.query(doc, "input[type=checkbox][name='user[remember_me]']")
+      assert Enum.count(remember) == 1
+      assert LazyHTML.attribute(remember, "checked") == []
+
+      password = LazyHTML.query(doc, "input#login_form_password_password")
+      assert Enum.count(password) == 1
+      assert LazyHTML.attribute(password, "value") == []
+      refute LazyHTML.to_html(doc) =~ "wrong-password-typed"
+    end
+
+    test "a sign-in link request shows the check-your-email box in place", %{
+      conn: conn,
+      user: user
+    } do
+      conn = post(conn, ~p"/users/log-in", %{"user" => %{"email" => user.email}})
+      assert redirected_to(conn) == ~p"/users/log-in"
+
+      doc =
+        conn
+        |> recycle()
+        |> get(~p"/users/log-in")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      status = LazyHTML.query(doc, "#log-in [role=status]")
+      assert LazyHTML.text(status) =~ "If your email is in our system"
+      assert doc |> LazyHTML.query("#flash-info") |> Enum.count() == 0
     end
 
     test "refuses suspended user and redirects to log-in with flash", %{conn: conn} do
