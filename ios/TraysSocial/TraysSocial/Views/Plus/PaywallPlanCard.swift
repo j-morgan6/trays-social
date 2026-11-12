@@ -10,45 +10,62 @@ struct PaywallPlanCard: View {
     let isSelected: Bool
     let onSelect: () -> Void
 
-    @Environment(\.colorScheme) private var colorScheme
-
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
         Button(action: onSelect) {
             HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
+                radio
+                VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.headline)
+                        .scaledFont(16, weight: .bold, relativeTo: .headline)
                         .foregroundStyle(Theme.text)
                     if let trialLine {
                         Text(trialLine)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Theme.accentInk(for: colorScheme))
+                            .scaledFont(13, weight: .semibold, relativeTo: .footnote)
+                            .foregroundStyle(Theme.primaryInk)
                     }
+                    // The price stays at least as prominent as the trial line:
+                    // rounded, heavy and in text colour.
                     Text(priceLine)
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
+                        .roundedFont(15, weight: .heavy, relativeTo: .subheadline)
+                        .foregroundStyle(Theme.text)
                 }
                 .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 8)
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(isSelected ? Theme.accentInk(for: colorScheme) : Theme.subtle(for: colorScheme))
-                    .accessibilityHidden(true)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .background(shape.fill(Theme.surface))
+            // More artboard: a hairline ring at rest; selected, an amber ring
+            // inside a soft amber halo.
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(
-                        isSelected ? Theme.accentBorder : Theme.hairline(for: colorScheme),
-                        lineWidth: isSelected ? 2 : 1
-                    )
+                shape.strokeBorder(
+                    isSelected ? Theme.accent : Theme.hairlineStrong,
+                    lineWidth: isSelected ? 2 : 1
+                )
             )
+            .background {
+                if isSelected {
+                    shape.inset(by: -2).stroke(Theme.accentMuted, lineWidth: 4)
+                }
+            }
+            .contentShape(shape)
         }
+        .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    /// A 24pt radio: a hairline circle at rest, a thick amber ring when
+    /// selected.
+    private var radio: some View {
+        Circle()
+            .strokeBorder(
+                isSelected ? Theme.accent : Theme.hairlineStrong,
+                lineWidth: isSelected ? 7 : 2
+            )
+            .frame(width: 24, height: 24)
+            .accessibilityHidden(true)
     }
 
     private var title: String {
@@ -77,4 +94,37 @@ struct PaywallPlanCard: View {
             ? String(format: String(localized: "Then %@ per month"), plan.displayPrice)
             : String(format: String(localized: "%@ per month"), plan.displayPrice)
     }
+}
+
+/// Previews only. The price is a placeholder, never a figure: real prices
+/// always come from StoreKit.
+private struct PaywallPlanCardGallery: View {
+    var body: some View {
+        VStack(spacing: 10) {
+            PaywallPlanCard(
+                plan: PlanOption(id: "yearly", displayPrice: "[PRICE]", period: .year, freeTrial: .week),
+                isSelected: true,
+                onSelect: {}
+            )
+            PaywallPlanCard(
+                plan: PlanOption(id: "monthly", displayPrice: "[PRICE]", period: .month, freeTrial: nil),
+                isSelected: false,
+                onSelect: {}
+            )
+        }
+        .padding(24)
+        .background(Theme.background)
+    }
+}
+
+#Preview("Plan cards · light") {
+    PaywallPlanCardGallery().preferredColorScheme(.light)
+}
+
+#Preview("Plan cards · dark") {
+    PaywallPlanCardGallery().preferredColorScheme(.dark)
+}
+
+#Preview("Plan cards · largest text") {
+    PaywallPlanCardGallery().dynamicTypeSize(.accessibility5)
 }

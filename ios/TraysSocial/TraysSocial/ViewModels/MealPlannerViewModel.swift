@@ -31,6 +31,10 @@ final class MealPlannerViewModel {
     var groceryGroups: [GroceryGroup] = []
     var isLoadingWeek = false
     var isLoadingGrocery = false
+    /// W253: the displayed week's last load failed. Drives the planner's
+    /// load-failure block; cleared when a load starts or the week changes.
+    /// Logged only, never toasted (D95).
+    var weekLoadFailed = false
     /// Flipped by a server 403 `subscription_required` on the gated write, and
     /// by the locked-user branch of the day's add button.
     var needsPaywall = false
@@ -74,6 +78,7 @@ final class MealPlannerViewModel {
     func setWeek(_ newWeek: PlannerWeek, today: Date = Date()) {
         week = newWeek
         weekGeneration += 1
+        weekLoadFailed = false
         entries = []
         groceryGroups = []
         pendingRemovals.removeAll()

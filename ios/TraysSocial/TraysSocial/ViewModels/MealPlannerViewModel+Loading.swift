@@ -30,6 +30,7 @@ extension MealPlannerViewModel {
 
     func loadWeekEntries(generation: Int) async {
         isLoadingWeek = true
+        weekLoadFailed = false
         do {
             let response: DataResponse<MealPlanWeekPayload> = try await APIClient.shared.get(
                 path: "/meal-plan",
@@ -43,9 +44,19 @@ extension MealPlannerViewModel {
             // no way back — the opposite of graceful re-lock.
             markWeekLoadSucceeded()
         } catch {
-            Self.log.error("week load failed: \(String(describing: error), privacy: .public)")
+            recordWeekLoadFailure(error, generation: generation)
         }
         isLoadingWeek = false
+    }
+
+    /// D95: log, never toast. A response for a week the user has already left
+    /// must not flag the week now on screen, and a cancelled read is not a
+    /// failure. Internal so the tests can drive it without the network.
+    func recordWeekLoadFailure(_ error: Error, generation: Int) {
+        if generation == weekGeneration, !(error is CancellationError) {
+            weekLoadFailed = true
+        }
+        Self.log.error("week load failed: \(String(describing: error), privacy: .public)")
     }
 
     func loadGrocery(generation: Int) async {

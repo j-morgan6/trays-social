@@ -1,19 +1,14 @@
 import SwiftUI
 
-/// Notifications screen ported from the Pass 1 prototype's
-/// NotificationsScreen (prototype.jsx lines 654-695): a 30pt bold large
-/// title + subtitle inside the pushed scroll content (the back button
-/// + inline title come from the NavigationStack chrome), followed by a
-/// rounded card containing a vertical list of notification rows.
+/// Notifications, restyled to the More artboard ("Notifications"): a rounded
+/// page title with the unread count and "Mark all read", then the list in
+/// Today / This week / Earlier groups, each a soft card of rows. A row shows
+/// the leading amber unread dot, the actor's avatar, "@username action", the
+/// time, and the recipe's photo when the notification has one.
 ///
-/// Each row shows: 36pt `Avi`, amber-ink `@username` inline with the
-/// action phrase, "Nm ago" / "Nd ago" subtle line, and an 8pt amber
-/// unread dot trailing when the notification is unread.
-///
-/// Unread state stays visible on appear — tapping a row marks just
-/// that notification read (not the whole list at once).
+/// Unread state stays visible on appear — tapping a row marks just that
+/// notification read; "Mark all read" marks the rest.
 struct NotificationsView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(AppState.self) private var appState
     @State private var viewModel = NotificationsViewModel()
 
@@ -21,27 +16,18 @@ struct NotificationsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 headerSection
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 18)
                     .padding(.top, 12)
-                    .padding(.bottom, 14)
 
-                if viewModel.isLoading {
-                    ProgressView()
-                        .tint(Theme.accent)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 60)
-                } else if viewModel.notifications.isEmpty {
-                    emptyState
-                } else {
-                    notificationCard
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
-                }
+                content
+                    .padding(.bottom, 24)
             }
         }
         .background(Theme.background)
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Theme.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .task {
             await viewModel.load()
             // D72: keep the shell's bell dot in sync with the screen
@@ -54,115 +40,189 @@ struct NotificationsView: View {
         }
     }
 
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Notifications")
-                .font(.system(size: 30, weight: .bold))
-                .tracking(-0.75)
-                .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
+    @ViewBuilder
+    private var content: some View {
+        switch ContentLoadState.decide(
+            hasContent: !viewModel.notifications.isEmpty,
+            hasLoaded: viewModel.hasLoaded,
+            isLoading: viewModel.isLoading,
+            loadFailed: viewModel.loadFailed
+        ) {
+        case .loading:
+            NotificationsSkeleton()
+                .padding(.horizontal, 18)
+                .padding(.top, 22)
+        case .error:
+            // D95: the failure is logged by the view model; never toasted.
+            TrayLoadErrorView(
+                title: String(localized: "Notifications didn't load"),
+                onRetry: { Task { await viewModel.load() } }
+            )
+            .padding(.horizontal, 18)
+        case .empty:
+            emptyState
+        case .content:
+            VStack(alignment: .leading, spacing: 22) {
+                group(String(localized: "Today"), viewModel.todayNotifications)
+                group(String(localized: "This week"), viewModel.thisWeekNotifications)
+                group(String(localized: "Earlier"), viewModel.earlierNotifications)
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 22)
+        }
+    }
 
-            if !viewModel.notifications.isEmpty {
-                Text(subtitle)
-                    .font(.system(size: 13.5))
-                    .foregroundStyle(Theme.muted(for: colorScheme))
+    private var headerSection: some View {
+        HStack(alignment: .bottom, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Notifications")
+                    .roundedFont(32, weight: .heavy, relativeTo: .largeTitle)
+                    .tracking(-0.6)
+                    .foregroundStyle(Theme.text)
+                    .accessibilityAddTraits(.isHeader)
+
+                if !viewModel.notifications.isEmpty {
+                    Text(subtitle)
+                        .scaledFont(15, relativeTo: .subheadline)
+                        .foregroundStyle(Theme.muted)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if viewModel.unreadCount > 0 {
+                Button(String(localized: "Mark all read")) {
+                    viewModel.markRead(viewModel.notifications.filter { !$0.isRead }.map(\.id))
+                }
+                .scaledFont(14.5, weight: .semibold, relativeTo: .subheadline)
+                .foregroundStyle(Theme.primaryInk)
+                .frame(minHeight: 44)
+                .buttonStyle(.plain)
             }
         }
     }
 
     private var subtitle: String {
-        let unread = viewModel.notifications.count(where: { !$0.isRead })
+        let unread = viewModel.unreadCount
         if unread == 0 {
             return String(localized: "You're caught up.")
         }
         return String(localized: "\(unread) unread.")
     }
 
-    private var notificationCard: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(viewModel.notifications.enumerated()), id: \.element.id) { index, notification in
-                NotificationRow(notification: notification) {
-                    viewModel.markRead([notification.id])
+    /// One dated group; renders nothing when the group is empty.
+    @ViewBuilder
+    private func group(_ title: String, _ items: [AppNotification]) -> some View {
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .roundedFont(17, weight: .heavy, relativeTo: .headline)
+                    .foregroundStyle(Theme.text)
+                    .accessibilityAddTraits(.isHeader)
+
+                VStack(spacing: 0) {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, notification in
+                        NotificationRow(notification: notification) {
+                            viewModel.markRead([notification.id])
+                        }
+                        if index < items.count - 1 {
+                            Rectangle()
+                                .fill(Theme.hairline)
+                                .frame(height: 1)
+                        }
+                    }
                 }
-                if index < viewModel.notifications.count - 1 {
-                    Rectangle()
-                        .fill(Theme.hairline(for: colorScheme))
-                        .frame(height: 1)
-                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 2)
+                .cardSurface(cornerRadius: 22)
             }
         }
-        .background(Theme.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Theme.hairline(for: colorScheme), lineWidth: 1)
-        )
     }
 
+    /// Empty-state block with the bell in a mint circle (More artboard,
+    /// "Notifications · empty").
     private var emptyState: some View {
-        VStack(spacing: 6) {
-            Text("Nothing here yet")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
-            Text("Quiet by design. We won't ping you for the algorithm's sake.")
-                .font(.system(size: 13))
-                .foregroundStyle(Theme.muted(for: colorScheme))
-                .multilineTextAlignment(.center)
+        VStack(spacing: 14) {
+            Circle()
+                .fill(Theme.mintTint)
+                .frame(width: 64, height: 64)
+                .overlay {
+                    Image(systemName: "bell")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(Theme.primaryInk)
+                }
+                .accessibilityHidden(true)
+            EmptyStateBlock(
+                title: String(localized: "Nothing yet"),
+                subtitle: String(localized: """
+                When someone follows you, saves one of your recipes or shares one \
+                with you, it shows up here.
+                """),
+                topPadding: 0,
+                chrome: .plain
+            )
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 80)
-        .padding(.horizontal, 30)
+        .padding(.top, 70)
     }
 }
 
-/// One row inside the notifications card. The unread dot is the only
-/// visible difference between read and unread states — the row content
-/// stays identical so the rhythm of the list isn't disrupted by reads.
+/// One notification row. The unread dot is the only visible difference
+/// between read and unread states — the row content stays identical so the
+/// rhythm of the list isn't disrupted by reads.
 private struct NotificationRow: View {
-    @Environment(\.colorScheme) private var colorScheme
     let notification: AppNotification
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
-            HStack(alignment: .top, spacing: 12) {
-                Avi(
-                    initial: actorInitial,
-                    size: 36,
-                    palette: aviPalette,
-                    border: true
-                )
+            HStack(alignment: .center, spacing: 12) {
+                Circle()
+                    .fill(notification.isRead ? Color.clear : Theme.accent)
+                    .frame(width: 8, height: 8)
+                    .padding(.leading, -4)
+                    .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 4) {
+                avatar
+
+                VStack(alignment: .leading, spacing: 2) {
+                    // A long username or phrase truncates at three lines so
+                    // one row never dominates the card.
                     Text(phrase)
-                        .font(.system(size: 14))
-                        .lineSpacing(2)
-                        .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
+                        .scaledFont(14.5, relativeTo: .subheadline)
+                        .foregroundStyle(Theme.text)
+                        .lineLimit(3)
+                        .truncationMode(.tail)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text(String(localized: "\(notification.insertedAt.timeAgo()) ago"))
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.subtle(for: colorScheme))
+                        .scaledFont(12.5, relativeTo: .caption)
+                        .foregroundStyle(Theme.muted)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Spacer(minLength: 0)
-
-                if !notification.isRead {
-                    Circle()
-                        .fill(Theme.accent)
-                        .frame(width: 8, height: 8)
-                        .padding(.top, 14)
-                        .accessibilityHidden(true)
+                if let thumbURL = notification.post?.thumbnailUrl?.asBackendURL {
+                    PhotoSlot(url: thumbURL, cornerRadius: 11)
+                        .frame(width: 48, height: 48)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 14)
+            .padding(.vertical, 12)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
     }
 
-    /// Pretty-print the notification with amber-ink @username highlight.
+    /// The actor's photo when they have one, else their initial.
+    @ViewBuilder
+    private var avatar: some View {
+        if let url = notification.actor?.profilePhotoUrl?.asBackendURL {
+            AvatarSlot(url: url, size: 44)
+        } else {
+            Avi(initial: actorInitial, size: 44, palette: aviPalette, border: true)
+        }
+    }
+
+    /// "@username" in bold, then the action phrase.
     private var phrase: AttributedString {
         let actor = notification.actor?.username ?? String(localized: "Someone")
         let handle = "@\(actor) "
@@ -170,8 +230,7 @@ private struct NotificationRow: View {
 
         var s = AttributedString(handle + body)
         if let range = s.range(of: handle) {
-            s[range].font = .system(size: 14, weight: .semibold)
-            s[range].foregroundColor = Theme.accentInk(for: colorScheme)
+            s[range].inlinePresentationIntent = .stronglyEmphasized
         }
         return s
     }
@@ -203,5 +262,29 @@ private struct NotificationRow: View {
         let timeAgo = String(localized: "\(notification.insertedAt.timeAgo()) ago")
         let unread = notification.isRead ? "" : String(localized: ", unread")
         return "@\(actor) \(body) \(timeAgo)\(unread)"
+    }
+}
+
+/// Loading: one card of avatar-and-two-line rows. The pulse honours Reduce
+/// Motion through `skeletonPulse()`.
+private struct NotificationsSkeleton: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(0 ..< 5, id: \.self) { _ in
+                HStack(spacing: 12) {
+                    SkeletonCircle(size: 44)
+                    VStack(alignment: .leading, spacing: 8) {
+                        SkeletonShape(height: 11, cornerRadius: 6)
+                            .padding(.trailing, 40)
+                        SkeletonShape(width: 70, height: 10, cornerRadius: 5)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 12)
+            }
+        }
+        .padding(.horizontal, 14)
+        .cardSurface(cornerRadius: 22)
+        .skeletonGroup(label: String(localized: "Loading notifications"))
     }
 }

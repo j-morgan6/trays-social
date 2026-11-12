@@ -1,137 +1,185 @@
 import SwiftUI
 
-/// The seven day sections of the displayed week, Monday first.
+/// The seven days of the displayed week, Monday first (More artboard,
+/// "Planner · week").
 ///
 /// A vertical list of days rather than a 7-column grid: a day holds a
-/// variable number of recipe rows with real titles, and seven columns on a
-/// phone leaves each about 50pt wide.
+/// variable number of recipe cards with real titles, and seven columns on a
+/// phone leaves each about 50pt wide. Each day is a label column (weekday and
+/// date, "Today" on today) beside its soft cards; an open day is a dashed
+/// "Plan Monday" slot.
 struct PlannerWeekView: View {
     let viewModel: MealPlannerViewModel
     let onAdd: (PlannerDay) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            ForEach(viewModel.days) { day in
-                PlannerDaySection(
-                    day: day,
-                    entries: viewModel.entries(on: day),
-                    onAdd: { onAdd(day) },
-                    onRemove: { viewModel.removeEntry(id: $0) }
+        VStack(alignment: .leading, spacing: 10) {
+            if viewModel.weekLoadFailed, viewModel.entries.isEmpty {
+                // D95: the failure is logged by the view model; never toasted.
+                TrayLoadErrorView(
+                    title: String(localized: "Your week didn't load"),
+                    onRetry: { Task { await viewModel.reload() } }
                 )
+            } else {
+                ForEach(viewModel.days) { day in
+                    PlannerDayRow(
+                        day: day,
+                        entries: viewModel.entries(on: day),
+                        onAdd: { onAdd(day) },
+                        onRemove: { viewModel.removeEntry(id: $0) }
+                    )
+                }
+
+                if viewModel.hasLoadedOnce, viewModel.entries.isEmpty {
+                    Text(String(localized: "Tap a day to pick a dinner from your tray."))
+                        .scaledFont(14, relativeTo: .subheadline)
+                        .foregroundStyle(Theme.text)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 14)
+                        .padding(.horizontal, 16)
+                        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.mintTint))
+                        .padding(.top, 8)
+                }
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 18)
     }
 }
 
-/// One day: a header line, its planned recipes, and an add control.
-private struct PlannerDaySection: View {
-    @Environment(\.colorScheme) private var colorScheme
-
+/// One day: the label column, its planned recipes, and the add control.
+private struct PlannerDayRow: View {
     let day: PlannerDay
     let entries: [MealPlanEntry]
     let onAdd: () -> Void
     let onRemove: (Int) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            header
+        HStack(alignment: .top, spacing: 12) {
+            PlannerDayLabel(day: day)
+                .frame(minHeight: 76)
 
-            ForEach(entries) { entry in
-                PlannedRecipeRow(entry: entry, onRemove: { onRemove(entry.id) })
-            }
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(entries) { entry in
+                    PlannedRecipeCard(entry: entry, isToday: day.isToday, onRemove: { onRemove(entry.id) })
+                }
 
-            // Renders for locked users too: hiding it would remove the
-            // moment-of-need trigger from exactly the people it exists to
-            // convert. PlusGate works here (unlike in a .contextMenu) because
-            // its own paywall sheet lives in a hierarchy that survives.
-            PlusGate(.mealPlanner, action: onAdd) {
-                addLabel
+                // Renders for locked users too: hiding it would remove the
+                // moment-of-need trigger from exactly the people it exists to
+                // convert. PlusGate works here (unlike in a .contextMenu) because
+                // its own paywall sheet lives in a hierarchy that survives.
+                PlusGate(.mealPlanner, action: onAdd) {
+                    if entries.isEmpty {
+                        PlanDaySlot(weekday: day.fullWeekdayName)
+                    } else {
+                        addAnotherLabel
+                    }
+                }
+                .buttonStyle(.borderless)
             }
-            .buttonStyle(.borderless)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    private var header: some View {
-        HStack(spacing: 8) {
-            Text(day.weekdayLabel)
-                .font(.system(size: 13, weight: .bold))
-                .tracking(0.4)
-                .textCase(.uppercase)
-                .foregroundStyle(
-                    day.isToday
-                        ? Theme.accentInk(for: colorScheme)
-                        : Theme.muted(for: colorScheme)
-                )
-            Text(day.dayNumberLabel)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.muted(for: colorScheme))
-            Spacer(minLength: 0)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private var addLabel: some View {
+    /// A day can hold more than one recipe; once it has one, the add control
+    /// shrinks to a quiet link so the day reads as planned.
+    private var addAnotherLabel: some View {
         HStack(spacing: 6) {
             Image(systemName: "plus")
-                .font(.system(size: 12, weight: .bold))
-            Text("Add a recipe")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 13, weight: .bold))
+                .accessibilityHidden(true)
+            Text(String(localized: "Add another"))
+                .scaledFont(14.5, weight: .semibold, relativeTo: .subheadline)
         }
-        .foregroundStyle(Theme.accentInk(for: colorScheme))
-        .padding(.vertical, 9)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Theme.accent.opacity(0.05))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(
-                    Theme.accent.opacity(colorScheme == .dark ? 0.34 : 0.4),
-                    style: StrokeStyle(lineWidth: 1.2, dash: [5, 4])
-                )
-        )
+        .foregroundStyle(Theme.primaryInk)
+        .frame(minHeight: 44)
+        .padding(.horizontal, 4)
         .contentShape(Rectangle())
+        .accessibilityLabel(String(localized: "Add another recipe to \(day.fullWeekdayName)"))
     }
 }
 
-/// One planned recipe: thumbnail, title, cooking time, and a remove button.
-private struct PlannedRecipeRow: View {
-    @Environment(\.colorScheme) private var colorScheme
+/// The 46pt column: weekday (or "Today") over the rounded date number.
+private struct PlannerDayLabel: View {
+    let day: PlannerDay
 
+    var body: some View {
+        VStack(spacing: 1) {
+            Text(day.isToday ? String(localized: "Today") : day.weekdayLabel)
+                .scaledFont(12, weight: .bold, relativeTo: .caption)
+                .tracking(0.7)
+                .textCase(.uppercase)
+                .foregroundStyle(day.isToday ? Theme.text : Theme.muted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(day.dayNumberLabel)
+                .roundedFont(20, weight: .heavy, relativeTo: .title3)
+                .foregroundStyle(Theme.text)
+        }
+        .frame(width: 46)
+        .frame(maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// The dashed open-day slot: "Plan Monday".
+private struct PlanDaySlot: View {
+    let weekday: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "plus")
+                .font(.system(size: 14, weight: .bold))
+                .accessibilityHidden(true)
+            Text(String(localized: "Plan \(weekday)"))
+                .scaledFont(15, weight: .semibold, relativeTo: .body)
+                .multilineTextAlignment(.center)
+        }
+        .foregroundStyle(Theme.primaryInk)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, minHeight: 76)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(Theme.hairlineStrong, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+}
+
+/// One planned recipe: photo, rounded title, cooking time, and remove.
+/// Today's card carries the amber ring.
+private struct PlannedRecipeCard: View {
     let entry: MealPlanEntry
+    let isToday: Bool
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            Photo(key: photoKey, url: entry.post.thumbURL)
-                .frame(width: 46, height: 46)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        HStack(spacing: 12) {
+            PhotoSlot(url: entry.post.thumbURL, cornerRadius: 13)
+                .frame(width: 60, height: 60)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(entry.post.title)
-                    .font(.system(size: 14, weight: .semibold))
-                    .tracking(-0.2)
-                    .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
+                    .roundedFont(RoundedHeading.cardTitle.size, weight: .heavy, relativeTo: .subheadline)
+                    .foregroundStyle(Theme.text)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                 if let minutes = entry.post.cookingTimeMinutes {
-                    Text("\(minutes) min")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.muted(for: colorScheme))
+                    Text(String(localized: "\(minutes) min"))
+                        .scaledFont(12.5, relativeTo: .caption)
+                        .foregroundStyle(Theme.muted)
                 }
             }
-
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             // Removal is never gated server-side — a lapsed subscriber can
             // still prune their plan.
             Button(action: onRemove) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Theme.muted(for: colorScheme))
-                    .frame(width: 30, height: 30)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.muted)
+                    .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
@@ -140,17 +188,25 @@ private struct PlannedRecipeRow: View {
             .disabled(entry.isPending)
         }
         .padding(8)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
-        )
+        .cardSurface(cornerRadius: 20)
+        .overlay {
+            if isToday {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(Theme.accent, lineWidth: 2.5)
+            }
+        }
         .opacity(entry.isPending ? 0.6 : 1)
     }
+}
 
-    /// Same stable-key trick as `MyTrayView.photoKey(for:)` — a recipe with no
-    /// thumbnail always draws the same gradient rather than flickering.
-    private var photoKey: FoodPalette.Key {
-        let keys = FoodPalette.Key.allCases
-        return keys[abs(entry.post.id) % keys.count]
+private extension PlannerDay {
+    /// GMT, like `PlannerWeek`'s own label styles: `date` is GMT midnight, so a
+    /// device-zone format would name the previous day west of Greenwich.
+    static let fullWeekdayStyle = Date.FormatStyle(date: .omitted, time: .omitted, timeZone: .gmt)
+        .weekday(.wide)
+
+    /// "Monday", for the open-day slot and its VoiceOver label.
+    var fullWeekdayName: String {
+        date.formatted(Self.fullWeekdayStyle)
     }
 }

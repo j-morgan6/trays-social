@@ -6,6 +6,12 @@ import SwiftUI
 final class NotificationsViewModel {
     var notifications: [AppNotification] = []
     var isLoading = false
+    /// W253: the last load failed. Drives the load-failure block when there is
+    /// nothing to show; cleared when a load starts. Logged only, never toasted.
+    var loadFailed = false
+    /// W253: a load has finished at least once, so an empty list means
+    /// "nothing yet" rather than "not fetched yet".
+    private(set) var hasLoaded = false
 
     private static let log = Logger(subsystem: "com.trays.social", category: "notifications")
 
@@ -32,15 +38,30 @@ final class NotificationsViewModel {
 
     func load() async {
         isLoading = true
+        loadFailed = false
         do {
             let response: PaginatedResponse<[AppNotification]> = try await APIClient.shared.get(path: "/notifications")
             notifications = response.data
         } catch {
-            // D95: read-path failure — log; the existing empty / skeleton
-            // UI handles the no-content case.
-            Self.log.error("load failed: \(String(describing: error), privacy: .public)")
+            recordLoadFailure(error)
         }
+        finishLoad()
+    }
+
+    /// D95: read-path failure — log; the screen shows its load-failure block.
+    /// Never toast. A cancelled read is not a failure. Internal so the tests
+    /// can drive it without the network.
+    func recordLoadFailure(_ error: Error) {
+        if !(error is CancellationError) {
+            loadFailed = true
+        }
+        Self.log.error("load failed: \(String(describing: error), privacy: .public)")
+    }
+
+    /// Ends a load, failed or not: from here an empty list is "nothing yet".
+    func finishLoad() {
         isLoading = false
+        hasLoaded = true
     }
 
     func markRead(_ ids: [Int]) {

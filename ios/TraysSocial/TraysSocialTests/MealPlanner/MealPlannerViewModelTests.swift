@@ -56,6 +56,63 @@ final class MealPlannerViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.days.first?.key, "2026-03-09")
     }
 
+    /// W253: the planner's load-failure block belongs to the week that failed.
+    /// Stepping to another week must not carry it over before that week loads.
+    func test_setWeek_clearsAPreviousWeeksLoadFailure() {
+        let viewModel = PlannerFixtures.makeViewModel()
+        viewModel.weekLoadFailed = true
+
+        viewModel.setWeek(viewModel.week.next, today: PlannerFixtures.today)
+
+        XCTAssertFalse(viewModel.weekLoadFailed)
+    }
+
+    func test_aFailedWeekRead_flagsTheWeekOnScreen() {
+        let viewModel = PlannerFixtures.makeViewModel()
+
+        viewModel.recordWeekLoadFailure(URLError(.timedOut), generation: viewModel.weekGeneration)
+
+        XCTAssertTrue(viewModel.weekLoadFailed)
+    }
+
+    func test_aFailedReadForAWeekAlreadyLeft_doesNotFlagTheNewWeek() {
+        let viewModel = PlannerFixtures.makeViewModel()
+        let stale = viewModel.weekGeneration
+        viewModel.setWeek(viewModel.week.next, today: PlannerFixtures.today)
+
+        viewModel.recordWeekLoadFailure(URLError(.timedOut), generation: stale)
+
+        XCTAssertFalse(viewModel.weekLoadFailed)
+    }
+
+    func test_aCancelledWeekRead_isNotAFailure() {
+        let viewModel = PlannerFixtures.makeViewModel()
+
+        viewModel.recordWeekLoadFailure(CancellationError(), generation: viewModel.weekGeneration)
+
+        XCTAssertFalse(viewModel.weekLoadFailed)
+    }
+
+    /// W253 header copy: a failed week never claims "0 planned".
+    func test_weekSubtitle_dropsThePlannedCountWhenTheWeekFailedToLoad() {
+        XCTAssertEqual(
+            MealPlannerCopy.weekSubtitle(title: "This week", range: "R", plannedCount: 0, loadFailed: true),
+            "R"
+        )
+        XCTAssertEqual(
+            MealPlannerCopy.weekSubtitle(title: "R", range: "R", plannedCount: 0, loadFailed: true),
+            ""
+        )
+        XCTAssertEqual(
+            MealPlannerCopy.weekSubtitle(title: "This week", range: "R", plannedCount: 3, loadFailed: false),
+            "R · " + String(localized: "3 planned")
+        )
+        XCTAssertEqual(
+            MealPlannerCopy.weekSubtitle(title: "R", range: "R", plannedCount: 0, loadFailed: false),
+            String(localized: "0 planned")
+        )
+    }
+
     func test_weekNavigation_bumpsTheGeneration_soAnInFlightResponseIsDropped() {
         let viewModel = PlannerFixtures.makeViewModel()
         let stale = viewModel.weekGeneration

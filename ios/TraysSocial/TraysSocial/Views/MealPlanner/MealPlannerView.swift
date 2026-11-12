@@ -5,6 +5,22 @@ import SwiftUI
 /// displayed week lives on the shared `MealPlannerViewModel`.
 struct MealPlannerRoute: Hashable {}
 
+/// W253: the planner header's copy, pure so it is testable.
+enum MealPlannerCopy {
+    /// "Nov 9 – 15 · 6 planned" under "This week"; just "6 planned" under a
+    /// title that already is the range. A week that failed to load has no
+    /// known count, so it shows the range alone (or nothing) rather than
+    /// claiming "0 planned".
+    static func weekSubtitle(title: String, range: String, plannedCount: Int, loadFailed: Bool) -> String {
+        let showsRange = title != range
+        if loadFailed, plannedCount == 0 {
+            return showsRange ? range : ""
+        }
+        let planned = String(localized: "\(plannedCount) planned")
+        return showsRange ? "\(range) · \(planned)" : planned
+    }
+}
+
 /// The two faces of the planner.
 enum PlannerTab: String, CaseIterable, Identifiable {
     case week
@@ -32,7 +48,7 @@ enum PlannerTab: String, CaseIterable, Identifiable {
 struct MealPlannerView: View {
     @Environment(AppState.self) private var appState
     @Environment(MealPlannerViewModel.self) private var viewModel
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// A second instance, not the tray tab's: `MyTrayView`'s `@State` is not
     /// reachable from a root-stack destination. The picker only reads this, so
@@ -71,7 +87,9 @@ struct MealPlannerView: View {
         .background(Theme.background)
         .navigationTitle(String(localized: "Meal plan"))
         .navigationBarTitleDisplayMode(.inline)
-        .animation(.easeInOut(duration: 0.18), value: tab)
+        .toolbarBackground(Theme.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: tab)
         .modifier(MealPlannerSurface(
             viewModel: viewModel,
             tray: tray,
@@ -80,27 +98,47 @@ struct MealPlannerView: View {
         ))
     }
 
+    /// More artboard: the rounded page title (the week's name) over its date
+    /// range and planned count, with the week steppers as pill circles.
     private var weekHeader: some View {
-        HStack(spacing: 12) {
-            weekStepButton(
-                systemImage: "chevron.left",
-                label: String(localized: "Previous week"),
-                action: viewModel.goToPreviousWeek
-            )
+        HStack(alignment: .bottom, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(viewModel.weekRangeLabel)
+                    .roundedFont(32, weight: .heavy, relativeTo: .largeTitle)
+                    .tracking(-0.6)
+                    .foregroundStyle(Theme.text)
+                    .accessibilityAddTraits(.isHeader)
+                Text(weekSubtitle)
+                    .scaledFont(15, relativeTo: .subheadline)
+                    .foregroundStyle(Theme.muted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
 
-            Text(viewModel.weekRangeLabel)
-                .font(.system(size: 17, weight: .semibold))
-                .tracking(-0.3)
-                .foregroundStyle(colorScheme == .dark ? Theme.textDark : Theme.textLight)
-                .frame(maxWidth: .infinity)
-                .multilineTextAlignment(.center)
-
-            weekStepButton(
-                systemImage: "chevron.right",
-                label: String(localized: "Next week"),
-                action: viewModel.goToNextWeek
-            )
+            HStack(spacing: 6) {
+                weekStepButton(
+                    systemImage: "chevron.left",
+                    label: String(localized: "Previous week"),
+                    action: viewModel.goToPreviousWeek
+                )
+                weekStepButton(
+                    systemImage: "chevron.right",
+                    label: String(localized: "Next week"),
+                    action: viewModel.goToNextWeek
+                )
+            }
         }
+    }
+
+    /// "Nov 9 – 15 · 6 planned". The range repeats what a non-current week's
+    /// title already says, so it shows only under "This week".
+    private var weekSubtitle: String {
+        MealPlannerCopy.weekSubtitle(
+            title: viewModel.weekRangeLabel,
+            range: viewModel.week.rangeLabel,
+            plannedCount: viewModel.entries.count,
+            loadFailed: viewModel.weekLoadFailed
+        )
     }
 
     private func weekStepButton(
@@ -110,22 +148,28 @@ struct MealPlannerView: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Theme.accentInk(for: colorScheme))
-                .frame(width: 34, height: 34)
-                .contentShape(Rectangle())
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Theme.text)
+                .frame(width: 46, height: 46)
+                .background {
+                    ZStack {
+                        Circle().fill(.ultraThinMaterial)
+                        Circle().fill(Theme.pill)
+                    }
+                }
+                .overlay(Circle().strokeBorder(Theme.hairlineStrong, lineWidth: 1))
+                .shadow(color: Theme.shadow, radius: 12, y: 8)
+                .contentShape(Circle())
         }
         .buttonStyle(.borderless)
         .accessibilityLabel(label)
     }
 
     private var tabPicker: some View {
-        Picker(String(localized: "Meal plan"), selection: $tab) {
-            ForEach(PlannerTab.allCases) { option in
-                Text(option.label).tag(option)
-            }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
+        SegmentedPills(
+            options: PlannerTab.allCases.map { .init(value: $0, title: $0.label) },
+            selection: $tab
+        )
+        .accessibilityLabel(String(localized: "Meal plan"))
     }
 }
