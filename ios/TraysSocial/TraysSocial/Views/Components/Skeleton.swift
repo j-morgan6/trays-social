@@ -193,59 +193,59 @@ struct SkeletonSectionHeader: View {
     }
 }
 
-/// D93: matches `RecipeHero` + the metadata strip + first sections
-/// in `RecipeBodySection`. Used as the load surface for
-/// `PostDetailView`.
+/// D93: matches `RecipeHero` + the head sheet + the first rows of
+/// `RecipeBodySection`. Used as the load surface for `PostDetailView`.
+/// W247: the Recipe artboard's loading state: photo, title, byline, meta
+/// capsules, note card and ingredient rows.
 struct SkeletonPostDetail: View {
     // Track Dynamic Type so the placeholder keeps matching the real
-    // (scaling) cook's-note and section-header type at large sizes.
-    @ScaledMetric(relativeTo: .body) private var noteLineHeight: CGFloat = 17
-    @ScaledMetric(relativeTo: .title2) private var ingredientsHeaderHeight: CGFloat = 22
+    // (scaling) title, capsule and row type at large sizes.
+    @ScaledMetric(relativeTo: .title) private var titleHeight: CGFloat = 30
+    @ScaledMetric(relativeTo: .subheadline) private var capsuleHeight: CGFloat = 34
+    @ScaledMetric(relativeTo: .body) private var noteHeight: CGFloat = 84
+    @ScaledMetric(relativeTo: .body) private var ingredientRowHeight: CGFloat = 54
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Hero photo block — full-width, 360pt to match RecipeHero
-            SkeletonShape(height: 360, cornerRadius: 0)
+        VStack(alignment: .leading, spacing: 0) {
+            // Hero photo block at RecipeHero's fixed recipe height.
+            SkeletonShape(height: RecipeHero.recipeHeight, cornerRadius: 0)
 
-            VStack(alignment: .leading, spacing: 12) {
-                // Byline: 36pt avatar + handle + time
+            VStack(alignment: .leading, spacing: 16) {
+                SkeletonShape(height: titleHeight, cornerRadius: 8)
+                    .padding(.trailing, 60)
+
+                // Byline: 40pt avatar + cook
                 HStack(spacing: 10) {
-                    SkeletonCircle(size: 36)
-                    VStack(alignment: .leading, spacing: 4) {
-                        SkeletonShape(width: 100, height: 12, cornerRadius: 3)
-                        SkeletonShape(width: 60, height: 10, cornerRadius: 3)
-                    }
+                    SkeletonCircle(size: 40)
+                    SkeletonShape(width: 120, height: 12, cornerRadius: 6)
                     Spacer()
                 }
 
-                // Metadata strip (Time / Serves / Ingredients)
-                HStack(alignment: .top, spacing: 24) {
-                    ForEach(0 ..< 3, id: \.self) { _ in
-                        VStack(alignment: .leading, spacing: 4) {
-                            SkeletonShape(width: 36, height: 9, cornerRadius: 3)
-                            SkeletonShape(width: 52, height: 16, cornerRadius: 4)
-                        }
-                    }
-                    Spacer(minLength: 0)
+                // W247: the meta capsules.
+                HStack(spacing: 8) {
+                    SkeletonShape(width: 80, height: capsuleHeight, cornerRadius: capsuleHeight / 2)
+                    SkeletonShape(width: 90, height: capsuleHeight, cornerRadius: capsuleHeight / 2)
+                    SkeletonShape(width: 110, height: capsuleHeight, cornerRadius: capsuleHeight / 2)
                 }
-                .padding(.vertical, 6)
 
-                // Cook's-note pull quote (17pt italic)
-                VStack(alignment: .leading, spacing: 6) {
-                    SkeletonShape(height: noteLineHeight, cornerRadius: 3)
-                    SkeletonShape(height: noteLineHeight, cornerRadius: 3)
-                    SkeletonShape(width: 200, height: noteLineHeight, cornerRadius: 3)
-                }
-                .padding(.top, 4)
+                // The cook's note card.
+                SkeletonShape(height: noteHeight, cornerRadius: 20)
 
-                // Ingredients section header (22pt bold) + rows
-                SkeletonShape(width: 110, height: ingredientsHeaderHeight, cornerRadius: 4)
-                    .padding(.top, 10)
-                ForEach(0 ..< 4, id: \.self) { _ in
-                    SkeletonShape(height: 12, cornerRadius: 3)
-                }
+                // The ingredients card.
+                SkeletonShape(height: ingredientRowHeight * 5, cornerRadius: 22)
+                    .padding(.top, 8)
             }
             .padding(.horizontal, 20)
+            .padding(.top, 24)
+            .background(
+                UnevenRoundedRectangle(
+                    topLeadingRadius: RecipeHero.sheetOverlap,
+                    topTrailingRadius: RecipeHero.sheetOverlap,
+                    style: .continuous
+                )
+                .fill(Theme.background)
+            )
+            .padding(.top, -RecipeHero.sheetOverlap)
 
             Spacer(minLength: 0)
         }

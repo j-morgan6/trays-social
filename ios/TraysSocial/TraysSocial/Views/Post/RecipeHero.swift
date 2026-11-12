@@ -1,18 +1,21 @@
 import SwiftUI
 
-/// Recipe Detail hero — photo with overlaid title + eyebrow + floating
-/// controls. Mirrors `IOSRecipe`'s hero block from the Claude Design
-/// handoff (design/handoff/trays-social/project/ios-screens.jsx).
+/// Recipe Detail hero: the photo (or carousel) under the floating Back,
+/// Share and More controls.
 ///
-/// Top of the photo: floating back / share / bookmark buttons.
-/// Bottom of the photo: mono category eyebrow + SF 30pt title, on a
-/// dark gradient that fades into the photo.
+/// W247: restyled to the Recipe artboard. A recipe's photo is 400pt high; a
+/// legacy photo post's is square and carries a "Photo" tag. The title, the
+/// byline and everything else sit on the sheet below (`RecipeHeadSheet`),
+/// which rises 28pt over the bottom of the photo. Save moved to the bottom
+/// action pill (`RecipeActionBar`).
 struct RecipeHero: View {
+    static let recipeHeight: CGFloat = 400
+    /// How far the head sheet rises over the photo.
+    static let sheetOverlap: CGFloat = 28
+
     let post: Post
-    let bookmarked: Bool
     let onBack: () -> Void
     let shareURL: URL?
-    let onBookmark: () -> Void
     /// W148: the overflow (ellipsis) menu lives on the hero's floating
     /// controls because the nav bar is hidden (`.toolbar(.hidden,...)`),
     /// so a toolbar menu would be unreachable. Delete shows only for the
@@ -23,16 +26,36 @@ struct RecipeHero: View {
     var onDelete: () -> Void = {}
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            photo
-            gradient
-            floatingControls
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            titleBlock
+        photoFrame
+            .overlay(alignment: .top) { floatingControls }
+            .overlay(alignment: .bottomLeading) {
+                if !post.isRecipe {
+                    photoTag
+                        .padding(.leading, HomeMetrics.inset)
+                        .padding(.bottom, Self.sheetOverlap + 12)
+                }
+            }
+            .clipped()
+            .onAppear(perform: prefetchCarouselPhotos)
+    }
+
+    /// A recipe's photo is a fixed 400pt band; a legacy photo post's is
+    /// square, as it was posted.
+    @ViewBuilder
+    private var photoFrame: some View {
+        if post.isRecipe {
+            Color.clear
+                .containerRelativeFrame(.horizontal)
+                .frame(height: Self.recipeHeight)
+                .overlay { photo }
+        } else {
+            // Square at the width the scroll view offers; the photo inside
+            // is pinned to the container width and clipped.
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .aspectRatio(1, contentMode: .fit)
+                .overlay { photo }
         }
-        .frame(height: 360)
-        .clipped()
-        .onAppear(perform: prefetchCarouselPhotos)
     }
 
     /// W130: warm the shared image cache for the rest of the carousel
@@ -54,47 +77,32 @@ struct RecipeHero: View {
         if post.photos.count > 1 {
             TabView {
                 ForEach(post.photos.sorted(by: { $0.position < $1.position }), id: \.position) { photo in
-                    CachedAsyncImage(url: photo.url.asBackendURL) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        Rectangle().fill(Color(.systemGray5))
-                    }
-                    .containerRelativeFrame(.horizontal)
-                    .frame(height: 360)
-                    .clipped()
+                    PhotoSlot(url: photo.url.asBackendURL, cornerRadius: 0)
+                        .containerRelativeFrame(.horizontal)
+                        .clipped()
                 }
             }
             .tabViewStyle(.page)
-        } else if let url = post.primaryPhotoURL {
-            CachedAsyncImage(url: url.asBackendURL) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Rectangle().fill(Color(.systemGray5))
-            }
-            .containerRelativeFrame(.horizontal)
-            .frame(height: 360)
-            .clipped()
         } else {
-            Rectangle().fill(Color(.systemGray5))
+            PhotoSlot(url: post.primaryPhotoURL?.asBackendURL, cornerRadius: 0)
+                .containerRelativeFrame(.horizontal)
+                .clipped()
         }
     }
 
-    private var gradient: some View {
-        LinearGradient(
-            colors: [
-                .black.opacity(0.4),
-                .clear,
-                .clear,
-                .black.opacity(0.85),
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
+    private var photoTag: some View {
+        Text("Photo")
+            .scaledFont(11.5, weight: .bold, relativeTo: .caption)
+            .foregroundStyle(Theme.text)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Capsule(style: .continuous).fill(Theme.surface))
+            .shadow(color: Theme.shadow, radius: 1.5, y: 1)
     }
 
     private var floatingControls: some View {
         HStack {
-            CircleButton(icon: "chevron.left", action: onBack)
+            HeroCircleButton(icon: "chevron.left", label: String(localized: "Back"), action: onBack)
             Spacer()
             HStack(spacing: 8) {
                 if let shareURL {
@@ -103,20 +111,10 @@ struct RecipeHero: View {
                     // on the receiver side land back in the app via
                     // AppState.handlePostDeepLink (see TraysSocialApp).
                     ShareLink(item: shareURL, subject: Text(shareTitle), message: Text("From Trays")) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(.white)
-                            .frame(width: 38, height: 38)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
+                        HeroCircleLabel(icon: "square.and.arrow.up")
                     }
                     .accessibilityLabel("Share recipe")
                 }
-                CircleButton(
-                    icon: bookmarked ? "bookmark.fill" : "bookmark",
-                    tint: bookmarked ? Theme.accent : .white,
-                    action: onBookmark
-                )
                 Menu {
                     if isOwner {
                         Button("Edit Post", action: onEdit)
@@ -124,12 +122,7 @@ struct RecipeHero: View {
                     }
                     Button("Report Post", role: .destructive, action: onReport)
                 } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.white)
-                        .frame(width: 38, height: 38)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Circle())
+                    HeroCircleLabel(icon: "ellipsis")
                 }
                 .accessibilityLabel("More options")
             }
@@ -139,66 +132,43 @@ struct RecipeHero: View {
     }
 
     private var shareTitle: String {
-        let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
-            .first?
-            .trimmingCharacters(in: .whitespaces) ?? raw
-        return candidate.isEmpty ? String(localized: "A recipe on Trays") : candidate
-    }
-
-    private var titleBlock: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if let eyebrow = eyebrowText {
-                Text(eyebrow)
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Theme.secondary)
-                    .tracking(2)
-            }
-
-            Text(titleText)
-                .font(.system(size: 30, weight: .bold))
-                .foregroundStyle(.white)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 18)
-    }
-
-    // MARK: - Derived
-
-    private var titleText: String {
-        let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return String(localized: "Untitled recipe") }
-        let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
-            .first?
-            .trimmingCharacters(in: .whitespaces) ?? raw
-        return candidate.isEmpty ? String(localized: "Untitled recipe") : candidate
-    }
-
-    /// First 3 tags as a "·"-separated breadcrumb. Same convention the
-    /// web recipe detail uses for its category eyebrow.
-    private var eyebrowText: String? {
-        guard !post.tags.isEmpty else { return nil }
-        return post.tags.prefix(3).joined(separator: " · ").uppercased()
+        RecipeTitle.from(caption: post.caption, fallback: String(localized: "A recipe on Trays"))
     }
 }
 
-/// Round translucent button — used for the floating back / share /
-/// bookmark controls on the recipe hero.
-private struct CircleButton: View {
+/// W247: the floating pill circle behind the hero controls (the canvas time
+/// pill: material plus the pill token).
+private struct HeroCircleLabel: View {
     let icon: String
-    var tint: Color = .white
+
+    var body: some View {
+        Image(systemName: icon)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(Theme.text)
+            .frame(width: 46, height: 46)
+            .background {
+                ZStack {
+                    Circle().fill(.ultraThinMaterial)
+                    Circle().fill(Theme.pill)
+                }
+            }
+            .overlay(Circle().strokeBorder(Theme.hairlineStrong, lineWidth: 1))
+            .shadow(color: Theme.shadow, radius: 12, y: 8)
+            .contentShape(Circle())
+    }
+}
+
+/// Round translucent button — the hero's back control.
+private struct HeroCircleButton: View {
+    let icon: String
+    let label: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(tint)
-                .frame(width: 38, height: 38)
-                .background(.ultraThinMaterial)
-                .clipShape(Circle())
+            HeroCircleLabel(icon: icon)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text(label))
     }
 }

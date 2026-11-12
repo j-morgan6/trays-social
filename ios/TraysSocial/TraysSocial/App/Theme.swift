@@ -144,6 +144,8 @@ enum Theme {
     )
     /// Photo, avatar and empty-block fill: cream in light, lift in dark
     static let creamOrLift = Color(light: cream, dark: liftDark)
+    /// W247: Cook mode page: cream in light, the page background in dark
+    static let cookBackground = Color(light: cream, dark: bgDark)
     /// Links, See all, Ready pill text: emerald in light, mint in dark
     static let primaryInk = Color(light: primary, dark: secondary)
     /// Text on an emerald fill: white in light, cream in dark

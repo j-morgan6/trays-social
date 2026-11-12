@@ -22,6 +22,8 @@ struct PrimaryButtonStyle: ButtonStyle {
 /// Surface capsule with a strong hairline ring: the quiet second action.
 struct SecondaryButtonStyle: ButtonStyle {
     var fillsWidth = false
+    /// W247: Cook mode's Back and Next are 60pt high (Recipe artboard).
+    var minHeight: CGFloat = 50
 
     func makeBody(configuration: ButtonStyleConfiguration) -> some View {
         TrayButtonBody(
@@ -29,7 +31,7 @@ struct SecondaryButtonStyle: ButtonStyle {
             fill: configuration.isPressed ? Theme.lift : Theme.surface,
             foreground: Theme.text,
             ring: Theme.hairlineStrong,
-            minHeight: 50,
+            minHeight: minHeight,
             fillsWidth: fillsWidth
         )
     }
@@ -38,6 +40,8 @@ struct SecondaryButtonStyle: ButtonStyle {
 /// Amber capsule with ink-on-accent text: Create and the Plus call to action.
 struct AccentButtonStyle: ButtonStyle {
     var fillsWidth = false
+    /// W247: Cook mode's Back and Next are 60pt high (Recipe artboard).
+    var minHeight: CGFloat = 50
 
     func makeBody(configuration: ButtonStyleConfiguration) -> some View {
         TrayButtonBody(
@@ -45,7 +49,7 @@ struct AccentButtonStyle: ButtonStyle {
             fill: Theme.accent.opacity(configuration.isPressed ? 0.85 : 1),
             foreground: Theme.inkOnAccent,
             ring: nil,
-            minHeight: 50,
+            minHeight: minHeight,
             fillsWidth: fillsWidth
         )
     }

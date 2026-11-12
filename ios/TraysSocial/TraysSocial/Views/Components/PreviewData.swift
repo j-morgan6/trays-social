@@ -70,6 +70,54 @@ enum PreviewData {
         collection(3, "Baking project", count: 0),
     ]
 
+    /// W247: a full recipe for the recipe detail and Cook mode galleries:
+    /// tags, a cook's note, ingredients (one listed twice), steps and tools.
+    static let recipeCaption = "Sesame chicken thighs. Crisp skin, sticky glaze, ready while the rice cooks."
+
+    static func recipe(
+        caption: String = recipeCaption,
+        saved: Bool = false,
+        liked: Bool = false
+    ) -> Post {
+        let insertedAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-5 * 3600))
+        let json = """
+        {"id": 41, "type": "recipe", "caption": "\(caption)", "cooking_time_minutes": 35,
+         "servings": 4, "like_count": 12, "comment_count": 2, "liked_by_current_user": \(liked),
+         "bookmarked_by_current_user": \(saved), "inserted_at": "\(insertedAt)",
+         "user": {"id": 2, "username": "noor", "profile_photo_url": null},
+         "photos": [], "tags": ["weeknight", "chicken", "sheet pan"],
+         "ingredients": [
+           {"name": "chicken thighs", "quantity": "6", "unit": null},
+           {"name": "toasted sesame oil", "quantity": "2", "unit": "tbsp"},
+           {"name": "honey", "quantity": "1", "unit": "tbsp"},
+           {"name": "spring onions", "quantity": null, "unit": null},
+           {"name": "honey", "quantity": "1", "unit": "tbsp"}
+         ],
+         "cooking_steps": [
+           {"position": 1, "instruction": "Heat the oven to 220C and line a tray."},
+           {"position": 2, "instruction": "Toss the thighs with the oil, honey and a big pinch of salt."},
+           {"position": 3, "instruction": "Roast skin side up for 30 minutes, until crisp and sticky."}
+         ],
+         "tools": [{"name": "Sheet pan"}, {"name": "Tongs"}]}
+        """
+        return decode(json)
+    }
+
+    static let comments: [Comment] = [
+        Comment(
+            id: 1,
+            body: "Made this twice this week. The glaze is the whole thing.",
+            insertedAt: Date().addingTimeInterval(-3600),
+            user: PostUser(id: 3, username: "sam", profilePhotoUrl: nil)
+        ),
+        Comment(
+            id: 2,
+            body: "Thanks! Add chilli flakes to the glaze if you like heat.",
+            insertedAt: Date().addingTimeInterval(-1800),
+            user: PostUser(id: 2, username: "noor", profilePhotoUrl: nil)
+        ),
+    ]
+
     private static func decode<T: Decodable & Sendable>(_ json: String) -> T {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase

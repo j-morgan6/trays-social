@@ -1,293 +1,114 @@
 import SwiftUI
 
+/// Cook mode: one step at a time, full screen, with the screen kept awake.
+///
+/// W247: restyled to the Recipe artboard — progress segments, the step on a
+/// scrollable page, Back and an amber Next. The stepping rules live in
+/// `CookProgress`. W141 removed the per-step timer and D16 keeps it out, so
+/// the unused timer code is gone.
 struct CookModeView: View {
     let steps: [CookingStep]
     let title: String
+    /// The recipe's servings, for the "Title · serves N" line; nil hides it.
+    var servings: Int?
     @Environment(\.dismiss) private var dismiss
-    @State private var currentStep = 0
-    /// W158: last-step "Done" now lands on a completion screen (with an
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// W158: last-step "Done" lands on a completion screen (with an
     /// optional sponsored card) instead of dismissing immediately.
-    @State private var isComplete = false
-    @State private var timerSeconds: Int?
-    @State private var timerRemaining: Int = 0
-    @State private var timerActive = false
-    @State private var timer: Timer?
+    @State private var progress: CookProgress
+
+    init(steps: [CookingStep], title: String, servings: Int? = nil, progress: CookProgress? = nil) {
+        self.steps = steps
+        self.title = title
+        self.servings = servings
+        _progress = State(initialValue: progress ?? CookProgress(stepCount: steps.count))
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.gray)
-                }
+        VStack(spacing: 18) {
+            CookModeHeader(
+                progressLabel: String(localized: "Step \(progress.stepNumber) of \(progress.stepCount)"),
+                onClose: { dismiss() }
+            )
+            .padding(.horizontal, 22)
 
-                Spacer()
+            CookProgressSegments(segments: progress.segments, reduceMotion: reduceMotion)
+                .padding(.horizontal, 22)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text("Step \(progress.stepNumber) of \(progress.stepCount)"))
 
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.text)
-                    .lineLimit(1)
-
-                Spacer()
-
-                Text("\(currentStep + 1) of \(steps.count)")
-                    .font(.caption)
-                    .foregroundStyle(.gray)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-
-            // Progress bar
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Rectangle()
-                        .fill(Theme.surface)
-                    Rectangle()
-                        .fill(Theme.accent)
-                        .frame(width: geo.size.width * progress)
-                        .animation(.easeInOut(duration: 0.3), value: currentStep)
-                }
-            }
-            .frame(height: 4)
-            .clipShape(Capsule())
-            .padding(.horizontal, 16)
-
-            // Food-safety disclaimer — shown only on step 1 so it greets the
-            // user when they begin cooking but does not clutter later steps.
-            // Wording matches Terms of Service §10 verbatim.
-            if currentStep == 0, !isComplete {
-                Text("Recipes are user-submitted. We don't verify ingredients, allergens, or food safety — cook at your own risk.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-                    .background(Theme.surface)
-                    .accessibilityAddTraits(.isStaticText)
-            }
-
-            Spacer()
-
-            if isComplete {
+            if progress.isComplete {
                 // W158: completion screen — replaces step content and the
                 // nav buttons once the last step's Done is tapped.
-                completionContent
-            } else {
-                // Step content
-                VStack(spacing: 20) {
-                    Text("STEP \(currentStep + 1)")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.gray)
-                        .tracking(2)
-
-                    if currentStep < steps.count {
-                        Text(steps[currentStep].instruction)
-                            .font(.system(size: 26, weight: .regular))
-                            .foregroundStyle(Theme.text)
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(6)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.horizontal, 24)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-            }
-
-            Spacer()
-
-            // W141: per-step timer removed from the cook flow. The
-            // detectedTime parse + Timer state remain (callers can
-            // re-enable via a future surface), but the in-flow
-            // affordance + countdown display are gone — users found
-            // them noisy and the auto-detect occasionally fired on
-            // times that weren't durations (e.g. "preheat oven to
-            // 350°F for 10 min" vs "stir for 1 minute").
-
-            if isComplete {
-                // Full-width Done — the only affordance on the
-                // completion screen.
+                Spacer()
+                CookCompletionContent()
+                Spacer()
                 Button { dismiss() } label: {
                     Text("Done")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Theme.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 32)
+                .buttonStyle(PrimaryButtonStyle(fillsWidth: true))
+                .padding(.horizontal, 22)
+                .padding(.bottom, 34)
             } else {
-                // Navigation buttons
-                HStack(spacing: 16) {
-                    Button {
-                        withAnimation { currentStep = max(0, currentStep - 1) }
-                        stopTimer()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                            Text("Previous")
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        // Food-safety disclaimer — shown only on step 1 so it
+                        // greets the user when they begin cooking but does not
+                        // clutter later steps. Wording matches Terms of
+                        // Service §10 verbatim.
+                        if progress.isFirstStep {
+                            FoodSafetyNote()
                         }
-                        .font(.subheadline)
-                        .foregroundStyle(.gray)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 14)
-                        .background(Theme.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                    .opacity(currentStep > 0 ? 1 : 0.3)
-                    .disabled(currentStep == 0)
-
-                    Spacer()
-
-                    if currentStep < steps.count - 1 {
-                        Button {
-                            withAnimation { currentStep += 1 }
-                            stopTimer()
-                        } label: {
-                            HStack(spacing: 4) {
-                                Text("Next")
-                                Image(systemName: "chevron.right")
-                            }
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 14)
-                            .background(Theme.primary)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                    } else {
-                        Button {
-                            withAnimation { isComplete = true }
-                            stopTimer()
-                        } label: {
-                            Text("Done")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 14)
-                                .background(Theme.primary)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        if progress.current < steps.count {
+                            CookStepContent(
+                                recipeLine: CookModeCopy.recipeLine(title: title, servings: servings),
+                                instruction: steps[progress.current].instruction
+                            )
                         }
                     }
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 4)
+                    .containerRelativeFrame(.horizontal, alignment: .leading)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 32)
+
+                CookModeNavButtons(
+                    canGoBack: progress.canGoBack,
+                    isLastStep: progress.isLastStep,
+                    onBack: { step { $0.goBack() } },
+                    onNext: { step { $0.advance() } }
+                )
+                .padding(.horizontal, 22)
+                .padding(.bottom, 34)
             }
         }
-        .background(Theme.background)
+        .padding(.top, 16)
+        .background(Theme.cookBackground)
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = true
         }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
-            stopTimer()
         }
         .gesture(
             DragGesture(minimumDistance: 50)
                 .onEnded { value in
-                    // W158: step swiping is disabled on the completion screen.
-                    guard !isComplete else { return }
-                    if value.translation.width < -50, currentStep < steps.count - 1 {
-                        withAnimation { currentStep += 1 }
-                        stopTimer()
-                    } else if value.translation.width > 50, currentStep > 0 {
-                        withAnimation { currentStep -= 1 }
-                        stopTimer()
+                    // W158: step swiping is disabled on the completion screen
+                    // (CookProgress ignores both moves once complete).
+                    if value.translation.width < -50 {
+                        step { $0.swipeForward() }
+                    } else if value.translation.width > 50 {
+                        step { $0.goBack() }
                     }
                 }
         )
     }
 
-    // MARK: - Completion (W158)
-
-    private var completionContent: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(Theme.primary)
-
-            Text("Recipe complete")
-                .font(.system(size: 26, weight: .semibold))
-                .foregroundStyle(Theme.text)
-                .multilineTextAlignment(.center)
-
-            // Single sponsored card, only when the server flag is on.
-            // NO ads during the cooking steps themselves.
-            if AdSettings.shared.config?.enabled == true {
-                SponsoredCardView(slot: AdSlot(slot: 0, placement: "cook_mode_finish"))
-                    .padding(.top, 8)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .transition(.opacity)
-    }
-
-    // MARK: - Helpers
-
-    private var progress: CGFloat {
-        guard !steps.isEmpty else { return 0 }
-        if isComplete {
-            return 1
-        }
-        return CGFloat(currentStep + 1) / CGFloat(steps.count)
-    }
-
-    private var detectedTime: Int? {
-        guard currentStep < steps.count else { return nil }
-        let text = steps[currentStep].instruction
-        return parseTime(from: text)
-    }
-
-    private func parseTime(from text: String) -> Int? {
-        let pattern = /(\d+)\s*(min|minute|minutes|hour|hours|sec|second|seconds)/
-        guard let match = text.firstMatch(of: pattern) else { return nil }
-
-        let value = Int(match.1) ?? 0
-        let unit = String(match.2).lowercased()
-
-        switch unit {
-        case "hour", "hours": return value * 3600
-        case "min", "minute", "minutes": return value * 60
-        case "sec", "second", "seconds": return value
-        default: return nil
-        }
-    }
-
-    private func formatTime(_ seconds: Int) -> String {
-        if seconds >= 3600 {
-            let h = seconds / 3600
-            let m = (seconds % 3600) / 60
-            return "\(h)h \(m)m"
-        } else if seconds >= 60 {
-            let m = seconds / 60
-            let s = seconds % 60
-            return s > 0 ? "\(m)m \(s)s" : "\(m) min"
+    /// Applies a step change, animated unless Reduce Motion is on.
+    private func step(_ change: (inout CookProgress) -> Void) {
+        if reduceMotion {
+            change(&progress)
         } else {
-            return "\(seconds)s"
+            withAnimation(.easeInOut(duration: 0.25)) { change(&progress) }
         }
-    }
-
-    private func startTimer(seconds: Int) {
-        timerRemaining = seconds
-        timerActive = true
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [self] _ in
-            Task { @MainActor in
-                if timerRemaining > 0 {
-                    timerRemaining -= 1
-                } else {
-                    stopTimer()
-                }
-            }
-        }
-    }
-
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-        timerActive = false
     }
 }
