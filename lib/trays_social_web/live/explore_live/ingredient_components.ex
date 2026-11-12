@@ -1,12 +1,15 @@
 defmodule TraysSocialWeb.ExploreLive.IngredientComponents do
   @moduledoc """
   Ingredient pieces of the single search box on the Find / Search page:
-  the chip row under the box, recently used chips, and the grouped
-  "You have everything" / "Almost there" results with missing ingredients.
+  the chip row under the box, recently used chips, and the "You have
+  everything" / "Almost there" results with the summary card (W244 restyle,
+  Main artboard Search state c).
   """
   use TraysSocialWeb, :html
 
   alias TraysSocialWeb.ExploreLive.Index
+  alias TraysSocialWeb.HomeFormatting
+  alias TraysSocialWeb.SearchFormatting
 
   attr :chips, :list, required: true
   attr :recent, :list, required: true
@@ -21,97 +24,119 @@ defmodule TraysSocialWeb.ExploreLive.IngredientComponents do
       )
 
     ~H"""
-    <div :if={@chips != []} class="flex flex-wrap gap-2 mb-3">
-      <button
+    <div :if={@chips != []} class="mt-3 flex flex-wrap gap-2">
+      <.ingredient_chip
         :for={chip <- @chips}
-        type="button"
+        name={chip}
         phx-click="remove-ingredient"
         phx-value-ingredient={chip}
-        aria-label={"Remove #{chip}"}
-        class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[13px] bg-primary text-primary-content border border-primary"
-      >
-        {chip}
-        <.icon name="hero-x-mark" class="size-3 opacity-70 -mr-1" />
-      </button>
+      />
     </div>
 
-    <p :if={@full} class="text-sm text-base-content/60 mb-3">
+    <p :if={@full} class="mx-1 mt-2.5 text-[13px] text-muted">
       Up to {@max_chips} ingredients
     </p>
 
     <p
       :if={!@full and length(@chips) < 2 and (@typing or @chips != [])}
-      class="text-sm text-base-content/60 mb-3"
+      class="mx-1 mt-2.5 text-[13px] text-muted"
     >
       Press Enter to add an ingredient. Add two or more to see what you can make.
     </p>
 
-    <div :if={@suggestions != [] and not @typing and not @full} class="mb-3">
-      <h3 class="text-xs font-bold uppercase tracking-wide text-base-content/60 mb-2">
-        Recently used
-      </h3>
-      <div class="flex flex-wrap gap-2">
-        <button
+    <div :if={@suggestions != [] and not @typing and not @full} class="mt-[18px]">
+      <h3 class="text-[15px] font-semibold leading-tight text-base-content">Recently used</h3>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <.recent_chip
           :for={chip <- @suggestions}
-          type="button"
+          name={chip}
+          class="max-w-full"
           phx-click="add-ingredient"
           phx-value-ingredient={chip}
-          aria-label={"Add #{chip}"}
-          class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[13px] bg-base-100 text-base-content border border-base-300 hover:border-base-content/30"
-        >
-          <.icon name="hero-plus" class="size-3" />
-          {chip}
-        </button>
+        />
       </div>
     </div>
     """
   end
 
   attr :results, :map, default: nil
+  attr :terms, :list, default: [], doc: "the searched ingredients (chips plus typed text)"
 
   def ingredient_results(assigns) do
     ~H"""
-    <div :if={@results} class="max-w-2xl space-y-5">
-      <div
-        :if={@results.everything == [] and @results.almost == []}
-        class="bg-base-100 border border-base-300 rounded-sm p-10 text-center"
-      >
-        <p class="font-serif-editorial italic text-[17px] text-base-content/70">
-          No matches yet. Try removing an ingredient.
+    <div :if={@results}>
+      <%= if @results.everything == [] and @results.almost == [] do %>
+        <div class="pt-6">
+          <.empty_block chrome={:plain} title="No matches yet." message="Try removing an ingredient." />
+        </div>
+      <% else %>
+        <div id="ingredient-summary" class="rounded-[22px] bg-accent/25 px-[18px] pt-[18px] pb-4">
+          <h2 class="font-display text-[22px] font-bold leading-tight text-base-content md:text-[26px]">
+            {SearchFormatting.summary_title(@terms)}
+          </h2>
+          <p class="mt-1 text-sm text-muted">
+            {SearchFormatting.summary_subtitle(length(@results.everything), length(@results.almost))}
+          </p>
+        </div>
+        <div class="grid gap-x-8 md:grid-cols-2">
+          <.match_group
+            id="ingredient-everything"
+            title="You have everything"
+            matches={@results.everything}
+            terms={@terms}
+          />
+          <.match_group
+            id="ingredient-almost"
+            title="Almost there"
+            matches={@results.almost}
+            terms={@terms}
+          />
+        </div>
+        <p class="mx-1 mt-[18px] text-[12.5px] text-muted">
+          Salt, pepper, oil and water count as pantry staples.
         </p>
-      </div>
-      <.match_group title="You have everything" matches={@results.everything} />
-      <.match_group title="Almost there" matches={@results.almost} />
+      <% end %>
     </div>
     """
   end
 
+  attr :id, :string, required: true
   attr :title, :string, required: true
   attr :matches, :list, required: true
+  attr :terms, :list, required: true
 
   defp match_group(assigns) do
     ~H"""
-    <section :if={@matches != []}>
-      <h3 class="text-xs font-bold uppercase tracking-wide text-base-content/60 mb-2">{@title}</h3>
-      <ul class="space-y-2">
-        <li :for={match <- @matches}>
-          <.link navigate={~p"/posts/#{match.post.id}"} class="flex items-center gap-3">
-            <img
-              src={TraysSocial.Uploads.ImageProcessor.thumb_url(match.post.photo_url)}
-              alt=""
-              class="h-14 w-14 rounded-lg object-cover bg-base-200"
-            />
-            <div class="min-w-0">
-              <p class="font-semibold truncate">{Index.post_title(match.post)}</p>
-              <p class="text-sm text-base-content/60">@{match.post.user.username}</p>
-              <p :if={match.missing != []} class="text-sm text-base-content/60">
-                missing: {Enum.join(match.missing, ", ")}
-              </p>
-            </div>
-          </.link>
-        </li>
-      </ul>
+    <section :if={@matches != []} id={@id} class="mt-[30px] min-w-0 md:mt-[42px]">
+      <.section_heading title={@title} />
+      <div class="flex flex-col gap-2.5">
+        <.row_card
+          :for={match <- @matches}
+          navigate={~p"/posts/#{match.post.id}"}
+          title={Index.post_title(match.post)}
+          photo_url={match.post.photo_url}
+          author_name={match.post.user.username}
+          author_avatar_url={match.post.user.profile_photo_url}
+          detail={HomeFormatting.cook_time_label(match.post.cooking_time_minutes)}
+          match={match_pill(match)}
+          missing={match.missing}
+          uses={uses_line(match, @terms)}
+        />
+      </div>
     </section>
     """
   end
+
+  defp match_pill(%{missing: []}), do: :ready
+  defp match_pill(%{missing: missing}), do: {:need, length(missing)}
+
+  # Only "You have everything" rows say what the recipe uses; an almost-there
+  # row shows what is missing instead.
+  defp uses_line(%{missing: [], post: post}, terms),
+    do: SearchFormatting.uses_line(terms, ingredients(post))
+
+  defp uses_line(_match, _terms), do: nil
+
+  defp ingredients(%{ingredients: ingredients}) when is_list(ingredients), do: ingredients
+  defp ingredients(_post), do: []
 end

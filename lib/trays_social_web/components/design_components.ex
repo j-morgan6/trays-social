@@ -372,14 +372,14 @@ defmodule TraysSocialWeb.DesignComponents do
   def ingredient_chip(assigns) do
     ~H"""
     <span class={[
-      "inline-flex h-10 items-center gap-0.5 rounded-full bg-accent/25 pl-[15px] pr-1 text-[14.5px] font-semibold text-base-content ring-1 ring-inset ring-accent/32",
+      "inline-flex h-10 max-w-full items-center gap-0.5 rounded-full bg-accent/25 pl-[15px] pr-1 text-[14.5px] font-semibold text-base-content ring-1 ring-inset ring-accent/32",
       @class
     ]}>
-      {@name}
+      <span class="min-w-0 truncate">{@name}</span>
       <button
         type="button"
         aria-label={"Remove #{@name}"}
-        class="grid size-8 place-items-center rounded-full hover:bg-accent/40 active:bg-accent/40 focus-visible:outline-2 focus-visible:outline-primary"
+        class="grid size-8 shrink-0 place-items-center rounded-full hover:bg-accent/40 active:bg-accent/40 focus-visible:outline-2 focus-visible:outline-primary"
         {@rest}
       >
         <.icon name="hero-x-mark" class="size-4" />
@@ -405,13 +405,13 @@ defmodule TraysSocialWeb.DesignComponents do
       type="button"
       aria-label={"Add #{@name}"}
       class={[
-        "inline-flex h-10 items-center gap-1.5 rounded-full bg-base-100 pl-3 pr-[15px] text-[14.5px] font-medium text-base-content ring-1 ring-inset ring-border hover:bg-base-300 focus-visible:outline-2 focus-visible:outline-primary",
+        "inline-flex h-10 max-w-full items-center gap-1.5 rounded-full bg-base-100 pl-3 pr-[15px] text-[14.5px] font-medium text-base-content ring-1 ring-inset ring-border hover:bg-base-300 focus-visible:outline-2 focus-visible:outline-primary",
         @class
       ]}
       {@rest}
     >
-      <.icon name="hero-plus" class="size-4 text-primary-ink" />
-      {@name}
+      <.icon name="hero-plus" class="size-4 shrink-0 text-primary-ink" />
+      <span class="min-w-0 truncate">{@name}</span>
     </button>
     """
   end

@@ -3,6 +3,7 @@ defmodule TraysSocialWeb.ExploreLive.Index do
 
   alias TraysSocial.Accounts
   alias TraysSocial.Features
+  alias TraysSocial.Monetization
   alias TraysSocial.Posts
   alias TraysSocial.Posts.BrowseCategories
   alias TraysSocial.Posts.IngredientSearch
@@ -50,6 +51,7 @@ defmodule TraysSocialWeb.ExploreLive.Index do
        socket
        |> assign_static()
        |> assign(:loading, false)
+       |> assign(:show_ads, Monetization.web_ads_enabled?(socket.assigns.current_scope.user))
        |> assign_classic_rails()
        |> assign(:results, [])
        |> maybe_assign_most_saved()}
@@ -58,6 +60,7 @@ defmodule TraysSocialWeb.ExploreLive.Index do
        socket
        |> assign_static()
        |> assign(:loading, true)
+       |> assign(:show_ads, false)
        |> assign(:trending, [])
        |> assign(:recent, [])
        |> assign(:tag_sections, [])
@@ -273,8 +276,8 @@ defmodule TraysSocialWeb.ExploreLive.Index do
     end
   end
 
-  # Recipe-first: grouped search (tray / following / everyone) driven by the
-  # search term or the selected Browse tile; nil groups shows Browse.
+  # Recipe-first: grouped search (cooks / tray / following / everyone) driven
+  # by the search term or the selected Browse tile; nil groups shows Browse.
   defp refresh_results(%{assigns: %{recipe_first: true}} = socket, query) do
     category = BrowseCategories.fetch(socket.assigns.category)
 
@@ -282,16 +285,18 @@ defmodule TraysSocialWeb.ExploreLive.Index do
       assign(socket, :groups, nil)
     else
       user = socket.assigns.current_scope.user
+      blocked_ids = Accounts.blocked_pair_ids(user.id)
+      term = search_term(query, category)
 
       groups =
-        Posts.search_grouped(user.id, search_term(query, category),
+        Posts.search_grouped(user.id, term,
           following_ids: Accounts.list_following_ids(user.id),
-          blocked_user_ids: Accounts.blocked_pair_ids(user.id),
+          blocked_user_ids: blocked_ids,
           max_cooking_time: category && category.max_cooking_time,
           tag: category && category.tag
         )
 
-      assign(socket, :groups, groups)
+      assign(socket, :groups, Map.put(groups, :users, search_cooks(term, category, blocked_ids)))
     end
   end
 
@@ -310,6 +315,16 @@ defmodule TraysSocialWeb.ExploreLive.Index do
       assign(socket, :results, Posts.search_posts(query, opts))
     end
   end
+
+  # Cooks matching the term, as the API search does: skipped for a tag or
+  # time-limited Browse tile, and never a blocked user. Three, as the canvas
+  # draws them.
+  defp search_cooks(_term, %{tag: tag}, _blocked_ids) when is_binary(tag), do: []
+
+  defp search_cooks(_term, %{max_cooking_time: max}, _blocked_ids) when is_integer(max), do: []
+
+  defp search_cooks(term, _category, blocked_ids),
+    do: Accounts.search_users(term, limit: 3, blocked_user_ids: blocked_ids)
 
   defp search_term("", nil), do: ""
   defp search_term("", category), do: category.q || ""

@@ -39,7 +39,7 @@ struct IngredientMatchContent: View {
             summary(results)
             matchSection(String(localized: "You have everything"), results.everything, ready: true)
             matchSection(String(localized: "Almost there"), results.almost, ready: false)
-            Text("Salt, pepper, oil and garlic count as pantry staples.")
+            Text("Salt, pepper, oil and water count as pantry staples.")
                 .scaledFont(12.5, relativeTo: .caption)
                 .foregroundStyle(Theme.muted)
                 .padding(.top, 18)

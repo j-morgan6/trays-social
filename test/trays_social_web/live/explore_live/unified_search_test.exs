@@ -58,7 +58,8 @@ defmodule TraysSocialWeb.ExploreLive.UnifiedSearchTest do
     assert html =~ "You have everything"
     assert html =~ "Chicken rice bowl"
     assert html =~ "Almost there"
-    assert html =~ "missing: soy sauce"
+    assert has_element?(view, "#ingredient-almost", "missing:")
+    assert has_element?(view, "#ingredient-almost", "soy sauce")
     refute html =~ "In your tray"
   end
 

@@ -1,10 +1,20 @@
 defmodule TraysSocialWeb.AdComponents do
   @moduledoc """
-  Sponsored placement components for the public web recipe pages (W159).
+  Sponsored placement components.
+
+    * `sponsored_slot/1`: hand-placed units on the public web recipe pages
+      (W159).
+    * `sponsored_card/1`: the Search grid card (W244), with the same footprint
+      as `recipe_card`. It is interleaved automatically into Most saved and
+      Everyone only, one card per `Monetization.ad_frequency()` recipes
+      (`FeedItemJSON.interleave_ads/3`, never trailing). Most saved (10
+      recipes) plus Everyone (20) keeps a Search page at two cards or fewer,
+      and only when `Monetization.web_ads_enabled?/1` is true for the viewer.
 
   ## Density cap
 
-  At most TWO sponsored units per page, placed by hand in the template —
+  At most TWO sponsored units per page. On recipe pages they are placed by
+  hand in the template —
   never by network auto-injection. If a third-party ad network is ever
   wired up, its dashboard auto-insert / "auto ads" features MUST stay off;
   the template placements are the only inventory.
@@ -31,6 +41,11 @@ defmodule TraysSocialWeb.AdComponents do
   """
 
   use Phoenix.Component
+
+  use Phoenix.VerifiedRoutes,
+    endpoint: TraysSocialWeb.Endpoint,
+    router: TraysSocialWeb.Router,
+    statics: TraysSocialWeb.static_paths()
 
   attr :id, :string, required: true, doc: "DOM id for the slot container"
 
@@ -71,6 +86,45 @@ defmodule TraysSocialWeb.AdComponents do
           <p class="text-[12px] text-base-content/50">
             Nothing in this space tracks you.
           </p>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :slot, :integer, required: true, doc: "0-based ad slot index within the grid"
+  attr :placement, :string, default: "find", doc: "surface name, rendered in data-ad-slot"
+  attr :class, :any, default: nil
+
+  @doc """
+  Sponsored card for Search grids (W244). It has the recipe_card footprint
+  (same padding, 4:3 photo, two reserved title lines, a 22px byline row), so
+  a grid row with an ad stays level with its recipe cards. House copy only;
+  "Why this ad?" links to the existing ads-choices page.
+  """
+  def sponsored_card(assigns) do
+    ~H"""
+    <div
+      class={["min-w-0 rounded-[21px] bg-base-100 p-1.5 text-base-content shadow-card", @class]}
+      data-ad-slot={"#{@placement}-#{@slot}"}
+    >
+      <div class="relative aspect-[4/3] overflow-hidden rounded-[15px] bg-cream-lift">
+        <span class="absolute left-2 top-2 rounded-full bg-base-100 px-2.5 py-1 text-[11.5px] font-bold leading-none text-base-content shadow-sm">
+          Sponsored
+        </span>
+      </div>
+      <div class="flex flex-col gap-[7px] px-1.5 pb-1.5 pt-[9px]">
+        <p class="min-h-[2lh] font-display text-base font-bold leading-tight line-clamp-2">
+          Trays stays free thanks to our sponsors
+        </p>
+        <div class="flex min-h-[22px] min-w-0 items-center justify-between gap-2 text-[12.5px] text-muted">
+          <span class="truncate">Sponsored · partner recipe</span>
+          <.link
+            href={~p"/privacy/ads-choices"}
+            class="shrink-0 font-semibold text-primary-ink hover:underline"
+          >
+            Why this ad?
+          </.link>
         </div>
       </div>
     </div>

@@ -78,7 +78,8 @@ defmodule TraysSocialWeb.ExploreLive.IngredientSearchTest do
       assert html =~ "Lemon rice"
       assert html =~ "Almost there"
       assert html =~ "Chicken adobo"
-      assert html =~ "missing: soy sauce"
+      assert has_element?(view, "#ingredient-almost", "missing:")
+      assert has_element?(view, "#ingredient-almost", "soy sauce")
     end
 
     test "removing chips steps back to normal search, then to nothing", %{

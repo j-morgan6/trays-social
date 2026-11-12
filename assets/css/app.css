@@ -115,6 +115,10 @@
 @custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
 @custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
 @custom-variant phx-change-loading (.phx-change-loading&, .phx-change-loading &);
+/* W244 Search state e: results swap for skeletons while #search-form has an
+   event in flight. The form is not an ancestor of the results (both sit under
+   #search-prefs), so this reads the form's loading class through :has(). */
+@custom-variant search-loading (#search-prefs:has(#search-form.phx-change-loading, #search-form.phx-submit-loading) &);
 
 /* Use the data attribute for dark mode  */
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
