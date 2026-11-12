@@ -2,11 +2,15 @@ defmodule TraysSocialWeb.HomeLive.IndexTest do
   # async: false: toggles the global :features config.
   use TraysSocialWeb.ConnCase, async: false
 
+  import Ecto.Query, only: [from: 2]
   import Phoenix.LiveViewTest
   import TraysSocial.AccountsFixtures
   import TraysSocial.PostsFixtures
 
   alias TraysSocial.Accounts
+  alias TraysSocial.MealPlans
+  alias TraysSocial.Posts.Post
+  alias TraysSocial.Repo
 
   # Placeholder text unique to the root layout's header search pill (the
   # /explore page field reads "Search recipes, ingredients, cooks…").
@@ -50,6 +54,130 @@ defmodule TraysSocialWeb.HomeLive.IndexTest do
       assert has_element?(view, "#home-new", "New from people you follow")
       assert has_element?(view, "#home-new", "Friend focaccia")
       assert has_element?(view, "#home-caught-up", "You're caught up")
+    end
+
+    test "the greeting asks the cook by username", %{conn: conn, viewer: viewer} do
+      post_fixture(%{user_id: viewer.id, caption: "My chili"})
+
+      {:ok, view, _html} = live(conn, ~p"/home")
+
+      assert has_element?(view, "#home-greeting h1", "What are you cooking, #{viewer.username}?")
+    end
+
+    test "a valid tz offset shows the weekday kicker", %{conn: conn, viewer: viewer} do
+      post_fixture(%{user_id: viewer.id, caption: "My chili"})
+
+      {:ok, view, _html} = conn |> put_connect_params(%{"tz_offset" => 0}) |> live(~p"/home")
+
+      assert has_element?(
+               view,
+               "#home-greeting p",
+               ~r/^(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day (morning|afternoon|evening|night)$/
+             )
+    end
+
+    test "a missing or invalid tz offset leaves the kicker out", %{conn: conn, viewer: viewer} do
+      post_fixture(%{user_id: viewer.id, caption: "My chili"})
+
+      {:ok, missing, _html} = live(conn, ~p"/home")
+      refute has_element?(missing, "#home-greeting p")
+
+      {:ok, invalid, _html} =
+        conn |> put_connect_params(%{"tz_offset" => 9999}) |> live(~p"/home")
+
+      refute has_element?(invalid, "#home-greeting p")
+    end
+
+    test "the welcome block lists cooks to follow as profile links, with no Follow button", %{
+      conn: conn
+    } do
+      cook = user_fixture()
+      post_fixture(%{user_id: cook.id, caption: "Cook pie"})
+
+      {:ok, view, _html} = live(conn, ~p"/home")
+
+      assert has_element?(view, "#home-cooks", "Cooks to follow")
+      assert has_element?(view, ~s(#home-cooks a[href="/@#{cook.username}"]), cook.username)
+      refute has_element?(view, "#home-cooks button")
+    end
+
+    test "new recipes carry the New badge and the cook time", %{conn: conn, viewer: viewer} do
+      friend = user_fixture()
+      {:ok, _} = Accounts.follow_user(viewer, friend)
+      post_fixture(%{user_id: friend.id, caption: "Friend focaccia", cooking_time_minutes: 90})
+
+      {:ok, view, _html} = live(conn, ~p"/home")
+
+      assert has_element?(view, "#home-new span.bg-accent", "New")
+      assert has_element?(view, "#home-new", "1 hr 30 min")
+      assert has_element?(view, "#home-new", "Just now")
+    end
+
+    test "today's planned recipe shows as the Tonight strip", %{conn: conn, viewer: viewer} do
+      post = post_fixture(%{user_id: viewer.id, caption: "Sheet-pan gnocchi"})
+      {:ok, _entry} = MealPlans.create_entry(viewer, Date.utc_today(), post)
+
+      {:ok, view, _html} = live(conn, ~p"/home")
+
+      assert has_element?(view, "#home-tonight", "Tonight")
+      assert has_element?(view, "#home-tonight", "Sheet-pan gnocchi")
+    end
+
+    test "the dead render shows the loading skeleton", %{conn: conn} do
+      html = conn |> get(~p"/home") |> html_response(200)
+
+      assert html =~ ~s(id="home-loading")
+    end
+
+    test "a followed cook with nothing from the last week shows Nothing new", %{
+      conn: conn,
+      viewer: viewer
+    } do
+      friend = user_fixture()
+      {:ok, _} = Accounts.follow_user(viewer, friend)
+      old = post_fixture(%{user_id: friend.id, caption: "Old stew"})
+      eight_days_ago = :second |> DateTime.utc_now() |> DateTime.add(-8, :day)
+      old_post = from(p in Post, where: p.id == ^old.id)
+      Repo.update_all(old_post, set: [inserted_at: eight_days_ago])
+
+      {:ok, view, _html} = live(conn, ~p"/home")
+
+      assert has_element?(view, "#home-caught-up", "Nothing new this week")
+    end
+
+    test "phone-first layout: two-column grid and rows that scroll on their own", %{
+      conn: conn,
+      viewer: viewer
+    } do
+      friend = user_fixture()
+      {:ok, _} = Accounts.follow_user(viewer, friend)
+      post_fixture(%{user_id: viewer.id, caption: "My chili"})
+      post_fixture(%{user_id: friend.id, caption: "Friend focaccia"})
+
+      {:ok, view, _html} = live(conn, ~p"/home")
+
+      assert has_element?(view, "#home-jump-back-in div.grid-cols-2")
+      assert has_element?(view, "#home-friends div.overflow-x-auto")
+      assert has_element?(view, "#home-new div.overflow-x-auto")
+    end
+
+    test "long usernames wrap or truncate instead of overflowing", %{conn: conn} do
+      long = String.duplicate("a", 30)
+      viewer = user_fixture(%{username: long})
+      cook = user_fixture(%{username: String.duplicate("b", 30)})
+      post_fixture(%{user_id: cook.id, caption: "Cook pie"})
+      conn = log_in_user(conn, viewer)
+
+      {:ok, welcome_view, _html} = live(conn, ~p"/home")
+      assert has_element?(welcome_view, "#home-cooks span.truncate", cook.username)
+
+      {:ok, _} = Accounts.follow_user(viewer, cook)
+      post_fixture(%{user_id: viewer.id, caption: "My chili"})
+
+      {:ok, view, _html} = live(conn, ~p"/home")
+
+      assert has_element?(view, ~s(#home-greeting h1[class*="overflow-wrap:anywhere"]), long)
+      assert has_element?(view, "#home-friends span.truncate", cook.username)
     end
 
     test "guests are sent to log in" do

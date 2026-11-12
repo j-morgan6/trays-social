@@ -161,7 +161,7 @@ defmodule TraysSocialWeb.CoreComponents do
   """
   attr :username, :string, required: true
   attr :photo_url, :string, default: nil
-  attr :size, :string, default: "md", values: ~w(xs sm md lg xl 2xl)
+  attr :size, :string, default: "md", values: ~w(xs sm md lg xl friend 2xl)
   attr :class, :any, default: nil
 
   def user_avatar(assigns) do
@@ -171,6 +171,8 @@ defmodule TraysSocialWeb.CoreComponents do
       "md" => "w-10 h-10 text-sm",
       "lg" => "w-12 h-12 text-base",
       "xl" => "w-16 h-16 text-lg",
+      # Home's Friends' trays row: 64px on phones, 76px from md up (W242).
+      "friend" => "w-16 h-16 md:w-[76px] md:h-[76px] text-lg",
       "2xl" => "w-32 h-32 text-4xl"
     }
 

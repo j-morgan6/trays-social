@@ -137,10 +137,17 @@ defmodule TraysSocialWeb.DesignComponents do
         </span>
       </div>
       <div class="flex flex-col gap-[7px] px-1.5 pb-1.5 pt-[9px]">
-        <h3 :if={@kind == :recipe} class="font-display text-base font-bold leading-tight line-clamp-2">
+        <%!-- min-h-[2lh] reserves both title lines, so a one-line title gives
+             the same card height as a two-line one and rows stay level. --%>
+        <h3
+          :if={@kind == :recipe}
+          class="min-h-[2lh] font-display text-base font-bold leading-tight line-clamp-2"
+        >
           {@title}
         </h3>
-        <p :if={@kind == :photo_post} class="text-sm leading-snug line-clamp-2">{@title}</p>
+        <p :if={@kind == :photo_post} class="min-h-[2lh] text-sm leading-snug line-clamp-2">
+          {@title}
+        </p>
         <.byline name={@author_name} avatar_url={@author_avatar_url} context={@context} />
       </div>
     </.link>
