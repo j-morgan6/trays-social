@@ -429,6 +429,160 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
     end
   end
 
+  describe "recipe page (W248)" do
+    test "recipe sections render", %{conn: conn} do
+      cook = user_fixture()
+      viewer = user_fixture()
+
+      post =
+        post_fixture(
+          user_id: cook.id,
+          caption: "Lemon pasta. Finish with extra zest.",
+          servings: 2,
+          post_tags: [%{tag: "Weeknight"}]
+        )
+
+      {:ok, view, _html} = conn |> log_in_user(viewer) |> live(~p"/posts/#{post.id}")
+
+      assert has_element?(view, "#recipe-hero img[src='#{post.photo_url}']")
+      assert has_element?(view, "#recipe-kicker", "weeknight")
+      assert has_element?(view, "#recipe-head h1", "Lemon pasta")
+      assert has_element?(view, "#recipe-byline", "@#{cook.username}")
+      assert has_element?(view, "#recipe-byline button[phx-click='toggle-follow']", "Follow")
+      assert has_element?(view, "#recipe-meta", "42 min")
+      assert has_element?(view, "#recipe-meta", "Serves 2")
+      assert has_element?(view, "#recipe-meta", "1 ingredient")
+      assert has_element?(view, "#recipe-note", "From #{cook.username}")
+      assert has_element?(view, "#recipe-note", "Finish with extra zest")
+
+      assert has_element?(
+               view,
+               "#recipe-actions button[phx-click='toggle-cook-mode']",
+               "Start cooking"
+             )
+
+      assert has_element?(
+               view,
+               "#recipe-actions button[phx-click='toggle-bookmark']",
+               "Save to My Tray"
+             )
+
+      assert has_element?(
+               view,
+               "#recipe-ingredients button[phx-click='toggle-ingredient']",
+               "Test ingredient"
+             )
+
+      assert has_element?(view, "#recipe-steps li", "Test step")
+      assert has_element?(view, "#cooks-notes")
+
+      refute has_element?(view, "#legacy-photo-label")
+      refute has_element?(view, "#legacy-note")
+
+      # Wiring: each restyled control still drives its existing event when
+      # clicked through the markup, not just via render_click(view, event).
+      view |> element("#recipe-byline button[phx-click='toggle-follow']") |> render_click()
+      assert has_element?(view, "#recipe-byline button[phx-click='toggle-follow']", "Following")
+
+      view |> element("#recipe-actions button[phx-click='toggle-like']") |> render_click()
+      assert has_element?(view, "#recipe-actions button[phx-click='toggle-like']", "1 helpful")
+
+      view |> element("#recipe-actions button[phx-click='toggle-bookmark']") |> render_click()
+
+      assert has_element?(
+               view,
+               "#recipe-actions button[phx-click='toggle-bookmark']",
+               "Saved to My Tray"
+             )
+
+      view
+      |> element("#recipe-ingredients button[phx-click='toggle-ingredient']")
+      |> render_click()
+
+      assert has_element?(
+               view,
+               "#recipe-ingredients button[aria-pressed='true']",
+               "Test ingredient"
+             )
+
+      view |> element("#recipe-actions button[phx-click='toggle-cook-mode']") |> render_click()
+      assert has_element?(view, "#cook-timer-display")
+      view |> element("#recipe-actions button[phx-click='toggle-cook-mode']") |> render_click()
+      refute has_element?(view, "#cook-timer-display")
+
+      view |> form("#cooks-notes form", comment: %{body: "Made it twice"}) |> render_submit()
+      assert has_element?(view, "#comments", "Made it twice")
+      view |> element("#comments button[phx-click='delete-comment']") |> render_click()
+      refute has_element?(view, "#comments", "Made it twice")
+
+      assert has_element?(view, "#recipe a[href='/feed']", "Back to feed")
+
+      # The carousel buttons on a multi-photo recipe.
+      gallery =
+        post_fixture(
+          user_id: cook.id,
+          post_photos: [
+            %{url: "/uploads/gallery-a.jpg", position: 0},
+            %{url: "/uploads/gallery-b.jpg", position: 1}
+          ]
+        )
+
+      {:ok, gallery_view, _html} =
+        conn |> log_in_user(viewer) |> live(~p"/posts/#{gallery.id}")
+
+      gallery_view |> element("#recipe-hero button[phx-click='next-photo']") |> render_click()
+      assert has_element?(gallery_view, "#recipe-hero img[src='/uploads/gallery-b.jpg']")
+      assert has_element?(gallery_view, "#recipe-hero", "2 / 2")
+      gallery_view |> element("#recipe-hero button[phx-click='prev-photo']") |> render_click()
+      assert has_element?(gallery_view, "#recipe-hero img[src='/uploads/gallery-a.jpg']")
+    end
+
+    test "narrow-width and long-text guards hold", %{conn: conn} do
+      username = String.pad_trailing("cook_#{System.unique_integer([:positive])}", 30, "x")
+      cook = user_fixture(username: username)
+      long_title = String.duplicate("Supercalifragilisticexpialidocious", 4)
+      post = post_fixture(user_id: cook.id, caption: long_title <> ". A long note.")
+
+      {:ok, view, _html} = live(conn, ~p"/posts/#{post.id}")
+
+      # One column below lg; every grid child can shrink (D116, no sideways
+      # scroll at 390 px). Actual layout is checked by hand at 1440/768/390.
+      assert has_element?(view, "article#recipe.grid.grid-cols-1")
+      refute has_element?(view, "#recipe > :not(.min-w-0)")
+
+      # A long unbroken title wraps and a 30-character username truncates.
+      assert has_element?(view, "#recipe-head h1.break-words", long_title)
+      assert has_element?(view, "#recipe-byline a.truncate", cook.username)
+      assert has_element?(view, "#recipe-byline span.truncate", "@#{cook.username}")
+    end
+
+    test "legacy photo post renders the Photo label", %{conn: conn} do
+      cook = user_fixture()
+
+      post =
+        post_fixture(
+          user_id: cook.id,
+          type: "post",
+          caption: "Sunday market haul. Peaches everywhere."
+        )
+
+      {:ok, view, html} = live(conn, ~p"/posts/#{post.id}")
+
+      assert html =~ post.photo_url
+      assert has_element?(view, "#legacy-photo-label", "Photo")
+      assert has_element?(view, "#legacy-caption", "Sunday market haul. Peaches everywhere.")
+      assert has_element?(view, "#legacy-note", "A photo post from before Trays had recipes")
+      assert has_element?(view, "#recipe-byline", cook.username)
+      assert has_element?(view, "#recipe-actions button[phx-click='toggle-bookmark']")
+
+      refute has_element?(view, "#recipe-meta")
+      refute has_element?(view, "#recipe-note")
+      refute has_element?(view, "#recipe-ingredients")
+      refute has_element?(view, "#recipe-steps")
+      refute has_element?(view, "button[phx-click='toggle-cook-mode']")
+    end
+  end
+
   describe "recipe opens" do
     alias TraysSocial.Posts.RecipeOpen
     alias TraysSocial.Repo
