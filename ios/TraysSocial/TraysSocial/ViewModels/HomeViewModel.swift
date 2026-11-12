@@ -6,11 +6,15 @@ import SwiftUI
 final class HomeViewModel {
     private(set) var payload: HomePayload?
     private(set) var isLoading = false
+    /// W241: the last load failed. Home shows its error state only when
+    /// there is no payload to fall back on; failures never toast (D95).
+    private(set) var loadFailed = false
 
     private static let log = Logger(subsystem: "com.trays.social", category: "home")
 
     func load(now: Date = Date()) async {
         isLoading = true
+        loadFailed = false
         defer { isLoading = false }
         do {
             let response: DataResponse<HomePayload> = try await APIClient.shared.get(
@@ -19,6 +23,7 @@ final class HomeViewModel {
             )
             payload = response.data
         } catch {
+            loadFailed = true
             // D95: read-path failures stay silent; keep showing the last Home.
             Self.log.error("home load failed: \(String(describing: error), privacy: .public)")
         }

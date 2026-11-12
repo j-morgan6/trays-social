@@ -26,6 +26,21 @@ struct SuggestedCook: Decodable, Identifiable, Sendable, Hashable {
 
 /// Pure decisions for what Home renders. Kept out of the view because this
 /// project has no view-test infrastructure (see MealPlanGating).
+/// Which Home screen to show. A payload always wins; with none, a failed
+/// first load shows the error block unless a retry is already in flight.
+enum HomeScreenState: Equatable {
+    case content
+    case error
+    case loading
+
+    static func decide(hasPayload: Bool, loadFailed: Bool, isLoading: Bool) -> HomeScreenState {
+        if hasPayload {
+            return .content
+        }
+        return loadFailed && !isLoading ? .error : .loading
+    }
+}
+
 enum HomeLayout {
     /// Brand-new user: nothing in the tray and nobody followed.
     static func showsWelcome(_ payload: HomePayload) -> Bool {

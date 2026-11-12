@@ -77,4 +77,30 @@ final class HomeTests: XCTestCase {
         XCTAssertEqual(HomeViewModel.dayKey(for: instant, timeZone: la), "2026-10-08")
         XCTAssertEqual(HomeViewModel.dayKey(for: instant, timeZone: .gmt), "2026-10-09")
     }
+
+    // MARK: - Screen state (W241)
+
+    func test_screenState_payloadAlwaysShowsContent() {
+        for failed in [false, true] {
+            for loading in [false, true] {
+                XCTAssertEqual(
+                    HomeScreenState.decide(hasPayload: true, loadFailed: failed, isLoading: loading),
+                    .content
+                )
+            }
+        }
+    }
+
+    func test_screenState_failedFirstLoadShowsError() {
+        XCTAssertEqual(HomeScreenState.decide(hasPayload: false, loadFailed: true, isLoading: false), .error)
+    }
+
+    func test_screenState_retryInFlightShowsLoading() {
+        XCTAssertEqual(HomeScreenState.decide(hasPayload: false, loadFailed: true, isLoading: true), .loading)
+    }
+
+    func test_screenState_firstLoadShowsLoading() {
+        XCTAssertEqual(HomeScreenState.decide(hasPayload: false, loadFailed: false, isLoading: true), .loading)
+        XCTAssertEqual(HomeScreenState.decide(hasPayload: false, loadFailed: false, isLoading: false), .loading)
+    }
 }

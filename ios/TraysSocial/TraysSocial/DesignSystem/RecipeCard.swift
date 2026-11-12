@@ -99,12 +99,14 @@ struct RecipeCard: View {
             Text(title)
                 .scaledFont(14, relativeTo: .subheadline)
                 .foregroundStyle(Theme.text)
-                .lineLimit(2)
+                // Reserve both lines so a one-line title gives the same card
+                // height as a two-line one; side-by-side cards stay level.
+                .lineLimit(2, reservesSpace: true)
         } else {
             Text(title)
                 .roundedFont(.cardTitle)
                 .foregroundStyle(Theme.text)
-                .lineLimit(2)
+                .lineLimit(2, reservesSpace: true)
                 .multilineTextAlignment(.leading)
         }
     }
