@@ -3,6 +3,7 @@ defmodule TraysSocial.Accounts.User do
   import Ecto.Changeset
 
   @age_confirmation_message "You must confirm you are 13 or older to use Trays"
+  @email_taken_message "can't be used here. If it's your email, log in or reset your password."
 
   schema "users" do
     field :email, :string
@@ -216,14 +217,40 @@ defmodule TraysSocial.Accounts.User do
       )
       |> validate_length(:email, max: 160)
 
+    # D123: a taken email gets the neutral message, never Ecto's default
+    # uniqueness message, so the error does not state that the address has
+    # an account. Usernames keep the default: handles are public at
+    # /@username.
     if Keyword.get(opts, :validate_unique, true) do
       changeset
-      |> unsafe_validate_unique(:email, TraysSocial.Repo)
-      |> unique_constraint(:email)
+      |> unsafe_validate_unique(:email, TraysSocial.Repo, message: @email_taken_message)
+      |> unique_constraint(:email, message: @email_taken_message)
       |> validate_email_changed()
     else
       changeset
     end
+  end
+
+  @doc """
+  The message a taken email carries (D123). Shared by registration and both
+  email-change flows; it never confirms that an account exists.
+  """
+  def email_taken_message, do: @email_taken_message
+
+  @doc """
+  True when the changeset's email error came from the uniqueness check
+  (`unsafe_validate_unique/4` or the `unique_constraint/3` race backstop).
+
+  Matches the error metadata, never the message text (D123).
+  """
+  def email_taken?(%Ecto.Changeset{errors: errors}) do
+    Enum.any?(errors, fn
+      {:email, {_message, meta}} ->
+        meta[:validation] == :unsafe_unique or meta[:constraint] == :unique
+
+      _ ->
+        false
+    end)
   end
 
   defp validate_email_changed(changeset) do

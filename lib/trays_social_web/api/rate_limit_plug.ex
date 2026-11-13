@@ -2,7 +2,8 @@ defmodule TraysSocialWeb.API.RateLimitPlug do
   @moduledoc """
   Rate limiting plug for API endpoints using Hammer.
 
-  Limits requests by client IP address. Configure limits per action
+  Limits requests by signed-in user, else by client IP address (IPv6 by
+  its /64, via `TraysSocialWeb.AuthRateLimit.ip_key/1`). Configure limits per action
   by passing options when plugging:
 
       plug TraysSocialWeb.API.RateLimitPlug, max_requests: 10, interval_ms: 60_000
@@ -29,7 +30,9 @@ defmodule TraysSocialWeb.API.RateLimitPlug do
     identity =
       case conn.assigns do
         %{current_user: %{id: id}} when not is_nil(id) -> "user:#{id}"
-        _ -> "ip:#{conn.remote_ip |> :inet.ntoa() |> to_string()}"
+        # D123: IPv6 by /64, as AuthRateLimit keys it, so rotating
+        # addresses inside one /64 does not buy a fresh bucket.
+        _ -> "ip:#{TraysSocialWeb.AuthRateLimit.ip_key(conn)}"
       end
 
     bucket_key = "api_rate_limit:#{conn.request_path}:#{identity}"

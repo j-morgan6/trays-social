@@ -157,6 +157,53 @@ defmodule TraysSocial.Accounts.UserNotifierTest do
     end
   end
 
+  # D123: the notice must be useless to anyone but the address owner.
+  describe "deliver_existing_account_notice/1" do
+    test "deliver_existing_account_notice/1 contains no token or credential link" do
+      user = user_fixture()
+      base = TraysSocialWeb.Endpoint.url()
+      tokens_before = user_token_count(user)
+
+      assert {:ok, email} = UserNotifier.deliver_existing_account_notice(user)
+
+      assert email.to == [{"", user.email}]
+      assert email.subject == "Someone tried to create a Trays account with your email"
+      assert_email_html_contains_cta(email, base <> "/users/log-in")
+      assert_email_html_uses_brand_color(email)
+      assert_email_text_contains_raw_url(email, base <> "/users/log-in")
+      assert_email_text_contains_raw_url(email, base <> "/users/reset-password")
+      assert email.html_body =~ ~s(href="#{base}/users/reset-password")
+
+      # Every link in either body is exactly one of the two public pages:
+      # no token path segment, no query string, nothing that acts by itself.
+      links =
+        Regex.scan(~r{https?://[^\s"<>]+}, email.text_body <> email.html_body)
+        |> List.flatten()
+        |> Enum.uniq()
+
+      assert Enum.sort(links) ==
+               Enum.sort([base <> "/users/log-in", base <> "/users/reset-password"])
+
+      # And sending it builds no token for the account.
+      assert user_token_count(user) == tokens_before
+    end
+
+    test "deliver_existing_account_notice/1 returns an error tuple when the mailer fails" do
+      user = user_fixture()
+
+      with_failing_mailer(fn ->
+        log =
+          capture_log(fn ->
+            assert {:error, :simulated_mailer_failure} =
+                     UserNotifier.deliver_existing_account_notice(user)
+          end)
+
+        assert log =~ "email delivery failed"
+        refute log =~ "nothing was created"
+      end)
+    end
+  end
+
   describe "html escaping" do
     test "URLs containing & and quotes are encoded in href but unchanged in text_body" do
       user = unconfirmed_user_fixture()
@@ -179,6 +226,13 @@ defmodule TraysSocial.Accounts.UserNotifierTest do
   end
 
   # ---------- helpers ----------
+
+  defp user_token_count(user) do
+    Repo.aggregate(
+      from(t in TraysSocial.Accounts.UserToken, where: t.user_id == ^user.id),
+      :count
+    )
+  end
 
   defp assert_email_html_contains_cta(email, url) do
     assert is_binary(email.html_body),

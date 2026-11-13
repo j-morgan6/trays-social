@@ -49,6 +49,24 @@ defmodule TraysSocialWeb.API.RateLimitPlugTest do
              }
     end
 
+    # D123: POST /api/v1/auth/register is limited by this plug, so an IPv6
+    # client rotating addresses inside its /64 must not get fresh buckets.
+    test "keys anonymous IPv6 clients by their /64", %{conn: conn} do
+      opts = RateLimitPlug.init(max_requests: 1, interval_ms: 60_000)
+      path = "/api/v1/auth/test-ipv6-#{System.unique_integer([:positive])}"
+      conn = Map.put(conn, :request_path, path)
+
+      first = RateLimitPlug.call(%{conn | remote_ip: {0x2001, 0xDB8, 7, 7, 1, 1, 1, 1}}, opts)
+      refute first.halted
+
+      same_64 = RateLimitPlug.call(%{conn | remote_ip: {0x2001, 0xDB8, 7, 7, 2, 2, 2, 2}}, opts)
+      assert same_64.halted
+      assert same_64.status == 429
+
+      other_64 = RateLimitPlug.call(%{conn | remote_ip: {0x2001, 0xDB8, 7, 8, 1, 1, 1, 1}}, opts)
+      refute other_64.halted
+    end
+
     test "includes Retry-After header in 429 response", %{conn: conn} do
       opts = RateLimitPlug.init(max_requests: 1, interval_ms: 120_000)
 

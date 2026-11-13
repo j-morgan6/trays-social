@@ -3,10 +3,12 @@ defmodule TraysSocialWeb.UserSettingsControllerTest do
   # global Application env (TraysSocial.MailerTestHelpers).
   use TraysSocialWeb.ConnCase, async: false
 
+  import Swoosh.TestAssertions
   import TraysSocial.AccountsFixtures
   import TraysSocial.MailerTestHelpers
 
   alias TraysSocial.Accounts
+  alias TraysSocial.Accounts.User
 
   setup :register_and_log_in_user
 
@@ -108,6 +110,55 @@ defmodule TraysSocialWeb.UserSettingsControllerTest do
                "couldn't send the confirmation link"
 
       refute Phoenix.Flash.get(conn.assigns.flash, :info)
+    end
+
+    # D123: the email-change form shares validate_email/2, so it shows the
+    # neutral message too, but the signed-in user does not own the address
+    # they typed, so the owner is never emailed from here.
+    test "changing to a taken email shows the neutral error and sends no notice", %{
+      conn: conn,
+      user: user
+    } do
+      other = user_fixture()
+
+      conn =
+        put(conn, ~p"/users/settings", %{
+          "action" => "update_email",
+          "user" => %{"email" => other.email}
+        })
+
+      await_mailer_tasks()
+
+      text = conn |> html_response(200) |> LazyHTML.from_document() |> LazyHTML.text()
+      assert text =~ User.email_taken_message()
+      refute text =~ "has already been taken"
+      refute_email_sent()
+      assert Accounts.get_user_by_email(user.email)
+    end
+
+    test "a sixth email-change attempt within the hour is rate limited with a neutral message",
+         %{conn: conn} do
+      Application.put_env(:trays_social, :disable_rate_limiting, false)
+      on_exit(fn -> Application.put_env(:trays_social, :disable_rate_limiting, true) end)
+
+      other = user_fixture()
+
+      attempt = fn email ->
+        put(conn, ~p"/users/settings", %{
+          "action" => "update_email",
+          "user" => %{"email" => email}
+        })
+      end
+
+      for _ <- 1..5 do
+        assert attempt.("with spaces") |> html_response(200) =~ "must have the @ sign"
+      end
+
+      limited = attempt.(other.email)
+      assert redirected_to(limited) == ~p"/users/settings"
+
+      assert Phoenix.Flash.get(limited.assigns.flash, :error) ==
+               "Unable to change your email right now. Please try again later."
     end
 
     test "does not update email on invalid data", %{conn: conn} do

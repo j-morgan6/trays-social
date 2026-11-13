@@ -559,6 +559,21 @@ defmodule TraysSocial.Accounts do
     UserNotifier.deliver_login_instructions(user, magic_link_url_fun.(encoded_token))
   end
 
+  ## Existing-account notice (D123)
+
+  @doc """
+  Emails `user` that someone tried to register with their address.
+
+  Synchronous: returns the notifier's `{:ok, email}` or `{:error, reason}`.
+  The email carries no token, only links to the public log-in and reset
+  pages. Registration handlers call it through
+  `TraysSocialWeb.ExistingAccountNotice`, which rate limits it and sends it
+  off the request path; it is never sent from the email-change flows.
+  """
+  def deliver_existing_account_notice(%User{} = user) do
+    UserNotifier.deliver_existing_account_notice(user)
+  end
+
   ## Password reset (W254)
 
   @doc """

@@ -88,6 +88,33 @@ defmodule TraysSocial.Accounts.UserNotifier do
     )
   end
 
+  @doc """
+  Tell an account owner that someone tried to register with their email (D123).
+
+  Carries no token: it only points to the public log-in and reset-password
+  pages, so the email is useless to anyone but the address owner and acts on
+  nothing by itself.
+  """
+  def deliver_existing_account_notice(user) do
+    log_in_url = TraysSocialWeb.Endpoint.url() <> "/users/log-in"
+    reset_url = TraysSocialWeb.Endpoint.url() <> "/users/reset-password"
+
+    deliver(
+      user.email,
+      "Someone tried to create a Trays account with your email",
+      text_body_for_existing_account(user.email, log_in_url, reset_url),
+      html_email_body(
+        "You already have a Trays account",
+        "Someone tried to create a new Trays account with this email address. " <>
+          "You already have one, so nothing was created and nothing on your account changed. " <>
+          "If it was you, log in instead. If it wasn't, you can ignore this email.",
+        "Log in",
+        log_in_url,
+        secondary_link_html("Forgot your password? Reset it here:", reset_url)
+      )
+    )
+  end
+
   # Delivers the email using the application mailer with both plain-text and HTML bodies.
   #
   # D63: pattern-matches the Mailer result so delivery failures (Resend
@@ -198,9 +225,38 @@ defmodule TraysSocial.Accounts.UserNotifier do
     """
   end
 
+  defp text_body_for_existing_account(email, log_in_url, reset_url) do
+    """
+    Hi #{email},
+
+    Someone tried to create a new Trays account with this email address. You already have one, so nothing was created and nothing on your account changed.
+
+    If it was you, log in instead:
+
+    #{log_in_url}
+
+    Forgot your password? Reset it here:
+
+    #{reset_url}
+
+    If it wasn't you, you can ignore this email.
+
+    — The Trays team
+    """
+  end
+
+  # An extra paragraph with a second link, below the main button. Both
+  # arguments are escaped here, so callers pass plain text.
+  defp secondary_link_html(label, url) do
+    """
+    <p style="margin:24px 0 0;font-size:14px;line-height:1.5;color:#4b5563;">#{html_escape(label)} <a href="#{html_attr(url)}" style="color:#{@primary_color};text-decoration:underline;">#{html_escape(url)}</a></p>
+    """
+  end
+
   # HTML body shell. Inline styles only — many email clients strip <style> blocks.
-  # Table-based layout for legacy client compatibility.
-  defp html_email_body(heading, intro, cta_label, url) do
+  # Table-based layout for legacy client compatibility. `extra_html` is
+  # trusted, already-escaped markup placed after the fallback link.
+  defp html_email_body(heading, intro, cta_label, url, extra_html \\ "") do
     """
     <!DOCTYPE html>
     <html lang="en">
@@ -234,6 +290,7 @@ defmodule TraysSocial.Accounts.UserNotifier do
                     </table>
                     <p style="margin:24px 0 0;font-size:14px;line-height:1.5;color:#6b7280;">If the button doesn't work, copy and paste this link into your browser:</p>
                     <p style="margin:8px 0 0;font-size:13px;line-height:1.5;color:#6b7280;word-break:break-all;"><a href="#{html_attr(url)}" style="color:#{@primary_color};text-decoration:underline;">#{html_escape(url)}</a></p>
+                    #{extra_html}
                   </td>
                 </tr>
                 <tr>

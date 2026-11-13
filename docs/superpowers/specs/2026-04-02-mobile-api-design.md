@@ -103,7 +103,7 @@ Consistent JSON structure across all endpoints:
 {"data": [ ... ], "cursor": "abc123"}
 
 // Error
-{"errors": [{"field": "email", "message": "has already been taken"}]}
+{"errors": [{"field": "username", "message": "has already been taken"}]}
 ```
 
 ### Pagination

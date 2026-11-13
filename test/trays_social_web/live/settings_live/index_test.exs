@@ -2,6 +2,7 @@ defmodule TraysSocialWeb.SettingsLive.IndexTest do
   use TraysSocialWeb.ConnCase
 
   import Phoenix.LiveViewTest
+  import Swoosh.TestAssertions
   import TraysSocial.AccountsFixtures
   import TraysSocial.MailerTestHelpers
 
@@ -278,6 +279,65 @@ defmodule TraysSocialWeb.SettingsLive.IndexTest do
       refute lv_flash(view)["info"]
       # What the user typed is kept so they can retry.
       assert html =~ new_email
+    end
+
+    # D123: the LiveView email form shares validate_email/2, so a taken
+    # address reads the neutral message, and no existing-account notice is
+    # sent from email change.
+    test "changing to a taken email in the LiveView form shows the neutral error and sends no notice",
+         %{conn: conn} do
+      user = user_fixture() |> set_password()
+      other = user_fixture()
+
+      {:ok, view, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/users/settings")
+
+      html =
+        view
+        |> element("#email-form")
+        |> render_submit(%{
+          "user" => %{"email" => other.email, "current_password" => valid_user_password()}
+        })
+
+      await_mailer_tasks()
+
+      text = html |> LazyHTML.from_fragment() |> LazyHTML.text()
+      assert text =~ TraysSocial.Accounts.User.email_taken_message()
+      refute text =~ "has already been taken"
+      refute lv_flash(view)["info"]
+      refute_email_sent()
+    end
+
+    test "the LiveView email form shares the email-change rate limit with the settings controller",
+         %{conn: conn} do
+      Application.put_env(:trays_social, :disable_rate_limiting, false)
+      on_exit(fn -> Application.put_env(:trays_social, :disable_rate_limiting, true) end)
+
+      user = user_fixture() |> set_password()
+      other = user_fixture()
+      conn = log_in_user(conn, user)
+
+      for _ <- 1..5 do
+        put(conn, ~p"/users/settings", %{
+          "action" => "update_email",
+          "user" => %{"email" => "with spaces"}
+        })
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/users/settings")
+
+      html =
+        view
+        |> element("#email-form")
+        |> render_submit(%{
+          "user" => %{"email" => other.email, "current_password" => valid_user_password()}
+        })
+
+      text = html |> LazyHTML.from_fragment() |> LazyHTML.text()
+      assert text =~ "Unable to change your email right now. Please try again later."
+      refute text =~ TraysSocial.Accounts.User.email_taken_message()
     end
 
     test "shows validation error for invalid email with correct password", %{conn: conn} do

@@ -3,8 +3,11 @@ defmodule TraysSocialWeb.UserRegistrationControllerTest do
   # global Application env (TraysSocial.MailerTestHelpers).
   use TraysSocialWeb.ConnCase, async: false
 
+  import Swoosh.TestAssertions
   import TraysSocial.AccountsFixtures
   import TraysSocial.MailerTestHelpers
+
+  alias TraysSocial.Accounts.User
 
   describe "GET /users/register" do
     test "renders registration page", %{conn: conn} do
@@ -146,6 +149,111 @@ defmodule TraysSocialWeb.UserRegistrationControllerTest do
       assert response =~ "Start your tray"
       assert response =~ "13 or older"
       refute get_session(conn, :user_token)
+    end
+  end
+
+  # D123: a taken email must not confirm that the address has an account.
+  describe "POST /users/register with a taken email" do
+    defp fresh_ip_conn do
+      %{
+        build_conn()
+        | remote_ip: {10, Enum.random(0..255), Enum.random(0..255), Enum.random(1..254)}
+      }
+    end
+
+    defp register_taken(conn, email, extra \\ %{}) do
+      attrs = Map.merge(valid_user_attributes(email: email), extra)
+      conn = post(conn, ~p"/users/register", %{"user" => attrs})
+      await_mailer_tasks()
+      conn
+    end
+
+    defp email_error_text(conn) do
+      conn
+      |> html_response(200)
+      |> LazyHTML.from_document()
+      |> LazyHTML.query("#create-account form p.bg-accent\\/25")
+      |> LazyHTML.text()
+    end
+
+    test "a taken email shows the neutral error and emails the owner once", %{conn: conn} do
+      owner = user_fixture()
+
+      conn = register_taken(conn, owner.email)
+
+      text = email_error_text(conn)
+      assert text =~ User.email_taken_message()
+      refute text =~ "has already been taken"
+      refute get_session(conn, :user_token)
+
+      assert_email_sent(fn email ->
+        assert email.to == [{"", owner.email}]
+        assert email.subject == "Someone tried to create a Trays account with your email"
+      end)
+
+      refute_email_sent()
+    end
+
+    test "a taken email in another case still sends the notice to the stored address", %{
+      conn: conn
+    } do
+      owner = user_fixture()
+
+      conn = register_taken(conn, String.upcase(owner.email))
+
+      assert email_error_text(conn) =~ User.email_taken_message()
+      assert_email_sent(fn email -> assert email.to == [{"", owner.email}] end)
+    end
+
+    test "a taken email with an invalid password shows both errors and sends one notice", %{
+      conn: conn
+    } do
+      owner = user_fixture()
+
+      conn = register_taken(conn, owner.email, %{password: "short"})
+
+      text = email_error_text(conn)
+      assert text =~ User.email_taken_message()
+      assert text =~ "should be at least"
+      assert_email_sent(fn email -> assert email.to == [{"", owner.email}] end)
+      refute_email_sent()
+    end
+
+    test "a second taken-email attempt within the hour sends no second notice" do
+      Application.put_env(:trays_social, :disable_rate_limiting, false)
+      on_exit(fn -> Application.put_env(:trays_social, :disable_rate_limiting, true) end)
+
+      owner = user_fixture()
+
+      first = register_taken(fresh_ip_conn(), owner.email)
+      assert email_error_text(first) =~ User.email_taken_message()
+      assert_email_sent(fn email -> assert email.to == [{"", owner.email}] end)
+
+      second = register_taken(fresh_ip_conn(), owner.email)
+      assert email_error_text(second) =~ User.email_taken_message()
+      refute_email_sent()
+
+      # The page is the same whether or not a notice went out.
+      assert email_error_text(first) == email_error_text(second)
+    end
+
+    test "a taken username keeps has already been taken and sends no notice", %{conn: conn} do
+      owner = user_fixture()
+
+      conn =
+        register_taken(conn, unique_user_email(), %{username: owner.username})
+
+      assert email_error_text(conn) =~ "has already been taken"
+      refute_email_sent()
+    end
+
+    test "a blank email still shows can't be blank", %{conn: conn} do
+      conn = register_taken(conn, "")
+
+      text = email_error_text(conn)
+      assert text =~ "can't be blank"
+      refute text =~ User.email_taken_message()
+      refute_email_sent()
     end
   end
 

@@ -151,6 +151,32 @@ defmodule TraysSocialWeb.AuthRateLimitTest do
     end
   end
 
+  # D123
+  describe "check_email_change/1" do
+    test "allows 5 email-change attempts per user per hour, then limits only that user" do
+      user_id = System.unique_integer([:positive])
+      other_id = System.unique_integer([:positive])
+
+      for _ <- 1..5, do: assert(AuthRateLimit.check_email_change(user_id) == :ok)
+      assert AuthRateLimit.check_email_change(user_id) == :rate_limited
+      assert AuthRateLimit.check_email_change(other_id) == :ok
+    end
+  end
+
+  describe "ip_key/1" do
+    test "keys IPv6 by its /64 and IPv4 by the full address" do
+      v6 = fn ip -> %{build_conn() | remote_ip: ip} end
+
+      assert AuthRateLimit.ip_key(v6.({0x2001, 0xDB8, 1, 2, 3, 4, 5, 6})) ==
+               AuthRateLimit.ip_key(v6.({0x2001, 0xDB8, 1, 2, 9, 9, 9, 9}))
+
+      refute AuthRateLimit.ip_key(v6.({0x2001, 0xDB8, 1, 2, 3, 4, 5, 6})) ==
+               AuthRateLimit.ip_key(v6.({0x2001, 0xDB8, 1, 3, 3, 4, 5, 6}))
+
+      assert AuthRateLimit.ip_key(conn_for_ip("10.1.2.3")) == "10.1.2.3"
+    end
+  end
+
   describe "disable flag" do
     test "honors :disable_rate_limiting=true" do
       Application.put_env(:trays_social, :disable_rate_limiting, true)

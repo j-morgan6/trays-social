@@ -8,6 +8,7 @@ defmodule TraysSocialWeb.API.V1.AuthController do
   alias TraysSocial.Accounts.User
   alias TraysSocialWeb.API.AuthPlug
   alias TraysSocialWeb.AuthRateLimit
+  alias TraysSocialWeb.ExistingAccountNotice
 
   # W254: one body for every reset request, whether the email has an account,
   # is rate limited, or the mailer fails, so the response never reveals which.
@@ -48,6 +49,9 @@ defmodule TraysSocialWeb.API.V1.AuthController do
         })
 
       {:error, changeset} ->
+        # D123: a taken email answers with the neutral message (same 422 and
+        # errors shape as before); the owner gets a rate-limited notice.
+        :ok = ExistingAccountNotice.maybe_send(changeset)
         {:error, changeset}
     end
   end

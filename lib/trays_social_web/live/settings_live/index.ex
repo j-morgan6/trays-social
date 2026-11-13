@@ -5,6 +5,7 @@ defmodule TraysSocialWeb.SettingsLive.Index do
   alias TraysSocial.Accounts.User
   alias TraysSocial.Uploads.ImageProcessor
   alias TraysSocial.Uploads.Photo
+  alias TraysSocialWeb.AuthRateLimit
 
   on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
   on_mount {TraysSocialWeb.NotificationsHook, :mount_notifications}
@@ -84,15 +85,28 @@ defmodule TraysSocialWeb.SettingsLive.Index do
       ) do
     user = socket.assigns.user
 
-    if User.valid_password?(user, current_password) do
-      email_changeset =
-        user
-        |> Accounts.change_user_email(%{"email" => email})
-        |> Map.put(:action, :validate)
+    # D123: shares the settings controller's per-user bucket, and every
+    # attempt counts, so the form can test at most 5 addresses per user per
+    # hour (see ExistingAccountNotice). Neutral copy, as in D46.
+    cond do
+      AuthRateLimit.check_email_change(user.id) == :rate_limited ->
+        {:noreply,
+         assign(
+           socket,
+           :email_form_error,
+           "Unable to change your email right now. Please try again later."
+         )}
 
-      send_email_change(socket, user, email, email_changeset)
-    else
-      {:noreply, assign(socket, :email_form_error, "Current password is incorrect.")}
+      User.valid_password?(user, current_password) ->
+        email_changeset =
+          user
+          |> Accounts.change_user_email(%{"email" => email})
+          |> Map.put(:action, :validate)
+
+        send_email_change(socket, user, email, email_changeset)
+
+      true ->
+        {:noreply, assign(socket, :email_form_error, "Current password is incorrect.")}
     end
   end
 

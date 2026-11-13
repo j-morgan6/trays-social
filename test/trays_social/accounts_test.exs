@@ -123,14 +123,51 @@ defmodule TraysSocial.AccountsTest do
       assert "should be at most 160 character(s)" in errors_on(changeset).email
     end
 
-    test "validates email uniqueness" do
+    # D123: a taken email never reads "has already been taken".
+    test "register_user/1 with a taken email returns the neutral email message, never has already been taken" do
       %{email: email} = user_fixture()
       {:error, changeset} = Accounts.register_user(%{email: email})
-      assert "has already been taken" in errors_on(changeset).email
+      assert User.email_taken_message() in errors_on(changeset).email
+      refute "has already been taken" in errors_on(changeset).email
+      assert User.email_taken?(changeset)
 
       # Now try with the uppercased email too, to check that email case is ignored.
       {:error, changeset} = Accounts.register_user(%{email: String.upcase(email)})
-      assert "has already been taken" in errors_on(changeset).email
+      assert User.email_taken_message() in errors_on(changeset).email
+      assert User.email_taken?(changeset)
+    end
+
+    test "register_user/1 with a taken username keeps has already been taken on username" do
+      %{username: username} = user_fixture()
+
+      {:error, changeset} =
+        Accounts.register_user(valid_user_attributes(username: username))
+
+      assert "has already been taken" in errors_on(changeset).username
+      refute Map.has_key?(errors_on(changeset), :email)
+      refute User.email_taken?(changeset)
+    end
+
+    test "email_taken?/1 is false for a blank or malformed email" do
+      {:error, blank} = Accounts.register_user(%{email: ""})
+      refute User.email_taken?(blank)
+
+      {:error, malformed} = Accounts.register_user(%{email: "not valid"})
+      refute User.email_taken?(malformed)
+    end
+
+    # The race backstop: unsafe_validate_unique/4 passed because the row did
+    # not exist yet, and the insert then hits the unique index.
+    test "the email unique_constraint carries the neutral message" do
+      attrs = valid_user_attributes()
+      changeset = User.registration_changeset(%User{}, attrs)
+      assert changeset.valid?
+
+      _racer = user_fixture(email: attrs.email)
+
+      {:error, changeset} = Repo.insert(changeset)
+      assert errors_on(changeset).email == [User.email_taken_message()]
+      assert User.email_taken?(changeset)
     end
 
     @tag :skip
@@ -259,6 +296,15 @@ defmodule TraysSocial.AccountsTest do
     test "returns a user changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user_email(%User{})
       assert changeset.required == [:email]
+    end
+
+    test "change_user_email/3 with another account's email returns the neutral message" do
+      user = user_fixture()
+      other = user_fixture()
+
+      changeset = Accounts.change_user_email(user, %{email: other.email})
+      assert User.email_taken_message() in errors_on(changeset).email
+      refute "has already been taken" in errors_on(changeset).email
     end
   end
 

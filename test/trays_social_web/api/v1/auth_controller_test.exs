@@ -3,9 +3,11 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
   # global Application env (TraysSocial.MailerTestHelpers).
   use TraysSocialWeb.ConnCase, async: false
 
+  import Swoosh.TestAssertions
   import TraysSocial.AccountsFixtures
   import TraysSocial.MailerTestHelpers
 
+  alias TraysSocial.Accounts.User
   alias TraysSocialWeb.API.V1.AuthController
 
   setup %{conn: conn} do
@@ -56,7 +58,11 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
       assert TraysSocial.Accounts.get_user_by_email("unsent@example.com")
     end
 
-    test "returns error for duplicate email", %{conn: conn} do
+    # D123: shipped iOS renders each error as "field: message"
+    # (Models/APIError.swift), so the status and shape stay exactly as they
+    # were and only the email message changes.
+    test "POST /api/v1/auth/register with a taken email returns 422 with field email and the neutral message",
+         %{conn: conn} do
       user = user_fixture()
 
       conn =
@@ -67,8 +73,54 @@ defmodule TraysSocialWeb.API.V1.AuthControllerTest do
           age_confirmation: true
         })
 
+      await_mailer_tasks()
+
       assert %{"errors" => errors} = json_response(conn, 422)
-      assert Enum.any?(errors, fn e -> e["field"] == "email" end)
+
+      assert %{"field" => "email", "message" => message} =
+               Enum.find(errors, &(&1["field"] == "email"))
+
+      assert message == User.email_taken_message()
+      refute conn.resp_body =~ "has already been taken"
+
+      assert_email_sent(fn email ->
+        assert email.to == [{"", user.email}]
+        assert email.subject == "Someone tried to create a Trays account with your email"
+      end)
+    end
+
+    @tag :capture_log
+    test "a notice mailer failure still returns the same 422 body", %{conn: conn} do
+      user = user_fixture()
+
+      params = %{
+        email: user.email,
+        username: "otheruser",
+        password: "valid_password123",
+        age_confirmation: true
+      }
+
+      sent = post(conn, ~p"/api/v1/auth/register", params)
+      await_mailer_tasks()
+      assert_email_sent(fn email -> assert email.to == [{"", user.email}] end)
+
+      failed =
+        with_failing_mailer(fn ->
+          conn =
+            post(
+              build_conn() |> put_req_header("accept", "application/json"),
+              ~p"/api/v1/auth/register",
+              params
+            )
+
+          await_mailer_tasks()
+          conn
+        end)
+
+      refute_email_sent()
+      assert failed.status == 422
+      assert sent.status == 422
+      assert failed.resp_body == sent.resp_body
     end
 
     test "returns error for duplicate username", %{conn: conn} do

@@ -4,6 +4,7 @@ defmodule TraysSocialWeb.UserRegistrationController do
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.User
   alias TraysSocialWeb.AuthRateLimit
+  alias TraysSocialWeb.ExistingAccountNotice
   alias TraysSocialWeb.UserAuth
 
   # W252: the sign-in pages show info and error flashes in place (the amber
@@ -60,6 +61,10 @@ defmodule TraysSocialWeb.UserRegistrationController do
         |> UserAuth.log_in_user(user)
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        # D123: a taken email shows the neutral message on the email field
+        # (User.validate_email/2) and the owner gets a rate-limited notice
+        # instead; the page re-renders exactly as for any other error.
+        :ok = ExistingAccountNotice.maybe_send(changeset)
         render(conn, :new, changeset: changeset)
     end
   end
