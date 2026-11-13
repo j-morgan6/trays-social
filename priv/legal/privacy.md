@@ -21,7 +21,7 @@ We collect what you give us when using Trays:
 - Optional bio and profile photo
 - Posts, photos, recipes, comments, reports you submit
 - Blocking and muting choices
-- In-app feedback you send us: the subject and message you write, plus your app version, OS version and device model, stored with your account
+- In-app feedback you send us: the subject and message you write and whether it is a bug report, plus your app version and build number, OS version, device model and the app screen you sent it from, stored with your account
 
 ## 3. Information collected automatically
 

@@ -16,7 +16,7 @@ Age rating: **13+**
 | Contact Info | Name | Yes | No | Sign in with Apple requests the full name; the iOS app sends the given name, lowercased, as the suggested username, which the server stores as the username if it passes validation; no name field exists |
 | User Content | Photos or Videos | Yes | No | User-uploaded recipe photos |
 | User Content | Other User Content | Yes | No | Posts, comments, recipes |
-| User Content | Customer Support | Yes | No | In-app feedback (subject, body, app/OS version, device model) posted to `/api/v1/feedback` and stored with the user |
+| User Content | Customer Support | Yes | No | In-app feedback (kind: bug or feedback, subject, body, app version and build, OS version, device model, entry screen) posted to `/api/v1/feedback` and stored with the user |
 | Identifiers | User ID | Yes | No | Internal Trays user ID + Apple `sub` claim from Sign in with Apple — declared once under "User ID" |
 | Identifiers | Device ID | Yes | No | APNs token only — used for push delivery, never for cross-app tracking |
 | Usage Data | Product Interaction | Yes | No | Recipe opens (`POST /api/v1/posts/:id/open`, stored in `recipe_opens`) power Home's "Jump back in" (W189); no analytics events |

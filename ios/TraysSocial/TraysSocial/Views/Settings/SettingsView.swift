@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct SettingsView: View {
+    /// W263: the `screen` a report sent from here carries.
+    static let feedbackEntryPoint: FeedbackEntryPoint = .settings
+
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirm = false
@@ -113,7 +116,7 @@ struct SettingsView: View {
                 }
 
                 Section("Feedback") {
-                    SettingsLinkRow(title: "Send Feedback") { showSendFeedback = true }
+                    SettingsLinkRow(title: "Report a bug or send feedback") { showSendFeedback = true }
                 }
 
                 if appState.currentUser?.hasAdminAccess == true {
@@ -211,7 +214,7 @@ struct SettingsView: View {
                 SafariView(url: URL(string: Configuration.apiBaseURL + "/admin/feedback")!)
             }
             .sheet(isPresented: $showSendFeedback) {
-                FeedbackView()
+                FeedbackView(entryPoint: Self.feedbackEntryPoint)
             }
         }
     }

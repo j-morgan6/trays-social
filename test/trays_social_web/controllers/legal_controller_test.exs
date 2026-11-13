@@ -32,7 +32,8 @@ defmodule TraysSocialWeb.LegalControllerTest do
         "may also share your name",
         "to suggest a username",
         "In-app feedback you send us",
-        "the subject and message you write, plus your app version, OS version and device model",
+        # W263: feedback also carries its kind, the build number and the screen.
+        "the subject and message you write and whether it is a bug report, plus your app version and build number, OS version, device model and the app screen you sent it from",
         "along with your app version, OS version and device model",
         "Recipe opens: when you are signed in",
         "Recipe opens are not used for analytics or ads",

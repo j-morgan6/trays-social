@@ -89,6 +89,7 @@ struct LoginView: View {
             if focusedField == nil {
                 Spacer(minLength: 24)
                 AuthFooterLink(prompt: "New here?", linkTitle: "Create an account", action: onCreateAccount)
+                LoginSupportLine()
             }
         }
         .authNavigationChrome()
@@ -139,6 +140,49 @@ struct LoginView: View {
     private func clearErrorIfShown() {
         if viewModel.errorMessage != nil, !viewModel.isLoading {
             viewModel.clearError()
+        }
+    }
+}
+
+/// W263: Trouble signing in? under the footer, for people who cannot sign
+/// in and so cannot reach the in-app feedback sheet. The address is the one
+/// published in the privacy policy. It is a mail link; with no mail app the
+/// address is still on screen, and a long press offers Copy email address
+/// (a Link label cannot take text selection, so Copy stands in for it).
+struct LoginSupportLine: View {
+    static let supportEmail = "support@trays.app"
+    static let mailURL = URL(string: "mailto:support@trays.app")!
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 4) { content }
+            VStack(spacing: 0) { content }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Copy email address, for people with no mail app set up.
+    static func copyAddress(to pasteboard: UIPasteboard = .general) {
+        pasteboard.string = supportEmail
+    }
+
+    @ViewBuilder private var content: some View {
+        Text("Trouble signing in?")
+            .scaledFont(15, relativeTo: .subheadline)
+            .foregroundStyle(Theme.muted)
+        Link(destination: Self.mailURL) {
+            Text(verbatim: Self.supportEmail)
+                .scaledFont(15, weight: .semibold, relativeTo: .subheadline)
+                .foregroundStyle(Theme.primaryInk)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .contextMenu {
+            Button {
+                Self.copyAddress()
+            } label: {
+                Label("Copy email address", systemImage: "doc.on.doc")
+            }
         }
     }
 }

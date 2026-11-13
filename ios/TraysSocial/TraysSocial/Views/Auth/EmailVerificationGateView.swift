@@ -5,7 +5,11 @@ import SwiftUI
 /// state (emerald band, rounded heading, mint panel, amber button). The
 /// refresh, resend cooldown and sign-out behaviour are unchanged.
 struct EmailVerificationGateView: View {
+    /// W263: the `screen` a report sent from the gate carries.
+    static let feedbackEntryPoint: FeedbackEntryPoint = .verifyEmail
+
     @Environment(AppState.self) private var appState
+    @State private var showFeedback = false
     @State private var isResending = false
     @State private var isRefreshing = false
     @State private var statusMessage: String?
@@ -82,6 +86,15 @@ struct EmailVerificationGateView: View {
                 .buttonStyle(AuthTextButtonStyle())
                 .disabled(isResending || isInCooldown)
 
+                // W263: a signed-in but unconfirmed user can still report a
+                // problem; the feedback endpoint does not need a confirmed email.
+                Button {
+                    showFeedback = true
+                } label: {
+                    Text("Report a problem")
+                }
+                .buttonStyle(AuthTextButtonStyle(weight: .regular, size: 15, color: Theme.muted))
+
                 Button(role: .destructive) {
                     appState.logout()
                 } label: {
@@ -92,6 +105,9 @@ struct EmailVerificationGateView: View {
         }
         .task {
             await refresh()
+        }
+        .sheet(isPresented: $showFeedback) {
+            FeedbackView(entryPoint: Self.feedbackEntryPoint)
         }
     }
 
