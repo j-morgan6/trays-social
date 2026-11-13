@@ -1,6 +1,7 @@
 defmodule TraysSocialWeb.API.V1.FeedbackController do
   @moduledoc """
-  Accepts in-app feedback submissions from authenticated iOS users.
+  Accepts in-app bug reports and feedback from signed-in iOS users
+  (W123, extended in W261).
 
   ## Endpoint
 
@@ -9,35 +10,77 @@ defmodule TraysSocialWeb.API.V1.FeedbackController do
   ## Body
 
       {
-        "subject":      "Optional subject line",
-        "body":         "Required free-text feedback (1–5000 chars)",
+        "kind":         "bug" | "feedback" (optional, default "feedback"),
+        "subject":      "Optional subject line (up to 200 chars)",
+        "body":         "Required free-text feedback (1 to 5000 chars)",
         "app_version":  "1.0.0",
+        "app_build":    "372",
         "os_version":   "17.5",
-        "device_model": "iPhone15,3"
+        "device_model": "iPhone15,3",
+        "screen":       "Settings"
       }
 
-  ## Auth + rate limiting
+  Every key but `body` is optional, so a body from a shipped build (no
+  `kind`, `app_build` or `screen`) is stored as before. The `201` response
+  is always `{"data": {"id": ..., "status": ...}}`; shipped builds decode
+  it as an empty response, so it never gains keys.
 
-  Authentication required — feedback must be attributable so the
-  operator can follow up. Rate-limited via `api_rate_limit_write`
-  (60/min/user) which is plenty for human-typed feedback.
+  ## Set by the server, never by the client
+
+    * `platform` is always `"ios"` here (the web form will set `"web"`); a
+      `platform` in the body is ignored so the source cannot be spoofed.
+    * `user_agent` comes from the request's `user-agent` header, cut to
+      512 characters; a `user_agent` in the body is ignored.
+    * The owner comes from the bearer token's user (D44/D52).
+
+  No IP address is stored.
+
+  ## Auth, scope and rate limiting
+
+  Authentication is required (`:api_auth`), so feedback is attributable
+  and the developer can follow up. Email confirmation is not: the route
+  sits in the read scope like `/devices`, because an unconfirmed user is
+  the one most likely to need to report a mailer bug.
+
+  Each user may submit 5 times per hour, counted by
+  `TraysSocialWeb.FeedbackRateLimit` in one bucket shared with the web
+  form. The check runs before validation, so an attempt that returns `422`
+  still counts. Over the limit the response is `429` with a `retry-after`
+  header and `{"errors": [{"message": "too many requests"}]}`, the same
+  shape as `TraysSocialWeb.API.RateLimitPlug`.
 
   ## Pitfalls (per W123 spec)
 
     * Body whitespace is trimmed before length validation so a body
       of `"   "` is rejected as empty.
-    * The full body is never logged at info level — only metadata
-      (id, user_id, subject length, body length, app/os/device).
+    * The full body is never logged at info level, only metadata
+      (id, user_id, kind, platform, subject length, body length, app/os).
   """
 
   use TraysSocialWeb, :controller
 
   alias TraysSocial.Feedback
+  alias TraysSocialWeb.FeedbackRateLimit
 
   require Logger
 
-  def create(conn, %{"body" => body} = params) when is_binary(body) do
-    attrs = feedback_attrs(body, params)
+  @user_agent_max 512
+
+  def create(conn, params) do
+    case FeedbackRateLimit.check_submission(conn.assigns.current_user.id) do
+      :ok ->
+        do_create(conn, params)
+
+      :rate_limited ->
+        conn
+        |> put_resp_header("retry-after", to_string(FeedbackRateLimit.retry_after_seconds()))
+        |> put_status(:too_many_requests)
+        |> json(%{errors: [%{message: "too many requests"}]})
+    end
+  end
+
+  defp do_create(conn, %{"body" => body} = params) when is_binary(body) do
+    attrs = feedback_attrs(conn, body, params)
 
     case Feedback.submit(conn.assigns.current_user, attrs) do
       {:ok, record} ->
@@ -54,27 +97,41 @@ defmodule TraysSocialWeb.API.V1.FeedbackController do
     end
   end
 
-  def create(conn, _params) do
+  defp do_create(conn, _params) do
     conn
     |> put_status(:unprocessable_entity)
     |> json(%{errors: [%{field: "body", message: "is required"}]})
   end
 
   # The owner comes from current_user via Feedback.submit/2, never from
-  # the body (D44/D52).
-  defp feedback_attrs(body, params) do
+  # the body (D44/D52). platform and user_agent are set here, never read
+  # from params (W261).
+  defp feedback_attrs(conn, body, params) do
     %{
+      kind: params["kind"],
+      platform: "ios",
       subject: params["subject"],
       body: body,
       app_version: params["app_version"],
+      app_build: params["app_build"],
       os_version: params["os_version"],
-      device_model: params["device_model"]
+      device_model: params["device_model"],
+      screen: params["screen"],
+      user_agent: request_user_agent(conn)
     }
+  end
+
+  defp request_user_agent(conn) do
+    case get_req_header(conn, "user-agent") do
+      [ua | _] when is_binary(ua) and ua != "" -> String.slice(ua, 0, @user_agent_max)
+      _ -> nil
+    end
   end
 
   defp log_submission(record) do
     Logger.info(
       "feedback submitted: id=#{record.id} user_id=#{record.user_id} " <>
+        "kind=#{record.kind} platform=#{record.platform} " <>
         "subject_len=#{String.length(record.subject || "")} " <>
         "body_len=#{String.length(record.body)} " <>
         "app=#{record.app_version} os=#{record.os_version}"

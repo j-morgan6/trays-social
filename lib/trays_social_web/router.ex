@@ -227,6 +227,12 @@ defmodule TraysSocialWeb.Router do
     # scope like /devices: it needs no email confirmation.
     post "/posts/:id/open", PostController, :open
 
+    # W123/W261: in-app bug reports and feedback. Read scope like /devices:
+    # no email confirmation, so an unconfirmed user (the one most likely to
+    # hit a mailer bug) can still report. The real limit is per user, 5 per
+    # hour, enforced by TraysSocialWeb.FeedbackRateLimit in the controller.
+    post "/feedback", FeedbackController, :create
+
     get "/blocked-users", UserController, :list_blocked_users
     get "/muted-keywords", UserController, :muted_keywords
     put "/muted-keywords", UserController, :update_muted_keywords
@@ -280,11 +286,6 @@ defmodule TraysSocialWeb.Router do
 
     post "/users/:username/block", UserController, :block
     delete "/users/:username/block", UserController, :unblock
-
-    # W123: in-app feedback ingest. Authenticated; uses the write
-    # bucket because human-typed feedback is low-frequency relative
-    # to like/comment writes.
-    post "/feedback", FeedbackController, :create
   end
 
   # API v1 — reports (rate limited separately)

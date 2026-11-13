@@ -23,6 +23,16 @@ defmodule TraysSocialWeb.Plugs.RequireAdmin do
         use TraysSocialWeb, :live_view
         on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin}
       end
+
+  `:ensure_admin` checks once, at mount. A LiveView whose events change
+  data can also mount `:ensure_admin_each_event` (W261): it reloads the
+  user before every `handle_event` and redirects to `/feed` when they are
+  no longer an admin, so revoking `is_admin` takes effect on the next
+  click rather than the next page load. It costs one primary-key lookup
+  per event.
+
+      on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin}
+      on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin_each_event}
   """
 
   use TraysSocialWeb, :verified_routes
@@ -30,6 +40,7 @@ defmodule TraysSocialWeb.Plugs.RequireAdmin do
   import Plug.Conn
   import Phoenix.Controller, only: [put_view: 2, render: 2]
 
+  alias TraysSocial.Accounts
   alias TraysSocialWeb.ErrorHTML
 
   def init(opts), do: opts
@@ -53,6 +64,24 @@ defmodule TraysSocialWeb.Plugs.RequireAdmin do
       {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/feed")}
     end
   end
+
+  def on_mount(:ensure_admin_each_event, _params, _session, socket) do
+    {:cont, Phoenix.LiveView.attach_hook(socket, :admin_recheck, :handle_event, &recheck_admin/3)}
+  end
+
+  defp recheck_admin(_event, _params, socket) do
+    if still_admin?(socket.assigns) do
+      {:cont, socket}
+    else
+      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/feed")}
+    end
+  end
+
+  defp still_admin?(%{current_scope: %{user: %{id: id}}}) when not is_nil(id) do
+    match?(%{is_admin: true}, Accounts.get_user(id))
+  end
+
+  defp still_admin?(_), do: false
 
   defp admin?(%{current_scope: %{user: %{is_admin: true}}}), do: true
   defp admin?(_), do: false

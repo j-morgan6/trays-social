@@ -5,13 +5,18 @@ defmodule TraysSocialWeb.Admin.FeedbackLive do
   Mirrors `Admin.IosCrashesLive` (W118): one module owns both
   `:index` (`/admin/feedback`) and `:show`
   (`/admin/feedback/:id`) via handle_params switching on the
-  optional `id`. List view shows submitter / subject / status badge /
-  app / received_at. Detail panel pulls the full body and offers
+  optional `id`. List view shows received_at / submitter / subject /
+  status badge / kind / platform / app version, filterable by status and
+  kind (W261). Detail panel pulls the full body plus the bug-report
+  context (kind, platform, app version and build, OS, device, screen and
+  user agent; "—" for rows stored before those fields existed) and offers
   Mark Triaged + Mark Resolved actions.
 
   Defense-in-depth admin gate: router pipeline plus the
   `on_mount {RequireAdmin, :ensure_admin}` hook used by ReportsLive +
-  IosCrashesLive.
+  IosCrashesLive. `:ensure_admin_each_event` (W261) re-checks `is_admin`
+  before every event, so a revoked admin cannot triage from an open page.
+  All user text renders through HEEx escaping.
   """
 
   use TraysSocialWeb, :live_view
@@ -21,6 +26,7 @@ defmodule TraysSocialWeb.Admin.FeedbackLive do
 
   on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
   on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin}
+  on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin_each_event}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -28,7 +34,9 @@ defmodule TraysSocialWeb.Admin.FeedbackLive do
      socket
      |> assign(:page_title, "Feedback")
      |> assign(:filter_status, "")
+     |> assign(:filter_kind, "")
      |> assign(:statuses, Submission.statuses())
+     |> assign(:kinds, Submission.kinds())
      |> assign(:submissions, [])
      |> assign(:selected, nil)
      |> assign_submissions()}
@@ -50,6 +58,7 @@ defmodule TraysSocialWeb.Admin.FeedbackLive do
     {:noreply,
      socket
      |> assign(:filter_status, params["status"] || "")
+     |> assign(:filter_kind, params["kind"] || "")
      |> assign_submissions()}
   end
 
@@ -73,7 +82,10 @@ defmodule TraysSocialWeb.Admin.FeedbackLive do
 
   defp assign_submissions(socket) do
     submissions =
-      Feedback.list_recent(status: presence(socket.assigns.filter_status))
+      Feedback.list_recent(
+        status: presence(socket.assigns.filter_status),
+        kind: presence(socket.assigns.filter_kind)
+      )
 
     assign(socket, :submissions, submissions)
   end
@@ -109,6 +121,20 @@ defmodule TraysSocialWeb.Admin.FeedbackLive do
           </select>
         </div>
 
+        <div class="flex flex-col gap-1">
+          <label for="filter-kind" class="text-xs font-medium">Kind</label>
+          <select
+            id="filter-kind"
+            name="kind"
+            class="select select-bordered select-sm"
+          >
+            <option value="">All</option>
+            <option :for={k <- @kinds} value={k} selected={k == @filter_kind}>
+              {k}
+            </option>
+          </select>
+        </div>
+
         <p class="ml-auto text-xs text-base-content/60">{length(@submissions)} submission(s)</p>
       </form>
 
@@ -134,13 +160,36 @@ defmodule TraysSocialWeb.Admin.FeedbackLive do
                 </dd>
               </div>
               <div>
-                <dt class="text-xs uppercase tracking-wide text-base-content/60">
-                  App / OS / Device
-                </dt>
-                <dd class="font-mono text-xs">
-                  {@selected.app_version || "—"} / {@selected.os_version || "—"} / {@selected.device_model ||
-                    "—"}
-                </dd>
+                <dt class="text-xs uppercase tracking-wide text-base-content/60">Kind</dt>
+                <dd>{@selected.kind || "—"}</dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-base-content/60">Platform</dt>
+                <dd>{@selected.platform || "—"}</dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-base-content/60">App version</dt>
+                <dd class="font-mono text-xs">{@selected.app_version || "—"}</dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-base-content/60">Build</dt>
+                <dd class="font-mono text-xs">{@selected.app_build || "—"}</dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-base-content/60">OS</dt>
+                <dd class="font-mono text-xs">{@selected.os_version || "—"}</dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-base-content/60">Device</dt>
+                <dd class="font-mono text-xs">{@selected.device_model || "—"}</dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-base-content/60">Screen</dt>
+                <dd class="font-mono text-xs">{@selected.screen || "—"}</dd>
+              </div>
+              <div class="col-span-2">
+                <dt class="text-xs uppercase tracking-wide text-base-content/60">User agent</dt>
+                <dd class="font-mono text-xs break-all">{@selected.user_agent || "—"}</dd>
               </div>
             </dl>
             <div :if={@selected.subject} class="pt-2">
@@ -186,6 +235,8 @@ defmodule TraysSocialWeb.Admin.FeedbackLive do
               <th>From</th>
               <th>Subject</th>
               <th>Status</th>
+              <th>Kind</th>
+              <th>Platform</th>
               <th>App</th>
               <th></th>
             </tr>
@@ -198,6 +249,8 @@ defmodule TraysSocialWeb.Admin.FeedbackLive do
               <td>
                 <span class={"badge badge-sm " <> badge_for(s.status)}>{s.status}</span>
               </td>
+              <td class="text-xs">{s.kind || "—"}</td>
+              <td class="text-xs">{s.platform || "—"}</td>
               <td class="font-mono text-xs">{s.app_version || "—"}</td>
               <td>
                 <.link patch={~p"/admin/feedback/#{s.id}"} class="btn btn-xs btn-ghost">
@@ -206,7 +259,7 @@ defmodule TraysSocialWeb.Admin.FeedbackLive do
               </td>
             </tr>
             <tr :if={@submissions == []}>
-              <td colspan="6" class="text-center text-sm text-base-content/60 py-6">
+              <td colspan="8" class="text-center text-sm text-base-content/60 py-6">
                 No feedback submitted yet.
               </td>
             </tr>
