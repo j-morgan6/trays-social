@@ -905,7 +905,7 @@ defmodule TraysSocial.AccountsTest do
 
     test "deletes the account and its feedback submissions (D103 regression)" do
       user = user_fixture()
-      {:ok, _} = TraysSocial.Feedback.submit(%{user_id: user.id, body: "love the app"})
+      {:ok, _} = TraysSocial.Feedback.submit(user, %{body: "love the app"})
 
       assert {:ok, _} = Accounts.delete_account(user)
 

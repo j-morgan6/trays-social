@@ -37,9 +37,9 @@ defmodule TraysSocialWeb.API.V1.FeedbackController do
   require Logger
 
   def create(conn, %{"body" => body} = params) when is_binary(body) do
-    attrs = feedback_attrs(conn.assigns.current_user, body, params)
+    attrs = feedback_attrs(body, params)
 
-    case Feedback.submit(attrs) do
+    case Feedback.submit(conn.assigns.current_user, attrs) do
       {:ok, record} ->
         log_submission(record)
 
@@ -60,9 +60,10 @@ defmodule TraysSocialWeb.API.V1.FeedbackController do
     |> json(%{errors: [%{field: "body", message: "is required"}]})
   end
 
-  defp feedback_attrs(user, body, params) do
+  # The owner comes from current_user via Feedback.submit/2, never from
+  # the body (D44/D52).
+  defp feedback_attrs(body, params) do
     %{
-      user_id: user.id,
       subject: params["subject"],
       body: body,
       app_version: params["app_version"],

@@ -18,12 +18,11 @@ defmodule TraysSocialWeb.Admin.FeedbackLiveTest do
 
     attrs =
       Enum.into(attrs, %{
-        user_id: user.id,
         body: "Default test body — useful feedback here.",
         subject: "Default subject"
       })
 
-    {:ok, sub} = Feedback.submit(attrs)
+    {:ok, sub} = Feedback.submit(user, attrs)
     Feedback.get_submission!(sub.id)
   end
 
@@ -70,6 +69,19 @@ defmodule TraysSocialWeb.Admin.FeedbackLiveTest do
 
     assert html =~ "Full body line 1"
     assert html =~ "Full body line 2"
+  end
+
+  test "show route escapes markup and control characters in the stored body", %{conn: conn} do
+    admin = admin_fixture()
+    sub = submission_fixture(%{body: "Before\n<script>alert(1)</script>\u0007\tAfter"})
+
+    {:ok, _view, html} =
+      conn |> log_in_user(admin) |> live(~p"/admin/feedback/#{sub.id}")
+
+    refute html =~ "<script>alert(1)</script>"
+    assert html =~ "&lt;script&gt;alert(1)&lt;/script&gt;"
+    assert html =~ "Before"
+    assert html =~ "After"
   end
 
   test "mark_triaged transitions status", %{conn: conn} do
