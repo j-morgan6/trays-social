@@ -186,6 +186,14 @@ developer.apple.com → Certificates (keep your own Mac's certificate) and
 re-run the job. If you add an app extension or an embedded framework, extend
 the script to sign it too; until then it fails the job.
 
+**When the upload gets no runner:** GitHub's macOS arm64 pool sometimes runs
+short, and the Beta upload job is then cancelled in the queue with "The job was
+not acquired by Runner of type hosted even after multiple attempts" while the
+test job has passed. `.github/workflows/ios-upload-retry.yml` re-runs the failed
+jobs of that run automatically, up to three times, and only for that
+annotation. If all three retries fail the same way, re-run it by hand later
+(`gh run rerun <id> --failed`), or let the next iOS push upload a newer build.
+
 ### Where the secrets live
 
 The key lives only as **environment-scoped** GitHub Actions secrets, never at

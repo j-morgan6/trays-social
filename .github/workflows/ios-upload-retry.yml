@@ -1,0 +1,57 @@
+# Re-runs a TestFlight Beta upload that never got a macOS runner.
+#
+# GitHub's macOS arm64 pool runs short at times. The upload job then waits in
+# the queue and is cancelled with "The job was not acquired by Runner of type
+# hosted even after multiple attempts" (twice on 2026-11-13), although the
+# test job passed. This workflow re-runs the failed jobs of that iOS run, and
+# only that case: a push to main whose Beta upload was cancelled before any
+# runner picked it up, with that annotation. A real failure (a red test, a
+# signing or upload error) is never retried.
+#
+# Every re-run completes the iOS run again and fires this workflow again, so
+# the run_attempt cap bounds it at three retries. It checks out no code and
+# reads only run and job metadata, so it never sees a secret; it needs
+# actions: write only to start the re-run. See docs/ios-release.md.
+
+name: iOS upload retry
+on:
+  workflow_run:
+    workflows: [iOS]
+    types: [completed]
+
+permissions:
+  actions: write
+
+jobs:
+  retry:
+    name: Re-run a Beta upload that got no runner
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.run_attempt < 4
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Re-run if the Beta upload never got a runner
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          job="$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --jq '
+            .jobs[]
+            | select(.name == "TestFlight Beta upload" and .conclusion == "cancelled" and (.runner_name // "") == "")
+            | .id' | head -n 1)"
+          if [ -z "$job" ]; then
+            echo "The Beta upload ran on a runner or was not cancelled; nothing to retry."
+            exit 0
+          fi
+          if ! gh api "repos/$REPO/check-runs/$job/annotations" --jq '.[].message' | grep -q 'not acquired by Runner'; then
+            echo "The Beta upload was cancelled for another reason; not retrying."
+            exit 0
+          fi
+          # Give the macOS pool a few minutes before queueing again.
+          sleep 180
+          gh run rerun "$RUN_ID" --failed --repo "$REPO"
+          echo "Re-ran the failed jobs of iOS run $RUN_ID."
