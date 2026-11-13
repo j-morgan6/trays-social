@@ -67,26 +67,45 @@ defmodule TraysSocialWeb.AdComponents do
       |> assign(:site_id, web_ads[:site_id])
 
     ~H"""
-    <div class="my-10" data-ad-slot={@position}>
-      <div class="font-mono text-[10px] uppercase tracking-[0.14em] text-base-content/60 mb-2">
-        Sponsored
-      </div>
-      <div
-        id={@id}
-        phx-hook="AdSlot"
-        phx-update="ignore"
-        data-script-url={@script_url}
-        data-site-id={@site_id}
-        class="flex items-center justify-center min-h-[250px] md:min-h-[280px] border border-base-300 rounded-sm bg-base-200/40 px-6 text-center"
-      >
-        <div class="space-y-1.5">
-          <p class="text-sm text-base-content/70 max-w-[420px] leading-relaxed">
-            Trays stays free for home cooks thanks to occasional, clearly labeled sponsors.
-          </p>
-          <p class="text-[12px] text-base-content/50">
-            Nothing in this space tracks you.
-          </p>
+    <div
+      class="my-10 rounded-[21px] bg-base-100 p-1.5 text-base-content shadow-card"
+      data-ad-slot={@position}
+    >
+      <%!-- W259: the pill sits over the cream-lift unit exactly as it does on
+           sponsored_card's photo, so it reads in both themes. It is a sibling
+           of the hook element, never inside it, so a network creative filling
+           the unit cannot replace the disclosure. The hook element carries
+           no vertical padding: the full 250/280 px min-height is the
+           reserved creative area (see Layout stability above). --%>
+      <div class="relative">
+        <span class="absolute left-2 top-2 rounded-full bg-base-100 px-2.5 py-1 text-[11.5px] font-bold leading-none text-base-content shadow-sm">
+          Sponsored
+        </span>
+        <div
+          id={@id}
+          phx-hook="AdSlot"
+          phx-update="ignore"
+          data-script-url={@script_url}
+          data-site-id={@site_id}
+          class="flex min-h-[250px] md:min-h-[280px] items-center justify-center rounded-[15px] bg-cream-lift px-6 text-center"
+        >
+          <div class="space-y-1.5">
+            <p class="max-w-[420px] text-sm leading-relaxed text-muted">
+              Trays stays free for home cooks thanks to occasional, clearly labeled sponsors.
+            </p>
+            <p class="text-[12px] text-muted">
+              Nothing in this space tracks you.
+            </p>
+          </div>
         </div>
+      </div>
+      <div class="flex min-h-[22px] items-center justify-end px-1.5 pb-1.5 pt-[9px] text-[12.5px] text-muted">
+        <.link
+          href={~p"/privacy/ads-choices"}
+          class="shrink-0 font-semibold text-primary-ink hover:underline"
+        >
+          Why this ad?
+        </.link>
       </div>
     </div>
     """
