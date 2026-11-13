@@ -78,6 +78,19 @@ final class PostedStateTests: XCTestCase {
         }
     }
 
+    /// W258: the Posted screen says which collections the recipe went into.
+    func test_postedSummaryListsTheCollectionsThePostWasAddedTo() throws {
+        let none = try PostedSummary(post: post(id: 3, caption: "Dal"), baseURL: "https://x")
+        let one = try PostedSummary(post: post(id: 3, caption: "Dal"), baseURL: "https://x", addedTo: ["Soups"])
+        let two = try PostedSummary(post: post(id: 3, caption: "Dal"), baseURL: "https://x", addedTo: ["Weeknights", "Soups"])
+
+        XCTAssertNil(none.addedToLine)
+        XCTAssertEqual(one.addedToLine, "Added to Soups")
+        let line = try XCTUnwrap(two.addedToLine)
+        XCTAssertTrue(line.hasPrefix("Added to "))
+        XCTAssertLessThan(try XCTUnwrap(line.range(of: "Weeknights")).lowerBound, try XCTUnwrap(line.range(of: "Soups")).lowerBound)
+    }
+
     // MARK: - handleCreateResponse(data:status:)
 
     func test_anUndecodableCreatedBodyStillCountsAsPostedWithoutAnError() {

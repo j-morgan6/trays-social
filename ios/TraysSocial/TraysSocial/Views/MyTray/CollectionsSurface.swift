@@ -33,6 +33,12 @@ struct CollectionsSurface: ViewModifier {
                     await viewModel.load()
                 }
             }
+            // W258: a recipe posted from the editor may have been filed into
+            // collections; My Tray never unmounts, so reload the shelf counts.
+            .onReceive(NotificationCenter.default.publisher(for: .postCreated)) { _ in
+                guard loadsCollections else { return }
+                Task { await viewModel.refresh() }
+            }
             .modifier(CollectionPresentations(
                 viewModel: viewModel,
                 formMode: $formMode,

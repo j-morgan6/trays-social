@@ -10,8 +10,12 @@ import SwiftUI
 /// step and a photo are in, but stays tappable; after a tap, each missing
 /// piece says what it needs in place, in amber, never red. A successful
 /// publish swaps the editor for the Posted screen (W257) instead of closing.
+/// W258: for Plus users an Add to a collection card follows Tools; the post
+/// is filed into the chosen collections after it is created and before
+/// `.postCreated` goes out, and the Posted screen says where it went.
 struct CreatePostView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var viewModel: CreatePostViewModel
     @State private var selectedPhoto: PhotosPickerItem?
@@ -38,6 +42,16 @@ struct CreatePostView: View {
         EditorReadiness.of(viewModel)
     }
 
+    /// W258: Plus is visible (W209) and the user has it. The server is still
+    /// authoritative; this only decides whether the card is offered.
+    private var canFileIntoCollections: Bool {
+        appState.isPlus && PlusVisibility.showsPlus(paidTier: FeatureFlags.shared.paidTier)
+    }
+
+    private var collectionPickerVisibility: CollectionPickerState.Visibility {
+        CollectionPickerState.visibility(isPlus: canFileIntoCollections, loadState: viewModel.collections.loadState)
+    }
+
     var body: some View {
         Group {
             if let posted {
@@ -57,6 +71,9 @@ struct CreatePostView: View {
         // Swiping down mid-post would leave the publish running with no
         // screen to land on; once posted, swipe-down closes like Done.
         .interactiveDismissDisabled(!viewModel.allowsInteractiveDismiss)
+        // The root ErrorToast does not draw above sheets (W113), so a write
+        // toast raised here (a collection add that failed) shows in place.
+        .overlay(alignment: .top) { ErrorToast() }
     }
 
     private var editorScreen: some View {
@@ -85,7 +102,7 @@ struct CreatePostView: View {
                 EditorActionBar(
                     title: isRecipe ? String(localized: "Post recipe") : String(localized: "Share post"),
                     busyLabel: String(localized: "Posting"),
-                    isBusy: viewModel.isPublishing,
+                    isBusy: viewModel.isBusy,
                     looksReady: readiness.isReady,
                     action: publish
                 )
@@ -96,6 +113,12 @@ struct CreatePostView: View {
                 if recipeFirst {
                     viewModel.postType = .recipe
                 }
+            }
+            // W258: no GET /collections unless the card can show; a failed
+            // load hides the card and is logged, never toasted (D95).
+            .task(id: canFileIntoCollections) {
+                guard canFileIntoCollections else { return }
+                await viewModel.collections.load()
             }
             .onChange(of: selectedPhoto) {
                 viewModel.selectedPhoto = selectedPhoto
@@ -167,6 +190,9 @@ struct CreatePostView: View {
                 IngredientsCard(viewModel: viewModel, needsAttention: missing.needsIngredient, focus: $focus)
                 StepsCard(viewModel: viewModel, needsAttention: missing.needsStep, focus: $focus)
                 ToolsCard(viewModel: viewModel, focus: $focus)
+                if collectionPickerVisibility == .shown {
+                    CollectionPickerCard(viewModel: viewModel)
+                }
             }
 
             TagsCard(viewModel: viewModel, focus: $focus)
@@ -200,7 +226,7 @@ struct CreatePostView: View {
                 }
                 .scaledFont(16, weight: .semibold, relativeTo: .body)
                 .foregroundStyle(Theme.primaryInk)
-                .disabled(viewModel.isPublishing)
+                .disabled(viewModel.isBusy)
             }
         }
         ToolbarItemGroup(placement: .keyboard) {
@@ -217,18 +243,18 @@ struct CreatePostView: View {
     }
 
     private func publish() {
-        guard !viewModel.isPublishing else { return }
+        guard !viewModel.isBusy else { return }
         focus = nil
         attemptedPost = true
+        // W258: what the card showed at the tap decides whether to file.
+        let filesIntoCollections = collectionPickerVisibility == .shown
         Task {
             let post = await viewModel.publish()
             let outcome = CreatePostViewModel.PublishOutcome(didPublish: viewModel.didPublish, post: post)
-            // W170: Feed and My Tray observe .postCreated to
-            // refresh — their .task gates never refire
-            // under the paging TabView, so a new post
-            // was invisible until manual pull-to-refresh.
-            // Posted exactly once per successful publish.
-            outcome.announce()
+            // W258: the collection adds settle, then .postCreated goes out
+            // (once per publish where the post exists), so My Tray's shelf
+            // reloads with the new counts.
+            let filed = await viewModel.settlePublish(outcome, filesIntoCollections: filesIntoCollections)
             switch outcome {
             case .failed:
                 break
@@ -237,8 +263,13 @@ struct CreatePostView: View {
             case let .posted(post):
                 showsPreview = false
                 withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
-                    posted = PostedSummary(post: post)
+                    posted = PostedSummary(post: post, addedTo: filed.added)
                 }
+            }
+            // One write toast at most, naming what the post did not reach;
+            // the post stays posted and the Posted screen still shows.
+            if let message = filed.failureToastMessage {
+                Toast.custom(message).show()
             }
         }
     }

@@ -25,6 +25,9 @@ enum CollectionFormMode: Identifiable, Hashable {
 struct CollectionFormSheet: View {
     let mode: CollectionFormMode
     let viewModel: CollectionsViewModel
+    /// W258: called with the pending id of a create the sheet submitted, so
+    /// the recipe editor's picker can select it. My Tray passes nothing.
+    var onCreated: (Int) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
@@ -98,11 +101,16 @@ struct CollectionFormSheet: View {
     }
 
     private func submit() {
-        let result: CollectionNameValidation = switch mode {
+        let result: CollectionNameValidation
+        switch mode {
         case .create:
-            viewModel.createCollection(name: name)
+            let (validation, pendingID) = viewModel.submitCreate(name: name)
+            result = validation
+            if let pendingID {
+                onCreated(pendingID)
+            }
         case let .rename(collection):
-            viewModel.renameCollection(id: collection.id, to: name)
+            result = viewModel.renameCollection(id: collection.id, to: name)
         }
 
         if case .valid = result {

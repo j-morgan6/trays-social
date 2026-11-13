@@ -53,6 +53,10 @@ enum CollectionNameValidation: Equatable {
 final class CollectionsViewModel {
     var collections: [RecipeCollection] = []
     var isLoading = false
+    /// W258: lets the recipe editor hide its picker card on a failed load.
+    private(set) var loadState: CollectionsLoadState = .idle
+    /// W258: pending id to server id per confirmed create, for the editor picker.
+    private(set) var confirmedIDs: [Int: Int] = [:]
     /// Flipped by a server 403 `subscription_required` on a gated write, and
     /// directly by the context menu's free-user branch. `MyTrayView` binds it
     /// to `.plusPaywall`.
@@ -77,13 +81,17 @@ final class CollectionsViewModel {
     func load() async {
         guard !isLoading else { return }
         isLoading = true
+        loadState = loadState == .loaded ? .loaded : .loading
         do {
             let response: DataResponse<[RecipeCollection]> = try await APIClient.shared.get(
                 path: "/collections"
             )
             collections = response.data
+            loadState = .loaded
         } catch {
             Self.log.error("load failed: \(String(describing: error), privacy: .public)")
+            // A failed refresh after a good load keeps what is already shown.
+            loadState = loadState == .loaded ? .loaded : .failed
         }
         isLoading = false
     }
@@ -122,8 +130,14 @@ final class CollectionsViewModel {
     /// name instead of dismissing into a row that vanishes.
     @discardableResult
     func createCollection(name: String) -> CollectionNameValidation {
+        submitCreate(name: name).validation
+    }
+
+    /// W258: `createCollection` plus the pending id, so the editor picker can select it.
+    @discardableResult
+    func submitCreate(name: String) -> (validation: CollectionNameValidation, pendingID: Int?) {
         let (validation, pendingID) = beginCreate(name: name)
-        guard let pendingID, case let .valid(trimmed) = validation else { return validation }
+        guard let pendingID, case let .valid(trimmed) = validation else { return (validation, nil) }
 
         Task { [weak self] in
             do {
@@ -136,13 +150,15 @@ final class CollectionsViewModel {
                 self?.handleWriteFailure(error, operation: "create", toast: .collectionCreateFailed)
             }
         }
-        return validation
+        return (validation, pendingID)
     }
 
     /// Replaces the pending row **in place**. Never re-inserts at 0: a
     /// concurrent `load()` may have reordered or dropped it, and re-inserting
     /// would duplicate the row.
     func confirmCreate(pendingID: Int, with server: RecipeCollection) {
+        // Before the guard: a concurrent load may have dropped the pending row.
+        confirmedIDs[pendingID] = server.id
         guard let index = collections.firstIndex(where: { $0.id == pendingID }) else { return }
         collections[index] = server
         // A user who hit the paywall from "Add to collection", subscribed, and

@@ -26,10 +26,26 @@ final class CreatePostViewModel {
     /// post exists then, so the view still treats it as posted.
     private(set) var didPublish = false
 
+    /// W258: the user's collections, for the Add to a collection card. Loads
+    /// only when the card can show (Plus); nothing is fetched at init.
+    let collections = CollectionsViewModel()
+    /// W258: which collections the new post goes into after it is published.
+    var collectionPicker = CollectionPickerState()
+    /// W258: true while the post is being added to the selected collections,
+    /// between a successful create and the Posted screen.
+    private(set) var isFilingIntoCollections = false
+
+    /// Publishing, or filing the new post into collections: Post stays busy
+    /// and the sheet stays put until both are done.
+    var isBusy: Bool {
+        isPublishing || isFilingIntoCollections
+    }
+
     /// W257: swipe-down is refused while a publish is in flight, so the sheet
     /// never closes on a half-finished post; before and after, it closes.
+    /// W258: the collection adds that follow a publish count as in flight.
     var allowsInteractiveDismiss: Bool {
-        !isPublishing
+        !isBusy
     }
 
     // Ingredient/step entry
@@ -183,6 +199,95 @@ final class CreatePostViewModel {
             errorMessage = Self.failureMessage(for: error)
             isPublishing = false
             return nil
+        }
+    }
+}
+
+// MARK: - Collection follow-up adds (W258)
+
+extension CreatePostViewModel {
+    /// One add of the new post to a collection. The real one is
+    /// `addToCollection(collectionID:postID:)`; tests pass a recording closure.
+    typealias CollectionAdd = @MainActor (_ collectionID: Int, _ postID: Int) async throws -> Void
+
+    /// How long filing waits for a collection made with New to confirm.
+    static let pendingCreateWait: Duration = .seconds(5)
+
+    /// The adds a publish should run: none unless the card was showing when
+    /// Post was tapped (`enabled`) and this is a recipe. Re-syncs first, so a
+    /// collection deleted or a create confirmed since the last tap is right.
+    func collectionFollowUpPlan(enabled: Bool) -> [CollectionAddTarget] {
+        guard enabled, postType == .recipe else { return [] }
+        collectionPicker.sync(with: collections.collections, confirmed: collections.confirmedIDs)
+        return collectionPicker.followUpPlan(from: collections.collections)
+    }
+
+    /// After a publish returns: file into the selected collections, then post
+    /// `.postCreated` (W170: Home, Feed and My Tray refresh on it), so My Tray
+    /// reloads with the new counts. Announced once whenever the post exists,
+    /// never for a failure. Returns what the Posted screen and toast report.
+    func settlePublish(
+        _ outcome: PublishOutcome,
+        filesIntoCollections enabled: Bool,
+        center: NotificationCenter = .default,
+        add: CollectionAdd = CreatePostViewModel.addToCollection(collectionID:postID:)
+    ) async -> CollectionAddResult {
+        let filed: CollectionAddResult = switch outcome {
+        case .failed:
+            .none
+        case .closed:
+            unfiledResult(enabled: enabled)
+        case let .posted(post):
+            await fileIntoSelectedCollections(post: post, enabled: enabled, add: add)
+        }
+        outcome.announce(on: center)
+        return filed
+    }
+
+    /// Adds the new post to each selected collection in turn; a failed add
+    /// never unposts it. A collection made with New just before Post may be
+    /// pending: wait up to `pendingWait` for it to confirm, not report it.
+    func fileIntoSelectedCollections(
+        post: Post,
+        enabled: Bool,
+        pendingWait: Duration = CreatePostViewModel.pendingCreateWait,
+        add: CollectionAdd = CreatePostViewModel.addToCollection(collectionID:postID:)
+    ) async -> CollectionAddResult {
+        guard !collectionFollowUpPlan(enabled: enabled).isEmpty else { return .none }
+        isFilingIntoCollections = true
+        defer { isFilingIntoCollections = false }
+        let plan = await planAfterPendingCreates(enabled: enabled, wait: pendingWait)
+        return await CollectionAddResult.run(plan, postID: post.id, add: add)
+    }
+
+    /// The plan once nothing selected is pending, or `wait` runs out. A create
+    /// that rolls back drops out on the re-sync (its own failure toasted).
+    private func planAfterPendingCreates(enabled: Bool, wait: Duration) async -> [CollectionAddTarget] {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: wait)
+        var plan = collectionFollowUpPlan(enabled: enabled)
+        while plan.contains(where: { $0.id < 0 }), clock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(100))
+            plan = collectionFollowUpPlan(enabled: enabled)
+        }
+        return plan
+    }
+
+    /// The server took the post but its body did not decode, so there is no
+    /// post id to file: every selected collection is reported as not reached.
+    func unfiledResult(enabled: Bool) -> CollectionAddResult {
+        CollectionAddResult(failed: collectionFollowUpPlan(enabled: enabled).map(\.name))
+    }
+
+    /// POST /collections/:id/posts/:post_id. Logs carry the collection id and
+    /// the error only, never a name or a body.
+    static func addToCollection(collectionID: Int, postID: Int) async throws {
+        do {
+            _ = try await APIClient.shared.post(path: "/collections/\(collectionID)/posts/\(postID)")
+        } catch {
+            let reason = String(describing: error)
+            log.error("Collection add failed: \(collectionID, privacy: .public), \(reason, privacy: .public)")
+            throw error
         }
     }
 }

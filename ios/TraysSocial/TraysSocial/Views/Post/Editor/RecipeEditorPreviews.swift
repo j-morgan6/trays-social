@@ -48,27 +48,33 @@ private enum EditorPreviewData {
 
 #Preview("Create · empty") {
     CreatePostView()
+        .environment(AppState())
 }
 
 #Preview("Create · filling in") {
     CreatePostView(viewModel: EditorPreviewData.filled())
+        .environment(AppState())
 }
 
 #Preview("Create · filling in · dark") {
     CreatePostView(viewModel: EditorPreviewData.filled())
+        .environment(AppState())
         .preferredColorScheme(.dark)
 }
 
 #Preview("Create · missing photo") {
     CreatePostView(viewModel: EditorPreviewData.missingPhoto())
+        .environment(AppState())
 }
 
 #Preview("Create · posting") {
     CreatePostView(viewModel: EditorPreviewData.filled(publishing: true))
+        .environment(AppState())
 }
 
 #Preview("Create · largest text") {
     CreatePostView(viewModel: EditorPreviewData.filled())
+        .environment(AppState())
         .dynamicTypeSize(.accessibility5)
 }
 

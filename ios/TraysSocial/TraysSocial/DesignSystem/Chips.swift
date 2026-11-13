@@ -68,6 +68,43 @@ struct RecentChip: View {
     }
 }
 
+/// W258: a chip that toggles, for picking from a short list (the recipe
+/// editor's Add to a collection card). Selected reads as the amber-muted
+/// ingredient chip with a check; unselected as the plain recent chip.
+struct ToggleChip: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Theme.primaryInk)
+                        .accessibilityHidden(true)
+                }
+                Text(title)
+                    .scaledFont(14.5, weight: .semibold, relativeTo: .subheadline)
+                    .foregroundStyle(Theme.text)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 15)
+            .frame(minHeight: 40)
+            .background(Capsule(style: .continuous).fill(isSelected ? Theme.accentMuted : Theme.surface))
+            .overlay(
+                Capsule(style: .continuous)
+                    .strokeBorder(isSelected ? Theme.accentBorder : Theme.border, lineWidth: 1)
+            )
+            .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
 private struct ChipsGallery: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -78,6 +115,10 @@ private struct ChipsGallery: View {
             HStack(spacing: 8) {
                 RecentChip(name: "garlic") {}
                 RecentChip(name: "eggs") {}
+            }
+            HStack(spacing: 8) {
+                ToggleChip(title: "Weeknights", isSelected: true) {}
+                ToggleChip(title: "Soups", isSelected: false) {}
             }
         }
         .padding()
