@@ -95,6 +95,32 @@ defmodule TraysSocialWeb.UserAuthTest do
     end
   end
 
+  describe "live socket id and disconnect_sessions/1 (W254)" do
+    test "log_in_user/3 stores a live_socket_id derived from the session token", %{
+      conn: conn,
+      user: user
+    } do
+      conn = UserAuth.log_in_user(conn, user)
+      token = get_session(conn, :user_token)
+
+      assert get_session(conn, :live_socket_id) ==
+               "users_sessions:#{Base.url_encode64(token)}"
+    end
+
+    test "disconnect_sessions/1 broadcasts disconnect for session tokens only", %{user: user} do
+      session_token = Accounts.generate_user_session_token(user)
+      topic = "users_sessions:#{Base.url_encode64(session_token)}"
+      TraysSocialWeb.Endpoint.subscribe(topic)
+
+      api_token = %TraysSocial.Accounts.UserToken{context: "api", token: "not-a-session"}
+      session = %TraysSocial.Accounts.UserToken{context: "session", token: session_token}
+
+      assert :ok = UserAuth.disconnect_sessions([api_token, session])
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect", topic: ^topic}
+      refute_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+    end
+  end
+
   describe "logout_user/1" do
     test "erases session and cookies", %{conn: conn, user: user} do
       user_token = Accounts.generate_user_session_token(user)

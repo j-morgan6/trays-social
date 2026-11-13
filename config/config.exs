@@ -148,8 +148,12 @@ config :logger, :default_formatter,
 config :phoenix, :json_library, Jason
 
 # Configure Hammer rate limiting
+# expiry_ms must cover the longest limiter window (AuthRateLimit's one-hour
+# magic-link and password-reset IP windows): the ETS prune deletes any bucket
+# idle longer than expiry_ms, whatever its window, so a 5-minute expiry let a
+# client reset an hour-long bucket by pausing (W254).
 config :hammer,
-  backend: {Hammer.Backend.ETS, [expiry_ms: 300_000, cleanup_interval_ms: 600_000]}
+  backend: {Hammer.Backend.ETS, [expiry_ms: 3_600_000, cleanup_interval_ms: 600_000]}
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

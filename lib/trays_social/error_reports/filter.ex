@@ -14,10 +14,13 @@ defmodule TraysSocial.ErrorReports.Filter do
       `current_password` and `refresh_token` all match), or
       is listed in `:phoenix, :filter_parameters`.
     * Drops the Authorization, Cookie and Set-Cookie headers from
-      `"request.headers"` entirely.
+      `"request.headers"` entirely, and redacts the token segment of a token
+      route quoted in any other header value (a Referer sent from the
+      password-reset page, say).
     * Redacts sensitive pairs inside the raw `"request.query"` string, and the
       token segment of the routes that carry one in the path (email
-      confirmation, magic-link log-in, email change, device unregister).
+      confirmation, magic-link log-in, email change, password reset, device
+      unregister).
 
   It never logs what it removes.
   """
@@ -34,7 +37,7 @@ defmodule TraysSocial.ErrorReports.Filter do
 
   # Routes whose last path segment is a bearer token (see router.ex).
   @token_path_prefixes ~w(/users/confirm/ /users/log-in/ /users/settings/confirm-email/
-                          /api/v1/devices/)
+                          /users/reset-password/ /api/v1/devices/)
 
   @impl true
   def sanitize(context) when is_map(context) do
@@ -50,7 +53,11 @@ defmodule TraysSocial.ErrorReports.Filter do
   defp drop_headers(context) do
     case fetch(context, "request.headers") do
       {key, headers} when is_map(headers) ->
-        kept = Map.reject(headers, fn {name, _} -> normalize(name) in @dropped_headers end)
+        kept =
+          headers
+          |> Map.reject(fn {name, _} -> normalize(name) in @dropped_headers end)
+          |> Map.new(fn {name, value} -> {name, redact_token_urls(value)} end)
+
         Map.put(context, key, kept)
 
       _ ->
@@ -108,6 +115,17 @@ defmodule TraysSocial.ErrorReports.Filter do
       prefix -> prefix <> @redacted
     end
   end
+
+  # W254: a header such as Referer can carry a token route as a full URL
+  # (https://host/users/reset-password/<token>), so redact the segment
+  # after any token prefix wherever it appears in the value.
+  defp redact_token_urls(value) when is_binary(value) do
+    Enum.reduce(@token_path_prefixes, value, fn prefix, acc ->
+      String.replace(acc, ~r/#{Regex.escape(prefix)}[^?#\s]+/, prefix <> @redacted)
+    end)
+  end
+
+  defp redact_token_urls(value), do: value
 
   defp redact(map, extra) when is_map(map) and not is_struct(map) do
     Map.new(map, fn {key, value} ->

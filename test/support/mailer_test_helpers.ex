@@ -8,6 +8,12 @@ defmodule TraysSocial.MailerTestHelpers do
 
   It changes global Application env, so any test module that uses it must be
   `async: false`.
+
+  `await_mailer_tasks/1` (W254) waits for every email task running under
+  `TraysSocial.MailerTaskSupervisor` to finish. Password-reset requests send
+  their email from that supervisor; call it before asserting on the email and,
+  with `with_failing_mailer/1`, inside the function so the failing adapter is
+  still in place when the task delivers.
   """
 
   defmodule FailingAdapter do
@@ -34,5 +40,18 @@ defmodule TraysSocial.MailerTestHelpers do
         Application.put_env(:trays_social, TraysSocial.Mailer, original)
       end
     end
+  end
+
+  def await_mailer_tasks(timeout \\ 2_000) do
+    TraysSocial.MailerTaskSupervisor
+    |> Task.Supervisor.children()
+    |> Enum.map(&Process.monitor/1)
+    |> Enum.each(fn ref ->
+      receive do
+        {:DOWN, ^ref, :process, _pid, _reason} -> :ok
+      after
+        timeout -> raise "a mailer task did not finish within #{timeout} ms"
+      end
+    end)
   end
 end

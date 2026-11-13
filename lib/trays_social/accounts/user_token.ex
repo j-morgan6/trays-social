@@ -11,6 +11,10 @@ defmodule TraysSocial.Accounts.UserToken do
   @magic_link_validity_in_minutes 15
   @confirm_validity_in_days 7
   @change_email_validity_in_days 7
+  # W254: a reset link can take over the account, so it is short-lived and
+  # single use (reset_user_password/2 deletes every token the user has,
+  # including this one).
+  @reset_password_validity_in_minutes 60
   @session_validity_in_days 14
   # API tokens back mobile sessions; 60 days matches typical mobile-app
   # re-auth cadence. There is no refresh-on-use — verifying a token does NOT
@@ -253,6 +257,37 @@ defmodule TraysSocial.Accounts.UserToken do
         :error
     end
   end
+
+  @doc """
+  Checks if the password reset token is valid and returns its underlying
+  lookup query.
+
+  The query returns the user found by the token, if any. The token is
+  matched by its SHA-256 hash in the "reset_password" context, must have
+  been sent to the user's current email, and is valid for
+  #{@reset_password_validity_in_minutes} minutes. Returns `:error` on
+  malformed input.
+  """
+  def verify_reset_password_token_query(token) when is_binary(token) do
+    case Base.url_decode64(token, padding: false) do
+      {:ok, decoded_token} ->
+        hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
+
+        query =
+          from token in by_token_and_context_query(hashed_token, "reset_password"),
+            join: user in assoc(token, :user),
+            where: token.inserted_at > ago(^@reset_password_validity_in_minutes, "minute"),
+            where: token.sent_to == user.email,
+            select: user
+
+        {:ok, query}
+
+      :error ->
+        :error
+    end
+  end
+
+  def verify_reset_password_token_query(_), do: :error
 
   @doc """
   Checks if the token is valid and returns its underlying lookup query.

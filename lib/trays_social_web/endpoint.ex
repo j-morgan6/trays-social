@@ -54,7 +54,11 @@ defmodule TraysSocialWeb.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
-  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  # W254: the request log is skipped for the reset-link paths, whose last
+  # segment is a credential (see request_log_level/1).
+  plug Plug.Telemetry,
+    event_prefix: [:phoenix, :endpoint],
+    log: {__MODULE__, :request_log_level, []}
 
   # D45: rewrite conn.remote_ip from a trusted X-Forwarded-For chain so
   # downstream rate-limit / auth-attempt buckets key on the real client IP
@@ -79,4 +83,15 @@ defmodule TraysSocialWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
   plug TraysSocialWeb.Router
+
+  @doc """
+  The Phoenix.Logger level for a request: `false` (no log line) for
+  `/users/reset-password/:token`, whose path carries a reset credential,
+  and `:info` for everything else. The token-less `/users/reset-password`
+  path still logs.
+  """
+  def request_log_level(%Plug.Conn{path_info: ["users", "reset-password", _token | _]}),
+    do: false
+
+  def request_log_level(_conn), do: :info
 end

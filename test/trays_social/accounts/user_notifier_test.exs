@@ -121,6 +121,42 @@ defmodule TraysSocial.Accounts.UserNotifierTest do
     end
   end
 
+  describe "deliver_reset_password_instructions/2" do
+    test "deliver_reset_password_instructions/2 sends the reset email with the link on its own line" do
+      user = user_fixture()
+      url = "https://trays.app/users/reset-password/reset-abc123"
+
+      assert {:ok, email} = UserNotifier.deliver_reset_password_instructions(user, url)
+
+      assert email.subject == "Reset your Trays password"
+      assert email.to == [{"", user.email}]
+      assert_email_html_contains_cta(email, url)
+      assert_email_html_uses_brand_color(email)
+      assert_email_text_contains_raw_url(email, url)
+      assert email.text_body =~ "one hour"
+      assert email.html_body =~ "one hour"
+      assert email.html_body =~ "Set new password"
+    end
+
+    test "deliver_reset_password_instructions/2 returns an error tuple when the mailer fails" do
+      user = user_fixture()
+      url = "https://trays.app/users/reset-password/reset-secret-token"
+
+      with_failing_mailer(fn ->
+        log =
+          capture_log(fn ->
+            assert {:error, :simulated_mailer_failure} =
+                     UserNotifier.deliver_reset_password_instructions(user, url)
+          end)
+
+        assert log =~ "email delivery failed"
+        assert log =~ "Reset your Trays password"
+        refute log =~ url
+        refute log =~ "reset-secret-token"
+      end)
+    end
+  end
+
   describe "html escaping" do
     test "URLs containing & and quotes are encoded in href but unchanged in text_body" do
       user = unconfirmed_user_fixture()

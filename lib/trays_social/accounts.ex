@@ -559,6 +559,89 @@ defmodule TraysSocial.Accounts do
     UserNotifier.deliver_login_instructions(user, magic_link_url_fun.(encoded_token))
   end
 
+  ## Password reset (W254)
+
+  @doc """
+  Builds a reset_password token for the user, stores its hash, and emails
+  the link built by `reset_url_fun` (it receives the encoded token).
+
+  Synchronous: returns the notifier's `{:ok, email}` or `{:error, reason}`.
+  Request handlers should call `request_password_reset/2` instead, which
+  never waits on the mailer.
+  """
+  def deliver_user_reset_password_instructions(%User{} = user, reset_url_fun)
+      when is_function(reset_url_fun, 1) do
+    {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password")
+    Repo.insert!(user_token)
+    UserNotifier.deliver_reset_password_instructions(user, reset_url_fun.(encoded_token))
+  end
+
+  @doc """
+  Starts a password reset for `email` and always returns `:ok`.
+
+  The email is trimmed (citext handles case). For a known account the
+  token is built and the email sent from a supervised task, so the caller
+  does the same work whether or not the account exists and the response
+  time cannot reveal it. D106: `start_child`, never `async_nolink`, so the
+  caller's mailbox stays untouched. A mailer failure is logged and
+  reported by `UserNotifier.deliver/4`; it never reaches the caller.
+
+  Note this is more lenient than password log-in, which does not trim.
+  """
+  @spec request_password_reset(term(), (String.t() -> String.t())) :: :ok
+  def request_password_reset(email, reset_url_fun)
+      when is_binary(email) and is_function(reset_url_fun, 1) do
+    with trimmed when trimmed != "" <- String.trim(email),
+         %User{} = user <- get_user_by_email(trimmed) do
+      _ =
+        Task.Supervisor.start_child(TraysSocial.MailerTaskSupervisor, fn ->
+          deliver_user_reset_password_instructions(user, reset_url_fun)
+        end)
+    end
+
+    :ok
+  end
+
+  def request_password_reset(_email, _reset_url_fun), do: :ok
+
+  @doc """
+  Gets the user for a fresh, unused reset_password token, or `nil`.
+  """
+  def get_user_by_reset_password_token(token) when is_binary(token) do
+    with {:ok, query} <- UserToken.verify_reset_password_token_query(token),
+         %User{} = user <- Repo.one(query) do
+      user
+    else
+      _ -> nil
+    end
+  end
+
+  def get_user_by_reset_password_token(_token), do: nil
+
+  @doc """
+  Sets a new password from a reset link.
+
+  Deletes every token the user has (browser sessions, API bearers,
+  biometric refresh tokens and pending email tokens, this reset token
+  included), so the link is single use and every device is signed out.
+  It deliberately never touches `confirmed_at` and never grants admin:
+  `confirm_user_by_token/1` stays the only path to `maybe_grant_admin/1`.
+
+  ## Examples
+
+      iex> reset_user_password(user, %{password: "new long password", password_confirmation: "new long password"})
+      {:ok, {%User{}, [...]}}
+
+      iex> reset_user_password(user, %{password: "short"})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def reset_user_password(%User{} = user, attrs) do
+    user
+    |> User.password_changeset(attrs)
+    |> update_user_and_delete_all_tokens()
+  end
+
   @doc """
   Deletes the signed token with the given context.
   """

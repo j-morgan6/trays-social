@@ -69,6 +69,25 @@ defmodule TraysSocial.Accounts.UserNotifier do
     )
   end
 
+  @doc """
+  Deliver instructions to reset a user's password (W254).
+  """
+  def deliver_reset_password_instructions(user, url) do
+    deliver(
+      user.email,
+      "Reset your Trays password",
+      text_body_for_reset_password(user.email, url),
+      html_email_body(
+        "Reset your password",
+        "Tap the button below to choose a new password for your Trays account. " <>
+          "The link works for one hour and can be used once. If you didn't ask to " <>
+          "reset your password, ignore this email and your password stays the same.",
+        "Set new password",
+        url
+      )
+    )
+  end
+
   # Delivers the email using the application mailer with both plain-text and HTML bodies.
   #
   # D63: pattern-matches the Mailer result so delivery failures (Resend
@@ -146,6 +165,20 @@ defmodule TraysSocial.Accounts.UserNotifier do
     #{url}
 
     If you didn't request a login email, you can safely ignore this message.
+
+    — The Trays team
+    """
+  end
+
+  defp text_body_for_reset_password(email, url) do
+    """
+    Hi #{email},
+
+    Open this link to choose a new password for your Trays account. It works for one hour and can be used once.
+
+    #{url}
+
+    If you didn't ask to reset your password, ignore this email. Your password stays the same.
 
     — The Trays team
     """

@@ -166,6 +166,10 @@ defmodule TraysSocialWeb.Router do
     # `confirmed_at` is set. Web fallback (Safari users without the app)
     # continues to use the LiveView confirmation flow at /users/confirm/<token>.
     post "/confirm", AuthController, :confirm
+    # W254: request a password reset email. Always 202 with one neutral body;
+    # the per-email and per-IP limits are AuthRateLimit's and answer the same
+    # 202. This scope's per-IP 429 reveals nothing about the email.
+    post "/reset-password", AuthController, :reset_password
   end
 
   # Resend confirmation — very strict limit, separate scope
@@ -438,6 +442,12 @@ defmodule TraysSocialWeb.Router do
     delete "/users/log-out", UserSessionController, :delete
     get "/users/confirm/:token", UserConfirmationController, :confirm
     post "/users/confirmation/resend", UserConfirmationController, :resend
+
+    # W254: the emailed reset link. The path carries the credential, so the
+    # router's dispatch log is off here (the endpoint's request log skips
+    # these paths too, see Endpoint.request_log_level/1).
+    get "/users/reset-password/:token", UserResetPasswordController, :edit, log: false
+    put "/users/reset-password/:token", UserResetPasswordController, :update, log: false
 
     # D64: Sign in with Apple — start initiates Apple's authorize redirect.
     # Callback is in the :browser_no_csrf pipeline below (Apple form_post

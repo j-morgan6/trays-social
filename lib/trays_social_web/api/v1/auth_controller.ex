@@ -7,6 +7,13 @@ defmodule TraysSocialWeb.API.V1.AuthController do
   alias TraysSocial.Accounts.AppleAuth
   alias TraysSocial.Accounts.User
   alias TraysSocialWeb.API.AuthPlug
+  alias TraysSocialWeb.AuthRateLimit
+
+  # W254: one body for every reset request, whether the email has an account,
+  # is rate limited, or the mailer fails, so the response never reveals which.
+  @reset_requested %{
+    data: %{message: "if an account exists for that email, a reset link is on its way"}
+  }
 
   def register(conn, %{"email" => email, "username" => username, "password" => password} = params) do
     age_confirmation = Map.get(params, "age_confirmation", false)
@@ -70,6 +77,37 @@ defmodule TraysSocialWeb.API.V1.AuthController do
     conn
     |> put_status(:unprocessable_entity)
     |> json(%{errors: [%{message: "email and password are required"}]})
+  end
+
+  @doc """
+  Requests a password reset email (W254). Always 202 with the same body for
+  a known, unknown or rate-limited email and when the mailer fails; the send
+  runs in a supervised task (`Accounts.request_password_reset/2`). 422 when
+  the email is missing or blank.
+  """
+  def reset_password(conn, %{"email" => email}) when is_binary(email) do
+    case String.trim(email) do
+      "" ->
+        reset_email_required(conn)
+
+      trimmed ->
+        # Trim before keying the limiter, so padded variants share a bucket.
+        if AuthRateLimit.check_password_reset_request(conn, trimmed) == :ok do
+          Accounts.request_password_reset(trimmed, &url(~p"/users/reset-password/#{&1}"))
+        end
+
+        conn
+        |> put_status(:accepted)
+        |> json(@reset_requested)
+    end
+  end
+
+  def reset_password(conn, _params), do: reset_email_required(conn)
+
+  defp reset_email_required(conn) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> json(%{errors: [%{message: "email is required"}]})
   end
 
   def logout(conn, _params) do

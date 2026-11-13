@@ -63,6 +63,26 @@ defmodule TraysSocial.ErrorReports.FilterTest do
       assert sanitized["request.path"] == "/users/log-in/#{@redacted}"
     end
 
+    test "redacts a reset-password token quoted in a Referer header" do
+      context = %{
+        "request.headers" => %{
+          "referer" => "https://trays.social/users/reset-password/abc123?x=1",
+          "user-agent" => "Safari"
+        }
+      }
+
+      headers = Filter.sanitize(context)["request.headers"]
+      assert headers["referer"] == "https://trays.social/users/reset-password/#{@redacted}?x=1"
+      assert headers["user-agent"] == "Safari"
+      refute inspect(headers) =~ "abc123"
+    end
+
+    test "redacts the token segment of the reset-password route" do
+      context = %{"request.path" => "/users/reset-password/abc123"}
+
+      assert Filter.sanitize(context)["request.path"] == "/users/reset-password/#{@redacted}"
+    end
+
     test "redacts a query key whose bracketed segment is sensitive" do
       context = %{"request.query" => "user%5Bemail%5D=cook%40example.com&user%5Bname%5D=Cook"}
 

@@ -91,6 +91,54 @@ defmodule TraysSocialWeb.AuthRateLimitTest do
     end
   end
 
+  describe "check_password_reset_request/2" do
+    test "allows 1 per email per 60 seconds, case-insensitively" do
+      email = "reset-#{System.unique_integer([:positive])}@example.com"
+      conn = conn_for_ip(uniq_ip())
+
+      assert :ok = AuthRateLimit.check_password_reset_request(conn, email)
+      assert :rate_limited = AuthRateLimit.check_password_reset_request(conn, email)
+
+      assert :rate_limited =
+               AuthRateLimit.check_password_reset_request(conn, String.upcase(email))
+    end
+
+    test "allows up to 5 per IP per hour (across emails)" do
+      conn = conn_for_ip(uniq_ip())
+
+      for i <- 1..5 do
+        email = "reset-ip-#{System.unique_integer([:positive])}-#{i}@example.com"
+        assert :ok = AuthRateLimit.check_password_reset_request(conn, email)
+      end
+
+      sixth = "reset-ip-#{System.unique_integer([:positive])}-6@example.com"
+      assert :rate_limited = AuthRateLimit.check_password_reset_request(conn, sixth)
+    end
+
+    test "keys IPv6 clients by their /64, so rotating the interface id does not help" do
+      prefix = {0x2001, 0xDB8, Enum.random(0..0xFFFF), Enum.random(0..0xFFFF)}
+      {a, b, c, d} = prefix
+
+      for i <- 1..5 do
+        conn = %{build_conn() | remote_ip: {a, b, c, d, 0, 0, 0, i}}
+        email = "reset-v6-#{System.unique_integer([:positive])}@example.com"
+        assert :ok = AuthRateLimit.check_password_reset_request(conn, email)
+      end
+
+      sixth = %{build_conn() | remote_ip: {a, b, c, d, 0xFFFF, 1, 2, 3}}
+      email = "reset-v6-#{System.unique_integer([:positive])}@example.com"
+      assert :rate_limited = AuthRateLimit.check_password_reset_request(sixth, email)
+    end
+
+    test "does not share buckets with the magic-link limiter" do
+      email = "reset-magic-#{System.unique_integer([:positive])}@example.com"
+      conn = conn_for_ip(uniq_ip())
+
+      assert :ok = AuthRateLimit.check_magic_link_request(conn, email)
+      assert :ok = AuthRateLimit.check_password_reset_request(conn, email)
+    end
+  end
+
   describe "check_registration/1" do
     test "allows up to 5 registrations per IP per hour" do
       conn = conn_for_ip(uniq_ip())

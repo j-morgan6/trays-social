@@ -199,9 +199,34 @@ defmodule TraysSocialWeb.UserAuth do
     |> put_resp_cookie(@remember_me_cookie, token, @remember_me_options)
   end
 
+  # W254: the live_socket_id ties every LiveView socket opened with this
+  # session token to a topic, so log-out and a password reset can disconnect
+  # them (see disconnect_sessions/1).
   defp put_token_in_session(conn, token) do
-    put_session(conn, :user_token, token)
+    conn
+    |> put_session(:user_token, token)
+    |> put_session(:live_socket_id, user_session_topic(token))
   end
+
+  @doc """
+  Disconnects the LiveView sockets of the given expired tokens (W254).
+
+  Takes the `UserToken` structs `Accounts.reset_user_password/2` returns;
+  only "session" tokens have sockets, the rest are ignored. A browser with a
+  mounted LiveView is dropped at once instead of acting as the user until
+  its socket reconnects.
+  """
+  def disconnect_sessions(tokens) when is_list(tokens) do
+    for %{context: "session", token: token} <- tokens do
+      token
+      |> user_session_topic()
+      |> TraysSocialWeb.Endpoint.broadcast("disconnect", %{})
+    end
+
+    :ok
+  end
+
+  defp user_session_topic(token), do: "users_sessions:#{Base.url_encode64(token)}"
 
   @doc """
   Plug for routes that require sudo mode.

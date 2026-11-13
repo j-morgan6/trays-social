@@ -2,6 +2,7 @@ defmodule TraysSocial.AccountsTest do
   use TraysSocial.DataCase
 
   import TraysSocial.AccountsFixtures
+  import TraysSocial.MailerTestHelpers, only: [await_mailer_tasks: 0]
 
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.User
@@ -557,6 +558,247 @@ defmodule TraysSocial.AccountsTest do
       assert user_token.user_id == user.id
       assert user_token.sent_to == user.email
       assert user_token.context == "login"
+    end
+  end
+
+  describe "deliver_user_reset_password_instructions/2" do
+    test "deliver_user_reset_password_instructions/2 stores a hashed reset_password token and sends one email" do
+      user = user_fixture()
+
+      token =
+        extract_user_token(fn url ->
+          Accounts.deliver_user_reset_password_instructions(user, url)
+        end)
+
+      {:ok, decoded} = Base.url_decode64(token, padding: false)
+      assert user_token = Repo.get_by(UserToken, token: :crypto.hash(:sha256, decoded))
+      assert user_token.user_id == user.id
+      assert user_token.sent_to == user.email
+      assert user_token.context == "reset_password"
+      refute user_token.token == decoded
+      refute Repo.get_by(UserToken, token: decoded)
+
+      assert_received {:email, %{subject: "Reset your Trays password"}}
+      refute_received {:email, _}
+    end
+  end
+
+  describe "get_user_by_reset_password_token/1" do
+    setup do
+      user = user_fixture()
+
+      token =
+        extract_user_token(fn url ->
+          Accounts.deliver_user_reset_password_instructions(user, url)
+        end)
+
+      %{user: user, token: token}
+    end
+
+    defp age_reset_tokens(user, minutes) do
+      issued_at = DateTime.utc_now(:second) |> DateTime.add(-minutes, :minute)
+
+      from(t in UserToken, where: t.user_id == ^user.id and t.context == "reset_password")
+      |> Repo.update_all(set: [inserted_at: issued_at])
+    end
+
+    test "get_user_by_reset_password_token/1 returns the user for a fresh token", %{
+      user: user,
+      token: token
+    } do
+      assert %User{id: id} = Accounts.get_user_by_reset_password_token(token)
+      assert id == user.id
+    end
+
+    test "get_user_by_reset_password_token/1 still accepts a token 59 minutes old", %{
+      user: user,
+      token: token
+    } do
+      age_reset_tokens(user, 59)
+      assert %User{} = Accounts.get_user_by_reset_password_token(token)
+    end
+
+    test "get_user_by_reset_password_token/1 rejects a token older than one hour", %{
+      user: user,
+      token: token
+    } do
+      age_reset_tokens(user, 61)
+      refute Accounts.get_user_by_reset_password_token(token)
+    end
+
+    test "get_user_by_reset_password_token/1 rejects a token issued before the email changed", %{
+      user: user,
+      token: token
+    } do
+      user |> Ecto.Changeset.change(email: unique_user_email()) |> Repo.update!()
+      refute Accounts.get_user_by_reset_password_token(token)
+    end
+
+    test "rejects a token from another context, a garbage token and a non-binary", %{user: user} do
+      {magic_link_token, _hashed} = generate_user_magic_link_token(user)
+
+      refute Accounts.get_user_by_reset_password_token(magic_link_token)
+      refute Accounts.get_user_by_reset_password_token("not base64 !!")
+      refute Accounts.get_user_by_reset_password_token(nil)
+    end
+
+    test "rejects the token once the account is deleted", %{user: user, token: token} do
+      Repo.delete!(user)
+      refute Accounts.get_user_by_reset_password_token(token)
+    end
+  end
+
+  describe "reset_user_password/2" do
+    setup do
+      user = user_fixture()
+
+      token =
+        extract_user_token(fn url ->
+          Accounts.deliver_user_reset_password_instructions(user, url)
+        end)
+
+      %{user: user, token: token}
+    end
+
+    test "reset_user_password/2 updates the password and deletes every session, api and refresh token",
+         %{user: user, token: token} do
+      session_token = Accounts.generate_user_session_token(user)
+      api_token = Accounts.generate_user_api_token(user)
+      refresh_token = Accounts.generate_user_refresh_token(user)
+
+      assert {:ok, {%User{}, expired}} =
+               Accounts.reset_user_password(user, %{
+                 password: "a brand new password",
+                 password_confirmation: "a brand new password"
+               })
+
+      assert expired |> Enum.map(& &1.context) |> Enum.sort() ==
+               ["api", "refresh", "reset_password", "session"]
+
+      assert Repo.all_by(UserToken, user_id: user.id) == []
+      refute Accounts.get_user_by_session_token(session_token)
+      refute Accounts.get_user_by_api_token(api_token)
+      assert {:error, :invalid_refresh_token} = Accounts.exchange_refresh_token(refresh_token)
+      refute Accounts.get_user_by_reset_password_token(token)
+      assert Accounts.get_user_by_email_and_password(user.email, "a brand new password")
+      refute Accounts.get_user_by_email_and_password(user.email, valid_user_password())
+    end
+
+    test "reset_user_password/2 rejects an 11-character password and keeps the tokens", %{
+      user: user,
+      token: token
+    } do
+      _ = Accounts.generate_user_session_token(user)
+
+      assert {:error, changeset} =
+               Accounts.reset_user_password(user, %{
+                 password: "elevenchars",
+                 password_confirmation: "elevenchars"
+               })
+
+      assert "should be at least 12 character(s)" in errors_on(changeset).password
+      assert length(Repo.all_by(UserToken, user_id: user.id)) == 2
+      assert Accounts.get_user_by_reset_password_token(token)
+      assert Accounts.get_user_by_email_and_password(user.email, valid_user_password())
+    end
+
+    test "rejects a mismatched confirmation", %{user: user} do
+      assert {:error, changeset} =
+               Accounts.reset_user_password(user, %{
+                 password: "a brand new password",
+                 password_confirmation: "a different password"
+               })
+
+      assert "does not match password" in errors_on(changeset).password_confirmation
+    end
+
+    test "reset_user_password/2 leaves confirmed_at nil for an unconfirmed user" do
+      user = unconfirmed_user_fixture()
+      previous = Application.get_env(:trays_social, :admin_emails)
+      Application.put_env(:trays_social, :admin_emails, [user.email])
+
+      on_exit(fn ->
+        if previous == nil,
+          do: Application.delete_env(:trays_social, :admin_emails),
+          else: Application.put_env(:trays_social, :admin_emails, previous)
+      end)
+
+      assert {:ok, {reset_user, _}} =
+               Accounts.reset_user_password(user, %{
+                 password: "a brand new password",
+                 password_confirmation: "a brand new password"
+               })
+
+      assert is_nil(reset_user.confirmed_at)
+      reloaded = Repo.get!(User, user.id)
+      assert is_nil(reloaded.confirmed_at)
+      refute reloaded.is_admin
+    end
+
+    test "lets an Apple-only account with a private-relay email set a first password" do
+      {:ok, apple_user} =
+        Accounts.find_or_create_apple_user(%{
+          apple_id: "001234.reset#{System.unique_integer([:positive])}",
+          email: "relay#{System.unique_integer([:positive])}@privaterelay.appleid.com",
+          username: unique_user_username(),
+          age_confirmation: true
+        })
+
+      assert is_nil(apple_user.hashed_password)
+
+      token =
+        extract_user_token(fn url ->
+          Accounts.deliver_user_reset_password_instructions(apple_user, url)
+        end)
+
+      assert %User{} = user = Accounts.get_user_by_reset_password_token(token)
+
+      assert {:ok, _} =
+               Accounts.reset_user_password(user, %{
+                 password: "a first password here",
+                 password_confirmation: "a first password here"
+               })
+
+      assert %User{id: id} =
+               Accounts.get_user_by_email_and_password(apple_user.email, "a first password here")
+
+      assert id == apple_user.id
+    end
+  end
+
+  describe "request_password_reset/2" do
+    defp reset_url(token), do: "https://trays.test/users/reset-password/#{token}"
+
+    test "sends one email for a known email, matching a mixed-case and padded address" do
+      user = user_fixture()
+
+      assert :ok =
+               Accounts.request_password_reset(
+                 "  " <> String.upcase(user.email) <> " ",
+                 &reset_url/1
+               )
+
+      await_mailer_tasks()
+
+      assert_received {:email, %{subject: "Reset your Trays password", to: [{_, to}]}}
+      assert to == user.email
+      refute_received {:email, _}
+      assert [%UserToken{context: "reset_password"}] = Repo.all_by(UserToken, user_id: user.id)
+    end
+
+    test "returns :ok and sends nothing for an unknown, blank or non-binary email" do
+      for email <- [
+            "nobody-#{System.unique_integer([:positive])}@example.com",
+            "",
+            "   ",
+            nil,
+            42
+          ] do
+        assert :ok = Accounts.request_password_reset(email, &reset_url/1)
+      end
+
+      await_mailer_tasks()
+      refute_received {:email, _}
     end
   end
 

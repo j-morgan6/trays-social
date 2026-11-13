@@ -1,0 +1,61 @@
+<%!-- Set a new password from the emailed reset link (W254), in the WebAuth
+     split panel like log-in and registration. The hint matches the server
+     rule (12 to 72 characters, User.password_changeset/3), not the canvas's
+     8. Flashes render here rather than as toasts (the controller sets
+     :inline_flash); field errors show in amber under each field. A
+     password is never written back into the page. --%>
+
+<.auth_shell id="reset-password">
+  <.auth_heading
+    title="Set a new password"
+    subtitle="Choose a new password for your Trays account. Every device signed in to it will be signed out."
+  />
+
+  <.form
+    :let={f}
+    for={@form}
+    id="reset_password_form"
+    action={~p"/users/reset-password/#{@token}"}
+    method="put"
+    class="mt-6 flex flex-col gap-4"
+  >
+    <.auth_input
+      field={f[:password]}
+      type="password"
+      label="New password"
+      autocomplete="new-password"
+      hint="At least 12 characters."
+      required
+    />
+    <.auth_input
+      field={f[:password_confirmation]}
+      type="password"
+      label="Confirm new password"
+      autocomplete="new-password"
+      required
+    />
+
+    <.callout :if={Phoenix.Flash.get(@flash, :error)} id="reset-password-error">
+      {Phoenix.Flash.get(@flash, :error)}
+    </.callout>
+
+    <.accent_button
+      type="submit"
+      wide
+      phx-disable-with="Saving…"
+      class="min-h-[52px] text-base shadow-lg shadow-accent/30"
+    >
+      Set new password
+    </.accent_button>
+  </.form>
+
+  <p class="mt-[22px] text-center text-[15px] text-muted">
+    Remembered it?
+    <.link
+      navigate={~p"/users/log-in"}
+      class="inline-flex min-h-11 items-center px-1 font-semibold text-primary-ink hover:underline"
+    >
+      Log in
+    </.link>
+  </p>
+</.auth_shell>

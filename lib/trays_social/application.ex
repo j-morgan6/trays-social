@@ -13,7 +13,10 @@ defmodule TraysSocial.Application do
         TraysSocial.Repo,
         {DNSCluster, query: Application.get_env(:trays_social, :dns_cluster_query) || :ignore},
         {Phoenix.PubSub, name: TraysSocial.PubSub},
-        {Task.Supervisor, name: TraysSocial.PushTaskSupervisor}
+        {Task.Supervisor, name: TraysSocial.PushTaskSupervisor},
+        # W254: password-reset emails are sent from here, fire-and-forget, so
+        # the request's response time does not reveal whether an account exists.
+        {Task.Supervisor, name: TraysSocial.MailerTaskSupervisor}
       ] ++
         error_report_pruner() ++
         [
