@@ -175,7 +175,10 @@ final class RecipeEditorTests: XCTestCase {
         let readiness = EditorReadiness.of(viewModel)
         XCTAssertEqual(
             readiness,
-            EditorReadiness(needsName: true, needsIngredient: false, needsStep: false, needsPhoto: false, needsTime: false)
+            EditorReadiness(
+                needsName: true, needsIngredient: false,
+                needsStep: false, needsPhoto: false, needsTime: false
+            )
         )
         viewModel.caption = "Dal\nJust a line"
         XCTAssertTrue(EditorReadiness.of(viewModel).isReady)
@@ -186,7 +189,10 @@ final class RecipeEditorTests: XCTestCase {
         viewModel.postType = .post
         XCTAssertEqual(
             EditorReadiness.of(viewModel),
-            EditorReadiness(needsName: false, needsIngredient: false, needsStep: false, needsPhoto: true, needsTime: false)
+            EditorReadiness(
+                needsName: false, needsIngredient: false,
+                needsStep: false, needsPhoto: true, needsTime: false
+            )
         )
     }
 
@@ -257,7 +263,10 @@ final class RecipeEditorTests: XCTestCase {
         let readiness = EditorReadiness.of(recipe())
         XCTAssertEqual(
             readiness,
-            EditorReadiness(needsName: false, needsIngredient: false, needsStep: false, needsPhoto: false, needsTime: true)
+            EditorReadiness(
+                needsName: false, needsIngredient: false,
+                needsStep: false, needsPhoto: false, needsTime: true
+            )
         )
         XCTAssertFalse(readiness.isReady)
     }
