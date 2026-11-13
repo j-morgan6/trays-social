@@ -158,18 +158,25 @@ final class RecipeEditorTests: XCTestCase {
 
     func test_emptyRecipeNeedsEveryPiece() {
         let readiness = EditorReadiness.of(CreatePostViewModel())
-        XCTAssertEqual(readiness, EditorReadiness(needsName: true, needsIngredient: true, needsStep: true, needsPhoto: true))
+        XCTAssertEqual(
+            readiness,
+            EditorReadiness(needsName: true, needsIngredient: true, needsStep: true, needsPhoto: true, needsTime: true)
+        )
         XCTAssertFalse(readiness.isReady)
     }
 
     func test_pendingInputCountsAndALineAloneIsNoName() {
         let viewModel = CreatePostViewModel()
         viewModel.caption = "\nJust a line"
+        viewModel.cookingTimeMinutes = "30"
         viewModel.newIngredientName = "cumin"
         viewModel.newStepText = "Simmer."
         viewModel.photoData = Data([0])
         let readiness = EditorReadiness.of(viewModel)
-        XCTAssertEqual(readiness, EditorReadiness(needsName: true, needsIngredient: false, needsStep: false, needsPhoto: false))
+        XCTAssertEqual(
+            readiness,
+            EditorReadiness(needsName: true, needsIngredient: false, needsStep: false, needsPhoto: false, needsTime: false)
+        )
         viewModel.caption = "Dal\nJust a line"
         XCTAssertTrue(EditorReadiness.of(viewModel).isReady)
     }
@@ -179,8 +186,85 @@ final class RecipeEditorTests: XCTestCase {
         viewModel.postType = .post
         XCTAssertEqual(
             EditorReadiness.of(viewModel),
-            EditorReadiness(needsName: false, needsIngredient: false, needsStep: false, needsPhoto: true)
+            EditorReadiness(needsName: false, needsIngredient: false, needsStep: false, needsPhoto: true, needsTime: false)
         )
+    }
+
+    // MARK: - EditorReadiness: total time (D124)
+
+    /// A recipe with everything in except, unless given, the total time.
+    private func recipe(minutes: String = "") -> CreatePostViewModel {
+        let viewModel = CreatePostViewModel()
+        viewModel.postType = .recipe
+        viewModel.caption = "Dal"
+        viewModel.newIngredientName = "red lentils"
+        viewModel.newStepText = "Simmer."
+        viewModel.photoData = Data([0])
+        viewModel.cookingTimeMinutes = minutes
+        return viewModel
+    }
+
+    func test_aRecipeWithAPositiveTimeDoesNotNeedTime() {
+        let readiness = EditorReadiness.of(recipe(minutes: "30"))
+        XCTAssertFalse(readiness.needsTime)
+        XCTAssertTrue(readiness.isReady)
+    }
+
+    func test_zeroTimeNeedsTimeAndOneMinuteDoesNot() {
+        XCTAssertTrue(EditorReadiness.of(recipe(minutes: "0")).needsTime)
+        XCTAssertTrue(EditorReadiness.of(recipe(minutes: "-5")).needsTime)
+        XCTAssertFalse(EditorReadiness.of(recipe(minutes: "1")).needsTime)
+    }
+
+    func test_nonNumericTimeStillNeedsTime() {
+        for minutes in ["", "soon", "5.5", "30 min"] {
+            XCTAssertTrue(EditorReadiness.of(recipe(minutes: minutes)).needsTime, minutes.debugDescription)
+        }
+    }
+
+    func test_aTypedTimeAboveTheStepperRangeIsATime() {
+        XCTAssertFalse(EditorReadiness.of(recipe(minutes: "2000")).needsTime)
+    }
+
+    /// `publish()` parses the time untrimmed and sends none for " 30 ", which
+    /// the server would refuse, so readiness must not call it ready.
+    func test_aTimeWithSpacesAroundItNeedsTimeBecausePublishWouldDropIt() {
+        XCTAssertNil(Int(" 30 "))
+        XCTAssertTrue(EditorReadiness.of(recipe(minutes: " 30 ")).needsTime)
+    }
+
+    /// Create stores the time through `EditorStepper.typed`, so whitespace
+    /// around a typed or pasted number is ignored and the time counts.
+    func test_whitespaceAroundATypedTimeIsIgnored() {
+        XCTAssertEqual(EditorStepper.typed(" 30 "), "30")
+        XCTAssertEqual(EditorStepper.typed(" "), "")
+        XCTAssertFalse(EditorReadiness.of(recipe(minutes: EditorStepper.typed(" 30 "))).needsTime)
+    }
+
+    func test_aPhotoPostNeverNeedsTime() {
+        for minutes in ["", "0", "soon"] {
+            let viewModel = CreatePostViewModel()
+            viewModel.postType = .post
+            viewModel.photoData = Data([0])
+            viewModel.cookingTimeMinutes = minutes
+            let readiness = EditorReadiness.of(viewModel)
+            XCTAssertFalse(readiness.needsTime, minutes.debugDescription)
+            XCTAssertTrue(readiness.isReady, minutes.debugDescription)
+        }
+    }
+
+    func test_isReadyIsFalseWhileOnlyTheTimeIsMissing() {
+        let readiness = EditorReadiness.of(recipe())
+        XCTAssertEqual(
+            readiness,
+            EditorReadiness(needsName: false, needsIngredient: false, needsStep: false, needsPhoto: false, needsTime: true)
+        )
+        XCTAssertFalse(readiness.isReady)
+    }
+
+    func test_nothingMissingFlagsNoTime() {
+        XCTAssertFalse(EditorReadiness.nothingMissing.needsTime)
+        XCTAssertTrue(EditorReadiness.nothingMissing.isReady)
     }
 
     // MARK: - RecipeMeta overload

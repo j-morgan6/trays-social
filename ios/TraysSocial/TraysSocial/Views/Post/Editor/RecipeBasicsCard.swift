@@ -15,6 +15,8 @@ struct RecipeBasicsCard: View {
     @Binding var servings: String
     let showsRecipeFields: Bool
     var nameNeedsAttention = false
+    /// D124: Create sets this after a Post tap when the recipe has no time.
+    var timeNeedsAttention = false
     var focus: FocusState<EditorField?>.Binding
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -69,16 +71,22 @@ struct RecipeBasicsCard: View {
             ? AnyLayout(VStackLayout(spacing: 12))
             : AnyLayout(HStackLayout(alignment: .top, spacing: 12))
         tiles {
-            CountStepperTile(
-                label: String(localized: "Total time"),
-                value: $minutes,
-                stepper: .minutes,
-                suffix: String(localized: "min"),
-                decrementLabel: String(localized: "Less time"),
-                incrementLabel: String(localized: "More time"),
-                field: EditorField.minutes,
-                focus: focus
-            )
+            VStack(alignment: .leading, spacing: 8) {
+                CountStepperTile(
+                    label: String(localized: "Total time"),
+                    value: $minutes,
+                    stepper: .minutes,
+                    suffix: String(localized: "min"),
+                    decrementLabel: String(localized: "Less time"),
+                    incrementLabel: String(localized: "More time"),
+                    field: EditorField.minutes,
+                    focus: focus,
+                    needsAttention: timeNeedsAttention
+                )
+                if timeNeedsAttention {
+                    EditorAttentionNote(message: String(localized: "Add a total time."))
+                }
+            }
             CountStepperTile(
                 label: String(localized: "Serves"),
                 value: $servings,

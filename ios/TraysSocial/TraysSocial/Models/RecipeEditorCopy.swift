@@ -36,6 +36,14 @@ struct EditorStepper: Equatable {
     private static func number(_ value: String) -> Int? {
         Int(value.trimmingCharacters(in: .whitespaces))
     }
+
+    /// D124: what Create keeps of a typed or pasted total time. Whitespace
+    /// around the number is dropped as it comes in, so " 30 " is stored as
+    /// "30": `publish()` parses the field untrimmed and would otherwise send
+    /// no time, which the server refuses.
+    static func typed(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespaces)
+    }
 }
 
 /// W249: Return in a multi-line field inserts a line break instead of
@@ -124,16 +132,20 @@ struct EditorReadiness: Equatable {
     let needsIngredient: Bool
     let needsStep: Bool
     let needsPhoto: Bool
+    /// D124: the server requires a recipe's cooking_time_minutes above 0
+    /// (Post.validate_recipe_fields/1), so a recipe without one is not ready.
+    let needsTime: Bool
 
     static let nothingMissing = EditorReadiness(
         needsName: false,
         needsIngredient: false,
         needsStep: false,
-        needsPhoto: false
+        needsPhoto: false,
+        needsTime: false
     )
 
     var isReady: Bool {
-        !(needsName || needsIngredient || needsStep || needsPhoto)
+        !(needsName || needsIngredient || needsStep || needsPhoto || needsTime)
     }
 
     @MainActor
@@ -144,7 +156,18 @@ struct EditorReadiness: Equatable {
             needsName: isRecipe && name.isEmpty,
             needsIngredient: isRecipe && viewModel.ingredients.isEmpty && viewModel.newIngredientName.isEmpty,
             needsStep: isRecipe && viewModel.steps.isEmpty && viewModel.newStepText.isEmpty,
-            needsPhoto: viewModel.photoData == nil
+            needsPhoto: viewModel.photoData == nil,
+            needsTime: isRecipe && !hasPostableTime(viewModel.cookingTimeMinutes)
         )
+    }
+
+    /// Whether `publish()` would send a time the server accepts. It parses
+    /// the field exactly as `publish()` does, untrimmed, so readiness never
+    /// calls ready a value that would be dropped from the request: a value
+    /// with spaces around it is not sent, so it still needs a time. Create
+    /// drops such spaces as they are typed (`EditorStepper.typed`).
+    static func hasPostableTime(_ minutes: String) -> Bool {
+        guard let value = Int(minutes) else { return false }
+        return value > 0
     }
 }

@@ -6,9 +6,9 @@ import SwiftUI
 /// Ingredients, Steps and Tools cards, Tags, a Preview of the recipe as
 /// others will see it, and a floating amber Post button that shows a
 /// spinner while posting. Posting and its rules are the view model's,
-/// unchanged. Post looks quiet until a name, an ingredient, a step and a
-/// photo are in, but stays tappable; after a tap, each missing piece says
-/// what it needs in place, in amber, never red.
+/// unchanged. Post looks quiet until a name, a total time, an ingredient, a
+/// step and a photo are in, but stays tappable; after a tap, each missing
+/// piece says what it needs in place, in amber, never red.
 struct CreatePostView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -125,10 +125,14 @@ struct CreatePostView: View {
 
             RecipeBasicsCard(
                 caption: $viewModel.caption,
-                minutes: $viewModel.cookingTimeMinutes,
+                minutes: Binding(
+                    get: { viewModel.cookingTimeMinutes },
+                    set: { viewModel.cookingTimeMinutes = EditorStepper.typed($0) }
+                ),
                 servings: $viewModel.servings,
                 showsRecipeFields: isRecipe,
                 nameNeedsAttention: missing.needsName,
+                timeNeedsAttention: missing.needsTime,
                 focus: $focus
             )
 

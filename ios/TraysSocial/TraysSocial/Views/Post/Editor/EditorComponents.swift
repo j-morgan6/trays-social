@@ -136,6 +136,8 @@ struct CountStepperTile<Field: Hashable>: View {
     let incrementLabel: String
     let field: Field
     var focus: FocusState<Field?>.Binding
+    /// D124: the amber ring for a missing value, as `TrayFieldBox` draws it.
+    var needsAttention = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -169,10 +171,14 @@ struct CountStepperTile<Field: Hashable>: View {
         .padding(EdgeInsets(top: 10, leading: 14, bottom: 10, trailing: 10))
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.background))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Theme.hairlineStrong, lineWidth: 1)
-        )
+        .overlay {
+            let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+            if needsAttention {
+                shape.strokeBorder(Theme.accent, lineWidth: 1.5)
+            } else {
+                shape.strokeBorder(Theme.hairlineStrong, lineWidth: 1)
+            }
+        }
     }
 
     private func stepButton(
