@@ -56,13 +56,40 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
 
       assert doc |> LazyHTML.query("#login-error") |> Enum.count() == 0
 
-      # Forgot password? reveals the existing sign-in link form: the section
-      # is hidden until it is the :target, so it needs no JavaScript.
-      assert doc |> LazyHTML.query("a[href='#sign-in-link']") |> LazyHTML.text() =~
+      # W255: Forgot password? opens the Reset page. The sign-in link form
+      # stays on the page, hidden until it is the :target (the Reset page
+      # links to it), so it needs no JavaScript.
+      assert form |> LazyHTML.query("a[href='/users/reset-password']") |> LazyHTML.text() =~
                "Forgot password?"
+
+      assert doc |> LazyHTML.query("a[href='#sign-in-link']") |> Enum.count() == 0
 
       section = LazyHTML.query(doc, "section#sign-in-link.hidden.target\\:block")
       assert section |> LazyHTML.query("form#login_form_magic") |> Enum.count() == 1
+    end
+
+    test "the log-in page links Forgot password? to /users/reset-password", %{conn: conn} do
+      doc = conn |> get(~p"/users/log-in") |> html_response(200) |> LazyHTML.from_document()
+
+      [href] =
+        doc
+        |> LazyHTML.query("form#login_form_password a")
+        |> Enum.filter(&(LazyHTML.text(&1) =~ "Forgot password?"))
+        |> Enum.flat_map(&LazyHTML.attribute(&1, "href"))
+
+      assert href == ~p"/users/reset-password"
+      assert build_conn() |> get(href) |> html_response(200) =~ "Reset your password"
+    end
+
+    # W255: HEEx comments never render, so the developer note is checked in
+    # the template source rather than through a request.
+    test "the log-in template no longer says the web has no password reset" do
+      source = File.read!("lib/trays_social_web/controllers/user_session_html/new.html.heex")
+
+      refute source =~ "There is no\n     password reset on the web"
+      refute source =~ "no password reset on the web"
+      refute source =~ "No reset flow exists on the web"
+      assert source =~ ~s{"Forgot password?"\n     opens the Reset page (W255)}
     end
 
     test "renders login page with email filled in (sudo mode)", %{conn: conn, user: user} do
@@ -81,6 +108,15 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
       # field is still pre-filled when in sudo mode.
       assert html =~
                ~s(<input type="email" name="user[email]" id="login_form_magic_email" value="#{user.email}")
+
+      # W255: the Reset page redirects signed-in users, so in sudo mode
+      # Forgot password? still opens the sign-in link form on this page.
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query("a[href='#sign-in-link']") |> LazyHTML.text() =~
+               "Forgot password?"
+
+      assert doc |> LazyHTML.query("a[href='/users/reset-password']") |> Enum.count() == 0
     end
 
     test "renders login page (email + password)", %{conn: conn} do

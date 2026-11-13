@@ -383,6 +383,12 @@ defmodule TraysSocialWeb.Router do
 
     get "/users/register", UserRegistrationController, :new
     post "/users/register", UserRegistrationController, :create
+
+    # W255: ask for a reset link. No credential in the path, so the request
+    # logs as usual; the emailed /users/reset-password/:token routes are in
+    # the :browser scope further down.
+    get "/users/reset-password", UserResetPasswordController, :new
+    post "/users/reset-password", UserResetPasswordController, :create
   end
 
   # W203: signed in but not necessarily confirmed. These are the escape

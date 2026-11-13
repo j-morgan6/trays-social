@@ -2,10 +2,10 @@
      Welcome screen's job beside the form. Continue with Apple first, then
      email and password, "Keep me logged in" and the amber Log in button,
      with the amber callout directly above it. Flashes render here rather
-     than as toasts (the controller sets :inline_flash). There is no
-     password reset on the web, so "Forgot password?" reveals the existing
-     sign-in link form. Sudo mode (@current_scope) reuses the page to
-     reauthenticate. --%>
+     than as toasts (the controller sets :inline_flash). "Forgot password?"
+     opens the Reset page (W255). Sudo mode (@current_scope) reuses the page
+     to reauthenticate; there the link still reveals the sign-in link form,
+     because the Reset page is for signed-out visitors and would redirect. --%>
 
 <.auth_shell id="log-in">
   <%= if @current_scope do %>
@@ -65,7 +65,7 @@
       >
         <:aside>
           <a
-            href="#sign-in-link"
+            href={if @current_scope, do: "#sign-in-link", else: ~p"/users/reset-password"}
             class="-my-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary-ink hover:underline"
           >
             Forgot password?
@@ -94,9 +94,10 @@
     </.form>
   </div>
 
-  <%!-- No reset flow exists on the web; the sign-in link is the way back
-       in. The section is hidden until "Forgot password?" targets it
-       (:target), so it opens without JavaScript in every browser. --%>
+  <%!-- The sign-in link is the other way back in. The Reset page's
+       "Prefer a sign-in link?" opens it (/users/log-in#sign-in-link), and so
+       does "Forgot password?" in sudo mode. The section is hidden until it
+       is the :target, so it opens without JavaScript in every browser. --%>
   <section
     id="sign-in-link"
     aria-labelledby="sign-in-link-title"

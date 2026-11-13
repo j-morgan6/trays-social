@@ -1,0 +1,89 @@
+<%!-- Ask for a reset link (W255), per the WebAuth artboard's Reset and
+     Check your email states, in the same split panel as log-in. The Check
+     your email state reads the same for a known, unknown, rate-limited or
+     mailer-failed request, so the page never says whether an account
+     exists; the typed email is echoed only through HEEx interpolation.
+     Resend posts the same email back through the same rate limiter.
+     Flashes render here rather than as toasts (the controller sets
+     :inline_flash). The sign-in link form stays on the log-in page, and
+     "Prefer a sign-in link?" opens it there. --%>
+
+<.auth_shell id="reset-request">
+  <%= if @sent_to do %>
+    <.auth_heading title="Check your email" />
+
+    <.auth_status id="reset-sent" class="mt-6">
+      If an account uses <strong class="font-semibold break-all">{@sent_to}</strong>, a reset link is on its way. It works for one hour.
+    </.auth_status>
+
+    <.form
+      for={%{}}
+      as={:user}
+      id="reset_resend_form"
+      action={~p"/users/reset-password"}
+      class="mt-6"
+    >
+      <input type="hidden" name="user[email]" value={@sent_to} />
+      <.secondary_button type="submit" wide phx-disable-with="Sending…">
+        Resend link
+      </.secondary_button>
+    </.form>
+  <% else %>
+    <.auth_heading
+      title="Reset your password"
+      subtitle="Enter the email you signed up with and we'll send you a link to set a new password."
+    />
+
+    <.form
+      :let={f}
+      for={@form}
+      id="reset_request_form"
+      action={~p"/users/reset-password"}
+      class="mt-6 flex flex-col gap-4"
+    >
+      <.auth_input
+        field={f[:email]}
+        type="email"
+        label="Email"
+        autocomplete="email"
+        placeholder="you@example.com"
+        required
+      />
+
+      <.callout :if={Phoenix.Flash.get(@flash, :error)} id="reset-request-error">
+        {Phoenix.Flash.get(@flash, :error)}
+      </.callout>
+
+      <.accent_button
+        type="submit"
+        wide
+        phx-disable-with="Sending…"
+        class="min-h-[52px] text-base shadow-lg shadow-accent/30"
+      >
+        Send reset link
+      </.accent_button>
+    </.form>
+
+    <p class="mt-4 text-center text-[15px]">
+      <%!-- href, not navigate: a full page load applies :target, which is
+           what opens the sign-in link section. --%>
+      <.link
+        id="reset-request-sign-in-link"
+        href={~p"/users/log-in#sign-in-link"}
+        class="inline-flex min-h-11 items-center px-1 font-semibold text-primary-ink hover:underline"
+      >
+        Prefer a sign-in link?
+      </.link>
+    </p>
+  <% end %>
+
+  <p class="mt-[22px] text-center text-[15px] text-muted">
+    Remembered it?
+    <.link
+      navigate={~p"/users/log-in"}
+      class="inline-flex min-h-11 items-center px-1 font-semibold text-primary-ink hover:underline"
+    >
+      Back to log in
+    </.link>
+  </p>
+</.auth_shell>
