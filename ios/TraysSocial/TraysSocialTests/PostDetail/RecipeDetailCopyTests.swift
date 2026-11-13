@@ -8,16 +8,58 @@ final class RecipeDetailCopyTests: XCTestCase {
 
     func test_titleIsTheFirstSentence() {
         XCTAssertEqual(RecipeTitle.from(caption: "Sesame chicken. Crisp skin.", fallback: "X"), "Sesame chicken")
+        XCTAssertEqual(RecipeTitle.from(caption: "Weeknight dal\nRoast it hot.", fallback: "X"), "Weeknight dal")
+        XCTAssertEqual(RecipeTitle.from(caption: "Wait... it's good", fallback: "X"), "Wait")
     }
 
     func test_titleWithoutATerminatorIsTheWholeCaption() {
         XCTAssertEqual(RecipeTitle.from(caption: "  Weeknight dal  ", fallback: "X"), "Weeknight dal")
     }
 
+    // D125: the shared title vectors. A sibling web task adopts the same rule
+    // and vectors, so a change here needs the matching change there.
+
+    func test_titleKeepsAPeriodAfterAnAbbreviation() {
+        XCTAssertEqual(RecipeTitle.from(caption: "Mrs. Smith's pie", fallback: "X"), "Mrs. Smith's pie")
+        XCTAssertEqual(RecipeTitle.from(caption: "mrs. smith's pie", fallback: "X"), "mrs. smith's pie")
+        XCTAssertEqual(RecipeTitle.from(caption: "St. Louis ribs!", fallback: "X"), "St. Louis ribs")
+        XCTAssertEqual(RecipeTitle.from(caption: "J. Kenji's eggs", fallback: "X"), "J. Kenji's eggs")
+        XCTAssertEqual(RecipeTitle.from(caption: "Dr.", fallback: "X"), "Dr")
+    }
+
+    func test_titleEndsAtTheSentenceAfterAnAbbreviation() {
+        XCTAssertEqual(
+            RecipeTitle.from(caption: "Mrs. Smith's pie. Flaky crust.", fallback: "X"),
+            "Mrs. Smith's pie"
+        )
+    }
+
+    func test_aPeriodInsideANumberNeverEndsTheTitle() {
+        XCTAssertEqual(RecipeTitle.from(caption: "1.5 hour brisket", fallback: "X"), "1.5 hour brisket")
+        XCTAssertEqual(RecipeTitle.from(caption: "3.5oz steak. Rare.", fallback: "X"), "3.5oz steak")
+    }
+
     func test_emptyOrPunctuationOnlyCaptionsUseTheFallback() {
         XCTAssertEqual(RecipeTitle.from(caption: nil, fallback: "Untitled recipe"), "Untitled recipe")
         XCTAssertEqual(RecipeTitle.from(caption: "   ", fallback: "Untitled recipe"), "Untitled recipe")
         XCTAssertEqual(RecipeTitle.from(caption: "...", fallback: "Untitled recipe"), "Untitled recipe")
+        XCTAssertEqual(RecipeTitle.from(caption: "?! .", fallback: "Untitled recipe"), "Untitled recipe")
+    }
+
+    @MainActor
+    func test_feedAndFindCardsUseRecipeTitle() {
+        let post = PreviewData.post(1, "Mrs. Smith's pie. Flaky crust.")
+        XCTAssertEqual(FeedCardView.title(for: post), "Mrs. Smith's pie")
+        XCTAssertEqual(FindView.gridTitle(for: post), "Mrs. Smith's pie")
+        let untitled = PreviewData.post(2, "...")
+        XCTAssertEqual(FeedCardView.title(for: untitled), String(localized: "Untitled"))
+        XCTAssertEqual(FindView.gridTitle(for: untitled), String(localized: "Untitled"))
+    }
+
+    func test_noteFollowsAnAbbreviatedTitle() {
+        XCTAssertEqual(RecipeTitle.note(caption: "Mrs. Smith's pie. Flaky crust."), "Flaky crust")
+        XCTAssertEqual(RecipeTitle.note(caption: "Mrs. Smith's pie"), "")
+        XCTAssertEqual(RecipeTitle.note(caption: "St. Louis ribs! Low and slow."), "Low and slow")
     }
 
     func test_cardTitleKeepsItsUntitledFallback() {

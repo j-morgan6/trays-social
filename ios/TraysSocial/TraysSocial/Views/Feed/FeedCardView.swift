@@ -154,12 +154,12 @@ struct FeedCardView: View {
     }
 
     private var cardTitle: String {
-        let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return String(localized: "Untitled") }
-        let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
-            .first?
-            .trimmingCharacters(in: .whitespaces) ?? raw
-        return candidate.isEmpty ? String(localized: "Untitled") : candidate
+        Self.title(for: post)
+    }
+
+    /// D125: the card reads the shared title rule rather than its own copy.
+    static func title(for post: Post) -> String {
+        RecipeTitle.from(caption: post.caption)
     }
 
     // D100: real profile photo on the card header; falls back to the

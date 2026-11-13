@@ -254,7 +254,7 @@ private extension FindView {
                     NavigationLink(value: post) {
                         GridCard(
                             photoKey: photoKey(for: post),
-                            title: gridTitle(for: post),
+                            title: Self.gridTitle(for: post),
                             url: post.primaryPhotoURL?.asBackendURL
                         )
                     }
@@ -308,7 +308,7 @@ private extension FindView {
                     NavigationLink(value: post) {
                         GridCard(
                             photoKey: photoKey(for: post),
-                            title: gridTitle(for: post),
+                            title: Self.gridTitle(for: post),
                             url: post.primaryPhotoURL?.asBackendURL
                         )
                     }
@@ -326,13 +326,12 @@ private extension FindView {
         let keys = FoodPalette.Key.allCases
         return keys[abs(post.id) % keys.count]
     }
+}
 
-    func gridTitle(for post: Post) -> String {
-        let raw = (post.caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !raw.isEmpty else { return String(localized: "Untitled") }
-        let candidate = raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
-            .first?
-            .trimmingCharacters(in: .whitespaces) ?? raw
-        return candidate.isEmpty ? String(localized: "Untitled") : candidate
+extension FindView {
+    /// D125: the grid reads the shared title rule rather than its own copy.
+    /// Internal rather than private so a test can pin that wiring.
+    static func gridTitle(for post: Post) -> String {
+        RecipeTitle.from(caption: post.caption)
     }
 }

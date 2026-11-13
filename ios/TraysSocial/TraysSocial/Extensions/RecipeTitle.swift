@@ -11,7 +11,32 @@ import Foundation
 /// W247: recipe detail, its hero and the share sheet used three more copies
 /// of the same rule with their own fallbacks; they call `from(caption:fallback:)`
 /// now, and the cook's note (the caption after its first sentence) is `note`.
+///
+/// D125: a sibling web task adopts this same rule, and both platforms must
+/// produce the same title for the same caption, so it is plain string
+/// scanning (never NLTokenizer, which the web cannot reproduce). Dotted
+/// multi-initials such as "U.S." end the title at their last period, because
+/// the word before it is "U.S", not a single letter:
+/// 1. Trim the caption and take the text before its first line break.
+/// 2. The title ends at the first `.`, `!` or `?` that is followed by
+///    whitespace or the end of that line. A period never ends it when the word
+///    just before it (the text back to the previous whitespace, leading
+///    non-letters dropped) is a known abbreviation, matched case-insensitively,
+///    or a single-letter initial. So "Mrs. Smith's pie", "St. Louis ribs!" and
+///    "J. Kenji's eggs" keep their periods, and "1.5 hour brisket" is whole
+///    because its period is followed by a digit.
+/// 3. Trailing terminators and whitespace are dropped; an empty result uses
+///    the fallback.
+/// The title is always a prefix of the trimmed caption, which `note` relies on.
 enum RecipeTitle {
+    /// Words whose trailing period never ends a title. Lowercase; compared
+    /// case-insensitively.
+    private static let abbreviations: Set<String> = [
+        "mr", "mrs", "ms", "dr", "st", "mt", "jr", "sr", "prof", "vs", "approx", "no",
+    ]
+
+    private static let terminators: Set<Character> = [".", "!", "?"]
+
     static func from(caption: String?) -> String {
         from(caption: caption, fallback: String(localized: "Untitled"))
     }
@@ -37,10 +62,34 @@ enum RecipeTitle {
 
     private static func firstSentence(of caption: String?) -> String {
         let raw = trimmed(caption)
-        guard !raw.isEmpty else { return "" }
-        return raw.components(separatedBy: CharacterSet(charactersIn: ".!?\n"))
-            .first?
-            .trimmingCharacters(in: .whitespaces) ?? raw
+        let line = raw.firstIndex(where: \.isNewline).map { raw[..<$0] } ?? raw[...]
+        let chars = Array(line)
+        var end = chars.count
+        for index in chars.indices where terminators.contains(chars[index]) {
+            let next = index + 1
+            guard next == chars.count || chars[next].isWhitespace else { continue }
+            if chars[index] == ".", keepsPeriod(after: chars[..<index]) {
+                continue
+            }
+            end = index
+            break
+        }
+        var title = chars[..<end]
+        while let last = title.last, terminators.contains(last) || last.isWhitespace {
+            title.removeLast()
+        }
+        return String(title)
+    }
+
+    /// Whether a period after `prefix` belongs to the word before it: a known
+    /// abbreviation or a single-letter initial.
+    private static func keepsPeriod(after prefix: ArraySlice<Character>) -> Bool {
+        let word = prefix.reversed().prefix { !$0.isWhitespace }.reversed()
+        let letters = String(word.drop { !$0.isLetter }).lowercased()
+        if letters.count == 1, letters.first?.isLetter == true {
+            return true
+        }
+        return abbreviations.contains(letters)
     }
 }
 
@@ -48,8 +97,8 @@ enum RecipeTitle {
 /// the one caption the API stores. The caption stays the source of truth: the
 /// name is the text before its first line break and the line is everything
 /// after it, so a caption nobody types into round-trips unchanged, and
-/// `RecipeTitle.from(caption:)` still reads the name as the title (a line
-/// break ends the first sentence). A caption with no line break (older
+/// `RecipeTitle.from(caption:)` still reads the name as the title (the title
+/// never reaches past the first line break). A caption with no line break (older
 /// posts) is all name.
 enum CaptionParts {
     static func name(of caption: String) -> String {
