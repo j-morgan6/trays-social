@@ -42,6 +42,12 @@ enum AuthService {
         let token: String
     }
 
+    /// W256: the password reset request body. Only the email, never
+    /// anything else about the user.
+    struct PasswordResetRequest: Encodable {
+        let email: String
+    }
+
     struct ConfirmEmailResponse: Decodable, Sendable {
         let confirmed: Bool
     }
@@ -122,6 +128,17 @@ enum AuthService {
 
     static func resendConfirmation() async throws {
         _ = try await APIClient.shared.post(path: "/auth/resend-confirmation")
+    }
+
+    /// W256: ask the server to email a password reset link. The server
+    /// answers 202 with one neutral body for every address, so any 2xx means
+    /// "sent" and nothing here reveals whether an account exists. The reset
+    /// token stays in the email and the web page; iOS never handles it.
+    static func requestPasswordReset(email: String) async throws {
+        try await APIClient.shared.postAcknowledged(
+            path: "/auth/reset-password",
+            body: PasswordResetRequest(email: email)
+        )
     }
 
     static func confirmEmail(token: String) async throws -> Bool {

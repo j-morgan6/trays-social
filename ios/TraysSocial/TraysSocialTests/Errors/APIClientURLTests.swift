@@ -9,6 +9,17 @@ final class APIClientURLTests: XCTestCase {
         try APIClient.makeURL(baseURL: baseURL, path: path, queryItems: items).query(percentEncoded: true)
     }
 
+    /// W256: the password reset request answers 202 Accepted, so the
+    /// acknowledged POST counts every 2xx as success and nothing else.
+    func test_acknowledgedPostAcceptsEvery2xxAndNothingElse() {
+        for code in [200, 201, 202, 204, 299] {
+            XCTAssertTrue(APIClient.isSuccess(statusCode: code), "\(code) is success")
+        }
+        for code in [199, 300, 304, 401, 422, 429, 500] {
+            XCTAssertFalse(APIClient.isSuccess(statusCode: code), "\(code) is not success")
+        }
+    }
+
     func test_plusInQueryValueIsPercentEncoded() throws {
         XCTAssertEqual(try query([.init(name: "q", value: "c++")]), "q=c%2B%2B")
         XCTAssertEqual(try query([.init(name: "q", value: "salt+pepper")]), "q=salt%2Bpepper")

@@ -52,4 +52,35 @@ final class AuthLayoutTests: XCTestCase {
         XCTAssertEqual(WelcomeView.path(showing: .register), [.register])
         XCTAssertEqual(WelcomeView.path(showing: .login), [.login])
     }
+
+    /// W256: Forgot password? puts Reset your password on top of Log in (so
+    /// Back returns to Log in), and Remembered it? Back to log in replaces
+    /// the path, so neither direction stacks a second copy of a screen.
+    func test_forgotPasswordPushesResetWithoutStackingScreens() {
+        let reset = WelcomeView.passwordResetPath
+        XCTAssertEqual(reset, [.login, .resetPassword])
+        XCTAssertEqual(Set(reset).count, reset.count, "no screen appears twice")
+        XCTAssertEqual(WelcomeView.path(showing: .login), [.login], "Back to log in leaves one Log in")
+    }
+
+    /// W256 Every Surface: Forgot password? is wired on Log in only, not on
+    /// Create account or the username sheet.
+    func test_forgotPasswordAppearsOnLogInOnly() {
+        func labels(_ view: Any) -> [String] {
+            Mirror(reflecting: view).children.compactMap { $0.label?.lowercased() }
+        }
+        let viewModel = AuthViewModel()
+        XCTAssertTrue(labels(LoginView(viewModel: viewModel)).contains("onforgotpassword"))
+        XCTAssertFalse(labels(RegisterView(viewModel: viewModel)).contains { $0.contains("forgot") })
+        XCTAssertFalse(labels(UsernamePickerView(viewModel: viewModel)).contains { $0.contains("forgot") })
+    }
+
+    /// W256 keyboard up: the reset form collapses the band so Send reset link
+    /// stays above the keyboard; the sent state never does.
+    func test_resetFormCollapsesTheBandOnlyWhileTyping() {
+        XCTAssertTrue(ResetPasswordView.usesCompactBand(isEmailFocused: true, isSent: false))
+        XCTAssertFalse(ResetPasswordView.usesCompactBand(isEmailFocused: false, isSent: false))
+        XCTAssertFalse(ResetPasswordView.usesCompactBand(isEmailFocused: true, isSent: true))
+        XCTAssertFalse(ResetPasswordView.usesCompactBand(isEmailFocused: false, isSent: true))
+    }
 }

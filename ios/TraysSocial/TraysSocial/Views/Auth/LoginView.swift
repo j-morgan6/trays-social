@@ -11,6 +11,9 @@ struct LoginView: View {
     @Bindable var viewModel: AuthViewModel
     /// Footer link: swaps this screen for Create account.
     var onCreateAccount: () -> Void = {}
+    /// W256: Forgot password? on the Password label row: opens Reset your
+    /// password with the typed email prefilled.
+    var onForgotPassword: () -> Void = {}
 
     private enum Field: Hashable {
         case email
@@ -40,8 +43,8 @@ struct LoginView: View {
                         .authField(isFocused: focusedField == .email, isBusy: viewModel.isLoading)
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    AuthFieldLabel("Password")
+                VStack(alignment: .leading, spacing: 0) {
+                    passwordLabelRow
                     SecureField("Password", text: $viewModel.password, prompt: .authPrompt("Your password"))
                         .textContentType(.password)
                         .submitLabel(.go)
@@ -94,6 +97,37 @@ struct LoginView: View {
         .onChange(of: viewModel.password) { clearErrorIfShown() }
         .onAppear { viewModel.checkBiometricAvailability() }
         .onDisappear { viewModel.clearError() }
+    }
+
+    /// The Password label with Forgot password? right aligned (Login
+    /// artboard: 14 semibold link, 44pt hit). The 44pt frame is taller than
+    /// the label, so the row starts 8pt higher to keep the label's rhythm
+    /// close to the Email group's. At the largest text sizes the link wraps
+    /// under the label instead of squeezing it.
+    private var passwordLabelRow: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: 12) {
+                AuthFieldLabel("Password")
+                Spacer(minLength: 0)
+                forgotPasswordLink
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                AuthFieldLabel("Password")
+                forgotPasswordLink
+            }
+        }
+        .padding(.top, -8)
+    }
+
+    private var forgotPasswordLink: some View {
+        Button(action: onForgotPassword) {
+            Text("Forgot password?")
+                .scaledFont(14, weight: .semibold, relativeTo: .subheadline)
+                .foregroundStyle(Theme.primaryInk)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func submit() {

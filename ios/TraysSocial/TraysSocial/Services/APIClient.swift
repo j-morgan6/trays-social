@@ -43,6 +43,32 @@ actor APIClient {
         return try await execute(request)
     }
 
+    /// W256: POST for endpoints that acknowledge rather than return data.
+    /// Any 2xx counts as success and the body is not decoded: the password
+    /// reset request answers 202 Accepted, which `execute` (200...201, then a
+    /// typed decode) would report as a server error. Non-2xx statuses still
+    /// map through `mapError`, so 422 and 429 keep their typed errors.
+    func postAcknowledged(path: String, body: Encodable? = nil) async throws {
+        var request = try buildRequest(method: "POST", path: path)
+        if let body {
+            request.httpBody = try JSONEncoder.apiEncoder.encode(body)
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        guard Self.isSuccess(statusCode: httpResponse.statusCode) else {
+            throw mapError(statusCode: httpResponse.statusCode, data: data)
+        }
+    }
+
+    /// Any 2xx status. Used by `postAcknowledged` only; every decoding call
+    /// keeps the stricter 200...201 in `execute`.
+    static func isSuccess(statusCode: Int) -> Bool {
+        (200 ..< 300).contains(statusCode)
+    }
+
     /// W125: POST a user-typed feedback submission to /api/v1/feedback.
     /// Auto-injects the device metadata (app version, OS version,
     /// device model) so the operator viewing /admin/feedback can

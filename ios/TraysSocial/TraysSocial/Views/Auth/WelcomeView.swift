@@ -22,15 +22,22 @@ struct WelcomeView: View {
     enum AuthRoute: Hashable {
         case login
         case register
+        case resetPassword
     }
 
     /// The path that shows `route`. Every entry point, the footer links on
-    /// Log in and Create account included, replaces the path rather than
-    /// pushing onto it, so switching between the two never stacks screens
-    /// and Back always returns to Welcome.
+    /// Log in, Create account and Reset your password included, replaces the
+    /// path rather than pushing onto it, so switching between them never
+    /// stacks screens and Back from Log in or Create account returns to
+    /// Welcome.
     static func path(showing route: AuthRoute) -> [AuthRoute] {
         [route]
     }
+
+    /// W256: Forgot password? on Log in. Reset your password sits on Log in,
+    /// so the system Back returns to Log in, and the path is assigned rather
+    /// than appended so a second tap never stacks another copy.
+    static let passwordResetPath: [AuthRoute] = [.login, .resetPassword]
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -53,9 +60,17 @@ struct WelcomeView: View {
             .navigationDestination(for: AuthRoute.self) { route in
                 switch route {
                 case .login:
-                    LoginView(viewModel: viewModel, onCreateAccount: { path = Self.path(showing: .register) })
+                    LoginView(
+                        viewModel: viewModel,
+                        onCreateAccount: { path = Self.path(showing: .register) },
+                        onForgotPassword: { path = Self.passwordResetPath }
+                    )
                 case .register:
                     RegisterView(viewModel: viewModel, onLogIn: { path = Self.path(showing: .login) })
+                case .resetPassword:
+                    // Prefilled with whatever was typed on Log in; the reset
+                    // screen keeps its own copy and never writes it back.
+                    ResetPasswordView(email: viewModel.email, onBackToLogIn: { path = Self.path(showing: .login) })
                 }
             }
             .sheet(isPresented: $viewModel.needsUsername) {
