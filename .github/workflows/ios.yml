@@ -53,6 +53,7 @@ on:
       - "scripts/regen-xcodeproj.sh"
       - "scripts/test-regen-xcodeproj.sh"
       - "scripts/test-ios-workflow.rb"
+      - "scripts/adhoc-sign-archive.sh"
       - ".github/workflows/ios.yml"
   pull_request:
     paths:
@@ -60,6 +61,7 @@ on:
       - "scripts/regen-xcodeproj.sh"
       - "scripts/test-regen-xcodeproj.sh"
       - "scripts/test-ios-workflow.rb"
+      - "scripts/adhoc-sign-archive.sh"
       - ".github/workflows/ios.yml"
   # A plain dispatch uploads a Beta build (testflight_beta). With release
   # set it uploads a Release build instead (testflight_release), after the
@@ -338,15 +340,12 @@ jobs:
 
       # Archive with the Beta configuration explicitly, even though the
       # scheme's archive action already selects it, so the scheme cannot drift
-      # to Release unnoticed. Signing is Automatic (project.yml sets no
-      # CODE_SIGN_STYLE); -allowProvisioningUpdates plus the API key lets
-      # Xcode fetch or create the certificate and profile it needs. The archive
-      # must be signed: an unsigned one would drop the Sign in with Apple and
-      # associated-domains entitlements.
+      # to Release unnoticed. The archive is built UNSIGNED: signing it here
+      # needs a development certificate, and a fresh runner has none, so Xcode
+      # minted a new "Apple Development: Created via API" certificate on every
+      # run until the account hit its limit (2026-11-13). The export step signs
+      # with Apple's cloud-managed distribution certificate instead.
       - name: Archive TraysSocial Beta
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           xcodebuild archive \
             -project ios/TraysSocial/TraysSocial.xcodeproj \
@@ -354,10 +353,14 @@ jobs:
             -configuration Beta \
             -destination "generic/platform=iOS" \
             -archivePath "$RUNNER_TEMP/TraysSocialBeta.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/asc-key/AuthKey_${ASC_KEY_ID}.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+            CODE_SIGNING_ALLOWED=NO
+
+      # An unsigned archive carries no entitlements, and the export keeps the
+      # archive's, so Sign in with Apple and associated domains would be lost.
+      # An ad-hoc signature (identity "-") needs no certificate and records
+      # them; the export then re-signs for distribution and keeps them.
+      - name: Ad-hoc sign the archive with its entitlements
+        run: bash scripts/adhoc-sign-archive.sh "$RUNNER_TEMP/TraysSocialBeta.xcarchive"
 
       # Mechanical proof of the two facts a tester would otherwise discover
       # by installing: the build talks to the review backend, and its build
@@ -532,12 +535,9 @@ jobs:
 
       # The "TraysSocial" scheme with the Release configuration named
       # explicitly, so the scheme cannot drift to Beta (review backend)
-      # unnoticed. Signing as in the Beta job: Automatic, cloud-managed
-      # through the API key.
+      # unnoticed. Signing as in the Beta job: unsigned archive, ad-hoc
+      # entitlements, cloud-managed distribution signing at export.
       - name: Archive TraysSocial (Release)
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           xcodebuild archive \
             -project ios/TraysSocial/TraysSocial.xcodeproj \
@@ -545,10 +545,10 @@ jobs:
             -configuration Release \
             -destination "generic/platform=iOS" \
             -archivePath "$RUNNER_TEMP/TraysSocialRelease.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/asc-key/AuthKey_${ASC_KEY_ID}.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Ad-hoc sign the archive with its entitlements
+        run: bash scripts/adhoc-sign-archive.sh "$RUNNER_TEMP/TraysSocialRelease.xcarchive"
 
       # Mechanical proof that the build talks to prod (not review), carries
       # the N.1 build number, and is signed with its entitlements. The

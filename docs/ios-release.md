@@ -173,6 +173,19 @@ certificates on the team's behalf, and Apple ties that to the Admin role. This
 had not been exercised by a real CI upload when the key was created; if one
 shows a lower role is enough, rotate to a narrower key and update this table.
 
+**Why the archive is unsigned:** both upload jobs archive with
+`CODE_SIGNING_ALLOWED=NO`, then `scripts/adhoc-sign-archive.sh` gives the app
+an ad-hoc signature carrying `TraysSocial.entitlements`, and the export signs it
+for distribution with the cloud-managed certificate. Until 2026-11-13 the
+archive was signed with automatic development signing, and since a fresh runner
+has no certificate, every upload minted a new "Apple Development: Created via
+API" certificate. About ten of those filled the account's limit and the archive
+step failed with "Your account has reached the maximum number of certificates".
+If that error ever returns, revoke the "Created via API" Development rows at
+developer.apple.com → Certificates (keep your own Mac's certificate) and
+re-run the job. If you add an app extension or an embedded framework, extend
+the script to sign it too; until then it fails the job.
+
 ### Where the secrets live
 
 The key lives only as **environment-scoped** GitHub Actions secrets, never at
