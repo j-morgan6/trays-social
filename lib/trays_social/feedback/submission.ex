@@ -13,7 +13,8 @@ defmodule TraysSocial.Feedback.Submission do
     * `subject` (max 200), `body` (required, 1 to 5,000 characters after
       trimming)
     * `app_version` (64), `app_build` (64), `os_version` (64),
-      `device_model` (128), `screen` (120), `user_agent` (512)
+      `device_model` (128), `screen` (120), `user_agent` (512); these and
+      `subject` are varchar columns, so their limits count codepoints
     * `status` - `"new"`, `"triaged"` or `"resolved"`
 
   `user_id` is never cast from attrs (D44/D52): `TraysSocial.Feedback.submit/2`
@@ -73,14 +74,18 @@ defmodule TraysSocial.Feedback.Submission do
     |> validate_required([:user_id, :kind, :platform, :body])
     |> validate_inclusion(:kind, @kinds)
     |> validate_inclusion(:platform, @platforms)
-    |> validate_length(:subject, max: 200)
+    # The varchar columns count codepoints, and validate_length counts
+    # graphemes by default, so a value of N graphemes made of combining
+    # marks would pass here and fail the insert (W261). The body is a
+    # text column, so it keeps the grapheme count the iOS counter uses.
+    |> validate_length(:subject, max: 200, count: :codepoints)
     |> validate_length(:body, min: 1, max: 5000)
-    |> validate_length(:app_version, max: 64)
-    |> validate_length(:app_build, max: 64)
-    |> validate_length(:os_version, max: 64)
-    |> validate_length(:device_model, max: 128)
-    |> validate_length(:screen, max: 120)
-    |> validate_length(:user_agent, max: 512)
+    |> validate_length(:app_version, max: 64, count: :codepoints)
+    |> validate_length(:app_build, max: 64, count: :codepoints)
+    |> validate_length(:os_version, max: 64, count: :codepoints)
+    |> validate_length(:device_model, max: 128, count: :codepoints)
+    |> validate_length(:screen, max: 120, count: :codepoints)
+    |> validate_length(:user_agent, max: 512, count: :codepoints)
     |> foreign_key_constraint(:user_id)
   end
 

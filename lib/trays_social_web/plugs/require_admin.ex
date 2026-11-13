@@ -26,10 +26,10 @@ defmodule TraysSocialWeb.Plugs.RequireAdmin do
 
   `:ensure_admin` checks once, at mount. A LiveView whose events change
   data can also mount `:ensure_admin_each_event` (W261): it reloads the
-  user before every `handle_event` and redirects to `/feed` when they are
-  no longer an admin, so revoking `is_admin` takes effect on the next
-  click rather than the next page load. It costs one primary-key lookup
-  per event.
+  user before every `handle_event` and every live-patch `handle_params`
+  and redirects to `/feed` when they are no longer an admin, so revoking
+  `is_admin` takes effect on the next click or patch rather than the next
+  page load. It costs one primary-key lookup per event or patch.
 
       on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin}
       on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin_each_event}
@@ -66,10 +66,15 @@ defmodule TraysSocialWeb.Plugs.RequireAdmin do
   end
 
   def on_mount(:ensure_admin_each_event, _params, _session, socket) do
-    {:cont, Phoenix.LiveView.attach_hook(socket, :admin_recheck, :handle_event, &recheck_admin/3)}
+    {:cont,
+     socket
+     |> Phoenix.LiveView.attach_hook(:admin_recheck, :handle_event, &recheck_admin/3)
+     |> Phoenix.LiveView.attach_hook(:admin_recheck_params, :handle_params, &recheck_admin/3)}
   end
 
-  defp recheck_admin(_event, _params, socket) do
+  # Shared by the :handle_event (event, params, socket) and :handle_params
+  # (params, uri, socket) hooks; only the socket matters.
+  defp recheck_admin(_first, _second, socket) do
     if still_admin?(socket.assigns) do
       {:cont, socket}
     else

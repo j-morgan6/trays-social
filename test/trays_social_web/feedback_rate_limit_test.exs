@@ -31,11 +31,21 @@ defmodule TraysSocialWeb.FeedbackRateLimitTest do
     assert FeedbackRateLimit.check_submission(other) == :ok
   end
 
+  test "the 21st submission in an hour from one address is rate limited" do
+    ip = "198.51.100.#{System.unique_integer([:positive])}"
+
+    for _ <- 1..20, do: assert(FeedbackRateLimit.check_address(ip) == :ok)
+
+    assert FeedbackRateLimit.check_address(ip) == :rate_limited
+    assert FeedbackRateLimit.check_address(ip <> "-other") == :ok
+  end
+
   test "the limit honors :disable_rate_limiting" do
     Application.put_env(:trays_social, :disable_rate_limiting, true)
     user_id = fresh_user_id()
 
     for _ <- 1..20, do: assert(FeedbackRateLimit.check_submission(user_id) == :ok)
+    for _ <- 1..30, do: assert(FeedbackRateLimit.check_address("disabled-flag-ip") == :ok)
   end
 
   test "retry_after_seconds is the one-hour window" do

@@ -116,6 +116,40 @@ defmodule TraysSocialWeb.API.V1.FeedbackControllerTest do
       assert String.length(Feedback.get_submission!(id).user_agent) == 512
     end
 
+    test "cuts a user agent by codepoints, which the varchar column counts", %{conn: conn} do
+      # 300 graphemes of "e" plus a combining acute accent: 600 codepoints.
+      ua = String.duplicate("e\u0301", 300)
+
+      conn =
+        conn
+        |> put_req_header("user-agent", ua)
+        |> post(~p"/api/v1/feedback", @valid_body)
+
+      assert %{"data" => %{"id" => id}} = json_response(conn, 201)
+      stored = Feedback.get_submission!(id).user_agent
+      assert length(String.codepoints(stored)) == 512
+    end
+
+    test "drops a user agent that is not valid UTF-8", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("user-agent", <<"TraysSocial/1.1.0 ", 0xFF, 0xFE>>)
+        |> post(~p"/api/v1/feedback", @valid_body)
+
+      assert %{"data" => %{"id" => id}} = json_response(conn, 201)
+      assert Feedback.get_submission!(id).user_agent == nil
+    end
+
+    test "returns 422, not 500, for a screen over 120 codepoints", %{conn: conn} do
+      # 100 graphemes but 200 codepoints: passes a grapheme count, fails the column.
+      screen = String.duplicate("e\u0301", 100)
+
+      conn = post(conn, ~p"/api/v1/feedback", Map.put(@valid_body, "screen", screen))
+
+      assert %{"errors" => errors} = json_response(conn, 422)
+      assert Enum.any?(errors, fn e -> e["field"] == "screen" end)
+    end
+
     test "returns 422 for an unknown kind", %{conn: conn} do
       conn = post(conn, ~p"/api/v1/feedback", Map.put(@valid_body, "kind", "praise"))
 
@@ -137,6 +171,15 @@ defmodule TraysSocialWeb.API.V1.FeedbackControllerTest do
       assert Feedback.get_submission!(id).user_id == user.id
     end
 
+    test "GET, PUT and DELETE are not routed", %{conn: conn} do
+      # The API answers unknown routes with its catch-all 404 rather than
+      # raising, so assert the status and that nothing was stored.
+      assert get(conn, ~p"/api/v1/feedback").status == 404
+      assert put(conn, ~p"/api/v1/feedback", @valid_body).status == 404
+      assert delete(conn, ~p"/api/v1/feedback").status == 404
+      assert Feedback.list_recent() == []
+    end
+
     test "returns 401 when unauthenticated" do
       conn =
         build_conn()
@@ -146,13 +189,67 @@ defmodule TraysSocialWeb.API.V1.FeedbackControllerTest do
       assert json_response(conn, 401)
     end
   end
+
+  describe "contract shared with the iOS app and the developer guide" do
+    test "the iOS body counter and the server's 5,000 limit agree" do
+      swift =
+        "../../../../ios/TraysSocial/TraysSocial/Views/Settings/FeedbackView.swift"
+        |> Path.expand(__DIR__)
+        |> File.read!()
+
+      assert [_, limit] = Regex.run(~r/bodyCharLimit\s*=\s*(\d+)/, swift)
+
+      limit = String.to_integer(limit)
+      assert limit == 5000
+
+      user = user_fixture()
+
+      at_limit =
+        TraysSocial.Feedback.Submission.submit_changeset(
+          %TraysSocial.Feedback.Submission{user_id: user.id},
+          %{body: String.duplicate("a", limit)}
+        )
+
+      over_limit =
+        TraysSocial.Feedback.Submission.submit_changeset(
+          %TraysSocial.Feedback.Submission{user_id: user.id},
+          %{body: String.duplicate("a", limit + 1)}
+        )
+
+      assert at_limit.valid?
+      refute over_limit.valid?
+    end
+
+    test "the moduledoc describes the new fields, the limit and the scope" do
+      {:docs_v1, _, :elixir, _, %{"en" => doc}, _, _} =
+        Code.fetch_docs(TraysSocialWeb.API.V1.FeedbackController)
+
+      for phrase <- [
+            ~s("kind"),
+            ~s("app_build"),
+            ~s("screen"),
+            "`platform` is always `\"ios\"`",
+            "5 times per hour",
+            "20 times per hour",
+            "read scope like `/devices`",
+            "429"
+          ] do
+        assert doc =~ phrase, "moduledoc is missing #{inspect(phrase)}"
+      end
+    end
+  end
 end
 
 defmodule TraysSocialWeb.API.V1.FeedbackControllerRateLimitTest do
-  # Not async: this module turns on the global :disable_rate_limiting flag.
+  # Not async: this module clears the global :disable_rate_limiting flag so
+  # the limiter runs.
   # ExUnit runs sync modules after async ones, so this cannot race the
   # module above.
   use TraysSocialWeb.ConnCase, async: false
+
+  import TraysSocial.AccountsFixtures
+
+  alias TraysSocial.Accounts
 
   # A fresh user per test, so each one gets its own Hammer bucket.
   setup :register_and_api_authenticate_user
@@ -175,5 +272,27 @@ defmodule TraysSocialWeb.API.V1.FeedbackControllerRateLimitTest do
 
     assert json_response(limited, 429) == %{"errors" => [%{"message" => "too many requests"}]}
     assert get_resp_header(limited, "retry-after") == ["3600"]
+  end
+
+  test "the 21st submission from one address across accounts returns 429" do
+    # Four accounts at 5 each fill the address bucket; the fifth account's
+    # first submission is refused. A test-only address keeps the bucket fresh.
+    ip = {10, 61, rem(System.unique_integer([:positive]), 250), 1}
+
+    post_as = fn user ->
+      build_conn()
+      |> Map.put(:remote_ip, ip)
+      |> put_req_header("authorization", "Bearer #{Accounts.generate_user_api_token(user)}")
+      |> put_req_header("accept", "application/json")
+      |> post(~p"/api/v1/feedback", @valid_body)
+    end
+
+    for _account <- 1..4 do
+      user = user_fixture()
+      for _ <- 1..5, do: assert(json_response(post_as.(user), 201))
+    end
+
+    limited = post_as.(user_fixture())
+    assert json_response(limited, 429) == %{"errors" => [%{"message" => "too many requests"}]}
   end
 end

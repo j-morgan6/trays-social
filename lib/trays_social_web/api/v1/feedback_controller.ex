@@ -30,7 +30,8 @@ defmodule TraysSocialWeb.API.V1.FeedbackController do
     * `platform` is always `"ios"` here (the web form will set `"web"`); a
       `platform` in the body is ignored so the source cannot be spoofed.
     * `user_agent` comes from the request's `user-agent` header, cut to
-      512 characters; a `user_agent` in the body is ignored.
+      512 codepoints (dropped if it is not valid UTF-8); a `user_agent` in
+      the body is ignored.
     * The owner comes from the bearer token's user (D44/D52).
 
   No IP address is stored.
@@ -44,8 +45,9 @@ defmodule TraysSocialWeb.API.V1.FeedbackController do
 
   Each user may submit 5 times per hour, counted by
   `TraysSocialWeb.FeedbackRateLimit` in one bucket shared with the web
-  form. The check runs before validation, so an attempt that returns `422`
-  still counts. Over the limit the response is `429` with a `retry-after`
+  form, and each client address 20 times per hour across all accounts, so
+  throwaway unconfirmed accounts cannot flood the developer. The checks run
+  before validation, so an attempt that returns `422` still counts. Over the limit the response is `429` with a `retry-after`
   header and `{"errors": [{"message": "too many requests"}]}`, the same
   shape as `TraysSocialWeb.API.RateLimitPlug`.
 
@@ -60,6 +62,7 @@ defmodule TraysSocialWeb.API.V1.FeedbackController do
   use TraysSocialWeb, :controller
 
   alias TraysSocial.Feedback
+  alias TraysSocialWeb.AuthRateLimit
   alias TraysSocialWeb.FeedbackRateLimit
 
   require Logger
@@ -67,10 +70,10 @@ defmodule TraysSocialWeb.API.V1.FeedbackController do
   @user_agent_max 512
 
   def create(conn, params) do
-    case FeedbackRateLimit.check_submission(conn.assigns.current_user.id) do
-      :ok ->
-        do_create(conn, params)
-
+    with :ok <- FeedbackRateLimit.check_submission(conn.assigns.current_user.id),
+         :ok <- conn |> AuthRateLimit.ip_key() |> FeedbackRateLimit.check_address() do
+      do_create(conn, params)
+    else
       :rate_limited ->
         conn
         |> put_resp_header("retry-after", to_string(FeedbackRateLimit.retry_after_seconds()))
@@ -121,9 +124,13 @@ defmodule TraysSocialWeb.API.V1.FeedbackController do
     }
   end
 
+  # Headers are raw bytes: invalid UTF-8 is dropped rather than stored, and
+  # the cut counts codepoints because the varchar(512) column does.
   defp request_user_agent(conn) do
-    case get_req_header(conn, "user-agent") do
-      [ua | _] when is_binary(ua) and ua != "" -> String.slice(ua, 0, @user_agent_max)
+    with [ua | _] <- get_req_header(conn, "user-agent"),
+         true <- ua != "" and String.valid?(ua) do
+      ua |> String.codepoints() |> Enum.take(@user_agent_max) |> Enum.join()
+    else
       _ -> nil
     end
   end

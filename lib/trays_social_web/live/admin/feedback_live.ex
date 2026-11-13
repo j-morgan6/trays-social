@@ -15,7 +15,8 @@ defmodule TraysSocialWeb.Admin.FeedbackLive do
   Defense-in-depth admin gate: router pipeline plus the
   `on_mount {RequireAdmin, :ensure_admin}` hook used by ReportsLive +
   IosCrashesLive. `:ensure_admin_each_event` (W261) re-checks `is_admin`
-  before every event, so a revoked admin cannot triage from an open page.
+  before every event and live patch, so a revoked admin can neither triage
+  nor open another submission from an already-open page.
   All user text renders through HEEx escaping.
   """
 

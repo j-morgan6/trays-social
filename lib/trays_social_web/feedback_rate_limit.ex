@@ -7,8 +7,15 @@ defmodule TraysSocialWeb.FeedbackRateLimit do
   and the web feedback form will check the same bucket, so the limit holds
   across web and iOS combined rather than per client.
 
-  The check counts every attempt, including one that later fails
-  validation, so it runs once at the top of the caller before any insert.
+  Accounts are cheap to create and confirmation is not required, so a
+  second bucket, `feedback:ip:<address>` (IPv6 by its /64, via
+  `TraysSocialWeb.AuthRateLimit.ip_key/1`), allows 20 submissions per hour
+  from one network across every account. One actor cycling throwaway
+  accounts from one place therefore stays under the developer email cap
+  (30 per hour, `TraysSocial.Feedback.Notifier`).
+
+  The checks count every attempt, including one that later fails
+  validation, so they run once at the top of the caller before any insert.
 
   Honors `Application.get_env(:trays_social, :disable_rate_limiting,
   false)` like `TraysSocialWeb.AuthRateLimit`, so the test suite can opt
@@ -17,6 +24,7 @@ defmodule TraysSocialWeb.FeedbackRateLimit do
 
   @window_ms 3_600_000
   @max_submissions 5
+  @max_address_submissions 20
 
   @doc """
   Counts one submission attempt for `user_id`. Returns `:ok` while the user
@@ -28,6 +36,23 @@ defmodule TraysSocialWeb.FeedbackRateLimit do
       :ok
     else
       case Hammer.check_rate("feedback:user:#{user_id}", @window_ms, @max_submissions) do
+        {:allow, _count} -> :ok
+        {:deny, _limit} -> :rate_limited
+      end
+    end
+  end
+
+  @doc """
+  Counts one submission attempt from the client address `ip_key` (from
+  `TraysSocialWeb.AuthRateLimit.ip_key/1`), across all accounts. Returns
+  `:ok` while the address is within 20 per hour, else `:rate_limited`.
+  """
+  @spec check_address(String.t()) :: :ok | :rate_limited
+  def check_address(ip_key) when is_binary(ip_key) do
+    if Application.get_env(:trays_social, :disable_rate_limiting, false) do
+      :ok
+    else
+      case Hammer.check_rate("feedback:ip:#{ip_key}", @window_ms, @max_address_submissions) do
         {:allow, _count} -> :ok
         {:deny, _limit} -> :rate_limited
       end

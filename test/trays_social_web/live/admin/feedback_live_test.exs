@@ -156,6 +156,18 @@ defmodule TraysSocialWeb.Admin.FeedbackLiveTest do
     assert Feedback.get_submission!(sub.id).status == "new"
   end
 
+  test "an admin who loses is_admin is refused on the next live patch", %{conn: conn} do
+    admin = admin_fixture()
+    sub = submission_fixture(%{subject: "Do not open"})
+
+    {:ok, view, _html} = conn |> log_in_user(admin) |> live(~p"/admin/feedback")
+
+    {:ok, _} = Accounts.set_admin(admin, false)
+
+    assert {:error, {:redirect, %{to: "/feed"}}} =
+             render_patch(view, ~p"/admin/feedback/#{sub.id}")
+  end
+
   test "show route renders the full body", %{conn: conn} do
     admin = admin_fixture()
     sub = submission_fixture(%{body: "Full body line 1\nFull body line 2"})
