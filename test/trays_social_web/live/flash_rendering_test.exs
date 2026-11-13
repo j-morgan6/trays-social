@@ -70,6 +70,35 @@ defmodule TraysSocialWeb.FlashRenderingTest do
       assert has_element?(view, "#flash-error", "User not found")
     end
 
+    test "Cook not found flash survives push_navigate from FollowersLive.Show to /feed",
+         %{conn: conn} do
+      conn = log_in_user(conn, user_fixture())
+
+      {:ok, view, _html} =
+        conn
+        |> live(~p"/@nonexistentuser/followers")
+        |> follow_redirect(conn, ~p"/feed")
+
+      assert has_element?(view, "#flash-error", "Cook not found")
+    end
+
+    test "an email-change flash in SettingsLive.Index shows without navigation", %{conn: conn} do
+      user = user_fixture() |> set_password()
+
+      {:ok, view, _html} = conn |> log_in_user(user) |> live(~p"/users/settings")
+      refute has_element?(view, "#flash-info")
+
+      new_email = "flash#{System.unique_integer([:positive])}@example.com"
+
+      view
+      |> element("#email-form")
+      |> render_submit(%{
+        "user" => %{"email" => new_email, "current_password" => valid_user_password()}
+      })
+
+      assert has_element?(view, "#flash-info", "A link to confirm your email change")
+    end
+
     test "the toast stays dismissible after live navigation", %{conn: conn} do
       conn = log_in_user(conn, user_fixture())
 
