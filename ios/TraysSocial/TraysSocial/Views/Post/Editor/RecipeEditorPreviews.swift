@@ -2,8 +2,8 @@ import SwiftUI
 import UIKit
 
 // W249: preview galleries for the recipe editor's designed states (Create
-// artboard): empty, filling in, missing photo, posting, the Preview, and the
-// edit form. Photos are a flat generated fill, never an asset.
+// artboard): empty, filling in, missing photo, posting, the Preview, Posted
+// (W257), and the edit form. Photos are a flat generated fill, never an asset.
 
 @MainActor
 private enum EditorPreviewData {
@@ -91,6 +91,32 @@ private enum EditorPreviewData {
         onPost: {}
     )
     .preferredColorScheme(.dark)
+}
+
+#Preview("Posted") {
+    PostedView(
+        summary: PostedSummary(post: PreviewData.post(7, "Sesame chicken thighs")),
+        onViewRecipe: {},
+        onDone: {}
+    )
+}
+
+#Preview("Posted · dark") {
+    PostedView(
+        summary: PostedSummary(post: PreviewData.post(7, "Sesame chicken thighs")),
+        onViewRecipe: {},
+        onDone: {}
+    )
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Posted · largest text") {
+    PostedView(
+        summary: PostedSummary(post: PreviewData.post(7, "Sesame chicken thighs")),
+        onViewRecipe: {},
+        onDone: {}
+    )
+    .dynamicTypeSize(.accessibility5)
 }
 
 #Preview("Edit · recipe") {

@@ -8,7 +8,8 @@ import SwiftUI
 /// spinner while posting. Posting and its rules are the view model's,
 /// unchanged. Post looks quiet until a name, a total time, an ingredient, a
 /// step and a photo are in, but stays tappable; after a tap, each missing
-/// piece says what it needs in place, in amber, never red.
+/// piece says what it needs in place, in amber, never red. A successful
+/// publish swaps the editor for the Posted screen (W257) instead of closing.
 struct CreatePostView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -19,9 +20,14 @@ struct CreatePostView: View {
     /// Set by the first Post tap; from then on each missing piece says so in place.
     @State private var attemptedPost = false
     @FocusState private var focus: EditorField?
+    /// W257: the new post once publish succeeds; the Posted screen replaces the editor.
+    @State private var posted: PostedSummary?
+    /// W257: View recipe. The presenter dismisses this sheet and opens the post.
+    private let onViewRecipe: (Post) -> Void
 
-    init(viewModel: CreatePostViewModel = CreatePostViewModel()) {
+    init(viewModel: CreatePostViewModel = CreatePostViewModel(), onViewRecipe: @escaping (Post) -> Void = { _ in }) {
         _viewModel = State(initialValue: viewModel)
+        self.onViewRecipe = onViewRecipe
     }
 
     private var isRecipe: Bool {
@@ -33,6 +39,27 @@ struct CreatePostView: View {
     }
 
     var body: some View {
+        Group {
+            if let posted {
+                PostedView(
+                    summary: posted,
+                    onViewRecipe: {
+                        onViewRecipe(posted.post)
+                        dismiss()
+                    },
+                    onDone: { dismiss() }
+                )
+                .transition(.opacity)
+            } else {
+                editorScreen
+            }
+        }
+        // Swiping down mid-post would leave the publish running with no
+        // screen to land on; once posted, swipe-down closes like Done.
+        .interactiveDismissDisabled(!viewModel.allowsInteractiveDismiss)
+    }
+
+    private var editorScreen: some View {
         NavigationStack {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -194,13 +221,24 @@ struct CreatePostView: View {
         focus = nil
         attemptedPost = true
         Task {
-            if await viewModel.publish() {
-                // W170: Feed and My Tray observe this to
-                // refresh — their .task gates never refire
-                // under the paging TabView, so a new post
-                // was invisible until manual pull-to-refresh.
-                NotificationCenter.default.post(name: .postCreated, object: nil)
+            let post = await viewModel.publish()
+            let outcome = CreatePostViewModel.PublishOutcome(didPublish: viewModel.didPublish, post: post)
+            // W170: Feed and My Tray observe .postCreated to
+            // refresh — their .task gates never refire
+            // under the paging TabView, so a new post
+            // was invisible until manual pull-to-refresh.
+            // Posted exactly once per successful publish.
+            outcome.announce()
+            switch outcome {
+            case .failed:
+                break
+            case .closed:
                 dismiss()
+            case let .posted(post):
+                showsPreview = false
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) {
+                    posted = PostedSummary(post: post)
+                }
             }
         }
     }

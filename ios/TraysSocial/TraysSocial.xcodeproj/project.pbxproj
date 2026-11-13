@@ -119,6 +119,7 @@
 		86A35E95D8983D29A9F28C2E /* ImageSlots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F51BFC7ABA32D65D9162383 /* ImageSlots.swift */; };
 		86AB9BA0EA9766F0995E5414 /* SponsoredCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDB82B0D2D18AE1B278067DF /* SponsoredCardView.swift */; };
 		878D75D8A9FE2C9E18DF44C2 /* RecipeHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4191F4AE9819C57781DB5E3 /* RecipeHero.swift */; };
+		88B9547E7F9231B7344811B4 /* PostedStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A17868A6C04AA254BDE7934 /* PostedStateTests.swift */; };
 		892334F4875A4620B720B2A5 /* SubscriptionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856DF06453D39C005EBF4775 /* SubscriptionServiceTests.swift */; };
 		8935ADE7E14E0802771F2F46 /* RecipeBodySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60646F2040AF1970F9DAA64C /* RecipeBodySection.swift */; };
 		8951A90C8E70110553467728 /* PostDetailPreviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B57595338955CA5AB7AC6E3E /* PostDetailPreviews.swift */; };
@@ -165,6 +166,7 @@
 		B49D2CAB29C36A436AA1E18C /* PlannerWeekTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 624DAAB08F4667BBA4EC2134 /* PlannerWeekTests.swift */; };
 		B5F5A682F5C3624249559472 /* MyTrayCardSizingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25ABDB035A2ECA479AB74994 /* MyTrayCardSizingTests.swift */; };
 		B61423072C960CEFF809895B /* SearchGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2A2991AE426AB06B0FE3B1 /* SearchGroupView.swift */; };
+		B652B791BE9ED600EA4DB213 /* PostedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5691A506B588281E1DEFB1E4 /* PostedView.swift */; };
 		B689A9AFCF360DCB73453623 /* UnifiedSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 163EFB151A517A4E8CF8E9D7 /* UnifiedSearchTests.swift */; };
 		B6EE5EE0619EC94CB96CF20B /* ErrorToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF881083B0DBC6A7F20C3922 /* ErrorToast.swift */; };
 		B87D69B45508CA5B72C2F429 /* PlannerWeekView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FFC4408A636E669AD59AC76 /* PlannerWeekView.swift */; };
@@ -333,6 +335,7 @@
 		539FB5FFFE16AC16BF5BEF29 /* SearchCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchCards.swift; sourceTree = "<group>"; };
 		543A06A6A684F149EB19FF22 /* EditorControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorControls.swift; sourceTree = "<group>"; };
 		54D385EAB43626DE90C1CF52 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
+		5691A506B588281E1DEFB1E4 /* PostedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostedView.swift; sourceTree = "<group>"; };
 		56C3C5F8EC79DAF5159276FD /* HomeSectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSectionViews.swift; sourceTree = "<group>"; };
 		57D6157473441EF4E163A03A /* APIClientURLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientURLTests.swift; sourceTree = "<group>"; };
 		58613543D79D4CBB194A7308 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
@@ -378,6 +381,7 @@
 		805CBBD0E47A9827AB41CD7B /* MealPlannerSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlannerSurface.swift; sourceTree = "<group>"; };
 		856DF06453D39C005EBF4775 /* SubscriptionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionServiceTests.swift; sourceTree = "<group>"; };
 		88FA3AAE60B04DA0CD0184E5 /* SaveButtonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveButtonView.swift; sourceTree = "<group>"; };
+		8A17868A6C04AA254BDE7934 /* PostedStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostedStateTests.swift; sourceTree = "<group>"; };
 		8C10779B86B4059A19D6681F /* TraySections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraySections.swift; sourceTree = "<group>"; };
 		8D5A6AC4887DBFA2579C1ADB /* TabSegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabSegment.swift; sourceTree = "<group>"; };
 		8EFC61757F559A1D768B6A12 /* FeedItemDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedItemDecodingTests.swift; sourceTree = "<group>"; };
@@ -922,6 +926,7 @@
 			isa = PBXGroup;
 			children = (
 				64A842DA0A5CB3BE98938DF1 /* EditorComponents.swift */,
+				5691A506B588281E1DEFB1E4 /* PostedView.swift */,
 				7235B7BE4F933CC97CEBE950 /* RecipeBasicsCard.swift */,
 				11B851F920BD96E4ED25D29E /* RecipeDraftPreview.swift */,
 				CE1ED7F40E1D2F0CA7C527C3 /* RecipeEditorPreviews.swift */,
@@ -933,6 +938,7 @@
 		DBDDFAB509D81B71D73EA59D /* Create */ = {
 			isa = PBXGroup;
 			children = (
+				8A17868A6C04AA254BDE7934 /* PostedStateTests.swift */,
 				1A45F6923E3C2782F7281A19 /* RecipeEditorTests.swift */,
 			);
 			path = Create;
@@ -1203,6 +1209,7 @@
 				B49D2CAB29C36A436AA1E18C /* PlannerWeekTests.swift in Sources */,
 				52F25B9F3CD9AF2D3C911FCB /* PlusGateTests.swift in Sources */,
 				4D8DD68233225D661B225FC4 /* PostDetailSizingTests.swift in Sources */,
+				88B9547E7F9231B7344811B4 /* PostedStateTests.swift in Sources */,
 				4DC92154066B4DDBCCB4BA53 /* PrivacyManifestTests.swift in Sources */,
 				5BEA26413E10C40DB32D04C0 /* RecipeDetailCopyTests.swift in Sources */,
 				5AEAFA8DD4558984036F189A /* RecipeEditorTests.swift in Sources */,
@@ -1341,6 +1348,7 @@
 				E6F36149B52A5781300385E9 /* PostDetailView.swift in Sources */,
 				944A082C6C11545178549001 /* PostGrid.swift in Sources */,
 				D9D83A18DCA43251859EFB14 /* PostViewModel.swift in Sources */,
+				B652B791BE9ED600EA4DB213 /* PostedView.swift in Sources */,
 				62A0D06274FD0389BB049705 /* PreviewData.swift in Sources */,
 				450DAAA4B89A6512FA9F0B46 /* ProfileActionRow.swift in Sources */,
 				AFD36B97DAAA3D942A590820 /* ProfileHeader.swift in Sources */,

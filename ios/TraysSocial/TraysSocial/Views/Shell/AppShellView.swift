@@ -25,6 +25,9 @@ struct AppShellView: View {
     // means the tray's entry row and the planner screen share a loaded week.
     @State private var planner = MealPlannerViewModel()
     @State private var showCreatePost = false
+    // W257: the post the Posted screen's View recipe asked for, pushed once
+    // the Create sheet has finished dismissing, never under a live sheet.
+    @State private var pendingPost: Post?
     // W195: the opening tab is applied once per mount, never on re-render.
     @State private var didApplyInitialTab = false
     // W195: only a real return from the background refreshes the flags, not
@@ -110,8 +113,11 @@ struct AppShellView: View {
             .navigationDestination(for: SearchGroupRoute.self) { route in
                 SearchGroupView(route: route)
             }
-            .sheet(isPresented: $showCreatePost) {
-                CreatePostView()
+            .sheet(isPresented: $showCreatePost, onDismiss: openPendingPost) {
+                CreatePostView(onViewRecipe: { post in
+                    pendingPost = post
+                    showCreatePost = false
+                })
             }
         }
         .tint(Theme.primary)
@@ -212,6 +218,13 @@ struct AppShellView: View {
             SearchView()
                 .tag(AppState.TrayTab.search)
         }
+    }
+
+    /// W257: Done and swipe-down leave nothing pending, so nothing is pushed.
+    private func openPendingPost() {
+        guard let post = pendingPost else { return }
+        pendingPost = nil
+        appState.navigationPath.append(post)
     }
 
     private func pillTransition(edge: Edge) -> AnyTransition {
