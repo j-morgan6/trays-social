@@ -40,4 +40,17 @@
       Log out
     </.link>
   </p>
+
+  <%!-- W262: the way to get help when the email never arrives. /feedback
+       accepts unconfirmed users, so this does not loop back here. --%>
+  <p class="mt-1 text-center text-[15px] text-muted">
+    Something not working?
+    <.link
+      id="confirm-required-report"
+      href={~p"/feedback?kind=bug&from=/users/confirm-required"}
+      class="inline-flex min-h-11 items-center px-1 font-semibold text-primary-ink hover:underline"
+    >
+      Report a problem
+    </.link>
+  </p>
 </.auth_shell>

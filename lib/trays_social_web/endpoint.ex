@@ -17,9 +17,11 @@ defmodule TraysSocialWeb.Endpoint do
     http_only: true
   ]
 
+  # W262: :user_agent so the web feedback form can attach the browser's
+  # user agent to a report (FeedbackLive.Index).
   socket "/live", Phoenix.LiveView.Socket,
-    websocket: [connect_info: [session: @session_options]],
-    longpoll: [connect_info: [session: @session_options]]
+    websocket: [connect_info: [:user_agent, session: @session_options]],
+    longpoll: [connect_info: [:user_agent, session: @session_options]]
 
   # Serve uploaded files from configurable directory (volume mount in prod)
   plug TraysSocialWeb.Plugs.UploadServing

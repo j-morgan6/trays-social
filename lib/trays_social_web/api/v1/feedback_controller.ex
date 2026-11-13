@@ -63,11 +63,10 @@ defmodule TraysSocialWeb.API.V1.FeedbackController do
 
   alias TraysSocial.Feedback
   alias TraysSocialWeb.AuthRateLimit
+  alias TraysSocialWeb.FeedbackClientContext
   alias TraysSocialWeb.FeedbackRateLimit
 
   require Logger
-
-  @user_agent_max 512
 
   def create(conn, params) do
     with :ok <- FeedbackRateLimit.check_submission(conn.assigns.current_user.id),
@@ -125,13 +124,12 @@ defmodule TraysSocialWeb.API.V1.FeedbackController do
   end
 
   # Headers are raw bytes: invalid UTF-8 is dropped rather than stored, and
-  # the cut counts codepoints because the varchar(512) column does.
+  # the cut counts codepoints because the varchar(512) column does. The web
+  # form applies the same rule (FeedbackClientContext, W262).
   defp request_user_agent(conn) do
-    with [ua | _] <- get_req_header(conn, "user-agent"),
-         true <- ua != "" and String.valid?(ua) do
-      ua |> String.codepoints() |> Enum.take(@user_agent_max) |> Enum.join()
-    else
-      _ -> nil
+    case get_req_header(conn, "user-agent") do
+      [ua | _] -> FeedbackClientContext.user_agent(ua)
+      [] -> nil
     end
   end
 

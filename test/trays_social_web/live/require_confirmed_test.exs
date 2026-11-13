@@ -159,7 +159,8 @@ defmodule TraysSocialWeb.RequireConfirmedTest do
         "user_token" => Accounts.generate_user_session_token(unconfirmed_user_fixture())
       }
 
-      escape_hatches = [TraysSocialWeb.SettingsLive.Index]
+      # W262: Report a problem is open to unconfirmed users on purpose.
+      escape_hatches = [TraysSocialWeb.SettingsLive.Index, TraysSocialWeb.FeedbackLive.Index]
 
       modules =
         TraysSocialWeb.Router

@@ -1,0 +1,110 @@
+<%!-- W262: Report a problem. The redesign's form pieces: a pill choice for
+     Bug or Feedback, the auth_input field for the subject, the recipe
+     editor's textarea well for the message, the amber callout above the
+     amber Send button. Success swaps the form for the mint status box; every
+     refusal stays in place and keeps the typed text. --%>
+
+<main class="mx-auto max-w-xl px-4 pb-12 pt-8">
+  <header id="feedback-header">
+    <h1 class="font-display text-[32px] font-extrabold leading-tight tracking-[-0.02em] text-base-content">
+      Report a problem
+    </h1>
+    <p class="mt-1.5 text-[15px] text-muted">
+      Tell us what went wrong or what would make Trays better. We read every report.
+    </p>
+  </header>
+
+  <%= if @sent? do %>
+    <div class="mt-8 flex flex-col gap-4">
+      <.auth_status id="feedback-sent" icon="hero-check-circle" title="Thanks for telling us">
+        Your report is with the developer. If we need more detail, we will email you.
+      </.auth_status>
+
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <.secondary_button id="feedback-send-another" type="button" phx-click="send_another" wide>
+          Send another
+        </.secondary_button>
+        <.secondary_button id="feedback-back-to-settings" navigate={~p"/users/settings"} wide>
+          Back to settings
+        </.secondary_button>
+      </div>
+    </div>
+  <% else %>
+    <.form
+      for={@form}
+      id="feedback-form"
+      phx-change="validate"
+      phx-submit="send"
+      class="mt-8 flex flex-col gap-5"
+    >
+      <.segmented_choice
+        id="feedback-kind"
+        field={@form[:kind]}
+        label="What are you sending?"
+        options={@kind_options}
+      />
+
+      <.auth_input
+        field={@form[:subject]}
+        label="Subject (optional)"
+        placeholder="A few words about it"
+        autocomplete="off"
+      />
+
+      <% body_errors = field_errors(@form[:body]) %>
+      <div class="flex flex-col gap-2">
+        <label for={@form[:body].id} class="text-[13.5px] font-semibold text-base-content">
+          Message
+        </label>
+        <div class={[
+          "flex rounded-[14px] bg-base-100 px-3.5 ring-inset focus-within:ring-2 focus-within:ring-accent",
+          if(body_errors == [],
+            do: "ring-1 ring-hairline-strong",
+            else: "ring-[1.5px] ring-accent"
+          )
+        ]}>
+          <textarea
+            id={@form[:body].id}
+            name={@form[:body].name}
+            rows="7"
+            phx-debounce="300"
+            placeholder="What happened, and what did you expect?"
+            aria-describedby="feedback-body-count"
+            aria-invalid={body_errors != [] && "true"}
+            class="min-h-[160px] w-full resize-y border-0 bg-transparent px-0 py-3 text-base leading-normal text-base-content outline-none placeholder:text-muted focus:ring-0"
+          >{Phoenix.HTML.Form.normalize_value("textarea", @form[:body].value)}</textarea>
+        </div>
+        <p
+          id="feedback-body-count"
+          class={[
+            "self-end text-[13px] tabular-nums",
+            if(@body_length > @body_max_length,
+              do: "font-semibold text-base-content",
+              else: "text-muted"
+            )
+          ]}
+        >
+          {format_count(@body_length)} / {format_count(@body_max_length)}
+        </p>
+        <.field_error :for={msg <- body_errors}>{msg}</.field_error>
+      </div>
+
+      <.callout :if={@rate_limited?} id="feedback-rate-limited">
+        Too many reports have been sent in the last hour. Your message is still here; try again later, or email <a
+          href="mailto:support@trays.app"
+          class="font-semibold underline"
+        >support@trays.app</a>.
+      </.callout>
+
+      <.accent_button
+        id="feedback-send"
+        type="submit"
+        wide
+        phx-disable-with="Sending…"
+        class="min-h-[52px] text-base shadow-lg shadow-accent/30"
+      >
+        Send
+      </.accent_button>
+    </.form>
+  <% end %>
+</main>

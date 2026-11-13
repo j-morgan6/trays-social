@@ -194,6 +194,21 @@
     </.form>
   </div>
 
+  <%!-- Help and feedback Section (W262) --%>
+  <div id="settings-help" class="mt-12 pt-8 border-t">
+    <h2 class="text-xl font-bold mb-4">Help and feedback</h2>
+    <p class="text-sm text-base-content/70 mb-3">
+      Found a bug or have an idea? Send it straight to the developer.
+    </p>
+    <.link
+      id="settings-feedback-link"
+      navigate={~p"/feedback?from=/users/settings"}
+      class="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+    >
+      Report a problem or send feedback
+    </.link>
+  </div>
+
   <%!-- Account Section --%>
   <div class="mt-12 pt-8 border-t">
     <h2 class="text-xl font-bold mb-4 text-error">Danger Zone</h2>

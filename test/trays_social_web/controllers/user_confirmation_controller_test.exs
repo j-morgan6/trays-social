@@ -158,6 +158,21 @@ defmodule TraysSocialWeb.UserConfirmationControllerTest do
              |> LazyHTML.query("a#confirm-required-log-out[data-method=delete]")
              |> Enum.count() == 1
     end
+
+    # W262: an unconfirmed user can report the email that never arrives.
+    test "the confirm-required page links to /feedback" do
+      doc =
+        unconfirmed_user_fixture()
+        |> signed_in_get(~p"/users/confirm-required")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert doc
+             |> LazyHTML.query(
+               ~s(a#confirm-required-report[href="/feedback?kind=bug&from=/users/confirm-required"])
+             )
+             |> Enum.count() == 1
+    end
   end
 
   defp signed_in_get(user, path), do: build_conn() |> log_in_user(user) |> get(path)

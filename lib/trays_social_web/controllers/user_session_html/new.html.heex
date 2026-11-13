@@ -145,4 +145,17 @@
       Create an account
     </.link>
   </p>
+
+  <%!-- W262: people who cannot sign in cannot use /feedback, so they get the
+       support address published in the privacy policy. Static text: it says
+       nothing about any account. --%>
+  <p id="log-in-support" class="mt-1 text-center text-[15px] text-muted">
+    Trouble signing in?
+    <a
+      href="mailto:support@trays.app"
+      class="inline-flex min-h-11 items-center px-1 font-semibold text-primary-ink hover:underline"
+    >
+      support@trays.app
+    </a>
+  </p>
 </.auth_shell>

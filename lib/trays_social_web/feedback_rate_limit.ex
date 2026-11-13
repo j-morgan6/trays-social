@@ -3,9 +3,9 @@ defmodule TraysSocialWeb.FeedbackRateLimit do
   W261: the per-user limit on bug reports and feedback.
 
   One Hammer bucket per signed-in user, `feedback:user:<id>`, allows 5
-  submissions per hour. The API (`POST /api/v1/feedback`) checks it today
-  and the web feedback form will check the same bucket, so the limit holds
-  across web and iOS combined rather than per client.
+  submissions per hour. The API (`POST /api/v1/feedback`) and the web form
+  (`TraysSocialWeb.FeedbackLive.Index`, W262) check the same bucket, so the
+  limit holds across web and iOS combined rather than per client.
 
   Accounts are cheap to create and confirmation is not required, so a
   second bucket, `feedback:ip:<address>` (IPv6 by its /64, via

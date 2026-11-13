@@ -405,6 +405,16 @@ defmodule TraysSocialWeb.Router do
     live "/users/settings", SettingsLive.Index, :index
     put "/users/settings", UserSettingsController, :update
     get "/users/settings/confirm-email/:token", UserSettingsController, :confirm_email
+
+    # W262: Report a problem. Unconfirmed users need it most (a mailer bug
+    # is what keeps them unconfirmed). Its own live_session so the session
+    # callback can sign the client's rate-limit address key, read from the
+    # conn after TrustedRemoteIp, into the LiveView session. Live only:
+    # there is no POST /feedback.
+    live_session :feedback,
+      session: {TraysSocialWeb.FeedbackClientContext, :live_session, []} do
+      live "/feedback", FeedbackLive.Index, :index
+    end
   end
 
   scope "/", TraysSocialWeb do

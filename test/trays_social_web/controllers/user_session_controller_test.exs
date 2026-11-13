@@ -9,6 +9,20 @@ defmodule TraysSocialWeb.UserSessionControllerTest do
   end
 
   describe "GET /users/log-in" do
+    # W262: people who cannot sign in cannot use /feedback.
+    test "the log-in page shows the support address for sign-in trouble", %{conn: conn} do
+      doc = conn |> get(~p"/users/log-in") |> html_response(200) |> LazyHTML.from_document()
+
+      line = LazyHTML.query(doc, "#log-in p#log-in-support")
+      assert LazyHTML.text(line) =~ "Trouble signing in?"
+      assert line |> LazyHTML.query(~s(a[href="mailto:support@trays.app"])) |> Enum.count() == 1
+
+      # The W252 form ids and the reset link are untouched.
+      assert doc |> LazyHTML.query("form#login_form_password") |> Enum.count() == 1
+      assert doc |> LazyHTML.query("form#login_form_magic") |> Enum.count() == 1
+      assert doc |> LazyHTML.query(~s(a[href="/users/reset-password"])) |> Enum.count() == 1
+    end
+
     test "renders login page", %{conn: conn} do
       conn = get(conn, ~p"/users/log-in")
       response = html_response(conn, 200)

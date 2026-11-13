@@ -29,6 +29,7 @@ defmodule TraysSocial.Feedback.Submission do
   @statuses ~w(new triaged resolved)
   @kinds ~w(bug feedback)
   @platforms ~w(ios web)
+  @body_max_length 5000
 
   schema "feedback_submissions" do
     field :kind, :string, default: "feedback"
@@ -79,7 +80,7 @@ defmodule TraysSocial.Feedback.Submission do
     # marks would pass here and fail the insert (W261). The body is a
     # text column, so it keeps the grapheme count the iOS counter uses.
     |> validate_length(:subject, max: 200, count: :codepoints)
-    |> validate_length(:body, min: 1, max: 5000)
+    |> validate_length(:body, min: 1, max: @body_max_length)
     |> validate_length(:app_version, max: 64, count: :codepoints)
     |> validate_length(:app_build, max: 64, count: :codepoints)
     |> validate_length(:os_version, max: 64, count: :codepoints)
@@ -96,6 +97,12 @@ defmodule TraysSocial.Feedback.Submission do
   def statuses, do: @statuses
   def kinds, do: @kinds
   def platforms, do: @platforms
+
+  @doc """
+  The body limit in graphemes, after trimming. The web form's counter reads
+  it so the counter and this changeset cannot disagree (W262).
+  """
+  def body_max_length, do: @body_max_length
 
   defp default_if_nil(changeset, field, default) do
     case get_field(changeset, field) do

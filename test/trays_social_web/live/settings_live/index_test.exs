@@ -24,6 +24,24 @@ defmodule TraysSocialWeb.SettingsLive.IndexTest do
       assert html =~ "Manage your profile and account"
     end
 
+    # W262: the Help and feedback section.
+    test "settings links to /feedback", %{conn: conn} do
+      conn = log_in_user(conn, user_fixture())
+      {:ok, view, _html} = live(conn, ~p"/users/settings")
+
+      assert has_element?(view, "#settings-help h2", "Help and feedback")
+
+      assert has_element?(
+               view,
+               ~s(#settings-help a#settings-feedback-link[href="/feedback?from=/users/settings"])
+             )
+
+      {:ok, _feedback, html} =
+        view |> element("#settings-feedback-link") |> render_click() |> follow_redirect(conn)
+
+      assert html =~ "Report a problem"
+    end
+
     test "displays profile form with current username", %{conn: conn} do
       user = user_fixture()
 

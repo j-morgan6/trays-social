@@ -416,6 +416,59 @@ defmodule TraysSocialWeb.DesignComponents do
   defp pill_state_class(true), do: "bg-base-100 text-base-content shadow-card"
   defp pill_state_class(_selected), do: "text-muted hover:text-base-content"
 
+  @doc """
+  The form-field twin of `segmented_pills/1`: the same pills on the same
+  lift track, but each pill is a radio input, so the choice travels with
+  the form's params instead of the URL and switching never re-renders what
+  the user typed (W262). The checked pill sits on the surface by CSS alone.
+
+  ## Examples
+
+      <.segmented_choice
+        id="feedback-kind"
+        field={@form[:kind]}
+        label="What are you sending?"
+        options={[{"Bug", "bug"}, {"Feedback", "feedback"}]}
+      />
+  """
+  attr :id, :string, required: true
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :label, :string, required: true, doc: "the fieldset's accessible name"
+  attr :options, :list, required: true, doc: "{label, value} tuples"
+  attr :class, :any, default: nil
+
+  def segmented_choice(assigns) do
+    assigns = assign(assigns, :checked, to_string(assigns.field.value))
+
+    ~H"""
+    <fieldset id={@id} class={["min-w-0", @class]}>
+      <legend class="sr-only">{@label}</legend>
+      <div class="flex gap-1 rounded-full bg-base-300 p-1">
+        <label
+          :for={{label, value} <- @options}
+          for={"#{@field.id}_#{value}"}
+          class={[
+            "flex min-h-11 min-w-0 flex-1 cursor-pointer items-center justify-center rounded-full px-4 text-[15px] font-semibold transition-colors",
+            "text-muted hover:text-base-content",
+            "has-checked:bg-base-100 has-checked:text-base-content has-checked:shadow-card",
+            "has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary"
+          ]}
+        >
+          <input
+            type="radio"
+            id={"#{@field.id}_#{value}"}
+            name={@field.name}
+            value={value}
+            checked={@checked == value}
+            class="sr-only"
+          />
+          <span class="truncate">{label}</span>
+        </label>
+      </div>
+    </fieldset>
+    """
+  end
+
   # ---------------------------------------------------------------------------
   # Chips
   # ---------------------------------------------------------------------------
@@ -906,6 +959,7 @@ defmodule TraysSocialWeb.DesignComponents do
   the verify-email gate), mint tint at 35% / 14%, radius 18.
   """
   attr :title, :string, default: nil
+  attr :icon, :string, default: "hero-envelope", doc: "the leading Heroicon"
   attr :class, :any, default: nil
   attr :rest, :global
   slot :inner_block, required: true
@@ -917,7 +971,7 @@ defmodule TraysSocialWeb.DesignComponents do
       class={["flex items-start gap-3 rounded-[18px] bg-mint-tint p-4 text-base-content", @class]}
       {@rest}
     >
-      <.icon name="hero-envelope" class="mt-0.5 size-5 shrink-0" />
+      <.icon name={@icon} class="mt-0.5 size-5 shrink-0" />
       <div class="min-w-0">
         <p :if={@title} class="mb-1 font-display text-[17px] font-extrabold">{@title}</p>
         <p class="text-[14.5px] leading-[1.45] break-words">{render_slot(@inner_block)}</p>
