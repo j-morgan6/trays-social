@@ -390,18 +390,7 @@ defmodule TraysSocialWeb.ExploreLive.Index do
 
   defp sanitize_recent(_other), do: []
 
-  # Derive a serif title from a post's caption, matching the convention
-  # used on Feed and Recipe Detail.
-  def post_title(%{caption: caption}) do
-    case String.split(caption || "", ~r/[\n.!?]/, parts: 2, trim: true) do
-      [t | _] ->
-        case String.trim(t) do
-          "" -> "Untitled recipe"
-          title -> title
-        end
-
-      _ ->
-        "Untitled recipe"
-    end
-  end
+  # A post's title from its caption: the shared rule every web surface
+  # uses (TrayFormatting.post_title/1, D126).
+  def post_title(post), do: TraysSocialWeb.TrayFormatting.post_title(post)
 end

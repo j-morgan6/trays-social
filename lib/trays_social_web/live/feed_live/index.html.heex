@@ -55,14 +55,8 @@
           <%!-- Editorial title — Instagram-style caption isn't a recipe title,
                 so derive a serif title from the first line/short prefix and
                 keep the rest as the cook's note body. --%>
-          <% raw_caption = post.caption || "" %>
-          <% {title_text, body_text} =
-            case String.split(raw_caption, ~r/[\n.!?]/, parts: 2, trim: true) do
-              [t] -> {String.trim(t), ""}
-              [t, rest] -> {String.trim(t), String.trim(rest)}
-              _ -> {"Untitled recipe", ""}
-            end %>
-          <% title_text = if title_text == "", do: "Untitled recipe", else: title_text %>
+          <% title_text = TraysSocialWeb.TrayFormatting.post_title(post) %>
+          <% body_text = TraysSocialWeb.TrayFormatting.post_note(post) %>
 
           <% ingredients_loaded =
             Ecto.assoc_loaded?(post.ingredients) and not Enum.empty?(post.ingredients) %>

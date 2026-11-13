@@ -537,6 +537,21 @@ defmodule TraysSocialWeb.PostLive.ShowTest do
       assert has_element?(gallery_view, "#recipe-hero img[src='/uploads/gallery-a.jpg']")
     end
 
+    # D126: an abbreviation's period no longer cuts the title, and the
+    # cook's note starts after the whole title.
+    test "a recipe captioned Mrs. Smith's pie shows the full name as its heading", %{
+      conn: conn
+    } do
+      cook = user_fixture()
+      post = post_fixture(user_id: cook.id, caption: "Mrs. Smith's pie. Flaky crust.")
+
+      {:ok, view, _html} = live(conn, ~p"/posts/#{post.id}")
+
+      assert has_element?(view, "#recipe-head h1", "Mrs. Smith's pie")
+      assert has_element?(view, "#recipe-note", "Flaky crust")
+      refute has_element?(view, "#recipe-note", "Smith's pie")
+    end
+
     test "narrow-width and long-text guards hold", %{conn: conn} do
       username = String.pad_trailing("cook_#{System.unique_integer([:positive])}", 30, "x")
       cook = user_fixture(username: username)

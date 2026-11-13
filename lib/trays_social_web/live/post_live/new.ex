@@ -296,14 +296,11 @@ defmodule TraysSocialWeb.PostLive.New do
       else: []
   end
 
-  # The preview card's title: the caption's first line or sentence, as the
-  # recipe page (W248) splits it.
-  defp preview_title(caption) when is_binary(caption) do
-    case String.split(caption, ~r/[\n.!?]/, parts: 2, trim: true) do
-      [title | _] -> String.trim(title)
-      [] -> ""
-    end
-  end
+  # The preview card's title: the caption's first line or sentence, by the
+  # rule the recipe page uses (D126). Empty when there is none, so the
+  # preview shows its placeholder.
+  defp preview_title(caption) when is_binary(caption),
+    do: TraysSocialWeb.TrayFormatting.caption_title(caption, "")
 
   defp preview_title(_caption), do: ""
 

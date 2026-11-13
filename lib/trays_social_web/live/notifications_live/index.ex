@@ -85,21 +85,9 @@ defmodule TraysSocialWeb.NotificationsLive.Index do
   def target_path(%{post: %{id: id}}), do: ~p"/posts/#{id}"
   def target_path(_notification), do: ~p"/feed"
 
-  # Derive a serif-friendly recipe title from a post's caption — the
-  # caption is free-form text, so we take the first sentence/line and
-  # fall back to a placeholder when it's empty.
+  # A recipe title from a post's caption, by the shared rule
+  # (TrayFormatting.post_title/1, D126). No post gives nil, so the template
+  # can say "recipe" instead.
   def post_title(nil), do: nil
-
-  def post_title(%{caption: caption}) do
-    case String.split(caption || "", ~r/[\n.!?]/, parts: 2, trim: true) do
-      [t | _] ->
-        case String.trim(t) do
-          "" -> "Untitled recipe"
-          title -> title
-        end
-
-      _ ->
-        "Untitled recipe"
-    end
-  end
+  def post_title(post), do: TraysSocialWeb.TrayFormatting.post_title(post)
 end

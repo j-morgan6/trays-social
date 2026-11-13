@@ -301,6 +301,16 @@ defmodule TraysSocialWeb.FeedLive.IndexTest do
       assert html =~ post.caption
     end
 
+    # D126: the feed card title keeps an abbreviation's period.
+    test "a feed card for Mrs. Smith's pie shows the full name", %{conn: conn} do
+      poster = user_fixture()
+      post_fixture(user_id: poster.id, caption: "Mrs. Smith's pie. Flaky crust.")
+
+      {:ok, view, _html} = live(conn, ~p"/feed")
+
+      assert has_element?(view, "h3", "Mrs. Smith's pie")
+    end
+
     test "shows personalized feed for user with follows", %{conn: conn} do
       poster = user_fixture()
       follower = user_fixture()

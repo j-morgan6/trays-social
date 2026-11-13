@@ -40,6 +40,18 @@ defmodule TraysSocialWeb.MyTrayLive.IndexTest do
       assert has_element?(view, "#my-tray-empty a[href='/explore']", "Find recipes to save")
     end
 
+    # D126: a saved card's title keeps an abbreviation's period.
+    test "a saved card titles Mrs. Smith's pie in full", %{conn: conn} do
+      user = user_fixture()
+      post = post_fixture(user_id: user_fixture().id, caption: "Mrs. Smith's pie. Flaky crust.")
+      {:ok, _bookmark} = Posts.create_bookmark(user.id, post.id)
+
+      {:ok, view, _html} = conn |> log_in_user(user) |> live(~p"/my-tray")
+
+      assert has_element?(view, "#saved-recipes", "Mrs. Smith's pie")
+      refute has_element?(view, "#saved-recipes", "Flaky crust")
+    end
+
     test "renders saved recipes as cards", %{conn: conn} do
       user = user_fixture()
       author = user_fixture()

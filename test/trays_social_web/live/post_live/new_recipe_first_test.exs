@@ -21,6 +21,23 @@ defmodule TraysSocialWeb.PostLive.NewRecipeFirstTest do
     %{conn: log_in_user(conn, user), user: user}
   end
 
+  # D126: the preview title keeps an abbreviation's period, as every other
+  # surface does, and a caption with no title keeps the placeholder.
+  test "the preview titles Mrs. Smith's pie in full", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/posts/new")
+
+    view
+    |> form("#post-form", post: %{caption: "Mrs. Smith's pie. Flaky crust."})
+    |> render_change()
+
+    assert has_element?(view, "#editor-preview", "Mrs. Smith's pie")
+    refute has_element?(view, "#editor-preview", "Flaky crust")
+
+    view |> form("#post-form", post: %{caption: "..."}) |> render_change()
+
+    assert has_element?(view, "#editor-preview", "Your recipe name")
+  end
+
   test "opens straight on the recipe form", %{conn: conn} do
     {:ok, view, html} = live(conn, ~p"/posts/new")
 

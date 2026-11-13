@@ -15,13 +15,8 @@
 <% current_photo = Enum.at(photos, @photo_index) %>
 
 <% raw_caption = @post.caption || "" %>
-<% {title_text, body_text} =
-  case String.split(raw_caption, ~r/[\n.!?]/, parts: 2, trim: true) do
-    [t] -> {String.trim(t), ""}
-    [t, rest] -> {String.trim(t), String.trim(rest)}
-    _ -> {"Untitled recipe", ""}
-  end %>
-<% title_text = if title_text == "", do: "Untitled recipe", else: title_text %>
+<% title_text = TraysSocialWeb.TrayFormatting.post_title(@post) %>
+<% body_text = TraysSocialWeb.TrayFormatting.post_note(@post) %>
 
 <% legacy = @post.type != "recipe" %>
 <% viewer = assigns[:current_scope] && @current_scope.user %>
