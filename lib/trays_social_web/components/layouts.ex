@@ -14,10 +14,42 @@ defmodule TraysSocialWeb.Layouts do
   embed_templates "layouts/*"
 
   @doc """
+  The LiveView layout (D127), set for every LiveView in
+  `TraysSocialWeb.live_view/0`. LiveView never re-renders the root layout, so
+  a flash group there only shows flashes that arrive with a full page load;
+  this layout renders inside the LiveView, so every `put_flash` shows on the
+  next render, including one carried across `push_navigate`. It adds no
+  wrapper element, so page widths are unchanged.
+
+  The root layout skips its own group when it wraps a LiveView (it sees
+  `@live_module`), so the first render shows exactly one group. A LiveView
+  that shows a flash kind in place sets `:inline_flash` (see `toast_flash/2`).
+  """
+  def live(assigns) do
+    ~H"""
+    <.flash_group flash={toast_flash(@flash, assigns[:inline_flash])} />
+    {@inner_content}
+    """
+  end
+
+  @doc """
+  The flashes the toast group shows, given a page's `:inline_flash` assign.
+  `true` (the sign-in controller pages, W252) means info and error render in
+  place, so neither is toasted; a list of kinds (`[:error]` on
+  `PostLive.New`) drops only those; `nil` or `false` keeps every kind.
+  """
+  def toast_flash(flash, inline) when inline in [nil, false], do: flash
+  def toast_flash(flash, true), do: toast_flash(flash, [:info, :error])
+
+  def toast_flash(flash, kinds) when is_list(kinds),
+    do: Map.drop(flash, Enum.map(kinds, &to_string/1))
+
+  @doc """
   Renders a constrained content column for pages that want a centered, narrow
-  layout (e.g. Settings, forms). The site-wide header, flash, and mobile nav
-  are rendered by `root.html.heex` — this component is a thin wrapper that
-  only sets the inner column width.
+  layout (e.g. the controller-rendered Settings page). The site-wide header
+  and mobile nav are rendered by `root.html.heex`; flashes render in
+  `root.html.heex` for controller pages and in `live/1` for LiveViews. This
+  component is a thin wrapper that only sets the inner column width.
 
   ## Examples
 

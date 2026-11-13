@@ -54,14 +54,17 @@
       unread_notifications={assigns[:unread_notifications] || 0}
     />
 
-    <%!-- Flash messages, rendered globally so controller flows (login,
-         signup, settings, etc.) and LiveView flashes both surface
-         without needing each page to wrap in a layout component. The
-         sign-in pages render info and error in place (W252), so they set
-         :inline_flash and the toast group skips those two kinds. --%>
-    <Layouts.flash_group flash={
-      if assigns[:inline_flash], do: Map.drop(@flash, ["info", "error"]), else: @flash
-    } />
+    <%!-- Flash messages for controller pages (login, signup, settings,
+         etc.). LiveView never re-renders this layout, so LiveViews render
+         their own group in Layouts.live/1 (D127); @live_module is set only
+         when this layout wraps a LiveView, and the group is skipped then so
+         the first render shows one group. The sign-in pages render info and
+         error in place (W252), so they set :inline_flash and the toast
+         group skips those two kinds. --%>
+    <Layouts.flash_group
+      :if={!assigns[:live_module]}
+      flash={Layouts.toast_flash(@flash, assigns[:inline_flash])}
+    />
 
     <%!-- Main Content --%>
     <main class={["min-h-screen py-8", nav_mode == :classic && "pb-24 md:pb-8"]}>

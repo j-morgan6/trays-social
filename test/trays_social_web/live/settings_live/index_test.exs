@@ -687,7 +687,8 @@ defmodule TraysSocialWeb.SettingsLive.IndexTest do
     end
   end
 
-  # The flash renders in the root layout, not this LiveView's template, so
-  # read it from the LiveView process's socket.
+  # Read the flash from the LiveView process's socket, so these tests check
+  # the flash value itself; flash_rendering_test.exs covers that the live
+  # layout (D127) puts it on screen.
   defp lv_flash(view), do: :sys.get_state(view.pid).socket.assigns.flash
 end

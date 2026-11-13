@@ -166,6 +166,8 @@ defmodule TraysSocialWeb.PostLive.NewRecipeFirstTest do
       # recipe-only rule (total time required) shows as an amber note.
       refute html =~ "Post created"
       assert has_element?(view, "#editor-form-note", "Please upload at least one photo")
+      # D127: the error shows once, inline, never also as a toast.
+      refute has_element?(view, "#flash-error")
       assert has_element?(view, "#editor-head h1", "New recipe")
 
       assert has_element?(

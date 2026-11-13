@@ -17,6 +17,9 @@ defmodule TraysSocialWeb.PostLive.New do
       |> assign(:current_tab, :new_post)
       |> assign(:post_type, nil)
       |> assign(:recipe_first, TraysSocial.Features.recipe_first?())
+      # D127: save errors show in the editor's inline note, so the live
+      # layout's toast group skips the error kind and nothing shows twice.
+      |> assign(:inline_flash, [:error])
 
     # Recipe-first: skip the type picker and open straight on the recipe
     # form. The picker code stays for flag-off.
@@ -80,7 +83,7 @@ defmodule TraysSocialWeb.PostLive.New do
       |> Map.put(:action, :validate)
 
     # W250: a save error from the flash is shown inline in the editor
-    # (the root layout's flash group never re-renders here). Any edit,
+    # (the toast group skips it via :inline_flash, D127). Any edit,
     # including attaching a photo, clears it so a stale message does not
     # stay after the user acted on it.
     {:noreply,

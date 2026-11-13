@@ -74,6 +74,54 @@ defmodule TraysSocialWeb.LayoutsTest do
     end
   end
 
+  describe "flash groups (D127)" do
+    defp root_html(assigns) do
+      assigns
+      |> Map.merge(%{current_scope: nil, inner_content: "page"})
+      |> Layouts.root()
+      |> rendered_to_string()
+    end
+
+    test "controller pages still render the root flash group and keep :inline_flash" do
+      flash = %{"info" => "Saved the thing", "error" => "Broke the thing"}
+
+      html = root_html(%{flash: flash})
+      assert html =~ ~s(id="flash-group")
+      assert html =~ "Saved the thing"
+      assert html =~ "Broke the thing"
+
+      inline = root_html(%{flash: flash, inline_flash: true})
+      assert inline =~ ~s(id="flash-group")
+      refute inline =~ "Saved the thing"
+      refute inline =~ "Broke the thing"
+    end
+
+    test "the root layout leaves the group to the live layout when it wraps a LiveView" do
+      html = root_html(%{flash: %{"info" => "Hello"}, live_module: SomeLive})
+
+      refute html =~ ~s(id="flash-group")
+      refute html =~ "Hello"
+    end
+
+    test "live/1 renders the group and the content, dropping inline kinds" do
+      flash = %{"info" => "Saved the thing", "error" => "Broke the thing"}
+
+      html = rendered_to_string(Layouts.live(%{flash: flash, inner_content: "page"}))
+      assert html =~ ~s(id="flash-group")
+      assert html =~ "Saved the thing"
+      assert html =~ "Broke the thing"
+      assert html =~ "page"
+
+      inline =
+        rendered_to_string(
+          Layouts.live(%{flash: flash, inline_flash: [:error], inner_content: "page"})
+        )
+
+      assert inline =~ "Saved the thing"
+      refute inline =~ "Broke the thing"
+    end
+  end
+
   test "nav_mode/1 picks classic for guests and gated for unconfirmed users" do
     assert Layouts.nav_mode(nil) == :classic
     assert nil |> scope() |> Layouts.nav_mode() == :gated

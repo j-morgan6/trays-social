@@ -51,7 +51,9 @@ defmodule TraysSocialWeb do
 
   def live_view do
     quote do
-      use Phoenix.LiveView
+      # D127: Layouts.live/1 renders the flash group inside the LiveView,
+      # since LiveView never re-renders the root layout.
+      use Phoenix.LiveView, layout: {TraysSocialWeb.Layouts, :live}
 
       unquote(html_helpers())
     end

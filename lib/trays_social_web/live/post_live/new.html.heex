@@ -462,10 +462,10 @@
         </div>
 
         <%!-- The save errors put in the flash ("Please upload at least one
-             photo", "Photo upload failed") and the recipe-only rule. The
-             root layout's flash group does not re-render inside a
-             LiveView, so without this note they were never seen here. The
-             validate event clears the flash, so the note goes once the
+             photo", "Photo upload failed") and the recipe-only rule. They
+             show here, in place, and only here: mount sets :inline_flash to
+             [:error], so the live layout's toast group skips them (D127).
+             The validate event clears the flash, so the note goes once the
              user edits the form or attaches a photo. --%>
         <.field_note
           id="editor-form-note"
