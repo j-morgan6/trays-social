@@ -39,6 +39,7 @@
 		21ED0FD82FCF838A1DFB9297 /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D385EAB43626DE90C1CF52 /* EditProfileView.swift */; };
 		224486F773E61A97294C608E /* MyTrayStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FAEDA85AD377F4A8A2A6330 /* MyTrayStateTests.swift */; };
 		23A7E3EFD563B189FE6F3B5F /* FeedItemDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFC61757F559A1D768B6A12 /* FeedItemDecodingTests.swift */; };
+		259EA5A1454DF6E2E8797032 /* RecipeTitleVectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 776931E6D239134489448A62 /* RecipeTitleVectorTests.swift */; };
 		25B4DF17C0FF96F0E628CBCF /* NotificationsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A06A596F5AA8F5A05BA8A34 /* NotificationsViewModel.swift */; };
 		269FB0034584F9A10915A5B8 /* APIResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = E769DEF560D0E279B26B7746 /* APIResponse.swift */; };
 		2783B1BD609D031F762E4823 /* RecipeEditorCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5482EB615DED0D21DC7EA1B /* RecipeEditorCopy.swift */; };
@@ -107,6 +108,7 @@
 		76F6B0AEB18ECD018A0B561B /* GridCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE1F96F37B0983D36933F6FF /* GridCard.swift */; };
 		7782D753D74888E194C89BA0 /* MealPlannerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7E0D4A679ABD152E0AA96F /* MealPlannerViewModelTests.swift */; };
 		781B2CF4081BED5C2C0B760A /* CollectionsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52055EAF85FF749C3AFFC13E /* CollectionsViewModelTests.swift */; };
+		7860F6AA22F3352DA11A39D0 /* recipe-title-vectors.json in Resources */ = {isa = PBXBuildFile; fileRef = 46B4DFBD34B1145950AC2297 /* recipe-title-vectors.json */; };
 		78BC4163185A479319E05EB4 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 802ABCDA09713C4678248278 /* AuthService.swift */; };
 		7911FCE388382AF25FD6D3B4 /* PlaceholderTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 799AB364DADE33F1869359DD /* PlaceholderTest.swift */; };
 		79142C9FA75C676106CFFBE9 /* HomeSectionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56C3C5F8EC79DAF5159276FD /* HomeSectionViews.swift */; };
@@ -328,6 +330,7 @@
 		44C462660691D2DAFC72D6B9 /* InfoPlistTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoPlistTests.swift; sourceTree = "<group>"; };
 		451C2D86DD6964AC8DE2089C /* NotificationsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsViewModelTests.swift; sourceTree = "<group>"; };
 		45AD072C42CEDFF1299909E3 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		46B4DFBD34B1145950AC2297 /* recipe-title-vectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "recipe-title-vectors.json"; sourceTree = "<group>"; };
 		4B3F94C238BD0189A4E71F4C /* HomePreviews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomePreviews.swift; sourceTree = "<group>"; };
 		4B4945BB12EDFDEE86A033A5 /* CollectionFormSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionFormSheet.swift; sourceTree = "<group>"; };
 		4B57FFEC7DEF5C14EF9F647B /* ProfileHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileHeader.swift; sourceTree = "<group>"; };
@@ -380,6 +383,7 @@
 		73DF326DC71ADE6953FAD7C0 /* MealPlannerGroceryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealPlannerGroceryTests.swift; sourceTree = "<group>"; };
 		7695863C4903CBB80EA75E1E /* IngredientTicks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IngredientTicks.swift; sourceTree = "<group>"; };
 		76D8375AE5C3EA1291D06A5B /* FeedItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedItem.swift; sourceTree = "<group>"; };
+		776931E6D239134489448A62 /* RecipeTitleVectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeTitleVectorTests.swift; sourceTree = "<group>"; };
 		795F8E4EC5FAF2D1FC43DD6A /* Avi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Avi.swift; sourceTree = "<group>"; };
 		799AB364DADE33F1869359DD /* PlaceholderTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTest.swift; sourceTree = "<group>"; };
 		7C95FC39F4695EA3AF4C37A5 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
@@ -512,6 +516,14 @@
 			path = "Preview Content";
 			sourceTree = "<group>";
 		};
+		0A0DE25A7B474CF916FD97A0 /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				46B4DFBD34B1145950AC2297 /* recipe-title-vectors.json */,
+			);
+			path = Fixtures;
+			sourceTree = "<group>";
+		};
 		0B2A37EC40E1A5551FF80405 /* Images */ = {
 			isa = PBXGroup;
 			children = (
@@ -581,6 +593,7 @@
 				DC415D22D76EE5EF165FFADA /* CookProgressTests.swift */,
 				C8E8131DF834B6D672806EBD /* PostDetailSizingTests.swift */,
 				F54725F2716448B02194CC99 /* RecipeDetailCopyTests.swift */,
+				776931E6D239134489448A62 /* RecipeTitleVectorTests.swift */,
 			);
 			path = PostDetail;
 			sourceTree = "<group>";
@@ -907,6 +920,7 @@
 				4320DA2BD7BB885011765579 /* Design */,
 				2FD333E0AF5AB0C971D29A37 /* Errors */,
 				99C92C170D0A93A052F120FC /* Feed */,
+				0A0DE25A7B474CF916FD97A0 /* Fixtures */,
 				F745C2EE8EB5F6051FD1689B /* Home */,
 				0B2A37EC40E1A5551FF80405 /* Images */,
 				251CCA5342EF7149DE5806DB /* MealPlanner */,
@@ -1133,6 +1147,7 @@
 			buildConfigurationList = 8E882E254B0D4E70E66BA2F9 /* Build configuration list for PBXNativeTarget "TraysSocialTests" */;
 			buildPhases = (
 				AE2C6686DE06FB49AF1C4995 /* Sources */,
+				A495C589136AE58B32FB094A /* Resources */,
 			);
 			buildRules = (
 			);
@@ -1186,6 +1201,14 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		A495C589136AE58B32FB094A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7860F6AA22F3352DA11A39D0 /* recipe-title-vectors.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		EDE30648619817DBBC2E3913 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1238,6 +1261,7 @@
 				4DC92154066B4DDBCCB4BA53 /* PrivacyManifestTests.swift in Sources */,
 				5BEA26413E10C40DB32D04C0 /* RecipeDetailCopyTests.swift in Sources */,
 				5AEAFA8DD4558984036F189A /* RecipeEditorTests.swift in Sources */,
+				259EA5A1454DF6E2E8797032 /* RecipeTitleVectorTests.swift in Sources */,
 				C097A0548286885E217FDC02 /* SearchCardSizingTests.swift in Sources */,
 				CC0F0283BBB4D017AA515C43 /* SearchFormattingTests.swift in Sources */,
 				A3DAC95EFC115B812DDD5D16 /* SearchPreferencesTests.swift in Sources */,
@@ -1462,7 +1486,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 414;
+				CURRENT_PROJECT_VERSION = 438;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1483,7 +1507,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 414;
+				CURRENT_PROJECT_VERSION = 438;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1644,7 +1668,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TraysSocial/TraysSocial.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 414;
+				CURRENT_PROJECT_VERSION = 438;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TraysSocial/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

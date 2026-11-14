@@ -30,28 +30,28 @@ defmodule TraysSocialWeb.TrayFormatting do
   @spec saved_on(DateTime.t()) :: String.t()
   def saved_on(datetime), do: "Saved " <> Calendar.strftime(datetime, "%b %-d")
 
-  # D126: the one web copy of the recipe title rule. It must match the iOS
-  # RecipeTitle (Extensions/RecipeTitle.swift, D125) caption for caption, so
-  # it is the same plain left-to-right scan, and the shared vectors in
-  # tray_formatting_test.exs mirror RecipeDetailCopyTests.swift and
-  # RecipeEditorTests.swift:
+  # D126: the one web copy of the recipe title rule; iOS RecipeTitle
+  # (Extensions/RecipeTitle.swift, D125) is the other. The rule is defined by
+  # ios/TraysSocial/TraysSocialTests/Fixtures/recipe-title-vectors.json (W267):
+  # every title and note there, plus its abbreviation, whitespace and
+  # line-break lists, is asserted against this module by
+  # tray_formatting_test.exs and against RecipeTitle by
+  # RecipeTitleVectorTests.swift. Change the rule by editing that file and
+  # both implementations together.
   #
-  # 1. Trim the caption and take the text before its first line break.
-  # 2. The title ends at the first ".", "!" or "?" followed by whitespace or
-  #    the end of that line. A period never ends it when the word before it
-  #    (back to the previous whitespace, leading non-letters dropped) is a
-  #    known abbreviation, matched case-insensitively, or a single-letter
-  #    initial. A period followed by anything else (1.5, 3.5oz) never ends it.
-  # 3. Trailing terminators and whitespace are dropped; empty means fallback.
-  #
+  # Whitespace and line breaks are the explicit lists below, never String.trim
+  # or a Unicode table, so the rule does not move with the Elixir/OTP version.
   # The title is always a prefix of the trimmed caption, which post_note/1
   # relies on. Each step walks the graphemes once and no regex spans the
   # caption (letter?/1 tests a single grapheme), so a long caption costs
   # linear time.
   @abbreviations MapSet.new(~w(mr mrs ms dr st mt jr sr prof vs approx no))
   @terminators [".", "!", "?"]
-  @newlines ["\n", "\r", "\r\n", "\v", "\f", "\u0085", "\u2028", "\u2029"]
-  @note_trim [" ", "\n", "\t", ".", "!", "?"]
+  @line_breaks ["\n", "\r", "\r\n", "\v", "\f", "\u0085", "\u2028", "\u2029"]
+  @whitespace [" ", "\t", "\u00A0", "\u1680"] ++
+                Enum.map(0x2000..0x200A, &<<&1::utf8>>) ++
+                ["\u202F", "\u205F", "\u3000"] ++ @line_breaks
+  @note_trim @terminators ++ @whitespace
 
   @doc """
   A recipe's title from its caption: the first line or sentence, or
@@ -106,21 +106,43 @@ defmodule TraysSocialWeb.TrayFormatting do
       raw
       |> binary_part(byte_size(title), byte_size(raw) - byte_size(title))
       |> String.graphemes()
-      |> Enum.drop_while(&(&1 in @note_trim))
-      |> Enum.reverse()
-      |> Enum.drop_while(&(&1 in @note_trim))
-      |> Enum.reverse()
-      |> Enum.join()
+      |> trim_graphemes(@note_trim)
     end
   end
 
+  @doc false
+  # The rule's lists, for the vector-file test only (W267).
+  @spec title_rule_sets() :: %{
+          abbreviations: [String.t()],
+          whitespace: [String.t()],
+          line_breaks: [String.t()]
+        }
+  def title_rule_sets do
+    %{
+      abbreviations: MapSet.to_list(@abbreviations),
+      whitespace: @whitespace,
+      line_breaks: @line_breaks
+    }
+  end
+
   defp trimmed(nil), do: ""
-  defp trimmed(caption) when is_binary(caption), do: String.trim(caption)
+
+  defp trimmed(caption) when is_binary(caption),
+    do: caption |> String.graphemes() |> trim_graphemes(@whitespace)
+
+  defp trim_graphemes(graphemes, set) do
+    graphemes
+    |> Enum.drop_while(&(&1 in set))
+    |> Enum.reverse()
+    |> Enum.drop_while(&(&1 in set))
+    |> Enum.reverse()
+    |> Enum.join()
+  end
 
   defp first_sentence(raw) do
     raw
     |> String.graphemes()
-    |> Enum.take_while(&(&1 not in @newlines))
+    |> Enum.take_while(&(&1 not in @line_breaks))
     |> scan([], [])
     |> Enum.drop_while(&(&1 in @terminators or whitespace?(&1)))
     |> Enum.reverse()
@@ -146,19 +168,21 @@ defmodule TraysSocialWeb.TrayFormatting do
   defp sentence_break?([]), do: true
   defp sentence_break?([next | _]), do: whitespace?(next)
 
-  # The word before a period: a known abbreviation or a single-letter
-  # initial keeps it. `word` is reversed.
+  # The word before a period (`word` is reversed), leading non-letters
+  # dropped, keeps it when it is a known abbreviation in any case or a dotted
+  # initial: single letters each followed by a period, so "J", "U.S" and
+  # "e.g" keep it and "Ph.D" does not.
   defp keeps_period?(word) do
-    letters =
-      word
-      |> Enum.reverse()
-      |> Enum.drop_while(&(not letter?(&1)))
-      |> Enum.join()
-      |> String.downcase()
+    letters = word |> Enum.reverse() |> Enum.drop_while(&(not letter?(&1)))
 
-    String.length(letters) == 1 or MapSet.member?(@abbreviations, letters)
+    dotted_initial?(letters) or
+      MapSet.member?(@abbreviations, letters |> Enum.join() |> String.downcase())
   end
 
-  defp whitespace?(char), do: String.trim(char) == ""
+  defp dotted_initial?([letter]), do: letter?(letter)
+  defp dotted_initial?([letter, "." | rest]), do: letter?(letter) and dotted_initial?(rest)
+  defp dotted_initial?(_letters), do: false
+
+  defp whitespace?(char), do: char in @whitespace
   defp letter?(char), do: String.match?(char, ~r/\A\p{L}/u)
 end

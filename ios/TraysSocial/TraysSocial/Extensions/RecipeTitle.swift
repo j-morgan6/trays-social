@@ -12,30 +12,45 @@ import Foundation
 /// of the same rule with their own fallbacks; they call `from(caption:fallback:)`
 /// now, and the cook's note (the caption after its first sentence) is `note`.
 ///
-/// D125: a sibling web task adopts this same rule, and both platforms must
-/// produce the same title for the same caption, so it is plain string
-/// scanning (never NLTokenizer, which the web cannot reproduce). Dotted
-/// multi-initials such as "U.S." end the title at their last period, because
-/// the word before it is "U.S", not a single letter:
-/// 1. Trim the caption and take the text before its first line break.
-/// 2. The title ends at the first `.`, `!` or `?` that is followed by
-///    whitespace or the end of that line. A period never ends it when the word
-///    just before it (the text back to the previous whitespace, leading
-///    non-letters dropped) is a known abbreviation, matched case-insensitively,
-///    or a single-letter initial. So "Mrs. Smith's pie", "St. Louis ribs!" and
-///    "J. Kenji's eggs" keep their periods, and "1.5 hour brisket" is whole
-///    because its period is followed by a digit.
-/// 3. Trailing terminators and whitespace are dropped; an empty result uses
-///    the fallback.
-/// The title is always a prefix of the trimmed caption, which `note` relies on.
+/// D125: the web `TrayFormatting.caption_title/2` (D126) runs the same rule,
+/// and both platforms must give the same title and note for the same caption,
+/// so it is plain string scanning (never NLTokenizer, which the web cannot
+/// reproduce). The rule is defined by
+/// TraysSocialTests/Fixtures/recipe-title-vectors.json (W267): every title and
+/// note there, and its abbreviation, whitespace and line-break lists, is
+/// asserted against this type by RecipeTitleVectorTests and against the web by
+/// tray_formatting_test.exs. Change the rule by editing that file and both
+/// implementations together.
+///
+/// Whitespace and line breaks are the explicit sets below, never
+/// `Character.isWhitespace` or `CharacterSet.whitespacesAndNewlines`, so the
+/// rule does not move with the SDK's Unicode tables. The title is always a
+/// prefix of the trimmed caption, which `note` relies on.
 enum RecipeTitle {
     /// Words whose trailing period never ends a title. Lowercase; compared
     /// case-insensitively.
-    private static let abbreviations: Set<String> = [
+    static let abbreviations: Set<String> = [
         "mr", "mrs", "ms", "dr", "st", "mt", "jr", "sr", "prof", "vs", "approx", "no",
     ]
 
+    /// Characters that end the title line.
+    static let lineBreaks: Set<Character> = [
+        "\n", "\r", "\r\n", "\u{000B}", "\u{000C}", "\u{0085}", "\u{2028}", "\u{2029}",
+    ]
+
+    /// Characters that separate words, line breaks included. Swift compares
+    /// characters by canonical equivalence, so U+2000 and U+2001 match their
+    /// equivalents U+2002 and U+2003, which are members too.
+    static let whitespace: Set<Character> = lineBreaks.union([
+        " ", "\t", "\u{00A0}", "\u{1680}",
+        "\u{2000}", "\u{2001}", "\u{2002}", "\u{2003}", "\u{2004}", "\u{2005}",
+        "\u{2006}", "\u{2007}", "\u{2008}", "\u{2009}", "\u{200A}",
+        "\u{202F}", "\u{205F}", "\u{3000}",
+    ])
+
     private static let terminators: Set<Character> = [".", "!", "?"]
+
+    private static let noteTrim = whitespace.union(terminators)
 
     static func from(caption: String?) -> String {
         from(caption: caption, fallback: String(localized: "Untitled"))
@@ -46,28 +61,35 @@ enum RecipeTitle {
         return candidate.isEmpty ? fallback : candidate
     }
 
-    /// The caption after its first sentence, without the joining punctuation;
-    /// empty when the caption is one sentence or has no first sentence.
+    /// The caption after its first sentence, without the joining punctuation
+    /// or whitespace; empty when the caption is one sentence or has no first
+    /// sentence.
     static func note(caption: String?) -> String {
         let raw = trimmed(caption)
         let title = firstSentence(of: caption)
         guard !title.isEmpty, raw.count > title.count else { return "" }
-        return raw.dropFirst(title.count)
-            .trimmingCharacters(in: CharacterSet(charactersIn: " \n\t.!?"))
+        return trim(raw.dropFirst(title.count), in: noteTrim)
     }
 
     private static func trimmed(_ caption: String?) -> String {
-        (caption ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        trim((caption ?? "")[...], in: whitespace)
+    }
+
+    private static func trim(_ text: Substring, in set: Set<Character>) -> String {
+        guard let first = text.firstIndex(where: { !set.contains($0) }),
+              let last = text.lastIndex(where: { !set.contains($0) })
+        else { return "" }
+        return String(text[first ... last])
     }
 
     private static func firstSentence(of caption: String?) -> String {
         let raw = trimmed(caption)
-        let line = raw.firstIndex(where: \.isNewline).map { raw[..<$0] } ?? raw[...]
+        let line = raw.firstIndex(where: { lineBreaks.contains($0) }).map { raw[..<$0] } ?? raw[...]
         let chars = Array(line)
         var end = chars.count
         for index in chars.indices where terminators.contains(chars[index]) {
             let next = index + 1
-            guard next == chars.count || chars[next].isWhitespace else { continue }
+            guard next == chars.count || whitespace.contains(chars[next]) else { continue }
             if chars[index] == ".", keepsPeriod(after: chars[..<index]) {
                 continue
             }
@@ -75,21 +97,27 @@ enum RecipeTitle {
             break
         }
         var title = chars[..<end]
-        while let last = title.last, terminators.contains(last) || last.isWhitespace {
+        while let last = title.last, terminators.contains(last) || whitespace.contains(last) {
             title.removeLast()
         }
         return String(title)
     }
 
-    /// Whether a period after `prefix` belongs to the word before it: a known
-    /// abbreviation or a single-letter initial.
+    /// Whether a period after `prefix` belongs to the word before it (back to
+    /// the previous whitespace, leading non-letters dropped): a known
+    /// abbreviation in any case, or a dotted initial, single letters each
+    /// followed by a period, so "J", "U.S" and "e.g" keep it and "Ph.D" does not.
     private static func keepsPeriod(after prefix: ArraySlice<Character>) -> Bool {
-        let word = prefix.reversed().prefix { !$0.isWhitespace }.reversed()
-        let letters = String(word.drop { !$0.isLetter }).lowercased()
-        if letters.count == 1, letters.first?.isLetter == true {
-            return true
+        let word = Array(prefix.reversed().prefix { !whitespace.contains($0) }.reversed().drop { !$0.isLetter })
+        return isDottedInitial(word) || abbreviations.contains(String(word).lowercased())
+    }
+
+    /// "J", "U.S", "U.S.A": a letter, then any number of "." and a letter.
+    private static func isDottedInitial(_ word: [Character]) -> Bool {
+        guard word.count % 2 == 1 else { return false }
+        return word.indices.allSatisfy { index in
+            index.isMultiple(of: 2) ? word[index].isLetter : word[index] == "."
         }
-        return abbreviations.contains(letters)
     }
 }
 
