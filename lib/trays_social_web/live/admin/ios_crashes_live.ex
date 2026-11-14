@@ -17,7 +17,10 @@ defmodule TraysSocialWeb.Admin.IosCrashesLive do
   (require_authenticated_user + RequireAdmin) plus the same defense-in-
   depth `on_mount {RequireAdmin, :ensure_admin}` hook used by
   ReportsLive — so a future scope refactor doesn't accidentally expose
-  the page.
+  the page. `:ensure_admin_each_event` (W261, adopted here in W264)
+  re-checks `is_admin` before every event and live patch, so a revoked
+  admin can neither filter nor open another payload from an already-open
+  page.
   """
 
   use TraysSocialWeb, :live_view
@@ -27,6 +30,7 @@ defmodule TraysSocialWeb.Admin.IosCrashesLive do
 
   on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
   on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin}
+  on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin_each_event}
 
   @impl true
   def mount(_params, _session, socket) do

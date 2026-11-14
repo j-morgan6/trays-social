@@ -11,8 +11,14 @@ defmodule TraysSocialWeb.Admin.ReportsLive do
   # check from drifting if a future live_session refactor moves things
   # around. Reuses the existing :ensure_admin hook on RequireAdmin so
   # there's only one definition of "what counts as admin".
+  #
+  # W264: :ensure_admin checks once, at mount. :ensure_admin_each_event
+  # (W261) re-checks is_admin before every event, so an admin demoted
+  # mid-session cannot resolve a report, remove a post, or suspend or
+  # unsuspend a user from an already-open page.
   on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
   on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin}
+  on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin_each_event}
 
   @impl true
   def mount(_params, _session, socket) do

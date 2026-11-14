@@ -25,11 +25,14 @@ defmodule TraysSocialWeb.Plugs.RequireAdmin do
       end
 
   `:ensure_admin` checks once, at mount. A LiveView whose events change
-  data can also mount `:ensure_admin_each_event` (W261): it reloads the
-  user before every `handle_event` and every live-patch `handle_params`
-  and redirects to `/feed` when they are no longer an admin, so revoking
-  `is_admin` takes effect on the next click or patch rather than the next
-  page load. It costs one primary-key lookup per event or patch.
+  data or reveal sensitive data also mounts `:ensure_admin_each_event`
+  (W261): it reloads the user before every `handle_event` and every
+  live-patch `handle_params` and redirects to `/feed` when they are no
+  longer an admin, so revoking `is_admin` takes effect on the next click
+  or patch rather than the next page load. It costs one primary-key
+  lookup per event or patch. FeedbackLive, ReportsLive, IosCrashesLive
+  and EmailEventsLive (W264) mount it; a new admin LiveView should mount
+  it too.
 
       on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin}
       on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin_each_event}

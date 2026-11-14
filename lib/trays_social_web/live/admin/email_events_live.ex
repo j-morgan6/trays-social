@@ -3,14 +3,23 @@ defmodule TraysSocialWeb.Admin.EmailEventsLive do
   Admin view of recent Resend webhook events. Recipient and event type
   filters; click an email_id to show the full event chain for that send.
 
-  Gated by the surrounding /admin scope's require_authenticated_user +
-  RequireAdmin pipeline (see router.ex). The recipient column is PII;
-  this view is the only place it should be displayed.
+  The recipient column is PII; this view is the only place it should be
+  displayed. Defense-in-depth admin gate (W264): the `/admin` router
+  pipeline covers HTTP requests only, so the view also mounts the same
+  three hooks as FeedbackLive. `:require_authenticated_user` and
+  `{RequireAdmin, :ensure_admin}` refuse a non-admin on the socket mount
+  and on live navigation, and `:ensure_admin_each_event` (W261) re-checks
+  `is_admin` before every event, so a revoked admin gets no further
+  recipient addresses from an already-open page.
   """
 
   use TraysSocialWeb, :live_view
 
   alias TraysSocial.Email
+
+  on_mount {TraysSocialWeb.UserAuth, :require_authenticated_user}
+  on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin}
+  on_mount {TraysSocialWeb.Plugs.RequireAdmin, :ensure_admin_each_event}
 
   @event_types ~w(
     email.sent

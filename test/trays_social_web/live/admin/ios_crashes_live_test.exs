@@ -82,4 +82,30 @@ defmodule TraysSocialWeb.Admin.IosCrashesLiveTest do
     assert html =~ "Payload ##{payload.id}"
     assert html =~ "SIGABRT"
   end
+
+  test "an admin who loses is_admin is refused on the next event", %{conn: conn} do
+    admin = admin_fixture()
+    payload_fixture(%{payload_type: "metric"})
+
+    {:ok, view, _html} = conn |> log_in_user(admin) |> live(~p"/admin/ios-crashes")
+
+    {:ok, _} = Accounts.set_admin(admin, false)
+
+    assert {:error, {:redirect, %{to: "/feed"}}} =
+             view
+             |> form("form", %{"payload_type" => "metric"})
+             |> render_change()
+  end
+
+  test "an admin who loses is_admin is refused on the next live patch", %{conn: conn} do
+    admin = admin_fixture()
+    payload = payload_fixture(%{payload: %{"crashDiagnostics" => [%{"signal" => "SIGBUS"}]}})
+
+    {:ok, view, _html} = conn |> log_in_user(admin) |> live(~p"/admin/ios-crashes")
+
+    {:ok, _} = Accounts.set_admin(admin, false)
+
+    assert {:error, {:redirect, %{to: "/feed"}}} =
+             render_patch(view, ~p"/admin/ios-crashes/#{payload.id}")
+  end
 end

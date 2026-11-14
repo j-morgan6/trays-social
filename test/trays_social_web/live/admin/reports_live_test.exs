@@ -13,8 +13,10 @@ defmodule TraysSocialWeb.Admin.ReportsLiveTest do
 
   import Phoenix.LiveViewTest
   import TraysSocial.AccountsFixtures
+  import TraysSocial.PostsFixtures
 
   alias TraysSocial.Accounts
+  alias TraysSocial.Posts.Post
   alias TraysSocial.Reports
   alias TraysSocial.Reports.Report
 
@@ -172,5 +174,120 @@ defmodule TraysSocialWeb.Admin.ReportsLiveTest do
 
     reloaded_target = Accounts.get_user!(target.id)
     assert reloaded_target.suspended_until == nil
+  end
+
+  describe "per-event admin re-check (W264)" do
+    defp resolve_button(report),
+      do:
+        ~s(button[phx-click="resolve"][phx-value-id="#{report.id}"][phx-value-status="resolved"])
+
+    defp report_status(report), do: TraysSocial.Repo.get!(Report, report.id).status
+
+    test "an admin who loses is_admin is refused on the next event", %{conn: conn} do
+      admin = admin_fixture()
+      report = open_report_fixture(user_fixture())
+
+      {:ok, view, _html} = conn |> log_in_user(admin) |> live(~p"/admin/reports")
+
+      # The demotion is written by this test process while the LiveView
+      # process stays alive; the hook must read it from the database.
+      {:ok, _} = Accounts.set_admin(admin, false)
+
+      assert {:error, {:redirect, %{to: "/feed"}}} =
+               view |> element(resolve_button(report)) |> render_click()
+
+      assert report_status(report) == "open"
+    end
+
+    test "an admin who loses is_admin cannot suspend a user", %{conn: conn} do
+      admin = admin_fixture()
+      target = user_fixture()
+      report = open_user_report_fixture(user_fixture(), target)
+
+      {:ok, view, _html} = conn |> log_in_user(admin) |> live(~p"/admin/reports")
+
+      {:ok, _} = Accounts.set_admin(admin, false)
+
+      assert {:error, {:redirect, %{to: "/feed"}}} =
+               view
+               |> form("form[phx-submit=\"suspend_user\"]", %{
+                 "report_id" => report.id,
+                 "suspended_until" => ""
+               })
+               |> render_submit()
+
+      assert Accounts.get_user!(target.id).suspended_until == nil
+      assert report_status(report) == "open"
+    end
+
+    test "an admin who loses is_admin cannot remove a post or lift a suspension",
+         %{conn: conn} do
+      admin = admin_fixture()
+      reporter = user_fixture()
+      post = post_fixture(%{user_id: user_fixture().id})
+
+      {:ok, post_report} =
+        Reports.create_report(reporter, %{target_type: "post", target_id: post.id, reason: "spam"})
+
+      suspended = suspended_user_fixture()
+      user_report = open_user_report_fixture(reporter, suspended)
+
+      conn = log_in_user(conn, admin)
+      {:ok, remove_view, _html} = live(conn, ~p"/admin/reports")
+      {:ok, unsuspend_view, _html} = live(conn, ~p"/admin/reports")
+
+      {:ok, _} = Accounts.set_admin(admin, false)
+
+      assert {:error, {:redirect, %{to: "/feed"}}} =
+               remove_view
+               |> element(~s(button[phx-click="remove_post"][phx-value-id="#{post_report.id}"]))
+               |> render_click()
+
+      assert {:error, {:redirect, %{to: "/feed"}}} =
+               unsuspend_view
+               |> element(
+                 ~s(button[phx-click="unsuspend_user"][phx-value-id="#{user_report.id}"])
+               )
+               |> render_click()
+
+      # Repo.get! rather than Posts.get_post!, which filters removed posts.
+      assert TraysSocial.Repo.get!(Post, post.id).removed_at == nil
+      assert report_status(post_report) == "open"
+      assert Accounts.get_user!(suspended.id).suspended_until != nil
+      assert report_status(user_report) == "open"
+    end
+
+    test "an admin demoted and re-promoted before the click can still resolve", %{conn: conn} do
+      admin = admin_fixture()
+      report = open_report_fixture(user_fixture())
+
+      {:ok, view, _html} = conn |> log_in_user(admin) |> live(~p"/admin/reports")
+
+      # Re-promote from the demoted struct: set_admin(admin, true) on the
+      # original struct is a no-op changeset (is_admin already true there).
+      {:ok, demoted} = Accounts.set_admin(admin, false)
+      {:ok, _} = Accounts.set_admin(demoted, true)
+
+      view |> element(resolve_button(report)) |> render_click()
+
+      reloaded = TraysSocial.Repo.get!(Report, report.id)
+      assert reloaded.status == "resolved"
+      assert reloaded.resolved_by_id == admin.id
+    end
+
+    test "an admin whose account is deleted is refused on the next event", %{conn: conn} do
+      admin = admin_fixture()
+      report = open_report_fixture(user_fixture())
+
+      {:ok, view, _html} = conn |> log_in_user(admin) |> live(~p"/admin/reports")
+
+      {:ok, _} = Accounts.delete_account(admin)
+      assert Accounts.get_user(admin.id) == nil
+
+      assert {:error, {:redirect, %{to: "/feed"}}} =
+               view |> element(resolve_button(report)) |> render_click()
+
+      assert report_status(report) == "open"
+    end
   end
 end

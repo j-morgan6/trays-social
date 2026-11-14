@@ -192,12 +192,14 @@ defmodule TraysSocialWeb.API.V1.FeedbackControllerTest do
 
   describe "contract shared with the iOS app and the developer guide" do
     test "the iOS body counter and the server's 5,000 limit agree" do
+      # W263 moved the limit from FeedbackView.swift to FeedbackForm.bodyLimit,
+      # which the view's counter reads.
       swift =
-        "../../../../ios/TraysSocial/TraysSocial/Views/Settings/FeedbackView.swift"
+        "../../../../ios/TraysSocial/TraysSocial/Models/FeedbackForm.swift"
         |> Path.expand(__DIR__)
         |> File.read!()
 
-      assert [_, limit] = Regex.run(~r/bodyCharLimit\s*=\s*(\d+)/, swift)
+      assert [_, limit] = Regex.run(~r/static let bodyLimit\s*=\s*(\d+)/, swift)
 
       limit = String.to_integer(limit)
       assert limit == 5000
