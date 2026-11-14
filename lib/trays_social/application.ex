@@ -11,6 +11,9 @@ defmodule TraysSocial.Application do
       [
         TraysSocialWeb.Telemetry,
         TraysSocial.Repo,
+        # W265: before DNSCluster so a fast join is seen. Logs only; rate
+        # limits are per machine (docs/infra/fly-inventory.md, Rate limits).
+        TraysSocial.RateLimitClusterGuard,
         {DNSCluster, query: Application.get_env(:trays_social, :dns_cluster_query) || :ignore},
         {Phoenix.PubSub, name: TraysSocial.PubSub},
         {Task.Supervisor, name: TraysSocial.PushTaskSupervisor},

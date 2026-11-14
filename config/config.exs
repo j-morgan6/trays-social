@@ -152,6 +152,10 @@ config :phoenix, :json_library, Jason
 # magic-link and password-reset IP windows): the ETS prune deletes any bucket
 # idle longer than expiry_ms, whatever its window, so a 5-minute expiry let a
 # client reset an hour-long bucket by pausing (W254).
+# Buckets are per BEAM node (ETS): on N machines every limit is N times its
+# stated value, and a restart or deploy resets them. Production runs one
+# machine on purpose; see "Rate limits" in docs/infra/fly-inventory.md (W265).
+# TraysSocial.RateLimitClusterGuard logs a warning if another node joins.
 config :hammer,
   backend: {Hammer.Backend.ETS, [expiry_ms: 3_600_000, cleanup_interval_ms: 600_000]}
 
