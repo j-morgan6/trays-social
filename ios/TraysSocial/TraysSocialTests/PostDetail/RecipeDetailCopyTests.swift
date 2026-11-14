@@ -56,6 +56,74 @@ final class RecipeDetailCopyTests: XCTestCase {
         XCTAssertEqual(FindView.gridTitle(for: untitled), String(localized: "Untitled"))
     }
 
+    // W266: the other surfaces that show a recipe title. Each view reads its
+    // seam, so a surface cannot drift onto its own copy of the rule.
+
+    @MainActor
+    func test_trayTileUsesRecipeTitle() {
+        let post = PreviewData.post(1, "Mrs. Smith's pie. Flaky crust.")
+        XCTAssertEqual(PostRecipeCard.title(for: post), "Mrs. Smith's pie")
+    }
+
+    @MainActor
+    func test_recipePickerRowUsesRecipeTitle() {
+        let post = PreviewData.post(1, "Mrs. Smith's pie. Flaky crust.")
+        XCTAssertEqual(RecipePickerSheet.rowTitle(for: post), "Mrs. Smith's pie")
+    }
+
+    @MainActor
+    func test_recipeDetailTitleUsesRecipeTitle() {
+        let post = PreviewData.post(1, "Mrs. Smith's pie. Flaky crust.")
+        XCTAssertEqual(RecipeHeadSheet.title(for: post), "Mrs. Smith's pie")
+    }
+
+    @MainActor
+    func test_shareSubjectUsesRecipeTitle() {
+        let post = PreviewData.post(1, "Mrs. Smith's pie. Flaky crust.")
+        XCTAssertEqual(RecipeHero.shareTitle(for: post), "Mrs. Smith's pie")
+        // The subject leaves the app, so it is the title only, never the caption.
+        XCTAssertNotEqual(RecipeHero.shareTitle(for: post), post.caption)
+    }
+
+    @MainActor
+    func test_surfaceTitlesKeepAbbreviationPeriods() {
+        let cases = [
+            ("Mrs. Smith's pie. Flaky crust.", "Mrs. Smith's pie"),
+            ("St. Louis ribs! Low and slow.", "St. Louis ribs"),
+        ]
+        for (caption, title) in cases {
+            let post = PreviewData.post(1, caption)
+            let titles = [
+                PostRecipeCard.title(for: post),
+                RecipePickerSheet.rowTitle(for: post),
+                RecipeHeadSheet.title(for: post),
+                RecipeHero.shareTitle(for: post),
+            ]
+            XCTAssertEqual(titles, Array(repeating: title, count: 4), caption)
+        }
+    }
+
+    @MainActor
+    func test_eachSurfaceKeepsItsOwnFallback() {
+        for post in [Self.post(caption: nil), PreviewData.post(2, "...")] {
+            XCTAssertEqual(PostRecipeCard.title(for: post), String(localized: "Untitled"))
+            XCTAssertEqual(RecipePickerSheet.rowTitle(for: post), String(localized: "Untitled"))
+            XCTAssertEqual(RecipeHeadSheet.title(for: post), String(localized: "Untitled recipe"))
+            XCTAssertEqual(RecipeHero.shareTitle(for: post), String(localized: "A recipe on Trays"))
+        }
+    }
+
+    /// PreviewData.post always carries a caption string; this one can be nil.
+    private static func post(caption: String?) -> Post {
+        Post(
+            id: 3, type: "recipe", caption: caption, cookingTimeMinutes: nil, servings: nil,
+            likeCount: 0, commentCount: 0, likedByCurrentUser: false, bookmarkedByCurrentUser: nil,
+            insertedAt: Date(timeIntervalSince1970: 0),
+            user: PostUser(id: 1, username: "ren", profilePhotoUrl: nil),
+            photos: [], ingredients: [], cookingSteps: [], tools: [], tags: []
+        )
+    }
+
     func test_noteFollowsAnAbbreviatedTitle() {
         XCTAssertEqual(RecipeTitle.note(caption: "Mrs. Smith's pie. Flaky crust."), "Flaky crust")
         XCTAssertEqual(RecipeTitle.note(caption: "Mrs. Smith's pie"), "")

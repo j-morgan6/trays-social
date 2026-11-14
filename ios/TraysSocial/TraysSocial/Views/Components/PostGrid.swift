@@ -14,7 +14,7 @@ struct PostRecipeCard: View {
 
     var body: some View {
         RecipeCard(
-            title: RecipeTitle.from(caption: post.caption),
+            title: Self.title(for: post),
             photoURL: post.primaryPhotoURL?.asBackendURL,
             authorName: authorName ?? post.user.username,
             authorAvatarURL: post.user.profilePhotoUrl?.asBackendURL,
@@ -23,6 +23,12 @@ struct PostRecipeCard: View {
             kind: Self.kind(for: post, recipeFirst: FeatureFlags.shared.recipeFirst),
             showsAuthor: showsAuthor
         )
+    }
+
+    /// W266: the tile reads the shared title rule. Internal rather than
+    /// private so a test can pin that wiring.
+    static func title(for post: Post) -> String {
+        RecipeTitle.from(caption: post.caption)
     }
 
     static func kind(for post: Post, recipeFirst: Bool) -> RecipeCard.Kind {

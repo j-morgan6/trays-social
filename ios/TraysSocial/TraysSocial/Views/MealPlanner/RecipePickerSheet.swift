@@ -76,6 +76,12 @@ struct RecipePickerSheet: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
     }
+
+    /// W266: each row reads the shared title rule. It lives here rather than
+    /// on the private row so a test can pin that wiring.
+    static func rowTitle(for post: Post) -> String {
+        RecipeTitle.from(caption: post.caption)
+    }
 }
 
 private struct RecipePickerRow: View {
@@ -116,6 +122,6 @@ private struct RecipePickerRow: View {
     }
 
     private var title: String {
-        RecipeTitle.from(caption: post.caption)
+        RecipePickerSheet.rowTitle(for: post)
     }
 }

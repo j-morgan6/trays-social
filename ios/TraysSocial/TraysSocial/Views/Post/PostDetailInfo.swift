@@ -15,12 +15,18 @@ struct RecipeHeadSheet: View {
         post.bookmarkedByCurrentUser == true
     }
 
+    /// W266: the detail title reads the shared title rule, with its own
+    /// "Untitled recipe" fallback. Internal so a test can pin that wiring.
+    static func title(for post: Post) -> String {
+        RecipeTitle.from(caption: post.caption, fallback: String(localized: "Untitled recipe"))
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if post.isRecipe {
                 RecipeTitleBlock(
                     kicker: RecipeMeta.kicker(tags: post.tags),
-                    title: RecipeTitle.from(caption: post.caption, fallback: String(localized: "Untitled recipe"))
+                    title: Self.title(for: post)
                 )
                 .padding(.bottom, 14)
             }

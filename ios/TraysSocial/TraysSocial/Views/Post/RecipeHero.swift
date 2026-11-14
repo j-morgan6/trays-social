@@ -110,7 +110,7 @@ struct RecipeHero: View {
                     // share sheet with the post URL — Universal Links
                     // on the receiver side land back in the app via
                     // AppState.handlePostDeepLink (see TraysSocialApp).
-                    ShareLink(item: shareURL, subject: Text(shareTitle), message: Text("From Trays")) {
+                    ShareLink(item: shareURL, subject: Text(Self.shareTitle(for: post)), message: Text("From Trays")) {
                         HeroCircleLabel(icon: "square.and.arrow.up")
                     }
                     .accessibilityLabel("Share recipe")
@@ -131,7 +131,10 @@ struct RecipeHero: View {
         .padding(.top, 56)
     }
 
-    private var shareTitle: String {
+    /// W266: the share subject is the recipe title only, never the full
+    /// caption, with its own "A recipe on Trays" fallback. Internal so a test
+    /// can pin that wiring.
+    static func shareTitle(for post: Post) -> String {
         RecipeTitle.from(caption: post.caption, fallback: String(localized: "A recipe on Trays"))
     }
 }
