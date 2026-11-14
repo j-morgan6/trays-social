@@ -1,6 +1,8 @@
 defmodule TraysSocialWeb.LegalControllerTest do
   use TraysSocialWeb.ConnCase, async: true
 
+  @app_store_checklist Path.expand("../../../docs/app-store-privacy-checklist.md", __DIR__)
+
   describe "GET /privacy" do
     test "returns 200 HTML with cache-control", %{conn: conn} do
       conn = get(conn, ~p"/privacy")
@@ -33,7 +35,13 @@ defmodule TraysSocialWeb.LegalControllerTest do
         "to suggest a username",
         "In-app feedback you send us",
         # W263: feedback also carries its kind, the build number and the screen.
-        "the subject and message you write and whether it is a bug report, plus your app version and build number, OS version, device model and the app screen you sent it from",
+        # W269 (v1.4): and the platform and request user agent (W261, API),
+        # the browser user agent and the web page the form was opened from
+        # (W262). The user agent is hedged: it is stored only when sent.
+        "whether it is a bug report, and whether you sent it from the app or the website",
+        "plus, when your app or browser sends one with the request, its user agent",
+        "your app version and build number, OS version, device model and the app screen you sent it from",
+        "feedback sent from the website carries the page you opened the form from",
         "along with your app version, OS version and device model",
         "Recipe opens: when you are signed in",
         "Recipe opens are not used for analytics or ads",
@@ -109,6 +117,25 @@ defmodule TraysSocialWeb.LegalControllerTest do
         Regex.run(~r/^## Privacy Policy v(\S+) — (\S+)$/m, changelog)
 
       assert {latest_version, latest_date} == {version, date}
+    end
+
+    test "the App Store checklist names the feedback user agent" do
+      # W269: the Customer Support row must match the policy's feedback line,
+      # and its category, linked and tracking answers must not move.
+      row =
+        @app_store_checklist
+        |> File.read!()
+        |> String.split("\n")
+        |> Enum.find(&String.starts_with?(&1, "| User Content | Customer Support |"))
+
+      assert row, "expected a Customer Support row in the App Store checklist"
+
+      assert String.starts_with?(
+               row,
+               "| User Content | Customer Support | Yes | No | In-app feedback"
+             )
+
+      assert row =~ "request user agent"
     end
 
     test "links the ads-choices page and keeps the no-ad-cookies statement", %{conn: conn} do

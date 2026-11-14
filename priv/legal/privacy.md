@@ -1,6 +1,6 @@
 ---
-effective_date: 2026-11-04
-version: 1.3
+effective_date: 2026-11-14
+version: 1.4
 ---
 
 # Privacy Policy
@@ -21,7 +21,7 @@ We collect what you give us when using Trays:
 - Optional bio and profile photo
 - Posts, photos, recipes, comments, reports you submit
 - Blocking and muting choices
-- In-app feedback you send us: the subject and message you write and whether it is a bug report, plus your app version and build number, OS version, device model and the app screen you sent it from, stored with your account
+- In-app feedback you send us: the subject and message you write, whether it is a bug report, and whether you sent it from the app or the website, plus, when your app or browser sends one with the request, its user agent (a technical string that names the app or browser and its version and can include your device type and operating system details). Feedback sent from the app also carries your app version and build number, OS version, device model and the app screen you sent it from; feedback sent from the website carries the page you opened the form from, when there is one. All of it is stored with your account
 
 ## 3. Information collected automatically
 

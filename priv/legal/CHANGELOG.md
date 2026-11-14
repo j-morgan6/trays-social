@@ -10,6 +10,24 @@ the document name (e.g. `## Community Guidelines v1.0 — …`). Entries
 that span multiple documents are unprefixed and the body lists which
 documents changed.
 
+## Privacy Policy v1.4 — 2026-11-14
+
+Privacy Policy only. Terms of Service unchanged at v1.2, Community Guidelines
+unchanged at v1.0, FAQ unchanged at v1.3.
+
+Section 2's in-app feedback line now names every field a feedback submission
+stores. This version changes no collection: it describes what the server has
+stored since W261, W262 and W263.
+
+- §2: the feedback line names whether it is a bug report, the app build number
+  and the app screen it was sent from (W263, which edited the line without a
+  version bump or an entry here)
+- §2: the feedback line names whether it was sent from the app or the website
+  and the user agent the app sends with the request (W261, the feedback API),
+  plus the browser's user agent and the page the form was opened from for the
+  website's Report a problem page (W262); the user agent is stored only when
+  one is sent
+
 ## FAQ v1.3 — 2026-11-04
 
 FAQ only. "Do you track me?" now lists what Privacy Policy v1.3 discloses
