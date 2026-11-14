@@ -43,6 +43,45 @@ defmodule TraysSocialWeb.AdComponentsTest do
     class
   end
 
+  # The class list of the AdSlot hook element (id="ad-slot-a").
+  defp hook_classes(html) do
+    [_, hook_class] = Regex.run(~r/<div id="ad-slot-a"[^>]* class="([^"]*)"/, html)
+    String.split(hook_class)
+  end
+
+  # The class list of the positioned wrapper the pill sits in (the only
+  # .relative element in either component).
+  defp pill_wrapper_classes(html) do
+    [wrapper] =
+      html
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("div.relative")
+      |> Enum.to_list()
+
+    wrapper |> LazyHTML.attribute("class") |> hd() |> String.split()
+  end
+
+  describe "moduledoc" do
+    test "the network-wiring checklist keeps the creative inside the isolated hook element" do
+      {:docs_v1, _, _, _, %{"en" => moduledoc}, _, _} =
+        Code.fetch_docs(TraysSocialWeb.AdComponents)
+
+      [_, checklist] = String.split(moduledoc, "## Requirements before wiring a real network")
+
+      assert checklist =~ "Render the creative INSIDE the AdSlot hook element"
+      assert checklist =~ "The hook element is `isolate`"
+    end
+  end
+
+  describe "sponsored_card/1" do
+    test "the Sponsored pill stacks above the photo area, contained in the card" do
+      html = render_card()
+
+      assert "z-10" in String.split(pill_class(html))
+      assert ["relative", "isolate", "aspect-[4/3]"] -- pill_wrapper_classes(html) == []
+    end
+  end
+
   describe "sponsored_slot/1" do
     test "renders the Sponsored label and house copy with redesign classes" do
       put_web_ads(script_url: nil, site_id: nil)
@@ -101,15 +140,56 @@ defmodule TraysSocialWeb.AdComponentsTest do
       put_web_ads(script_url: nil, site_id: nil)
       html = render_slot()
 
-      [_, hook_class] = Regex.run(~r/<div id="ad-slot-a"[^>]* class="([^"]*)"/, html)
-      classes = String.split(hook_class)
+      classes = hook_classes(html)
 
+      # The W268 stacking context adds no box size to the reserved area.
+      assert "isolate" in classes
       assert "min-h-[250px]" in classes
       assert "md:min-h-[280px]" in classes
 
       # Vertical padding or a border inside the min-height would shrink the
       # reserved area, so a 250 px or 280 px unit would grow the slot (CLS).
       refute Enum.any?(classes, &String.match?(&1, ~r/^(md:|lg:)?(p|py|pt|pb)-|^border/))
+    end
+
+    test "the Sponsored pill stacks above the creative" do
+      put_web_ads(script_url: "https://ads.example.com/loader.js", site_id: "trays-123")
+      html = render_slot()
+
+      # W268: the pill is z-10 and the hook element is its own stacking
+      # context, so a creative's z-index inside the unit cannot rise above it.
+      assert "z-10" in String.split(pill_class(html))
+      assert "isolate" in hook_classes(html)
+
+      # The wrapper is isolated too, so the pill's z-10 stays local and never
+      # paints over page chrome (the Search page's sticky bar is also z-10).
+      assert ["relative", "isolate"] -- pill_wrapper_classes(html) == []
+    end
+
+    test "the pill keeps its stacking classes with no ad network configured" do
+      put_web_ads([])
+      html = render_slot()
+
+      assert "z-10" in String.split(pill_class(html))
+      assert "isolate" in hook_classes(html)
+      assert ["relative", "isolate"] -- pill_wrapper_classes(html) == []
+    end
+
+    test "the pill is a sibling of the AdSlot element, not inside it" do
+      put_web_ads(script_url: "https://ads.example.com/loader.js", site_id: "trays-123")
+      doc = LazyHTML.from_fragment(render_slot())
+
+      # The pill and the hook element are both direct children of the
+      # wrapper, pill first, so the pill sits outside the phx-update="ignore"
+      # region that a creative or a LiveView patch can replace.
+      assert doc |> LazyHTML.query("div.relative > span + #ad-slot-a") |> Enum.count() == 1
+
+      assert doc
+             |> LazyHTML.query("div.relative > span:first-child")
+             |> LazyHTML.text()
+             |> String.trim() == "Sponsored"
+
+      refute doc |> LazyHTML.query("#ad-slot-a") |> LazyHTML.text() =~ "Sponsored"
     end
 
     test "keeps the Sponsored pill outside the hook element" do

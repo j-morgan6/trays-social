@@ -32,6 +32,10 @@ defmodule TraysSocialWeb.AdComponents do
     * Set `config :trays_social, :web_ads` script_url/site_id (or the
       WEB_ADS_SCRIPT_URL / WEB_ADS_SITE_ID env vars in prod).
     * Turn OFF any dashboard-side auto-insert so the 2-unit cap holds.
+    * Render the creative INSIDE the AdSlot hook element, never as a sibling
+      of it or appended to `body`. The hook element is `isolate`, so a
+      creative's own z-index stays contained there and the `z-10`
+      Sponsored pill stays on top (W268).
     * Add GDPR opt-in consent (a CMP) for EEA visitors BEFORE setting
       script_url — the runtime gating here is opt-out + GPC only
       (CCPA-shaped), which is not sufficient for EEA opt-in requirements.
@@ -76,9 +80,15 @@ defmodule TraysSocialWeb.AdComponents do
            of the hook element, never inside it, so a network creative filling
            the unit cannot replace the disclosure. The hook element carries
            no vertical padding: the full 250/280 px min-height is the
-           reserved creative area (see Layout stability above). --%>
-      <div class="relative">
-        <span class="absolute left-2 top-2 rounded-full bg-base-100 px-2.5 py-1 text-[11.5px] font-bold leading-none text-base-content shadow-sm">
+           reserved creative area (see Layout stability above).
+           W268: stacking. The pill carries z-10 and the hook element is
+           its own stacking context (isolate), so any z-index a creative
+           sets inside the unit (an iframe or a fixed div) is resolved
+           inside the hook element and can never rise above the pill. The
+           relative wrapper is isolated too, so the pill's z-10 stays local
+           and never paints over page chrome such as a sticky bar. --%>
+      <div class="relative isolate">
+        <span class="absolute left-2 top-2 z-10 rounded-full bg-base-100 px-2.5 py-1 text-[11.5px] font-bold leading-none text-base-content shadow-sm">
           Sponsored
         </span>
         <div
@@ -87,7 +97,7 @@ defmodule TraysSocialWeb.AdComponents do
           phx-update="ignore"
           data-script-url={@script_url}
           data-site-id={@site_id}
-          class="flex min-h-[250px] md:min-h-[280px] items-center justify-center rounded-[15px] bg-cream-lift px-6 text-center"
+          class="isolate flex min-h-[250px] md:min-h-[280px] items-center justify-center rounded-[15px] bg-cream-lift px-6 text-center"
         >
           <div class="space-y-1.5">
             <p class="max-w-[420px] text-sm leading-relaxed text-muted">
@@ -127,8 +137,10 @@ defmodule TraysSocialWeb.AdComponents do
       class={["min-w-0 rounded-[21px] bg-base-100 p-1.5 text-base-content shadow-card", @class]}
       data-ad-slot={"#{@placement}-#{@slot}"}
     >
-      <div class="relative aspect-[4/3] overflow-hidden rounded-[15px] bg-cream-lift">
-        <span class="absolute left-2 top-2 rounded-full bg-base-100 px-2.5 py-1 text-[11.5px] font-bold leading-none text-base-content shadow-sm">
+      <%!-- W268: isolate keeps the pill's z-10 inside the card, so it never
+           paints over the Search page's sticky z-10 search bar. --%>
+      <div class="relative isolate aspect-[4/3] overflow-hidden rounded-[15px] bg-cream-lift">
+        <span class="absolute left-2 top-2 z-10 rounded-full bg-base-100 px-2.5 py-1 text-[11.5px] font-bold leading-none text-base-content shadow-sm">
           Sponsored
         </span>
       </div>
