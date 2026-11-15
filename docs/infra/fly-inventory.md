@@ -158,16 +158,44 @@ limit.
 | **C. Redis** | A Hammer Redis backend against a hosted Redis (for example Upstash on Fly) | Cluster-wide and fast | A paid service, a new secret, and a network dependency on every auth request |
 | **D. One owning node** | Route every check through one cluster node (a `:global` process or a Mnesia backend) | No new service | Limits break during netsplits and deploys; every check pays cross-node latency |
 
-**Chosen default: A**, because production runs one machine and its volume keeps
-it there. **The choice is adjustable**: moving to B is a follow-up task that
-keeps the guard as a tripwire. Open question for the owner: whether to move to
-B before App Store traffic grows.
+**Today: A**, because production runs one machine and its volume keeps it
+there.
+
+**Long-term decision (owner, 2026-11-14): B, split by what each limit protects.**
+
+- **Move to Postgres:** the auth, email and feedback buckets. These are
+  `AuthRateLimit`, `FeedbackRateLimit`, the feedback `Notifier` caps,
+  `UserConfirmationController`, and the `:api_rate_limit_login`, `_register`,
+  `_resend`, `_reports` and `_diagnostics` pipelines.
+  - These limits are security or cost controls: credential stuffing, email
+    bombing, and the Resend bill.
+  - Their traffic is a few checks per user action, so a database write per check
+    is negligible next to the work the request already does.
+  - A Postgres counter is the only option that is both cluster-wide and survives
+    deploys, without adding a service.
+- **Stay on per-machine ETS:** `:api_rate_limit_read` (300 per 60 s) and
+  `:api_rate_limit_write` (60 per 60 s).
+  - These are coarse abuse throttles on the busiest paths.
+  - Putting a write on every API read would put the hottest path on the
+    single-node database.
+  - Doubling them on two machines is harmless.
+
+Why not C or D:
+
+- **C (Redis)** buys speed this traffic does not need, at the cost of a paid
+  service and a hard dependency on every login.
+- **D (one owning node)** fails during deploys and netsplits, exactly when the
+  limits matter.
+
+**When:** build B before production runs a second machine. Until then A
+enforces every limit exactly as stated. Keep `RateLimitClusterGuard` as the
+tripwire either way.
 
 ### Before running a second machine
 
-1. Decide between A and B. Staying on A means accepting that every limit above
-   doubles (and the feedback email cap becomes 30 per machine); otherwise build
-   B first.
+1. Build B for the auth, email and feedback buckets first (see the long-term
+   decision above). Skipping it means accepting that every limit above doubles
+   (and the feedback email cap becomes 30 per machine).
 2. Create a volume for the new machine, since both apps declare `[mounts]`.
 3. Update the Apps and Volumes tables in this file in the same commit.
 4. After it joins, check `fly logs` for one `rate limits are per machine:
