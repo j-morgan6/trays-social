@@ -7,7 +7,9 @@ defmodule TraysSocial.ReleaseTest do
   alias TraysSocial.Accounts
   alias TraysSocial.Accounts.Follow
   alias TraysSocial.Accounts.User
+  alias TraysSocial.Home
   alias TraysSocial.Notifications.Notification
+  alias TraysSocial.Posts.Bookmark
   alias TraysSocial.Posts.Comment
   alias TraysSocial.Posts.Post
   alias TraysSocial.Posts.PostLike
@@ -88,6 +90,62 @@ defmodule TraysSocial.ReleaseTest do
       refreshed = Repo.get_by(Post, user_id: alice.id, caption: caption)
       refute refreshed.photo_url == "https://example.com/broken.jpg"
       assert refreshed.photo_url =~ "images.unsplash.com"
+    end
+
+    # W217: Home's "New from people you follow" has a 7-day window, so a
+    # seed older than a week left the reviewer's Home half empty.
+    test "re-seeding re-dates the demo posts so demo_alice's Home is populated" do
+      assert :ok = Release.do_seed_demo(@password)
+      alice = Accounts.get_user_by_email("demo_alice@trays.app")
+      stale = DateTime.utc_now() |> DateTime.add(-30, :day) |> DateTime.truncate(:second)
+      Repo.update_all(Post, set: [inserted_at: stale])
+
+      assert Home.build(alice).new_from_following == []
+
+      assert :ok = Release.do_seed_demo(@password)
+      home = Home.build(alice)
+
+      assert length(home.new_from_following) == 10
+
+      assert home.new_from_following |> Enum.map(& &1.user.username) |> Enum.uniq() |> Enum.sort() ==
+               ["demo_ben", "demo_chloe"]
+
+      assert home.friends_trays |> Enum.map(& &1.user.username) |> Enum.sort() ==
+               ["demo_ben", "demo_chloe"]
+
+      assert home.jump_back_in != []
+    end
+
+    test "re-seeding never re-dates a post that is not in the seed" do
+      assert :ok = Release.do_seed_demo(@password)
+      alice = Accounts.get_user_by_email("demo_alice@trays.app")
+      own = post_fixture(%{user_id: alice.id})
+      stale = DateTime.utc_now() |> DateTime.add(-30, :day) |> DateTime.truncate(:second)
+      own |> Ecto.Changeset.change(inserted_at: stale) |> Repo.update!()
+
+      assert :ok = Release.do_seed_demo(@password)
+
+      assert Repo.get!(Post, own.id).inserted_at == stale
+    end
+
+    test "demo_alice saves one recipe from each friend, once" do
+      assert :ok = Release.do_seed_demo(@password)
+      assert :ok = Release.do_seed_demo(@password)
+      alice = Accounts.get_user_by_email("demo_alice@trays.app")
+
+      authors =
+        from(b in Bookmark,
+          join: p in Post,
+          on: p.id == b.post_id,
+          join: u in User,
+          on: u.id == p.user_id,
+          where: b.user_id == ^alice.id,
+          select: u.username
+        )
+        |> Repo.all()
+        |> Enum.sort()
+
+      assert authors == ["demo_ben", "demo_chloe"]
     end
 
     test "is idempotent — re-running creates no duplicate users" do

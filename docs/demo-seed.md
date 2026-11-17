@@ -18,8 +18,18 @@ Three users:
 
 Each cook gets 5 realistic recipe posts (ingredients, steps, tools,
 tags, photo). All three mutually follow each other. The script then
-seeds 12 cross-likes and 6 cross-comments so the feed has visible
-engagement when a reviewer logs in.
+seeds 12 cross-likes and 6 cross-comments so recipes have visible
+engagement when a reviewer logs in, and demo_alice saves one recipe
+from demo_ben and one from demo_chloe so My Tray's Saved section is not
+empty.
+
+**Every run re-dates the seed recipes (W217).** Home's "New from people
+you follow" row only shows recipes posted in the last 7 days, so each
+run packs the 15 seed recipes into the last ~36 hours (each cook's
+first recipe is the newest). Only posts whose caption matches the seed
+are re-dated; anything a reviewer or operator posted on a demo account
+keeps its date. Run the seed on the day you submit, and again if review
+is still pending a few days later.
 
 All three accounts share the **same password** — whatever you set
 `DEMO_USER_PASSWORD` to in step 1 below. Reviewers log in with the
@@ -49,14 +59,19 @@ API gates posting/commenting behind email confirmation and
    Set the same secret on `trays-social-review` if you want the demo
    accounts available in the review env too.
 
-2. **Paste this password into `docs/app-review-notes.md`** (the
-   "Demo credentials" section, W112) before the App Store submission.
+2. **Enter this password in App Store Connect only**, in **App Review
+   Information → Sign-in information**, before the App Store submission.
+   Never paste it into `docs/app-review-notes.md` or anywhere else in the
+   repo; the review notes point the reviewer at the Sign-in information
+   fields instead.
 
 ---
 
 ## Run it
 
-Against prod (review env is the same with the `--app` flipped):
+Against prod (review env is the same with the `--app` flipped). App
+Store and TestFlight Release builds talk to prod, so prod is where an
+App Reviewer signs in:
 
 ```bash
 fly ssh console --app trays-social --command 'bin/trays_social eval "TraysSocial.Release.seed_demo()"'
@@ -75,16 +90,23 @@ and the env you need to set.
 
 ## Verify
 
-Log into the iOS app (TestFlight or sideloaded) as `demo_alice` with the
-configured password. You should see:
+Log into the iOS app (TestFlight or sideloaded) and the web app as
+`demo_alice@trays.app` with the configured password. With recipe-first
+on (`FEATURES_RECIPE_FIRST`), you should see:
 
-- Feed pre-populated with posts from `demo_ben` and `demo_chloe`
-- "Recipes" section in My Tray showing the 5 recipes by `demo_alice`
+- **Home**: Jump back in (Alice's recipes and her two saved ones),
+  Friends' trays (`demo_ben` and `demo_chloe`), and New from people you
+  follow (recent recipes by Ben and Chloe)
+- **My Tray**: My recipes with Alice's 5 recipes, and Saved with one
+  recipe each from Ben and Chloe
 - Existing follows visible on the profile (Following 2, Followers 2)
-- Comments on Alice's first post from Ben and Chloe
+- Notes (comments) on Alice's first recipe from Ben and Chloe
+
+If New from people you follow says there is nothing new this week, the
+seed has not run in the last 7 days; run it again.
 
 Re-running the seed is safe — no duplicate users, posts, follows, likes,
-or comments are created. `seed_demo` deliberately never deletes existing
+comments or saves are created. `seed_demo` deliberately never deletes existing
 data; to remove the demo *content* before launch, use `purge_demo` below.
 
 ---
@@ -92,7 +114,7 @@ data; to remove the demo *content* before launch, use `purge_demo` below.
 ## Purge demo content before the App Store launch
 
 When you're ready to ship to real users, remove the demo cooks' content
-so it doesn't appear in real users' feeds — **but keep the three accounts**
+so it doesn't appear in real users' Home and Search — **but keep the three accounts**
 so an Apple App Reviewer can still log in to evaluate future submissions
 (Guideline 2.1 requires working demo credentials, and every app update is
 re-reviewed).
@@ -124,10 +146,15 @@ What it does:
 Idempotent: re-running once the content is gone is a harmless no-op
 (`removed 0 posts, 0 follows, 0 notifications`).
 
-> Sequencing for launch: run `purge_demo` shortly **before** flipping the
-> app live. If you later re-run `seed_demo` (e.g. to fix the demo
-> password), it re-creates the content and you'll need to `purge_demo`
-> again.
+> Sequencing for each submission: run `seed_demo` on prod on the day you
+> submit, because the reviewer needs a populated Home. While the demo
+> content exists it can show up for real users too: for about 7 days
+> after each run the re-dated recipes count as recent in Search's
+> trending recipes (`Posts.list_trending_posts`), and for 30 days the
+> demo cooks can appear in the suggested cooks Home shows to users who
+> follow nobody (`@suggested_window_days` in `TraysSocial.Home`). Run
+> `purge_demo` once the version is approved if you don't want that, and
+> re-run `seed_demo` before the next submission.
 
 ---
 
@@ -137,9 +164,9 @@ Idempotent: re-running once the content is gone is a harmless no-op
 - **When changing the demo password** — update the `DEMO_USER_PASSWORD`
   secret, then re-run the seed. It resets the three demo accounts' password
   to the new value (and re-confirms them). No SQL / row deletion needed.
-- **Periodically as content drift insurance** — the seed is cheap and
-  re-running on every release of a new app version is a reasonable
-  habit, even if it's a no-op
+- **On the day of every App Store submission** — it re-dates the seed
+  recipes so Home's New from people you follow is populated for the
+  reviewer (see "What it creates")
 
 ---
 
@@ -147,9 +174,13 @@ Idempotent: re-running once the content is gone is a harmless no-op
 
 - The seed uses `TraysSocial.Accounts.register_user/1` so all the
   validation paths the real registration takes are exercised.
-- Posts are created via `TraysSocial.Posts.create_post/2`, then their
-  child records (ingredients, cooking steps, tools, tags, photo) are
-  inserted via the standard changesets.
+- Posts are created via `TraysSocial.Posts.create_post/2` in one call,
+  with their child records (ingredients, cooking steps, tools, tags,
+  photo) nested in the same attrs.
+- Re-dating uses `Repo.update_all` on `inserted_at` / `updated_at`,
+  matched by `(user_id, caption)`, so it sends no notifications.
+- Saves go through `TraysSocial.Posts.create_bookmark/2`, after a
+  `Repo.get_by(Bookmark, ...)` check to skip duplicates.
 - Likes go through `TraysSocial.Posts.like_post/2` (already idempotent
   via `on_conflict: :nothing` per `post_likes` unique index).
 - Follows are checked via `Repo.get_by(Follow, ...)` first to skip

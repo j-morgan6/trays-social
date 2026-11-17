@@ -27,6 +27,7 @@ defmodule TraysSocial.Release do
   alias TraysSocial.Notifications.Notification
   alias TraysSocial.Posts
 
+  alias TraysSocial.Posts.Bookmark
   alias TraysSocial.Posts.Comment
   alias TraysSocial.Posts.Post
   alias TraysSocial.Posts.PostLike
@@ -130,20 +131,21 @@ defmodule TraysSocial.Release do
     Enum.each(ben_posts(), &upsert_demo_post(ben, &1))
     Enum.each(chloe_posts(), &upsert_demo_post(chloe, &1))
 
-    # Mutual follows — all three follow each other.
-    for {follower, followed} <- [
-          {alice, ben},
-          {alice, chloe},
-          {ben, alice},
-          {ben, chloe},
-          {chloe, alice},
-          {chloe, ben}
-        ] do
-      ensure_follow(follower, followed)
-    end
+    # W217: Home's "New from people you follow" only shows recipes from the
+    # last 7 days, so re-date the seed's own posts on every run. Running the
+    # seed on the day of an App Store submission then gives the reviewer a
+    # populated Home.
+    refresh_demo_dates([{alice, alice_posts()}, {ben, ben_posts()}, {chloe, chloe_posts()}])
+
+    seed_mutual_follows([alice, ben, chloe])
 
     seed_cross_likes([alice, ben, chloe])
     seed_cross_comments([alice, ben, chloe])
+
+    # W217: alice saves one recipe from each friend, so My Tray's Saved
+    # section and Home's Jump back in are not only her own recipes.
+    ensure_bookmark(alice, ben)
+    ensure_bookmark(alice, chloe)
 
     IO.puts("[seed_demo] OK — demo_alice, demo_ben, demo_chloe ready")
     :ok
@@ -412,12 +414,52 @@ defmodule TraysSocial.Release do
   defp demo_post_photos(url) when is_binary(url), do: [%{url: url, position: 0}]
   defp demo_post_photos(_url), do: []
 
+  # Packs the seed posts into the last ~36 hours: post i of cook c is
+  # (i * 8 + c * 2) hours old, so each cook's lead post is the newest and
+  # the three cooks interleave. Matching on the seed captions means a post a
+  # reviewer writes on a demo account is never re-dated.
+  defp refresh_demo_dates(cooks) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    for {{user, posts}, c} <- Enum.with_index(cooks),
+        {%{caption: caption}, i} <- Enum.with_index(posts) do
+      ts = DateTime.add(now, -(i * 8 + c * 2), :hour)
+
+      from(p in Post, where: p.user_id == ^user.id and p.caption == ^caption)
+      |> Repo.update_all(set: [inserted_at: ts, updated_at: ts])
+    end
+
+    :ok
+  end
+
   # --- Follows / Likes / Comments ----------------------------------
+
+  # Mutual follows — all three follow each other.
+  defp seed_mutual_follows(users) do
+    for follower <- users, followed <- users, follower.id != followed.id do
+      ensure_follow(follower, followed)
+    end
+
+    :ok
+  end
 
   defp ensure_follow(%User{} = follower, %User{} = followed) do
     case Repo.get_by(Follow, follower_id: follower.id, followed_id: followed.id) do
       %Follow{} -> :ok
       nil -> Accounts.follow_user(follower, followed)
+    end
+  end
+
+  defp ensure_bookmark(%User{} = user, %User{} = author) do
+    case posts_by_user(author) do
+      [%Post{id: post_id} | _] ->
+        case Repo.get_by(Bookmark, user_id: user.id, post_id: post_id) do
+          %Bookmark{} -> :ok
+          nil -> Posts.create_bookmark(user.id, post_id)
+        end
+
+      [] ->
+        :ok
     end
   end
 
