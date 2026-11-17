@@ -62,7 +62,10 @@ defmodule TraysSocial.MixProject do
        compile: false,
        depth: 1},
       {:swoosh, "~> 1.16"},
-      {:req, "~> 0.5"},
+      # Pinned to 0.6.x: "~> 0.5" let deps.update float to 0.7, which breaks
+      # APIs. 0.6 carries the advisory fixes, and AppleAuth's JWKS fetch relies
+      # on the JSON body being auto-decoded (compression is opt-in since 0.6.1).
+      {:req, "~> 0.6.1"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 1.0"},
@@ -70,11 +73,12 @@ defmodule TraysSocial.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:earmark, "~> 1.4"},
       {:bandit, "~> 1.5"},
-      # Forced override to pull in CVE patches (GHSA-9fm9-hp7p-53mf, GHSA-vq52-99r9-h5pw).
-      # Pulled transitively by httpoison/swoosh/ex_aws, all capped at < 2.0;
-      # 1.24+ stays within their constraint while patching the connection-pool
-      # leak and SSRF issues.
-      {:hackney, "~> 1.24", override: true},
+      # Direct dep so ex_aws (Tigris S3 photo storage) gets an HTTP client: its
+      # hackney dependency is optional. 4.0.1+ patches the hackney advisories.
+      # No override: every dependent must accept 4.x on its own, so an
+      # incompatible bump fails resolution instead of hiding (ex_aws must be
+      # 2.7+, whose adapter matches hackney 4's response shape).
+      {:hackney, "~> 4.0"},
       {:mogrify, "~> 0.9"},
       {:hammer, "~> 6.2"},
       # D45: parses X-Forwarded-For from trusted proxies and rewrites
@@ -85,7 +89,9 @@ defmodule TraysSocial.MixProject do
       {:ex_aws_s3, "~> 2.5"},
       {:sweet_xml, "~> 0.7"},
       {:assent, "~> 0.2"},
-      {:pigeon, "~> 2.0"},
+      # 2.1 talks to APNs over Mint, dropping httpoison and kadabra (and with
+      # them the last dependent that capped hackney below 2.0).
+      {:pigeon, "~> 2.1"},
       {:joken, "~> 2.6"},
       {:error_tracker, "~> 0.9"},
       {:tidewave, "~> 0.5", only: :dev},
@@ -149,7 +155,14 @@ defmodule TraysSocial.MixProject do
         "esbuild trays_social --minify",
         "phx.digest"
       ],
-      security: ["deps.audit", "sobelow --config"],
+      # GHSA-52mm-h59v-f3c7 (earmark: unescaped HTML attribute values) has no
+      # fix; earmark is retired. Only LegalDocParser calls it, at compile time,
+      # on our own priv/legal/*.md, never on user input. Scoped to this one ID:
+      # remove the ignore when earmark is replaced (e.g. by MDEx).
+      security: [
+        "deps.audit --ignore-advisory-ids GHSA-52mm-h59v-f3c7",
+        "sobelow --config"
+      ],
       precommit: [
         "compile --warnings-as-errors",
         "deps.unlock --unused",
