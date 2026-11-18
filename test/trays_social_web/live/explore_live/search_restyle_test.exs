@@ -180,6 +180,15 @@ defmodule TraysSocialWeb.ExploreLive.SearchRestyleTest do
   end
 
   describe "narrow width" do
+    test "the search bar pins below the site header, not at a fixed 64px (D116)", %{conn: conn} do
+      view = search(conn)
+
+      # The phone header is about 121px tall in recipe mode because of its
+      # tab row, so a top-16 bar slid underneath it. app.css sets the height.
+      assert has_element?(view, "#search-prefs > div.sticky[class*='top-(--site-header-h)']")
+      refute has_element?(view, "#search-prefs > div.sticky.top-16")
+    end
+
     test "grids start at two columns and the page has no sideways scroller", %{
       conn: conn,
       viewer: viewer

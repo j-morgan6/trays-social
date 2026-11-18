@@ -49,6 +49,34 @@ defmodule TraysSocialWeb.LayoutsTest do
       assert html =~ "size-[9px] rounded-full bg-accent"
     end
 
+    test "the header carries its nav mode so app.css can size --site-header-h (D116)" do
+      assigns = %{scope: scope(~U[2026-01-01 00:00:00Z])}
+
+      recipe =
+        rendered_to_string(~H"""
+        <Layouts.site_header nav_mode={:recipe} current_scope={@scope} current_tab={:home} />
+        """)
+
+      classic =
+        rendered_to_string(~H"""
+        <Layouts.site_header nav_mode={:classic} current_scope={@scope} />
+        """)
+
+      assert recipe =~ ~s(id="site-header")
+      assert recipe =~ ~s(data-nav="recipe")
+      assert classic =~ ~s(data-nav="classic")
+
+      # assets/css/app.css hard-codes --site-header-h from these classes:
+      # 64px row (min-h-16) or 72px at md, +1px border, and on phones in
+      # recipe mode a tab row of 38px tabs + p-1 + pb-2.5 = 56px (121px in
+      # all). If one of these fails, change the numbers in app.css too.
+      assert recipe =~ "min-h-16"
+      assert recipe =~ "md:h-[72px]"
+      assert recipe =~ ~s(class="px-3.5 pb-2.5 md:hidden")
+      assert recipe =~ "rounded-full bg-pill p-1"
+      assert recipe =~ "min-h-[38px] flex-1"
+    end
+
     test "no unread notifications means no dot" do
       assigns = %{scope: scope(~U[2026-01-01 00:00:00Z])}
 

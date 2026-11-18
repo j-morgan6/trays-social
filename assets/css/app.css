@@ -337,3 +337,33 @@ main {
 main.phx-navigating {
   opacity: 0.35;
 }
+
+/* D116: layout guards for narrow screens.
+   --site-header-h is the height of Layouts.site_header, for anything that
+   pins below it (the /search bar). It follows the header's fixed classes:
+   a 64px row (min-h-16, md:h-[72px]) plus its 1px bottom border, and in
+   recipe mode on phones the tab row under it (38px tabs + p-1 + pb-2.5 =
+   56px). Update these numbers if those classes change.
+   overflow-x: clip stops one over-wide element from making the whole page
+   scroll sideways. Unlike overflow: hidden it creates no scroll container,
+   so position: sticky keeps working against the viewport. */
+@layer base {
+  :root {
+    --site-header-h: 65px;
+  }
+
+  :root:has(#site-header[data-nav="recipe"]) {
+    --site-header-h: 121px;
+  }
+
+  @media (width >= 48rem) {
+    :root,
+    :root:has(#site-header[data-nav="recipe"]) {
+      --site-header-h: 73px;
+    }
+  }
+
+  body {
+    overflow-x: clip;
+  }
+}

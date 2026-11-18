@@ -27,6 +27,21 @@ defmodule TraysSocialWeb.ThemeCssTest do
     assert by_attribute == by_media
   end
 
+  # D116: the /search bar pins at this height, and the page clips sideways
+  # overflow without breaking sticky (clip, never hidden).
+  test "the site header height and the sideways-overflow clip are defined" do
+    css = File.read!(@css)
+
+    assert block_after(css, ":root {\n    --site-header-h") =~ "65px"
+
+    assert block_after(css, ~s|:root:has(#site-header[data-nav="recipe"]) {|) =~
+             "--site-header-h: 121px"
+
+    assert css =~ "--site-header-h: 73px"
+    assert css =~ ~r/body \{\s*overflow-x: clip;/
+    refute css =~ ~r/body \{\s*overflow-x: hidden;/
+  end
+
   test "the logo swaps to the on-dark mark under both dark selectors" do
     css = File.read!(@css)
     assert css =~ ~s([data-theme="dark"] .logo-on-dark)

@@ -214,7 +214,11 @@ defmodule TraysSocialWeb.Layouts do
       )
 
     ~H"""
-    <header class="sticky top-0 z-50 border-b border-hairline-strong bg-pill backdrop-blur-[20px]">
+    <header
+      id="site-header"
+      data-nav={@nav_mode}
+      class="sticky top-0 z-50 border-b border-hairline-strong bg-pill backdrop-blur-[20px]"
+    >
       <div class="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-3.5 md:h-[72px] md:px-8">
         <div class="flex flex-1 items-center">
           <.logo_lockup />

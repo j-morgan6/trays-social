@@ -14,8 +14,10 @@
      restores recently used ingredient chips from localStorage on mount, and
      stores them again whenever the server pushes "search-prefs". --%>
 <div id="search-prefs" phx-hook="SearchPrefs">
-  <%!-- Sticky search + chips bar (pinning unchanged in W244) --%>
-  <div class="sticky top-16 z-10 border-b border-hairline bg-base-200/95 backdrop-blur-[20px]">
+  <%!-- Sticky search + chips bar. It pins just below the site header, whose
+     height comes from --site-header-h in app.css: the phone header is taller
+     in recipe mode because of its tab row (D116). --%>
+  <div class="sticky top-(--site-header-h) z-10 border-b border-hairline bg-base-200/95 backdrop-blur-[20px]">
     <div class="mx-auto max-w-[1160px] px-[18px] pt-5 pb-4 md:px-12">
       <.form
         for={%{}}

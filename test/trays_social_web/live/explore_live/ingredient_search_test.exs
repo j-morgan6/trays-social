@@ -113,6 +113,24 @@ defmodule TraysSocialWeb.ExploreLive.IngredientSearchTest do
       assert render(view) =~ "Up to 10 ingredients"
     end
 
+    # D116: a full row of long chips wraps onto new lines inside its own
+    # container, and a single over-long name truncates within its chip, so
+    # neither can push the page sideways at 375px.
+    test "ten long chips wrap in their row and each name truncates", %{conn: conn} do
+      view = explore(conn)
+      # 44 characters: the longest kind of chip, under the 50-character cap.
+      for i <- 1..10, do: add(view, "#{i}-extra-virgin-cold-pressed-olive-oil-blend")
+
+      assert has_element?(
+               view,
+               "div.flex.flex-wrap > span.max-w-full",
+               "10-extra-virgin-cold-pressed-olive-oil-blend"
+             )
+
+      assert has_element?(view, "div.flex.flex-wrap > span.max-w-full > span.min-w-0.truncate")
+      refute has_element?(view, "div.flex.flex-wrap > span.whitespace-nowrap")
+    end
+
     test "duplicate chips are collapsed case-insensitively", %{conn: conn} do
       view = explore(conn)
       add(view, "Rice")
