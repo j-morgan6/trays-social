@@ -50,7 +50,7 @@ Social Networking
 
 ### Copyright
 ```
-2026 1001366752 Ontario Corporation
+2026 Joser Labs Inc.
 ```
 
 ### Support URL

@@ -1,6 +1,6 @@
 ---
-effective_date: 2026-09-04
-version: 1.2
+effective_date: 2026-11-18
+version: 1.3
 ---
 
 # Terms of Service
@@ -19,7 +19,7 @@ Provide accurate information. Keep your password secure. One account per person.
 
 ## 4. Your content and the license you grant us
 
-You own your content — your photos, your written recipe instructions, your captions, your comments. You grant 1001366752 Ontario Inc. a worldwide, non-exclusive, royalty-free license to host, display, distribute, and create thumbnails of your content **only as needed to operate the service**. The license terminates when you delete your content (90-day backup carve-out — see §8 for retention timelines).
+You own your content — your photos, your written recipe instructions, your captions, your comments. You grant Joser Labs Inc. a worldwide, non-exclusive, royalty-free license to host, display, distribute, and create thumbnails of your content **only as needed to operate the service**. The license terminates when you delete your content (90-day backup carve-out — see §8 for retention timelines).
 
 **Recipe ingredient note:** Under U.S. copyright law, mere lists of ingredients are not copyrightable (functional information). Your photos, your written instructions, and your captions are copyrightable; your bare ingredient list typically is not.
 
@@ -53,7 +53,7 @@ Trays Social complies with the U.S. Digital Millennium Copyright Act (17 U.S.C. 
 
 **Designated agent:**
 - Name: DMCA Agent
-- Organization: 1001366752 Ontario Inc.
+- Organization: Joser Labs Inc.
 - Address: 69 Yonge Street, 17043, Toronto, ON M5E 1Y2, Canada
 - Email: dmca@trays.app
 - Phone: +1 (647) 547-6354
@@ -71,7 +71,7 @@ You can delete your account in the iOS app at any time. We may terminate your ac
 
 ## 9. Intellectual property
 
-The Trays Social name, logo, code, and design are owned by 1001366752 Ontario Inc. Nothing in these Terms licenses them to you.
+The Trays Social name, logo, code, and design are owned by Joser Labs Inc. Nothing in these Terms licenses them to you.
 
 ## 10. Food safety disclaimer
 
@@ -83,11 +83,11 @@ The service is provided as-is, with no warranty of accuracy, availability, or fi
 
 ## 12. Limitation of liability
 
-To the maximum extent permitted by applicable law, the total cumulative liability of 1001366752 Ontario Inc. for all claims arising from or related to these Terms or the service — whether in contract, tort (including negligence), statute, or otherwise — is limited to **one hundred U.S. dollars (US$100)**. This cap applies in aggregate across all claims. We do not exclude or limit liability for matters that Ontario law (or the law of your jurisdiction, if more protective) does not allow to be limited (e.g., gross negligence, intentional misconduct, or specific consumer protection rights).
+To the maximum extent permitted by applicable law, the total cumulative liability of Joser Labs Inc. for all claims arising from or related to these Terms or the service — whether in contract, tort (including negligence), statute, or otherwise — is limited to **one hundred U.S. dollars (US$100)**. This cap applies in aggregate across all claims. We do not exclude or limit liability for matters that Ontario law (or the law of your jurisdiction, if more protective) does not allow to be limited (e.g., gross negligence, intentional misconduct, or specific consumer protection rights).
 
 ## 13. Indemnification
 
-You agree to indemnify and hold harmless 1001366752 Ontario Inc. for losses caused by your content or your breach of these Terms.
+You agree to indemnify and hold harmless Joser Labs Inc. for losses caused by your content or your breach of these Terms.
 
 ## 14. Governing law and disputes
 
@@ -104,28 +104,28 @@ Any dispute not resolved informally shall be resolved by **binding individual ar
 These clauses are required by Apple Schedule 1 and apply to App Store distribution.
 
 ### 16.1 Acknowledgement
-This agreement is between you and 1001366752 Ontario Inc., not Apple. Apple is not responsible for the app or its content.
+This agreement is between you and Joser Labs Inc., not Apple. Apple is not responsible for the app or its content.
 
 ### 16.2 Scope of license
 The license granted to you is non-transferable and limited to use on Apple-branded devices that you own or control, per the Apple Media Services Terms.
 
 ### 16.3 Maintenance and support
-1001366752 Ontario Inc. is solely responsible for providing maintenance and support. Apple has no obligation to provide either.
+Joser Labs Inc. is solely responsible for providing maintenance and support. Apple has no obligation to provide either.
 
 ### 16.4 Warranty
-1001366752 Ontario Inc. is solely responsible for any product warranty. If the app fails to conform to any applicable warranty, you may notify Apple, and Apple will refund the purchase price (where applicable). Apple has no other warranty obligation.
+Joser Labs Inc. is solely responsible for any product warranty. If the app fails to conform to any applicable warranty, you may notify Apple, and Apple will refund the purchase price (where applicable). Apple has no other warranty obligation.
 
 ### 16.5 Product claims
-1001366752 Ontario Inc. (not Apple) is responsible for addressing user or third-party claims relating to the app, including product liability, regulatory compliance, and consumer protection claims.
+Joser Labs Inc. (not Apple) is responsible for addressing user or third-party claims relating to the app, including product liability, regulatory compliance, and consumer protection claims.
 
 ### 16.6 Intellectual property rights
-In the event of any third-party claim that the app infringes intellectual property rights, 1001366752 Ontario Inc. (not Apple) is solely responsible for the investigation, defense, settlement, and discharge of the claim.
+In the event of any third-party claim that the app infringes intellectual property rights, Joser Labs Inc. (not Apple) is solely responsible for the investigation, defense, settlement, and discharge of the claim.
 
 ### 16.7 Legal compliance
 You represent and warrant that you are not located in a country subject to a U.S. Government embargo or designated as a "terrorist supporting" country, and that you are not on any U.S. Government list of prohibited or restricted parties.
 
 ### 16.8 Developer name and address
-1001366752 Ontario Inc. Contact: `support@trays.app`. Mailing address available on written request.
+Joser Labs Inc. (formerly 1001366752 Ontario Corporation; Ontario Corporation Number 1001366752). Contact: `support@trays.app`. Mailing address available on written request.
 
 ### 16.9 Third-party beneficiary
 Apple and Apple's subsidiaries are third-party beneficiaries of these Terms and have the right to enforce these Terms against you.

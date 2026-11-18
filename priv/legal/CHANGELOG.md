@@ -10,6 +10,39 @@ the document name (e.g. `## Community Guidelines v1.0 — …`). Entries
 that span multiple documents are unprefixed and the body lists which
 documents changed.
 
+## Privacy Policy v1.5 — 2026-11-18
+
+Privacy Policy only; Terms of Service v1.3 has its own entry below.
+Community Guidelines unchanged at v1.0, FAQ unchanged at v1.3.
+
+The corporation that operates Trays Social was renamed to Joser Labs Inc. by
+Articles of Amendment effective 2026-11-18. It is the same corporation, with
+the same Ontario Corporation Number (1001366752). The policy used to name it
+"1001366752 Ontario Inc.", which was never its legal name: the Articles of
+Incorporation say 1001366752 Ontario Corporation. This version changes no
+collection, use or sharing (W271).
+
+- §1: Trays Social is operated by Joser Labs Inc.
+- Quebec privacy officer (two places): the sole Director of Joser Labs Inc.
+
+## Terms of Service v1.3 — 2026-11-18
+
+Terms of Service only; Privacy Policy v1.5 has its own entry above.
+Community Guidelines unchanged at v1.0, FAQ unchanged at v1.3.
+
+The counterparty is renamed to Joser Labs Inc. by
+Articles of Amendment effective 2026-11-18. It is the same corporation, with
+the same Ontario Corporation Number (1001366752), so no right, obligation or
+license changes (W271).
+
+- Every mention of "1001366752 Ontario Inc." now reads Joser Labs Inc.: the
+  content license in §4, the DMCA designated-agent organization in §7,
+  intellectual property in §9, liability in §12, indemnification in §13, and
+  the Apple-specific addendum in §16
+- §16.8 developer name: Joser Labs Inc., noting it was formerly 1001366752
+  Ontario Corporation, Ontario Corporation Number 1001366752
+- The DMCA agent's address, email, phone and USCO registration are unchanged
+
 ## Privacy Policy v1.4 — 2026-11-14
 
 Privacy Policy only. Terms of Service unchanged at v1.2, Community Guidelines

@@ -1,13 +1,13 @@
 ---
-effective_date: 2026-11-14
-version: 1.4
+effective_date: 2026-11-18
+version: 1.5
 ---
 
 # Privacy Policy
 
 ## 1. Who we are and what this covers
 
-Trays Social is a food-focused social platform where home cooks share photos of their food, document recipes (ingredients, steps, tools, cooking time), and follow other cooks. Trays Social is operated by **1001366752 Ontario Inc.** (Ontario, Canada). Contact: `support@trays.app`. This policy covers the iOS app, the trays.app website, and the API serving both.
+Trays Social is a food-focused social platform where home cooks share photos of their food, document recipes (ingredients, steps, tools, cooking time), and follow other cooks. Trays Social is operated by **Joser Labs Inc.** (Ontario, Canada). Contact: `support@trays.app`. This policy covers the iOS app, the trays.app website, and the API serving both.
 
 Trays is offered only to users in **Canada and the United States**. We do not target or offer the service to residents of the European Union, the European Economic Area, or the United Kingdom, and the app is not listed on the App Store in those regions.
 
@@ -110,7 +110,7 @@ Depending on where you live, you have specific rights over your data:
 
 Trays does not sell or share your personal information for cross-context behavioral advertising — no sale or sharing occurs today. A functional preference control is available at [/privacy/ads-choices](/privacy/ads-choices): it sets a first-party opt-out cookie that the trays.app website honors before loading any advertising script. We also honor the [Global Privacy Control](https://globalprivacycontrol.org/) browser signal automatically. If third-party advertising is ever introduced, this recorded preference and the GPC signal will apply to it.
 
-**Quebec residents (Law 25):** privacy officer contact (the sole Director of 1001366752 Ontario Inc., reachable via `support@trays.app`), automated decisions disclosure (we do not make automated decisions about you), and portability (same JSON format as GDPR).
+**Quebec residents (Law 25):** privacy officer contact (the sole Director of Joser Labs Inc., reachable via `support@trays.app`), automated decisions disclosure (we do not make automated decisions about you), and portability (same JSON format as GDPR).
 
 **Canadian users (PIPEDA):** the right to challenge accuracy and the right to complain to the Office of the Privacy Commissioner of Canada.
 
@@ -142,5 +142,5 @@ If we make material changes, we will notify you via in-app notice and/or email. 
 
 - General privacy questions: `support@trays.app`
 - Mailing address: available on written request to `support@trays.app`
-- Quebec residents: contact our privacy officer (the sole Director of 1001366752 Ontario Inc.) via `support@trays.app`
+- Quebec residents: contact our privacy officer (the sole Director of Joser Labs Inc.) via `support@trays.app`
 - **EU/EEA and UK residents:** Trays is offered only in Canada and the United States and does not target residents of the EU, EEA, or UK, so we have not appointed a representative under Article 27 of the GDPR or the UK GDPR. If we expand availability to those regions, we will appoint a representative before launching there.

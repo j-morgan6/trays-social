@@ -65,7 +65,7 @@ deletion is final and not reversible.
 If you have questions, reach me at support@trays.app.
 
 — The Trays team
-1001366752 Ontario Inc.
+Joser Labs Inc.
 ```
 
 ## Producing the JSON

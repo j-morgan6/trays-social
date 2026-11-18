@@ -2,6 +2,8 @@ defmodule TraysSocialWeb.LegalControllerTest do
   use TraysSocialWeb.ConnCase, async: true
 
   @app_store_checklist Path.expand("../../../docs/app-store-privacy-checklist.md", __DIR__)
+  @app_store_listing Path.expand("../../../docs/app-store-listing.md", __DIR__)
+  @export_template Path.expand("../../../priv/legal/export-template.md", __DIR__)
 
   describe "GET /privacy" do
     test "returns 200 HTML with cache-control", %{conn: conn} do
@@ -17,7 +19,9 @@ defmodule TraysSocialWeb.LegalControllerTest do
       body = response(conn, 200)
 
       required = [
-        "1001366752 Ontario Inc.",
+        # Body text, not just the footer: the legal layout's footer also names
+        # the company, so a bare "Joser Labs Inc." would pass with a stale body.
+        "the sole Director of Joser Labs Inc.",
         "support@trays.app",
         "Sign in with Apple",
         "Tigris",
@@ -228,7 +232,9 @@ defmodule TraysSocialWeb.LegalControllerTest do
       body = response(conn, 200)
 
       required = [
-        "1001366752 Ontario Inc.",
+        # Body text, not just the footer (see the privacy test above).
+        "Joser Labs Inc. (formerly 1001366752 Ontario Corporation",
+        "hold harmless Joser Labs Inc.",
         "support@trays.app",
         "binding individual arbitration",
         "Quebec",
@@ -425,6 +431,23 @@ defmodule TraysSocialWeb.LegalControllerTest do
 
       for phrase <- required do
         assert body =~ phrase, "expected /faq body to contain #{inspect(phrase)}"
+      end
+    end
+  end
+
+  # W271: the App Store listing and the data-export reply are not rendered by
+  # the web app, so nothing above would catch a stale company name in them.
+  describe "company name outside the rendered pages" do
+    for {label, path} <- [
+          {"App Store listing", @app_store_listing},
+          {"data-export reply template", @export_template}
+        ] do
+      @path path
+      test "the #{label} names Joser Labs Inc." do
+        text = File.read!(@path)
+
+        assert text =~ "Joser Labs Inc."
+        refute text =~ "Ontario Inc"
       end
     end
   end
