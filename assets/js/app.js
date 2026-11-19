@@ -209,6 +209,70 @@ window.addEventListener("phx:page-loading-stop", _info => {
   document.querySelector("main")?.classList.remove("phx-navigating")
 })
 
+// D128: double-submit guard for server-rendered forms (log in, register,
+// reset password, confirm, settings). phx-disable-with only works inside a
+// LiveView, so on these pages a second click while the first POST is in
+// flight sent the form again; after a login the second POST carries a stale
+// CSRF token and gets a 403. LiveView forms are skipped: they submit over the
+// socket and handle phx-disable-with themselves.
+// A submit button is any <button> without another type, or an input of type
+// submit; form.elements also catches controls tied in with form="". (It never
+// lists <input type=image>, and no form here uses one.)
+function submitButtons(form) {
+  return Array.from(form.elements).filter(el => el.type === "submit")
+}
+
+function isLiveViewForm(form) {
+  return form.hasAttribute("phx-submit") ||
+    form.hasAttribute("phx-change") ||
+    form.hasAttribute("phx-trigger-action") ||
+    form.closest("[data-phx-session], [data-phx-main]") !== null
+}
+
+document.addEventListener("submit", e => {
+  const form = e.target
+  if (e.defaultPrevented || !(form instanceof HTMLFormElement) || isLiveViewForm(form)) return
+  // A form that opens another window leaves this page in place, so it would
+  // stay locked; none of today's server-rendered forms do this.
+  if (form.target && form.target !== "_self") return
+
+  if (form.dataset.submitting === "true") {
+    e.preventDefault()
+    return
+  }
+  form.dataset.submitting = "true"
+
+  // Disable after the browser has built the form data: a disabled submitter
+  // is left out of it, and the confirm page's buttons send remember_me=true
+  // by name and value.
+  setTimeout(() => {
+    submitButtons(form).forEach(button => {
+      button.disabled = true
+      const busyText = button.getAttribute("phx-disable-with")
+      if (busyText && button.tagName === "BUTTON") {
+        button.dataset.idleHtml = button.innerHTML
+        button.textContent = busyText
+      }
+    })
+  }, 0)
+})
+
+// Coming back with the Back button restores the page from the bfcache with the
+// buttons still disabled; undo the guard so the form works again.
+window.addEventListener("pageshow", e => {
+  if (!e.persisted) return
+  document.querySelectorAll("form[data-submitting]").forEach(form => {
+    delete form.dataset.submitting
+    submitButtons(form).forEach(button => {
+      button.disabled = false
+      if (button.dataset.idleHtml !== undefined) {
+        button.innerHTML = button.dataset.idleHtml
+        delete button.dataset.idleHtml
+      }
+    })
+  })
+})
+
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 
