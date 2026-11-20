@@ -134,10 +134,7 @@ defmodule TraysSocialWeb.API.V1.SearchController do
         limit: @page_size
       )
 
-    users =
-      if terms.tag || terms.max_cooking_time,
-        do: [],
-        else: Accounts.search_users(terms.query, limit: 10, blocked_user_ids: blocked_ids)
+    users = search_cooks(terms, blocked_ids)
 
     opts = render_opts(user, tray ++ following ++ everyone)
 
@@ -180,6 +177,15 @@ defmodule TraysSocialWeb.API.V1.SearchController do
     })
   end
 
+  # Cooks are searched by a typed or single-term query only: not for a tag,
+  # time-limited or multi-term Browse tile.
+  defp search_cooks(%{query: query}, _blocked_ids) when is_list(query), do: []
+  defp search_cooks(%{tag: tag}, _blocked_ids) when is_binary(tag), do: []
+  defp search_cooks(%{max_cooking_time: max}, _blocked_ids) when is_integer(max), do: []
+
+  defp search_cooks(terms, blocked_ids),
+    do: Accounts.search_users(terms.query, limit: 10, blocked_user_ids: blocked_ids)
+
   defp search_group("tray", user_id), do: {:tray, user_id}
 
   defp search_group("following", user_id),
@@ -190,7 +196,7 @@ defmodule TraysSocialWeb.API.V1.SearchController do
 
   # A `category` key is only looked up in the fixed BrowseCategories list; an
   # unknown key yields nil and contributes nothing. Explicit params win over the
-  # category's saved query.
+  # category's saved query, which may be a list of terms (see BrowseCategories).
   defp search_terms(params) do
     category = BrowseCategories.fetch(params["category"]) || %{}
 

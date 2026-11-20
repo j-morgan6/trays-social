@@ -134,6 +134,48 @@ defmodule TraysSocialWeb.API.V1.SearchGroupedTest do
       assert Enum.map(data["tray"], & &1["id"]) == [quick.id]
     end
 
+    test "Beef searches its terms and skips the cooks list", %{conn: conn, user: user} do
+      steak = post_fixture(%{user_id: user.id, caption: "Pan steak"})
+      _chicken = post_fixture(%{user_id: user.id, caption: "Lemon chicken"})
+      user_fixture(%{username: "beefcook"})
+
+      data =
+        conn
+        |> get("/api/v1/search?grouped=true&category=beef")
+        |> json_response(200)
+        |> Map.fetch!("data")
+
+      assert Enum.map(data["tray"], & &1["id"]) == [steak.id]
+      assert data["users"] == []
+    end
+
+    test "a single group page applies the Pork terms", %{conn: conn, user: user} do
+      bacon = post_fixture(%{user_id: user.id, caption: "Bacon pasta"})
+      _tofu = post_fixture(%{user_id: user.id, caption: "Tofu bowl"})
+
+      posts =
+        conn
+        |> get("/api/v1/search?group=tray&category=pork")
+        |> json_response(200)
+        |> get_in(["data", "posts"])
+
+      assert Enum.map(posts, & &1["post"]["id"]) == [bacon.id]
+    end
+
+    test "a removed category key from an old client is ignored", %{conn: conn, user: user} do
+      post = post_fixture(%{user_id: user.id, caption: "Lemon chicken", cooking_time_minutes: 90})
+
+      for key <- ~w(pasta breakfast soups) do
+        data =
+          conn
+          |> get("/api/v1/search?grouped=true&category=#{key}")
+          |> json_response(200)
+          |> Map.fetch!("data")
+
+        assert Enum.map(data["tray"], & &1["id"]) == [post.id]
+      end
+    end
+
     test "an unknown category is ignored", %{conn: conn, user: user} do
       post = post_fixture(%{user_id: user.id, cooking_time_minutes: 90})
 
@@ -217,6 +259,19 @@ defmodule TraysSocialWeb.API.V1.SearchGroupedTest do
   end
 
   describe "GET /api/v1/search/browse" do
+    test "search_grouped_test: API categories list returns the six keys in order", %{conn: conn} do
+      categories =
+        conn
+        |> get("/api/v1/search/browse")
+        |> json_response(200)
+        |> get_in(["data", "categories"])
+
+      assert Enum.map(categories, & &1["key"]) ==
+               ~w(quick_dinners chicken vegetarian beef pork baking)
+
+      assert Enum.all?(categories, &(Map.keys(&1) |> Enum.sort() == ["key", "label"]))
+    end
+
     test "browse returns categories and most saved", %{conn: conn, user: user} do
       post_fixture(%{user_id: user.id})
 

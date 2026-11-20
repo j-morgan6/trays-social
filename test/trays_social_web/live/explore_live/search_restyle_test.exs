@@ -97,13 +97,18 @@ defmodule TraysSocialWeb.ExploreLive.SearchRestyleTest do
 
     test "a text Browse tile searches cooks by its query; a tag tile shows none", %{conn: conn} do
       user_fixture(%{username: "chickenchef"})
-      user_fixture(%{username: "breakfastcook"})
+      user_fixture(%{username: "bakingcook"})
+      user_fixture(%{username: "beefcook"})
       view = search(conn)
 
       render_click(view, "select-category", %{"key" => "chicken"})
       assert has_element?(view, "#search-cooks a[href='/@chickenchef']")
 
-      html = render_click(view, "select-category", %{"key" => "breakfast"})
+      html = render_click(view, "select-category", %{"key" => "baking"})
+      refute html =~ ~s(id="search-cooks")
+
+      # A multi-term tile searches recipes only, not cooks.
+      html = render_click(view, "select-category", %{"key" => "beef"})
       refute html =~ ~s(id="search-cooks")
     end
 

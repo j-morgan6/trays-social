@@ -316,9 +316,11 @@ defmodule TraysSocialWeb.ExploreLive.Index do
     end
   end
 
-  # Cooks matching the term, as the API search does: skipped for a tag or
-  # time-limited Browse tile, and never a blocked user. Three, as the canvas
-  # draws them.
+  # Cooks matching the term, as the API search does: skipped for a tag,
+  # time-limited or multi-term Browse tile, and never a blocked user. Three, as
+  # the canvas draws them.
+  defp search_cooks(terms, _category, _blocked_ids) when is_list(terms), do: []
+
   defp search_cooks(_term, %{tag: tag}, _blocked_ids) when is_binary(tag), do: []
 
   defp search_cooks(_term, %{max_cooking_time: max}, _blocked_ids) when is_integer(max), do: []

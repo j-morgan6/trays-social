@@ -121,6 +121,60 @@ defmodule TraysSocialWeb.ExploreLive.UnifiedSearchTest do
     assert html =~ "Quick dinners"
   end
 
+  test "unified_search_test: selecting Beef on web shows a steak recipe; an old 'pasta' key is ignored",
+       %{conn: conn, viewer: viewer} do
+    post_fixture(%{user_id: viewer.id, caption: "Pan steak", cooking_time_minutes: 20})
+    recipe(viewer, "Weeknight chili", ["ground beef", "beans"])
+    post_fixture(%{user_id: viewer.id, caption: "Lemon chicken", cooking_time_minutes: 20})
+    view = search(conn)
+
+    assert has_element?(view, "#search-browse button[phx-value-key=beef]", "Beef")
+
+    # A removed key from an old client is ignored: still Browse, no crash.
+    html = render_click(view, "select-category", %{"key" => "pasta"})
+    assert html =~ "Quick dinners"
+    refute html =~ "In your tray"
+
+    html = view |> element("#search-browse button[phx-value-key=beef]") |> render_click()
+    assert html =~ "Pan steak"
+    assert html =~ "Weeknight chili"
+    refute html =~ "Lemon chicken"
+
+    # Typing replaces the tile, and a typed term searches that one term only.
+    html = type(view, "chicken")
+    assert html =~ "Lemon chicken"
+    refute html =~ "Pan steak"
+  end
+
+  test "Browse tiles are the six new categories in order", %{conn: conn} do
+    view = search(conn)
+
+    keys =
+      view
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("#search-browse button[phx-value-key]")
+      |> LazyHTML.attribute("phx-value-key")
+
+    assert keys == ~w(quick_dinners chicken vegetarian beef pork baking)
+  end
+
+  test "Quick dinners includes exactly 30 minutes and excludes 31", %{conn: conn, viewer: viewer} do
+    post_fixture(%{user_id: viewer.id, caption: "Thirty minute dal", cooking_time_minutes: 30})
+
+    post_fixture(%{
+      user_id: viewer.id,
+      caption: "Thirty-one minute dal",
+      cooking_time_minutes: 31
+    })
+
+    view = search(conn)
+
+    html = render_click(view, "select-category", %{"key" => "quick_dinners"})
+    assert html =~ "Thirty minute dal"
+    refute html =~ "Thirty-one minute dal"
+  end
+
   test "a chip replaces a selected Browse tile", %{conn: conn, viewer: viewer} do
     # 90 minutes is outside Quick dinners (max 30), so the recipe only shows
     # once the chip has dropped the tile's filter.

@@ -172,13 +172,121 @@ defmodule TraysSocial.Posts.GroupedSearchTest do
   end
 
   describe "BrowseCategories" do
-    test "browse categories are fixed and fetchable" do
+    test "browse_categories: list order and keys are the six new ones" do
       assert Enum.map(BrowseCategories.list(), & &1.key) ==
-               ~w(quick_dinners chicken pasta breakfast baking soups)
+               ~w(quick_dinners chicken vegetarian beef pork baking)
+
+      assert Enum.map(BrowseCategories.list(), &BrowseCategories.to_json/1) == [
+               %{key: "quick_dinners", label: "Quick dinners"},
+               %{key: "chicken", label: "Chicken"},
+               %{key: "vegetarian", label: "Vegetarian"},
+               %{key: "beef", label: "Beef"},
+               %{key: "pork", label: "Pork"},
+               %{key: "baking", label: "Baking"}
+             ]
 
       assert %{max_cooking_time: 30} = BrowseCategories.fetch("quick_dinners")
       assert BrowseCategories.fetch("nope") == nil
       assert BrowseCategories.fetch(nil) == nil
+
+      for removed <- ~w(pasta breakfast soups), do: assert(BrowseCategories.fetch(removed) == nil)
+    end
+  end
+
+  describe "Browse category search" do
+    defp browse(key, opts \\ []) do
+      category = BrowseCategories.fetch(key)
+
+      category.q
+      |> Posts.search_posts(
+        [max_cooking_time: category.max_cooking_time, tag: category.tag, recipes_only: true] ++
+          opts
+      )
+      |> Enum.map(& &1.id)
+      |> Enum.sort()
+    end
+
+    defp recipe(user, caption, attrs \\ %{}) do
+      post_fixture(Map.merge(%{user_id: user.id, caption: caption}, attrs))
+    end
+
+    defp ingredient(name), do: %{ingredients: [%{name: name, quantity: "1", unit: ""}]}
+    defp tags(tags), do: %{post_tags: Enum.map(tags, &%{tag: &1})}
+
+    test "posts: Beef matches a recipe with 'ground beef' and one with 'steak' and not a chicken recipe",
+         ctx do
+      ground = recipe(ctx.stranger, "Weeknight chili", ingredient("ground beef"))
+      steak = recipe(ctx.stranger, "Pan steak with butter")
+      brisket = recipe(ctx.stranger, "Smoked dinner", tags(["brisket"]))
+      _chicken = recipe(ctx.stranger, "Lemon chicken", ingredient("chicken thighs"))
+
+      assert browse("beef") == Enum.sort([ground.id, steak.id, brisket.id])
+    end
+
+    test "posts: Pork matches 'bacon' and 'chorizo'", ctx do
+      bacon = recipe(ctx.stranger, "Breakfast hash", ingredient("Bacon"))
+      chorizo = recipe(ctx.stranger, "Chorizo tacos")
+      _chicken = recipe(ctx.stranger, "Lemon chicken", ingredient("chicken thighs"))
+
+      assert browse("pork") == Enum.sort([bacon.id, chorizo.id])
+    end
+
+    test "posts: Vegetarian returns only tagged recipes, not an untagged meat-free one", ctx do
+      _untagged = recipe(ctx.stranger, "Vegetarian lentil soup", ingredient("lentils"))
+      assert browse("vegetarian") == []
+
+      tagged = recipe(ctx.stranger, "Mushroom risotto", tags(["vegetarian"]))
+      assert browse("vegetarian") == [tagged.id]
+    end
+
+    test "Baking returns only recipes tagged baking", ctx do
+      tagged = recipe(ctx.stranger, "Sourdough", tags(["baking"]))
+      _untagged = recipe(ctx.stranger, "Baking soda biscuits")
+
+      assert browse("baking") == [tagged.id]
+    end
+
+    test "Quick dinners includes exactly 30 minutes and excludes 31", ctx do
+      thirty = recipe(ctx.stranger, "Thirty", %{cooking_time_minutes: 30})
+      _thirty_one = recipe(ctx.stranger, "Thirty-one", %{cooking_time_minutes: 31})
+
+      assert browse("quick_dinners") == [thirty.id]
+    end
+
+    test "a blocked or removed author's recipe never shows in a multi-term tile", ctx do
+      visible = recipe(ctx.stranger, "Steak frites")
+      blocked = recipe(ctx.friend, "Steak salad")
+      removed = recipe(ctx.stranger, "Steak sandwich")
+
+      Repo.update_all(from(p in TraysSocial.Posts.Post, where: p.id == ^removed.id),
+        set: [removed_at: DateTime.utc_now(:second)]
+      )
+
+      assert browse("beef", blocked_user_ids: [ctx.friend.id]) == [visible.id]
+      refute blocked.id in browse("beef", blocked_user_ids: [ctx.friend.id])
+    end
+
+    test "each term in a list is escaped: _ and % are literal", ctx do
+      literal = recipe(ctx.stranger, "Mix a_c and 100% cocoa")
+      _abc = recipe(ctx.stranger, "abc")
+      _thousand = recipe(ctx.stranger, "1000 cocoa")
+
+      ids = fn terms -> terms |> Posts.search_posts() |> Enum.map(& &1.id) end
+
+      assert ids.(["a_c"]) == [literal.id]
+      assert ids.(["zzz", "100%"]) == [literal.id]
+    end
+
+    test "a single typed term matches the same posts as a one-term list", ctx do
+      a = recipe(ctx.stranger, "Steak frites")
+      b = recipe(ctx.stranger, "Dinner", ingredient("flank steak"))
+      _other = recipe(ctx.stranger, "Tofu bowl")
+
+      by_string = "steak" |> Posts.search_posts() |> Enum.map(& &1.id) |> Enum.sort()
+      assert by_string == Enum.sort([a.id, b.id])
+      assert ["steak"] |> Posts.search_posts() |> Enum.map(& &1.id) |> Enum.sort() == by_string
+      assert Posts.search_posts([]) |> length() == 3
+      assert Posts.search_posts(["", nil]) |> length() == 3
     end
   end
 end

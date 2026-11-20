@@ -40,7 +40,7 @@ private enum SearchPreviewData {
     }
 
     static var browse: BrowsePayload {
-        let categories = ["quick_dinners", "chicken", "pasta", "breakfast", "baking", "soups"]
+        let categories = ["quick_dinners", "chicken", "vegetarian", "beef", "pork", "baking"]
             .map { #"{"key": "\#($0)", "label": "\#($0)"}"# }
             .joined(separator: ",")
         let mostSaved = (recipes.prefix(4).map(item) + [ad] + recipes.suffix(1).map(item)).joined(separator: ",")

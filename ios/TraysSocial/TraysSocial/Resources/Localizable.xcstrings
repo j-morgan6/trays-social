@@ -208,6 +208,29 @@
         }
       }
     },
+    "Beef" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beef"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carne de res"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bœuf"
+          }
+        }
+      }
+    },
     "Bug" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -668,6 +691,29 @@
         }
       }
     },
+    "Pork" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pork"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cerdo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Porc"
+          }
+        }
+      }
+    },
     "Report a bug" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1032,6 +1078,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Un problème pour vous connecter ?"
+          }
+        }
+      }
+    },
+    "Vegetarian" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vegetarian"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vegetariano"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Végétarien"
           }
         }
       }

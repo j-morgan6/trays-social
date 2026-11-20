@@ -38,10 +38,10 @@ struct BrowseCategory: Decodable, Identifiable, Sendable, Hashable {
         switch key {
         case "quick_dinners": String(localized: "Quick dinners")
         case "chicken": String(localized: "Chicken")
-        case "pasta": String(localized: "Pasta")
-        case "breakfast": String(localized: "Breakfast")
+        case "vegetarian": String(localized: "Vegetarian")
+        case "beef": String(localized: "Beef")
+        case "pork": String(localized: "Pork")
         case "baking": String(localized: "Baking")
-        case "soups": String(localized: "Soups")
         default: label
         }
     }

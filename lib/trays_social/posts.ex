@@ -291,6 +291,10 @@ defmodule TraysSocial.Posts do
   @doc """
   Searches posts by caption and tags. Supports cooking time filter and tag filter.
   Returns cursor-paginated results.
+
+  `query_string` is one term, or a list of terms of which any one must match
+  (a multi-term Browse tile). Callers pass a list only from the fixed
+  `BrowseCategories` set, never from params.
   """
   def search_posts(query_string, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
@@ -324,8 +328,28 @@ defmodule TraysSocial.Posts do
   # allowed"; the tag branch's distinct also prepended `p.id ASC` to the
   # ORDER BY, returning oldest-first. EXISTS keeps one row per post, so
   # ordering and keyset cursors work like every other listing.
-  defp filter_search_text(query, query_string) do
-    sanitized = "%#{sanitize_like(query_string)}%"
+  #
+  # A list of terms (a multi-term Browse tile such as Beef) matches a post when
+  # any one term does; each term is escaped and bound on its own.
+  defp filter_search_text(query, terms) when is_list(terms) do
+    case Enum.reject(terms, &(&1 in [nil, ""])) do
+      [] ->
+        query
+
+      terms ->
+        match =
+          terms
+          |> Enum.map(&search_text_match/1)
+          |> Enum.reduce(fn term_match, acc -> dynamic([p], ^acc or ^term_match) end)
+
+        where(query, ^match)
+    end
+  end
+
+  defp filter_search_text(query, query_string), do: where(query, ^search_text_match(query_string))
+
+  defp search_text_match(term) do
+    sanitized = "%#{sanitize_like(term)}%"
 
     ingredient_match =
       from(i in Ingredient,
@@ -337,8 +361,7 @@ defmodule TraysSocial.Posts do
         where: pt.post_id == parent_as(:post).id and ilike(pt.tag, ^sanitized)
       )
 
-    where(
-      query,
+    dynamic(
       [p],
       ilike(p.caption, ^sanitized) or exists(ingredient_match) or exists(tag_match)
     )
