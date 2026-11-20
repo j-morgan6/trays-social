@@ -1,6 +1,7 @@
 defmodule TraysSocialWeb.PageController do
   use TraysSocialWeb, :controller
 
+  alias TraysSocial.Features
   alias TraysSocial.Monetization
 
   # Public marketing landing page (W120). Authenticated visitors are sent
@@ -13,13 +14,19 @@ defmodule TraysSocialWeb.PageController do
   # paid_tier (W211) decides whether the Trays Plus section shows prices and
   # the trial. It stays off until Plus can actually be bought, so the site
   # never advertises a price for something that is not for sale.
+  #
+  # recipe_first (W218) picks the landing copy: it describes Home, Search and
+  # My Tray, which visitors only get once the flag is on.
   def home(conn, _params) do
     case conn.assigns[:current_scope] do
       %{user: %{}} ->
         redirect(conn, to: TraysSocialWeb.UserAuth.signed_in_path(conn))
 
       _ ->
-        render(conn, :home, paid_tier: Monetization.paid_tier_enabled?())
+        render(conn, :home,
+          paid_tier: Monetization.paid_tier_enabled?(),
+          recipe_first: Features.recipe_first?()
+        )
     end
   end
 end
