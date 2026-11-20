@@ -19,8 +19,6 @@ struct RecipeBasicsCard: View {
     var timeNeedsAttention = false
     var focus: FocusState<EditorField?>.Binding
 
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
     var body: some View {
         EditorCard {
             if showsRecipeFields {
@@ -67,10 +65,11 @@ struct RecipeBasicsCard: View {
             .accessibilityLabel(Text("A line about it"))
         }
         .padding(.top, 2)
-        let tiles = dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(spacing: 12))
-            : AnyLayout(HStackLayout(alignment: .top, spacing: 12))
-        tiles {
+        // D129: the tiles stack, full width, at every text size. Side by
+        // side, each half-width tile had about 30pt (375pt screen) to 60pt
+        // (Pro Max) between its two 44pt buttons, too little for "120 min"
+        // at the tile's 17pt, so the suffix wrapped under the plus button.
+        VStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
                 CountStepperTile(
                     label: String(localized: "Total time"),

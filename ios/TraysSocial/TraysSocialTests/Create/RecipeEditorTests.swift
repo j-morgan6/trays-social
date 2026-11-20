@@ -1,3 +1,4 @@
+import SwiftUI
 @testable import TraysSocial
 import XCTest
 
@@ -284,5 +285,106 @@ final class RecipeEditorTests: XCTestCase {
             [RecipeMeta.timeLabel(minutes: 35), String(localized: "Serves \(2)"), String(localized: "1 ingredient")]
         )
         XCTAssertTrue(RecipeMeta.capsules(minutes: nil, servings: nil, ingredientCount: 0).isEmpty)
+    }
+}
+
+/// D129: the Total time tile's "min" suffix stays on one line. A wrapped
+/// suffix (the TestFlight report: one letter per line under the plus button)
+/// makes the tile taller, so every value must measure the same height as the
+/// blank "Set" tile; a value running under a step button makes the card wider
+/// than its width. Layout is measured through UIHostingController; there is
+/// no view inspection in this target.
+@MainActor
+final class CountStepperTileLayoutTests: XCTestCase {
+    /// The smallest supported iPhone (375pt) and the widest Pro Max (440pt),
+    /// less the editor's 16pt page padding on each side.
+    private let cardWidths: [CGFloat] = [375 - 32, 440 - 32]
+    private let textSizes: [DynamicTypeSize] = [.large, .xxxLarge]
+    private let values = ["", "5", "30", "120", "999", "1440"]
+
+    func test_basicsCardKeepsEveryTimeOnOneLineAtPhoneWidthsAndTextSizes() {
+        for width in cardWidths {
+            for size in textSizes {
+                let blank = measure(BasicsCardHost(minutes: ""), width: width, size: size).height
+                for value in values {
+                    let measured = measure(BasicsCardHost(minutes: value), width: width, size: size)
+                    XCTAssertEqual(measured.height, blank, accuracy: 0.5, "'\(value)' at width \(width), \(size)")
+                    // A value that runs under a step button pushes the card
+                    // wider than the screen gives it.
+                    XCTAssertLessThanOrEqual(measured.width, width + 0.5, "'\(value)' at width \(width), \(size)")
+                }
+            }
+        }
+    }
+
+    func test_squeezedTileShrinksTheSuffixRatherThanWrappingIt() {
+        // The width a half-screen tile had on a 375pt phone before D129.
+        let blank = height(of: TileHost(value: "", suffix: "min"), width: 150, size: .large)
+        for value in ["5", "30", "120"] {
+            let measured = height(of: TileHost(value: value, suffix: "min"), width: 150, size: .large)
+            XCTAssertEqual(measured, blank, accuracy: 0.5, "'\(value) min' wrapped in a 150pt tile")
+        }
+    }
+
+    func test_everyLocalizedSuffixFitsOnOneLine() throws {
+        let localizations = Bundle.main.localizations.filter { $0 != "Base" }
+        XCTAssertTrue(localizations.contains("fr") && localizations.contains("es"), "\(localizations)")
+        // The stacked tile's width on the smallest phone: card less its 16pt padding.
+        let tileWidth: CGFloat = 375 - 32 - 32
+        for localization in localizations {
+            let path = try XCTUnwrap(Bundle.main.path(forResource: localization, ofType: "lproj"), localization)
+            let suffix = try XCTUnwrap(Bundle(path: path)).localizedString(forKey: "min", value: nil, table: nil)
+            XCTAssertFalse(suffix.isEmpty, localization)
+            for size in textSizes {
+                let blank = height(of: TileHost(value: "", suffix: suffix), width: tileWidth, size: size)
+                let widest = height(of: TileHost(value: "1440", suffix: suffix), width: tileWidth, size: size)
+                XCTAssertEqual(widest, blank, accuracy: 0.5, "'1440 \(suffix)' (\(localization)) at \(size)")
+            }
+        }
+    }
+
+    private func height(of view: some View, width: CGFloat, size: DynamicTypeSize) -> CGFloat {
+        measure(view, width: width, size: size).height
+    }
+
+    private func measure(_ view: some View, width: CGFloat, size: DynamicTypeSize) -> CGSize {
+        let host = UIHostingController(rootView: view.environment(\.dynamicTypeSize, size))
+        return host.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
+    }
+}
+
+private struct BasicsCardHost: View {
+    @State var minutes: String
+    @State private var caption = "Dal\nSunday dinner"
+    @State private var servings = "4"
+    @FocusState private var focus: EditorField?
+
+    var body: some View {
+        RecipeBasicsCard(
+            caption: $caption,
+            minutes: $minutes,
+            servings: $servings,
+            showsRecipeFields: true,
+            focus: $focus
+        )
+    }
+}
+
+private struct TileHost: View {
+    let value: String
+    let suffix: String?
+    @FocusState private var focus: EditorField?
+
+    var body: some View {
+        CountStepperTile(
+            label: "Total time",
+            value: .constant(value),
+            stepper: .minutes,
+            suffix: suffix,
+            decrementLabel: "Less time",
+            incrementLabel: "More time",
+            field: EditorField.minutes,
+            focus: $focus
+        )
     }
 }

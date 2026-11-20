@@ -155,7 +155,11 @@ struct CountStepperTile<Field: Hashable>: View {
                         .fixedSize()
                         .focused(focus, equals: field)
                     if let suffix, !value.isEmpty {
+                        // D129: one line beside the value. Squeezed, it
+                        // shrinks rather than wrapping a letter per line.
                         Text(suffix)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
                     }
                 }
                 .roundedFont(17, weight: .heavy, relativeTo: .headline)
