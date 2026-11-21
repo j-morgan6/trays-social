@@ -1,4 +1,5 @@
 @testable import TraysSocial
+import UIKit
 import XCTest
 
 /// W243: the pure copy and styling rules behind the restyled Search screen.
@@ -49,6 +50,20 @@ final class SearchFormattingTests: XCTestCase {
     func test_usesIsNilWhenNoChipMatches() {
         let ingredients = [Ingredient(name: "Lemon", quantity: nil, unit: nil)]
         XCTAssertNil(IngredientUses.line(chips: ["chicken"], in: ingredients))
+    }
+
+    // MARK: - Category icons
+
+    func test_everyKnownCategoryHasAnIconNamedByKey() {
+        for key in ["quick_dinners", "chicken", "vegetarian", "beef", "pork", "baking"] {
+            XCTAssertEqual(CategoryIcon.assetName(for: key), key)
+            XCTAssertNotNil(UIImage(named: key), "no bundled imageset for \(key)")
+        }
+    }
+
+    func test_unknownCategoryHasNoIcon() {
+        XCTAssertNil(CategoryIcon.assetName(for: "brunch"))
+        XCTAssertNil(CategoryIcon.assetName(for: ""))
     }
 
     // MARK: - Category tile fills

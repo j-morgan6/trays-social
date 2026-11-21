@@ -49,6 +49,37 @@ defmodule TraysSocialWeb.ExploreLive.RecipeFirstSearchTest do
     refute html =~ "Under 30 min"
   end
 
+  # W273: each Browse tile shows its Fluent Flat icon, decorative only.
+  test "flag on: each browse tile renders its category icon", %{conn: conn, original: original} do
+    flag_on(original)
+    {:ok, view, _html} = live(conn, ~p"/search")
+
+    for key <- ~w(quick_dinners chicken vegetarian beef pork baking) do
+      assert has_element?(
+               view,
+               ~s(#search-browse button[phx-value-key="#{key}"] span[aria-hidden="true"] ) <>
+                 ~s(img[src="/images/categories/#{key}.svg"][alt=""][aria-hidden="true"])
+             )
+
+      assert File.exists?(
+               Application.app_dir(:trays_social, "priv/static/images/categories/#{key}.svg")
+             )
+    end
+  end
+
+  test "a browse tile whose key has no icon renders no slot" do
+    html =
+      render_component(&TraysSocialWeb.ExploreLive.RecipeFirstComponents.browse/1,
+        categories: [%{key: "brunch", label: "Brunch"}],
+        most_saved: []
+      )
+
+    assert html =~ "Brunch"
+    assert html =~ ~s(phx-value-key="brunch")
+    refute html =~ "<img"
+    refute html =~ ~s(aria-hidden="true")
+  end
+
   test "flag on: typing shows grouped results", %{conn: conn, viewer: viewer, original: original} do
     flag_on(original)
     friend = user_fixture()

@@ -60,7 +60,11 @@ defmodule TraysSocialWeb.ExploreLive.RecipeFirstComponents do
 
   defp category_tile(assigns) do
     fill = SearchFormatting.tile_fill(assigns.index)
-    assigns = assign(assigns, :fill, Map.fetch!(@tile_fills, fill))
+
+    assigns =
+      assigns
+      |> assign(:fill, Map.fetch!(@tile_fills, fill))
+      |> assign(:icon, SearchFormatting.category_icon(assigns.category.key))
 
     ~H"""
     <button
@@ -75,11 +79,21 @@ defmodule TraysSocialWeb.ExploreLive.RecipeFirstComponents do
       <span class="relative z-10 block max-w-[60%] font-display text-base font-bold leading-tight text-base-content md:text-lg">
         {@category.label}
       </span>
-      <%!-- Placeholder photo slot: there are no category images yet. --%>
+      <%!-- W273: the category's Fluent Flat icon on a small tilted card.
+           Decorative; a key with no icon shows no card at all. --%>
       <span
+        :if={@icon}
         aria-hidden="true"
-        class="absolute -bottom-2.5 -right-2.5 size-[76px] -rotate-8 rounded-[18px] bg-base-100/70 shadow-card md:size-[98px]"
+        class="absolute -bottom-2.5 -right-2.5 flex size-[76px] -rotate-8 items-center justify-center rounded-[18px] bg-base-100/80 shadow-card md:size-[98px]"
       >
+        <img
+          src={~p"/images/categories/#{@icon <> ".svg"}"}
+          alt=""
+          aria-hidden="true"
+          width="44"
+          height="44"
+          class="size-11 md:size-14"
+        />
       </span>
     </button>
     """

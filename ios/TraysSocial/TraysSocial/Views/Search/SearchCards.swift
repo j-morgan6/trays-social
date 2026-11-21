@@ -77,28 +77,39 @@ struct SearchRowCard: View {
     }
 }
 
-/// W243: a Browse category tile (Components artboard, "Category tile"). The
-/// server has no category photos, so the tilted photo is a placeholder slot.
+/// W243: a Browse category tile (Components artboard, "Category tile").
+/// W273: the tilted card holds the category's bundled Fluent Flat icon; a key
+/// with no icon shows no card, rather than an empty box.
 struct CategoryTile: View {
     let category: BrowseCategory
     let index: Int
     let action: () -> Void
 
     var body: some View {
+        let icon = CategoryIcon.assetName(for: category.key)
         Button(action: action) {
             ZStack(alignment: .topLeading) {
-                PhotoSlot(url: nil, cornerRadius: 18)
-                    .frame(width: 72, height: 72)
-                    .rotationEffect(.degrees(-8))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .offset(x: 10, y: 10)
-                    .accessibilityHidden(true)
+                if let icon {
+                    Image(decorative: icon)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 42, height: 42)
+                        .frame(width: 72, height: 72)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(Theme.surface.opacity(0.85))
+                        )
+                        .rotationEffect(.degrees(-8))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                        .offset(x: 10, y: 10)
+                        .accessibilityHidden(true)
+                }
                 Text(category.displayLabel)
                     .roundedFont(16, weight: .bold, relativeTo: .headline)
                     .foregroundStyle(Theme.text)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.trailing, 72)
+                    .padding(.trailing, icon == nil ? 0 : 72)
                     .padding(14)
             }
             .frame(minHeight: 96)

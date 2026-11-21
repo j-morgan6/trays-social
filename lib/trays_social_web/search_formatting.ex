@@ -3,11 +3,15 @@ defmodule TraysSocialWeb.SearchFormatting do
   Pure formatting for the web Search page (W244), mirroring the iOS
   `SearchFormatting.swift` from W243 so both platforms word Search the same
   way: the ingredient summary card, the "Uses ..." line on a "You have
-  everything" row, the Browse tile fill cycle and the Most saved ranks.
+  everything" row, the Browse tile fill cycle and icons, and the Most saved
+  ranks.
   """
 
   @ranked 3
   @fills [:cream, :amber, :mint]
+  # W273: the Browse keys that have a bundled Fluent Flat icon under
+  # priv/static/images/categories/<key>.svg. A fixed list, never user input.
+  @icon_keys ~w(quick_dinners chicken vegetarian beef pork baking)
 
   @doc """
   Title of the ingredient summary card. Up to three ingredients are listed;
@@ -55,6 +59,20 @@ defmodule TraysSocialWeb.SearchFormatting do
   @doc "Browse tiles cycle three warm fills: cream, amber, mint."
   @spec tile_fill(non_neg_integer()) :: :cream | :amber | :mint
   def tile_fill(index), do: Enum.at(@fills, rem(index, length(@fills)))
+
+  @doc """
+  The icon file name (without extension) for a Browse category key, or nil
+  when this build has no icon for it, so the tile shows no slot at all.
+
+      iex> category_icon("chicken")
+      "chicken"
+
+      iex> category_icon("brunch")
+      nil
+  """
+  @spec category_icon(String.t() | nil) :: String.t() | nil
+  def category_icon(key) when key in @icon_keys, do: key
+  def category_icon(_key), do: nil
 
   @doc """
   Rank (1-based) of the first three posts of Most saved, keyed by post id.

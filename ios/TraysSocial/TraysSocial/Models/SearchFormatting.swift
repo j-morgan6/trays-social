@@ -56,6 +56,17 @@ enum CategoryTileFill: Equatable {
     }
 }
 
+/// W273: the bundled Fluent Flat icon for a Browse category. The asset
+/// catalog has one vector imageset per key this build knows; a key from a
+/// newer server has none, and the tile then shows no icon card at all.
+enum CategoryIcon {
+    static let keys: Set<String> = ["quick_dinners", "chicken", "vegetarian", "beef", "pork", "baking"]
+
+    static func assetName(for key: String) -> String? {
+        keys.contains(key) ? key : nil
+    }
+}
+
 /// W243: Browse failed when a load has been attempted, finished, and left
 /// nothing to show. Retry flips back to loading while the new load runs.
 enum SearchBrowseState {

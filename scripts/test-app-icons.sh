@@ -60,6 +60,30 @@ for set_ in Logo-light Logo-dark; do
   [ "$vector" = "true" ] && pass "$set_ preserves vector data" || fail "$set_ does not preserve vector data"
 done
 
+# W273: the Browse category icons (Microsoft Fluent Emoji, Flat, MIT). iOS
+# bundles one vector imageset per category key; web serves the same file from
+# priv/static/images/categories. Both copies must be the identical, unmodified
+# file, with Microsoft's LICENSE beside them.
+CATEGORIES="$ASSETS/Categories"
+WEB_CATEGORIES="$REPO_ROOT/priv/static/images/categories"
+for dir in "$CATEGORIES" "$WEB_CATEGORIES"; do
+  grep -q "Copyright (c) Microsoft Corporation" "$dir/LICENSE" 2>/dev/null \
+    && pass "${dir#"$REPO_ROOT"/} keeps Microsoft's MIT LICENSE" \
+    || fail "${dir#"$REPO_ROOT"/}/LICENSE is missing or is not Microsoft's MIT licence"
+done
+for key in quick_dinners chicken vegetarian beef pork baking; do
+  contents="$CATEGORIES/$key.imageset/Contents.json"
+  if [ ! -f "$contents" ]; then fail "$key.imageset is missing"; continue; fi
+  file=$(plutil -extract images.0.filename raw -o - "$contents" 2>/dev/null || true)
+  [ -n "$file" ] && [ -f "$CATEGORIES/$key.imageset/$file" ] && pass "$key names an existing file ($file)" \
+    || fail "$key names '$file', which is not in the imageset"
+  vector=$(plutil -extract properties.preserves-vector-representation raw -o - "$contents" 2>/dev/null || true)
+  [ "$vector" = "true" ] && pass "$key preserves vector data" || fail "$key does not preserve vector data"
+  cmp -s "$CATEGORIES/$key.imageset/$key.svg" "$WEB_CATEGORIES/$key.svg" \
+    && pass "$key.svg is the same file on iOS and web" \
+    || fail "$key.svg differs between iOS and web (or one is missing)"
+done
+
 if [ "$failures" -gt 0 ]; then
   echo "$failures check(s) failed"
   exit 1
